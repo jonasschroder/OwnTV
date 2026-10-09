@@ -1,5 +1,8 @@
 # Reproducible debug build
 
+The Min TV prototype keeps this Core baseline. Its independent app identity and
+HOME/install workflow are documented in [Min TV v0.1](min-tv-v0.1.md).
+
 The app uses APIs and resources introduced after the published OwnTV Core 1.0.64
 artifacts. The default build therefore substitutes **both** `core` and `player-core`
 with Core source at the exact commit recorded in `gradle/owntv-core.commit`:

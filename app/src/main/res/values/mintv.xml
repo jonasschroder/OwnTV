@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Min TV</string>
+    <string name="mintv_home_live">Live TV</string>
+    <string name="mintv_home_settings">Android TV settings</string>
+    <string name="mintv_home_unavailable">Unable to open this screen. You can still use the remote Home button.</string>
+    <style name="Theme.MinTV.Starting" parent="Theme.OwnTV.Starting">
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/mintv_icon</item>
+    </style>
+</resources>

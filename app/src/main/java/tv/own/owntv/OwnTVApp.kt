@@ -90,11 +90,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.core.CoreBuildInfo.devTools = BuildConfig.DEV_TOOLS
         tv.own.owntv.core.CoreBuildInfo.debug = BuildConfig.DEBUG
         tv.own.owntv.core.CoreBuildInfo.diagnosticBuild = BuildConfig.DIAGNOSTIC_BUILD
-        // This app's own releases, which the in-app updater asks about. Core defaults to exactly
-        // this value, so the line changes nothing today — it is here so the television names its own
-        // repository instead of relying on core to guess it, the same as the phone app does. A
-        // default that happens to be right for one app is a trap for every other one.
-        tv.own.owntv.core.CoreBuildInfo.releaseRepo = "ahXN00/OwnTV"
+        // Never offer upstream OwnTV APKs to this independent package. v0.1 is distributed as
+        // workflow artifacts, so there is no prototype release for the in-app updater to install.
+        tv.own.owntv.core.CoreBuildInfo.releaseRepo = "jonasschroder/OwnTV"
+        // Core's TV recommendation intents use the upstream owntv:// scheme without a package.
+        // Do not publish ambiguous cards while both apps are installed. IPTV/EPG remain enabled.
+        tv.own.owntv.core.CoreBuildInfo.tvHome = false
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.
         tv.own.owntv.core.util.CrashRecorder.diagnostics = { tv.own.owntv.player.LiveDiagnosticsLog.snapshot() }

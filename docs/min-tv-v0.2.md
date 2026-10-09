@@ -1,5 +1,10 @@
 # Min TV v0.2 — live IPTV Home inside a normal app
 
+For first physical testing while retaining v0.1, use the separate
+**[Min TV Test QA build and Mac installation guide](min-tv-qa.md)**
+(`se.jonasschroder.mintv.qa`). The regular APK below remains an update candidate;
+the QA APK installs alongside it without requiring its signing key.
+
 Target: Chromecast with Google TV 4K, Android 14. Application ID remains
 `se.jonasschroder.mintv`; Kotlin namespace remains `tv.own.owntv`. No database
 migration, IPTV credentials, bundled channels or signing keys are introduced.

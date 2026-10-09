@@ -5,9 +5,13 @@ with an IPTV-first Home: real favorites, muted live preview, current/next EPG an
 fullscreen playback through the existing OwnTV player. Google's launcher and
 system packages must stay unchanged.
 
-See [the v0.2 build, safe update/install and Chromecast test guide](docs/min-tv-v0.2.md).
-Download the test APK from the **Min TV prototype** Actions artifact linked in the
-PR. **Fresh CI debug signing keys generally cannot update an installed v0.1:** read
+For side-by-side Chromecast testing, install **Min TV Test**
+(`se.jonasschroder.mintv.qa`) from the **MinTV-v0.2-QA.apk** Actions artifact linked
+in PR #3. Follow [the Mac installation and QA backup-import guide](docs/min-tv-qa.md).
+It preserves the existing Min TV installation and uses separate private data.
+
+See [the regular v0.2 build, safe update/install and Chromecast test guide](docs/min-tv-v0.2.md).
+The regular APK remains a separate artifact. **Fresh CI debug signing keys generally cannot update an installed v0.1:** read
 the artifact's installation notice and verify/backup existing data first. No public
 Release is published. The upstream description below is reference only; its APK,
 Downloader code and branding are not Min TV downloads.

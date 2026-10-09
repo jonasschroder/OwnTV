@@ -50,6 +50,9 @@ android {
         // Independent version sequence for Min TV. CI supplies a monotonically increasing code.
         versionCode = (System.getenv("VERSION_CODE") ?: "2").toInt()
         versionName = "0.2"
+        manifestPlaceholders["minTvLinkScheme"] = "mintv"
+        manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
+        buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")
 
         // Opt-in local diagnostic APKs keep the rolling playback trace enabled even when they are
         // release-signed (so they can update an installed production build without changing its data).
@@ -105,6 +108,15 @@ android {
         create("x86_64") {
             dimension = "abi"
             ndk { abiFilters += listOf("x86_64") }
+        }
+        // Side-by-side device QA: same app/source, separate Android sandbox and link protocol.
+        create("qa") {
+            dimension = "abi"
+            applicationIdSuffix = ".qa"
+            manifestPlaceholders["minTvLinkScheme"] = "mintv-qa"
+            manifestPlaceholders["minTvBanner"] = "@drawable/mintv_qa_banner"
+            buildConfigField("String", "APP_LINK_SCHEME", "\"mintv-qa\"")
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         }
     }
 
@@ -243,6 +255,10 @@ android {
 // the AGP 9.2.1 variant API (ApplicationAndroidComponentsExtension.onVariants +
 // ApplicationAndroidResources.localeFilters: SetProperty<String>); re-verify before deviating.
 androidComponents {
+    // QA is a debug-only prototype, never a release/signing target.
+    beforeVariants(selector().withFlavor("abi" to "qa")) { variant ->
+        variant.enable = variant.buildType == "debug"
+    }
     onVariants(selector().withBuildType("debug")) { variant ->
         variant.androidResources.localeFilters.addAll("en-rXA", "ar-rXB")
     }

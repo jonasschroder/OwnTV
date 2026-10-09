@@ -37,12 +37,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Unit tests
-        run: ./gradlew :app:testStandardDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
+        run: ./gradlew :app:testStandardDebugUnitTest :app:testQaDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
       - name: Lint
         if: always()
-        run: ./gradlew :app:lintStandardDebug --stacktrace
+        run: ./gradlew :app:lintStandardDebug :app:lintQaDebug --stacktrace
       - name: Assemble ARM debug APK and device tests
-        run: ./gradlew :app:assembleStandardDebug :app:assembleStandardDebugAndroidTest --stacktrace
+        run: ./gradlew :app:assembleStandardDebug :app:assembleQaDebug :app:assembleStandardDebugAndroidTest :app:assembleQaDebugAndroidTest --stacktrace
       - name: Verify and stage Min TV APK
         shell: bash
         run: |
@@ -57,6 +57,20 @@ jobs:
           cp "$APK" dist/MinTV-v0.2-arm-debug.apk
           cd dist
           sha256sum MinTV-v0.2-arm-debug.apk > SHA256SUMS
+      - name: Verify and stage isolated QA APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/qa/debug/app-qa-debug.apk
+          TOOLS="$ANDROID_HOME/build-tools/37.0.0"
+          python3 tools/verify-mintv-apk.py --qa --apk "$APK" --aapt2 "$TOOLS/aapt2" --peer-manifest app/build/intermediates/packaged_manifests/standardDebug/processStandardDebugManifestForPackage/AndroidManifest.xml
+          python3 tools/i18n/check_pseudo_locales.py --apk "$APK" --mode debug --aapt2 "$TOOLS/aapt2"
+          mkdir -p dist-qa
+          cp docs/apk-qa-notice.txt dist-qa/READ-BEFORE-INSTALL.txt
+          "$TOOLS/apksigner" verify --print-certs "$APK" > dist-qa/SIGNING-CERTIFICATE.txt
+          cp "$APK" dist-qa/MinTV-v0.2-QA.apk
+          cd dist-qa
+          sha256sum MinTV-v0.2-QA.apk > SHA256SUMS
       - name: Upload installable prototype
         uses: actions/upload-artifact@v7
         with:
@@ -66,6 +80,17 @@ jobs:
             dist/SHA256SUMS
             dist/READ-BEFORE-INSTALL.txt
             dist/SIGNING-CERTIFICATE.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload side-by-side QA prototype
+        uses: actions/upload-artifact@v7
+        with:
+          name: MinTV-v0.2-QA.apk
+          path: |
+            dist-qa/MinTV-v0.2-QA.apk
+            dist-qa/SHA256SUMS
+            dist-qa/READ-BEFORE-INSTALL.txt
+            dist-qa/SIGNING-CERTIFICATE.txt
           if-no-files-found: error
           retention-days: 14
       - name: Upload test and lint reports

@@ -13,6 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import tv.own.owntv.core.brand.AppIconSwitcher
 import tv.own.owntv.core.launcher.LauncherDeepLink
+import tv.own.owntv.BuildConfig
 
 /** Requires Android: JVM android.jar stubs cannot validate Uri or PackageManager routing. */
 @RunWith(AndroidJUnit4::class)
@@ -36,7 +37,8 @@ class MinTvRoutingTest {
 
     @Test fun liveEntryTargetsThisAppAndKeepsCoreOnboardingRouting() {
         val intent = MinTvIntents.liveTv(context)
-        assertEquals("se.jonasschroder.mintv", intent.component!!.packageName)
+        assertEquals(context.packageName, intent.component!!.packageName)
+        assertEquals(BuildConfig.APP_LINK_SCHEME, intent.data!!.scheme)
         assertEquals(AppIconSwitcher.launchComponent(context), intent.component)
         assertEquals(LauncherDeepLink.OpenLiveSection, MinTvIntents.parseDeepLink(intent.data))
         assertTrue(intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
@@ -46,8 +48,12 @@ class MinTvRoutingTest {
     @Test fun externalSchemePreservesPlaybackParametersWithoutClaimingUpstreamLinks() {
         assertEquals(
             LauncherDeepLink.Live(sourceId = 7, itemId = 42),
-            MinTvIntents.parseDeepLink(Uri.parse("mintv://play/live?sourceId=7&itemId=42")),
+            MinTvIntents.parseDeepLink(Uri.Builder().scheme(BuildConfig.APP_LINK_SCHEME)
+                .authority("play").appendPath("live").appendQueryParameter("sourceId", "7")
+                .appendQueryParameter("itemId", "42").build()),
         )
+        val otherScheme = if (BuildConfig.APP_LINK_SCHEME == "mintv") "mintv-qa" else "mintv"
+        assertNull(MinTvIntents.parseDeepLink(Uri.Builder().scheme(otherScheme).authority("open").appendPath("live").build()))
         assertNull(MinTvIntents.parseDeepLink(Uri.parse("https://example.com/open/live")))
     }
 

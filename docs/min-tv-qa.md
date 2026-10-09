@@ -1,6 +1,6 @@
 # Min TV Test — side-by-side Chromecast QA
 
-Use this build for the first physical Chromecast test. It is a **separate app**,
+Use this build for isolated physical Chromecast testing. It is a **separate app**,
 not an update or migration of the working Min TV v0.1 installation.
 
 | | Working/regular Min TV | QA prototype |
@@ -130,7 +130,7 @@ without importing or deleting user data; they are compiled, not hardware-execute
 | Launcher/icon/restart components | Same Kotlin class names, separate `(package, class)` components; AppIconSwitcher uses `context.packageName`; `:restart` process/task affinity is package-relative |
 | External deep links | All nine icon activities register only their variant's scheme; QA does not claim `mintv://` or `owntv://`; explicit internal Core links still parse `owntv://` |
 | Internal playback/notifications/alarms | Runtime package/component scopes in Core; recording/reminder alarm receivers are not exported; shared action strings do not route a pending intent to the other package |
-| External package visibility | Existing SmartTube, S0undTV, SVT Play, Play Store and stream-handler queries retained; no new query for regular Min TV or QUERY_ALL_PACKAGES |
+| External package visibility | SmartTube, SVT Play, Play Store and stream-handler queries retained; S0undTV removed; no new query for regular Min TV or QUERY_ALL_PACKAGES |
 | Database/settings/files/jobs | Application Context creates each package's private sandbox; no shared UID, data migration or schema change; WorkManager/notification identities are per package |
 | In-app updater | Core `verifyApk()` rejects an archive whose package differs from `context.packageName`; QA cannot install a regular Min TV update through this path |
 | TV rows/art | Core uses the owning package for TV rows, explicit launch components and logo-art URIs; existing row ownership is not renamed |
@@ -173,7 +173,15 @@ Local cloud verification on 9 October 2026:
 | Regular local update reference | Same saved-local-v0.1 signer and increasing versionCode; unrelated to first QA install |
 | Physical install, backup import and playback | Not executed; required checklist below |
 
+The latest companion changes, test results, APK size comparison and remaining
+physical measurements are documented in [the companion guide](min-tv-companions.md).
+The earlier 9 October table above records the pre-companion QA baseline. The user
+has since installed and exercised that baseline on Chromecast; cloud-only checks
+do not extend that device result to the new companion APK.
+
 ## Stable signing for regular Min TV
+
+See the [offline key, certificate gate and encrypted migration procedure](min-tv-signing.md).
 
 For future distribution, use a QA debug key distinct from the regular release key.
 Current local/CI debug variants may share a debug certificate; separate application
@@ -203,7 +211,7 @@ not migrate or remove regular v0.1.** See the regular guide's
 4. Rapid navigation leaves one preview; AC3/E-AC3 passthrough stays silent.
 5. OK produces full-quality fullscreen playback/audio; verify Exo same-stream promotion with logs/provider counts.
 6. Back, background and process recreation leave no orphaned stream; mpv/HLS/TS/Stalker fallback still works.
-7. SmartTube, ohnePixel/S0undTV and official SVT Play open; missing-app dialogs remain honest.
+7. SmartTube and official SVT Play open; optional Twitch status login works without playback.
 8. Profile/PIN/icon changes in QA affect only QA. Reopen original and verify its data/icon.
 9. Exercise 4K/50–60 fps, prolonged playback and memory pressure; record actual behavior.
 

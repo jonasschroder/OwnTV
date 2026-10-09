@@ -988,6 +988,26 @@ class LiveViewModel(
 
     enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
 
+    /** Bounded, local-only hockey discovery; no provider request and no preview on focus. */
+    suspend fun homeSportsChannels(query: String, favorites: List<ChannelEntity>, expectedProfileId: Long): List<ChannelEntity> = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext emptyList()
+        val terms = if (query.isNotBlank()) listOf(query.take(80)) else listOf("sport", "hockey", "SHL", "TV4", "C More")
+        val candidates = (favorites + terms.flatMap { channelDao.searchList(it, current.sourceIds, 24) }).distinctBy { it.id }.take(128)
+        candidates.filter { isVisibleToActiveProfile(it) }
+    }
+
+    /** Honors existing manual EPG mapping and guide offsets; only reads already stored programmes. */
+    suspend fun homeStoredProgrammes(channel: ChannelEntity, from: Long, to: Long): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> = withContext(Dispatchers.IO) {
+        if (!isVisibleToActiveProfile(channel)) return@withContext emptyList()
+        val cust = custom.value
+        val key = (cust.epgMatchResolver.epgIdFor(channel) ?: channel.epgChannelId)?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+            ?: return@withContext emptyList()
+        val shift = tv.own.owntv.core.epg.EpgShift.minutesFor(cust, channel, epgOffset.value)
+        epgDao.programmesForChannel(key, tv.own.owntv.core.epg.EpgShift.toStored(from, shift), tv.own.owntv.core.epg.EpgShift.toStored(to, shift))
+            .take(12).map { tv.own.owntv.core.epg.EpgShift.apply(it, shift) }
+    }
+
     suspend fun playHomeChannel(channelId: Long, favorites: List<ChannelEntity>): HomePlayback {
         val channel = channelDao.getById(channelId) ?: return HomePlayback.UNAVAILABLE
         if (!isVisibleToActiveProfile(channel)) return HomePlayback.UNAVAILABLE

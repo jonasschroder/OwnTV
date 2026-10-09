@@ -19,6 +19,10 @@ QA installation does not need to match regular Min TV's signing certificate.
 Later QA updates DO need to match QA's installed key and increase versionCode;
 never remove regular Min TV to solve a QA signature error.
 
+If QA is already installed, export and verify its encrypted IPTV backup before
+any update attempt. Stop on a certificate mismatch; neither app is removed
+automatically. Read docs/min-tv-companions.md for optional SHL/Twitch setup.
+
 Read docs/min-tv-qa.md in jonasschroder/OwnTV at this workflow's exact commit.
 Real Chromecast video/promotion/performance and backup import must be tested
 on hardware; compilation is not proof of those behaviors. GPLv3 applies;

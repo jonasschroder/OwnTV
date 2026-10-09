@@ -16,6 +16,8 @@ import tv.own.owntv.core.home.HomeFeedReader
 import tv.own.owntv.core.live.GuideReader
 import tv.own.owntv.core.live.LiveEpgReader
 import tv.own.owntv.features.home.HomeViewModel
+import tv.own.owntv.features.home.ShlRepository
+import tv.own.owntv.features.home.TwitchStatus
 import tv.own.owntv.features.live.LiveViewModel
 import tv.own.owntv.features.movies.MovieViewModel
 import tv.own.owntv.features.profiles.ProfileGateSessionViewModel
@@ -56,6 +58,8 @@ val appModule = module {
     singleOf(::GuideReader)
     singleOf(::SearchReader)
     singleOf(::HomeFeedReader)
+    singleOf(::ShlRepository)
+    singleOf(::TwitchStatus)
     viewModelOf(::HomeViewModel)
     viewModelOf(::SetupViewModel)
     viewModelOf(::DisplaySizeViewModel)

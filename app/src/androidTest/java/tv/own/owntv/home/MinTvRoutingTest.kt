@@ -63,9 +63,6 @@ class MinTvRoutingTest {
             assertTrue(intent.`package` in MinTvExternalApps.smartTubePackages)
             assertEquals("https://www.youtube.com/watch?v=dQw4w9WgXcQ", intent.data.toString())
         }
-        MinTvExternalApps.ohnePixel(context)?.let { intent ->
-            assertEquals(MinTvExternalApps.SOUND_TV, intent.`package`)
-            assertEquals("s0undtv://stream/ohnepixel", intent.data.toString())
-        }
+        assertEquals("org.smarttube.stable", MinTvExternalApps.smartTubePackages.first())
     }
 }

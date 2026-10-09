@@ -31,6 +31,9 @@ def categories(activity):
 homes = [a for a in activities if "android.intent.category.HOME" in categories(a)]
 assert not homes, "Min TV v0.2 must never register as Android HOME"
 assert all(a.get(ns + "name") != "tv.own.owntv.home.MinTvHomeActivity" for a in activities)
+queries = {p.get(ns + "name") for p in root.findall("queries/package")}
+assert "com.s0und.s0undtv" not in queries, "Removed Android 14-incompatible S0undTV query returned"
+assert "org.smarttube.stable" in queries, "Keep current SmartTube Stable visible"
 iptv = [a for a in activities if "android.intent.category.LEANBACK_LAUNCHER" in categories(a)]
 assert len(iptv) == 9, "Keep all supported AppIconSwitcher activity names"
 assert sum(a.get(ns + "enabled", "true") == "true" for a in iptv) == 1

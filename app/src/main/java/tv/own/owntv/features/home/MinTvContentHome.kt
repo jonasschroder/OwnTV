@@ -94,6 +94,8 @@ fun MinTvContentHome(
     val previewState by liveVm.previewEngine.state.collectAsStateWithLifecycle()
     val blocked by liveVm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val hockeyVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-shl" } } }
+    val twitchVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-twitch" } } }
     var favoriteRowFocused by remember { mutableStateOf(false) }
     var remoteNavigationSeen by remember(activeProfileId) { mutableStateOf(false) }
     val pauseOrDispose by rememberUpdatedState(onPauseOrDispose)
@@ -269,6 +271,17 @@ fun MinTvContentHome(
                 }
             }
         }
+        item(key = "mintv-shl") {
+            ShlCompanion(
+                visible = hockeyVisible,
+                active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
+                liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,
+            )
+        }
+        item(key = "mintv-twitch") {
+            TwitchCompanion(visible = twitchVisible, active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+                && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
+        }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
                 Text(stringResource(R.string.mintv_apps_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -277,14 +290,12 @@ fun MinTvContentHome(
                         HomeButton(stringResource(shortcut.label), {
                             pauseOrDispose()
                             controller.setActive(false)
-                            val intent = if (shortcut == ExternalShortcut.TWITCH) MinTvExternalApps.ohnePixel(context)
-                                else MinTvExternalApps.launch(context, shortcut.packages)
+                            val intent = MinTvExternalApps.launch(context, shortcut.packages)
                             if (intent != null) openExternal(intent) else missingApp = shortcut
                         }, Modifier.weight(1f).height(82.mpx))
                     }
                     HomeButton(stringResource(R.string.mintv_home_settings), { openExternal(MinTvIntents.settings()) }, Modifier.weight(1f).height(82.mpx))
                 }
-                Text(stringResource(R.string.mintv_feeds_deferred), style = stageText(16, 400), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -304,13 +315,12 @@ fun MinTvContentHome(
 }
 
 private enum class ExternalShortcut(val label: Int, val instructions: Int, val packages: List<String>) {
-    TWITCH(R.string.mintv_twitch, R.string.mintv_install_soundtv, listOf(MinTvExternalApps.SOUND_TV)),
     SMART_TUBE(R.string.mintv_smarttube, R.string.mintv_install_smarttube, MinTvExternalApps.smartTubePackages),
     SVT(R.string.mintv_svt, R.string.mintv_install_svt, listOf(MinTvExternalApps.SVT_PLAY)),
 }
 
 @Composable
-private fun HomeButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, logo: String? = null) {
+internal fun HomeButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, logo: String? = null) {
     Button(
         onClick = onClick, modifier = modifier,
         colors = ButtonDefaults.colors(containerColor = Color(0xFF1B2B36), contentColor = Color.White, focusedContainerColor = HomeTeal, focusedContentColor = HomeNavy),

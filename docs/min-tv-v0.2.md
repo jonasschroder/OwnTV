@@ -96,12 +96,10 @@ favorite-channel row. **Live TV** opens the existing browser, **TV Guide** opens
 existing guide. **Sport** currently opens Live TV so the user can choose their
 provider's sports category; no universal sports classification/schedule is invented.
 
-- **Twitch · ohnePixel:** package-scoped `s0undtv://stream/ohnepixel` to
-  `com.s0und.s0undtv`. The released S0undTV 1.5.10x manifest exports this VIEW handler;
-  inspection of its APK URI parser confirms that the first path segment is the
-  streamer login. Min TV does not claim LIVE/offline status without authenticated
-  Twitch API access and does not fetch a fabricated thumbnail. A missing/unsupported
-  handler offers installation/update via Google Play.
+- **ohnePixel status:** optional public-client Twitch device-code login and a
+  compact Helix status row. No playback, S0undTV route/query or installation
+  shortcut. Unconfigured/error status is unavailable. See
+  [companion setup, source limitations and performance](min-tv-companions.md).
 - **YouTube · SmartTube:** a working app shortcut. Recognized packages are current
   `org.smarttube.stable`, `org.smarttube.beta`, `app.smarttube.fdroid`, plus older
   `com.teamsmart.videomanager.tv` and `com.liskovsoft.smarttubetv.beta`. A verified
@@ -117,8 +115,6 @@ Package visibility is declared explicitly; no QUERY_ALL_PACKAGES permission is a
 Failures are shown in a dialog, without installing apps or changing the system.
 
 Verification references:
-[S0undTV released APK](https://github.com/S0und/S0undTV/releases/tag/v1.5.10x)
-(SHA-256 `6dec709684f38df7a460c194c3f1d62b2ca03d0f2d24419becab5c68c1075e70`),
 [SmartTube current package configuration](https://github.com/yuliskov/SmartTube/blob/6f9b5f2c82f280027c690967a71afb7022effac7/smarttubetv/build.gradle),
 [VIEW manifest](https://github.com/yuliskov/SmartTube/blob/6f9b5f2c82f280027c690967a71afb7022effac7/smarttubetv/src/main/AndroidManifest.xml),
 [video ID extraction](https://github.com/yuliskov/SmartTube/blob/6f9b5f2c82f280027c690967a71afb7022effac7/common/src/main/java/com/liskovsoft/smartyoutubetv2/common/utils/IntentExtractor.java),
@@ -271,7 +267,7 @@ launcher/packages left enabled and unchanged:
    Xtream and M3U. Existing safe fullscreen playback, fallback/zapping/controls must work.
 7. Back returns to the chosen favorite, stops fullscreen audio/connection, and requires
    fresh navigation to preview. Toggle Preview off; fullscreen OK remains available.
-8. Launch ohnePixel/S0undTV, SmartTube, SVT Play and Settings. Verify targets, missing-app
+8. Test optional Twitch status login; launch SmartTube, SVT Play and Settings. Verify targets, missing-app
    installation dialogs and Back/resume; no IPTV audio/decoder/provider connection remains.
 9. Test permitted HLS/TS, 4K HDR and 50/60 fps sports sources at full quality; compare
    decoder/frame drops with the unchanged Live page. Check EPG and favorites still update.

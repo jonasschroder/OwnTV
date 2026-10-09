@@ -76,9 +76,10 @@ junitExt = "1.3.0"
 espressoCore = "3.7.0"
 
 # --- OwnTV core library (https://github.com/ahXN00/OwnTV_Core) ---
-# Both artifacts always ship on the same version; never split them. Bumping this is how the TV app
-# takes a core change. For local work, owntv.corePath in ~/.gradle/gradle.properties substitutes
-# core's source for these artifacts, and this number is then ignored.
+# Both artifacts always ship on the same version; never split them. These coordinates are
+# substituted by the source revision in gradle/owntv-core.commit for the current build baseline.
+# 1.0.64 is not compatible with the current app on its own. An explicit owntv.corePath override
+# substitutes local source instead. See docs/build-baseline.md before changing dependency pins.
 owntvCore = "1.0.64"
 
 [libraries]

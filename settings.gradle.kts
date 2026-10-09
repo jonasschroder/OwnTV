@@ -40,16 +40,32 @@ dependencyResolutionManagement {
     }
 }
 
-// Local development: build against core's own source instead of the published artifact, so a core
-// edit reaches this app with no publish step. Gradle substitutes the dependency automatically
-// because OwnTV_Core publishes under the same group and artifact ids this app asks for. CI leaves
-// owntv.corePath unset and resolves the pinned version instead.
-// Set it in ~/.gradle/gradle.properties, never here:  owntv.corePath=E:/MEGA/CODE/AI/OwnTV_Core
-providers.gradleProperty("owntv.corePath").orNull?.takeIf { it.isNotBlank() }?.let { includeBuild(it) }
+// Core 1.0.64 predates APIs this app uses. Build both Core modules from one immutable source
+// revision until compatible artifacts are published. Prepare it with bash tools/prepare-core.sh.
+// An explicit owntv.corePath still supports local Core development (and intentionally bypasses
+// this pin). Gradle substitutes both tv.own.owntv dependencies by their group/project names.
+val localCorePath = providers.gradleProperty("owntv.corePath").orNull?.takeIf { it.isNotBlank() }
+if (localCorePath != null) {
+    includeBuild(localCorePath)
+} else {
+    val coreCommit = file("gradle/owntv-core.commit").readText().trim()
+    require(coreCommit.matches(Regex("[0-9a-f]{40}"))) { "Invalid gradle/owntv-core.commit" }
+    val coreDir = file(".gradle-cache/OwnTV_Core")
+    check(coreDir.resolve(".git").isDirectory) { "Run bash tools/prepare-core.sh before building." }
+    val actualCommit = providers.exec {
+        commandLine("git", "-C", coreDir.absolutePath, "rev-parse", "HEAD")
+    }.standardOutput.asText.get().trim()
+    check(actualCommit == coreCommit) { "Core revision differs from gradle/owntv-core.commit; run bash tools/prepare-core.sh." }
+    val coreChanges = providers.exec {
+        commandLine("git", "-C", coreDir.absolutePath, "status", "--porcelain", "--untracked-files=no")
+    }.standardOutput.asText.get().trim()
+    check(coreChanges.isEmpty()) { "Pinned Core has local changes; use owntv.corePath for Core development." }
+    includeBuild(coreDir)
+}
 
 rootProject.name = "OwnTV"
 include(":app")
 // Baseline-profile generator (audit ST1). Test-only module: it ships nothing to users, it records
 // the cold-start journey on a device and writes the profile :app packages.
 include(":baselineprofile")
- 
+

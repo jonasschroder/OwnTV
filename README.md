@@ -208,8 +208,11 @@ https://github.com/ahXN00/OwnTV/releases/latest/download/OwnTV.apk
 > Only if you want to build from source — otherwise just
 > **[install the APK](#-installing-fire-tv--android-tv)**.
 
-Half the app lives in the separate [OwnTV_Core](https://github.com/ahXN00/OwnTV_Core) repository;
-Gradle downloads it from OwnTV's public Maven repository by itself — **no account or token needed**.
+Half the app lives in the separate [OwnTV_Core](https://github.com/ahXN00/OwnTV_Core) repository.
+The current build uses an exact Core source commit because the published 1.0.64 artifacts
+predate APIs this app requires. Run `bash tools/prepare-core.sh` before Gradle sync or building;
+**no account or token is needed**. See the [reproducible build guide](docs/build-baseline.md)
+for prerequisites, tests, the source pin and local Core development.
 
 1. **Get the code** — `git clone https://github.com/ahXN00/OwnTV.git` (or download the ZIP).
 2. **Open it** in [Android Studio](https://developer.android.com/studio) and let Gradle sync.

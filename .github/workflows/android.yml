@@ -17,10 +17,9 @@ on:
 permissions:
   contents: write   # required so tag builds can create a Release
 
-# Core (tv.own.owntv:core, :player-core) and the mpv engine (tv.own.owntv:libmpv) resolve from OwnTV's
-# public Maven repository, https://ahxn00.github.io/OwnTV_Core/maven — no token, so fork pull requests
-# build exactly like the maintainer's. There is no owntv.corePath here: CI deliberately builds against
-# the PINNED artifact, which is what a release actually ships. Local builds use the composite.
+# OwnTV's public Maven repository supplies the mpv engine (tv.own.owntv:libmpv) without a token.
+# Both Core modules currently build from
+# the exact source revision in gradle/owntv-core.commit, matching the default local composite build.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -93,6 +92,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Prepare pinned Core source
+        run: bash tools/prepare-core.sh
+
       - name: Set up JDK 21
         uses: actions/setup-java@v6
         with:
@@ -114,7 +116,7 @@ jobs:
       - name: Unit tests
         run: |
           chmod +x ./gradlew
-          ./gradlew testStandardDebugUnitTest --stacktrace
+          ./gradlew testStandardDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
 
       # abortOnError = true in app/build.gradle.kts, so this fails the job on a lint error.
       - name: Lint
@@ -130,6 +132,9 @@ jobs:
             app/build/reports/tests/**
             app/build/reports/lint-results-*.html
             app/build/reports/lint-results-*.txt
+            .gradle-cache/OwnTV_Core/core/build/reports/tests/**
+            .gradle-cache/OwnTV_Core/player-core/build/reports/tests/**
+          include-hidden-files: true
           if-no-files-found: warn
 
   build:
@@ -145,6 +150,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Prepare pinned Core source
+        run: bash tools/prepare-core.sh
 
       - name: Set up JDK 21
         uses: actions/setup-java@v6

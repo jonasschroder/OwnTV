@@ -144,6 +144,7 @@ fun OwnTVShell(
     pendingDeepLink: LauncherDeepLink?,
     onDeepLinkConsumed: () -> Unit,
     normalAppEntry: Int = 0,
+    onPlaybackResumeAllowed: (Boolean) -> Unit = {},
     isOffline: Boolean = false,
     onExitApp: () -> Unit,
     onSwitchProfile: () -> Unit,
@@ -337,6 +338,12 @@ fun OwnTVShell(
     val streamRegistry = koinInject<tv.own.owntv.core.live.OpenStreamRegistry>()
     var multiview by remember { mutableStateOf<tv.own.owntv.features.multiview.MultiviewState?>(null) }
     var multiviewPickFor by remember { mutableStateOf<Int?>(null) }
+    androidx.compose.runtime.SideEffect {
+        onPlaybackResumeAllowed(playerMode != PlayerMode.NONE || multiview != null)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onPlaybackResumeAllowed(false) }
+    }
     // Publish the active engine to the system (audio focus + MediaSession), and detach when the player
     // is closed — an inactive session must not keep answering the TV's transport keys or the Assistant.
     // During Multiview that is the tile with the sound; the preview engine it used to stay on is stopped.
@@ -766,7 +773,8 @@ fun OwnTVShell(
 
     LaunchedEffect(normalAppEntry) {
         if (normalAppEntry > 0) {
-            if (playerMode != PlayerMode.NONE) exitPlayer()
+            stopForSleep() // includes retained Multiview/mini/audio sessions, not just fullscreen
+            liveVm.clearMultiviewSelection()
             liveVm.homePreview.endPromotion()
             liveVm.stopPreview()
             onSelectSection(MainSection.HOME)

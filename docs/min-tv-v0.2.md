@@ -30,14 +30,16 @@ The review was completed before implementation:
 - `LiveStagePane` renders the existing Live page. Home uses its same
   `ExoPreviewSurface` mechanism directly for a wider featured composition, keeping
   EPG beside the picture. The Home pane uses a TextureView so video clips within
-  its rounded card. Fullscreen uses the existing hardware SurfaceView for quality,
+  its rounded card; DRM channels use the existing Live pane's SurfaceView path.
+  Fullscreen uses the existing hardware SurfaceView for quality,
   HDR and frame-rate handling. Core's identity-checked `detachSurface(oldSurface)`
   prevents a late destruction of the old view detaching the new fullscreen surface.
 - `HomeLivePreviewController` is a focus/lifecycle policy, not another player. It
   waits 800 ms, cancels obsolete delayed work, and stops the prior Core request on
   a different channel before another starts. Refocusing an already playing channel
   reuses it. It starts nothing on initial/restored focus; deliberate D-pad movement
-  within Home arms preview after startup/resume. The existing preference can disable
+  within the favorite row arms preview after startup/resume. Leaving that row
+  cancels/stops preview; EPG polling runs only while the Activity is resumed. The existing preference can disable
   preview entirely using **Preview: on/off** in the Home toolbar (shared with Live TV).
 - The channel name/EPG selection changes immediately on focus. Home calls the shared
   `LiveEpgReader` without Live's 350 ms metadata debounce. Old results are cleared and
@@ -74,7 +76,12 @@ before launching the intent. Fullscreen promotion is exempt from Home disposal s
 its stream survives surface handoff. Back from fullscreen stops the detached stream
 before restoring Home focus; new remote interaction can preview again. This favors
 silence/no hidden connections over keeping an unmuted stream alive after Back.
-Existing fullscreen resume behavior is retained; process recreation starts Home
+Fullscreen/mini/audio/Multiview task return retains the existing resume behavior.
+A cold Activity or a new normal app-icon intent discards old engine snapshots;
+restoration is decided at onResume, after onNewIntent, and allowed only when the
+shell actually retains a player/grid. Normal entry closes a retained Multiview grid
+as well as fullscreen/mini/audio playback before displaying Home. This prevents
+an old stream reconnecting underneath Home. Process recreation starts Home
 without autoplay after the normal profile/onboarding gate.
 
 ## Home and external content
@@ -220,8 +227,8 @@ Recorded cloud results on 9 October 2026:
 | Check | Actual result |
 | --- | --- |
 | ARM standard debug APK | Passed; arm64-v8a + armeabi-v7a; versionName 0.2 |
-| JVM tests | 1,396 passed: app 186 (including 9 Home policy tests), Core 939, player-core 271; no failures/errors/skips |
-| App lint | Passed: 0 errors, 94 existing warnings, 22 hints |
+| JVM tests | 1,400 passed: app 190 (including 13 Home/foreground policy tests), Core 939, player-core 271; no failures/errors/skips |
+| App lint | Passed: 0 errors, 94 warnings, 22 hints |
 | Instrumentation APK | Compiled; 4 routing tests **not executed** without Android hardware/emulator |
 | Manifest/ABI and APK signature verification | Passed; Min TV identity and no Android HOME entry |
 | Source i18n/locale/text-overflow checks | Passed; no hardcoded-literal baseline growth |
@@ -243,7 +250,8 @@ and its backup. Test on Chromecast with Google TV 4K **Android 14**, with Google
 launcher/packages left enabled and unchanged:
 
 1. Open the normal app icon: custom Home follows the existing setup/profile/PIN gate.
-   No preview starts until deliberate D-pad interaction, including with a saved legacy
+   Repeat after backgrounding fullscreen/mini/audio/Multiview: no old stream should
+   reconnect under Home. No preview starts until deliberate D-pad interaction, including with a saved legacy
    last/specific-channel startup preference. Original OwnTV still launches.
 2. Browse actual favorites with D-pad. Names/logos and current/next programmes change
    with focus; unavailable EPG has no invented data. Test empty favorites/profile switch.

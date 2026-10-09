@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.*
@@ -93,6 +94,8 @@ fun MinTvContentHome(
     val previewState by liveVm.previewEngine.state.collectAsStateWithLifecycle()
     val blocked by liveVm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var favoriteRowFocused by remember { mutableStateOf(false) }
+    var remoteNavigationSeen by remember(activeProfileId) { mutableStateOf(false) }
     val pauseOrDispose by rememberUpdatedState(onPauseOrDispose)
 
     // There is no movie/trending hero decoder on this destination.
@@ -105,6 +108,7 @@ fun MinTvContentHome(
         }
     }
     LaunchedEffect(active, activeProfileId) {
+        remoteNavigationSeen = false
         controller.setActive(false)
         controller.setActive(active)
     }
@@ -119,21 +123,24 @@ fun MinTvContentHome(
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(selected?.id, activeProfileId) { controller.focus(selected) }
-    LaunchedEffect(selected?.id, activeProfileId, lifecycleState) {
+    LaunchedEffect(selected?.id, activeProfileId, favoriteRowFocused) {
+        controller.focus(selected.takeIf { favoriteRowFocused })
+    }
+    LaunchedEffect(selected?.id, activeProfileId, lifecycle) {
         guide = null // never label a new channel with the previous one's programme
-        if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
         val channel = selected ?: return@LaunchedEffect
-        while (true) {
-            guide = try {
-                liveVm.homeNowNext(channel)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                null
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                guide = try {
+                    liveVm.homeNowNext(channel)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null
+                }
+                clock = System.currentTimeMillis()
+                delay(30_000)
             }
-            clock = System.currentTimeMillis()
-            delay(30_000)
         }
     }
     DisposableEffect(firstRowFocusRequester, favorites.isEmpty()) {
@@ -169,8 +176,9 @@ fun MinTvContentHome(
         modifier = modifier.background(HomeNavy).onPreviewKeyEvent { event ->
             if (event.type == KeyEventType.KeyDown && event.key in listOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)) {
                 // Re-enable after a failed external launch, but never on automatic focus restoration.
+                remoteNavigationSeen = true
                 controller.setActive(active)
-                controller.onRemoteNavigation()
+                if (favoriteRowFocused) controller.onRemoteNavigation()
             }
             false
         }.onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
@@ -194,7 +202,8 @@ fun MinTvContentHome(
                 Box(Modifier.weight(1.3f).aspectRatio(16f / 9f).clip(RoundedCornerShape(22.mpx)).background(Color.Black), contentAlignment = Alignment.Center) {
                     val hasVideo = active && selected != null && previewState != LivePreviewEngine.State.IDLE && previewState != LivePreviewEngine.State.ERROR
                     if (hasVideo) {
-                        ExoPreviewSurface(liveVm.previewEngine, Modifier.fillMaxSize(), useTextureView = true)
+                        // Protected video needs the same SurfaceView path as the existing Live pane.
+                        ExoPreviewSurface(liveVm.previewEngine, Modifier.fillMaxSize(), useTextureView = selected.drmConfig == null)
                     } else {
                         selected?.displayLogoUrl?.let { logo ->
                             AsyncImage(model = logo, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(150.mpx).padding(12.mpx))
@@ -238,7 +247,10 @@ fun MinTvContentHome(
                 if (favorites.isEmpty()) {
                     Text(stringResource(if (state.isLoading || state.profileId != activeProfileId) R.string.mintv_favorites_loading else R.string.mintv_favorites_empty), style = stageText(19, 400), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 } else {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.focusRestorer().focusGroup()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.onFocusChanged {
+                        favoriteRowFocused = it.hasFocus
+                        if (!it.hasFocus) controller.focus(null)
+                    }.focusRestorer().focusGroup()) {
                         itemsIndexed(favorites, key = { _, channel -> channel.id }) { _, channel ->
                             HomeButton(channel.name, { onPlayChannel(channel, favorites) },
                                 Modifier.width(250.mpx).height(112.mpx)
@@ -246,6 +258,7 @@ fun MinTvContentHome(
                                     .onFocusChanged { if (it.hasFocus) {
                                         selectedId = channel.id
                                         controller.focus(channel)
+                                        if (remoteNavigationSeen) controller.onRemoteNavigation()
                                         liveVm.onChannelFocused(channel)
                                         onChildFocused()
                                     } },

@@ -1,13 +1,16 @@
-# Min TV v0.1
+# Min TV v0.2
 
-This fork builds **Min TV** (`se.jonasschroder.mintv`), an independent Chromecast
-with Google TV prototype with a minimal HOME screen and the existing OwnTV IPTV
-interface. Download its debug APK from the **Min TV prototype** Actions artifact,
-not the upstream OwnTV Release or Downloader code below.
+This fork builds **Min TV** (`se.jonasschroder.mintv`) as a normal Android TV app
+with an IPTV-first Home: real favorites, muted live preview, current/next EPG and
+fullscreen playback through the existing OwnTV player. Google's launcher and
+system packages must stay unchanged.
 
-See [installation, HOME activation and rollback](docs/min-tv-v0.1.md), including
-physical-device checks and debug signing limitations. The upstream project
-description follows for reference.
+See [the v0.2 build, safe update/install and Chromecast test guide](docs/min-tv-v0.2.md).
+Download the test APK from the **Min TV prototype** Actions artifact linked in the
+PR. **Fresh CI debug signing keys generally cannot update an installed v0.1:** read
+the artifact's installation notice and verify/backup existing data first. No public
+Release is published. The upstream description below is reference only; its APK,
+Downloader code and branding are not Min TV downloads.
 
 <p align="center">
   <picture>

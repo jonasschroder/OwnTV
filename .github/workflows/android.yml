@@ -52,16 +52,20 @@ jobs:
           python3 tools/verify-mintv-apk.py --apk "$APK" --aapt2 "$TOOLS/aapt2"
           "$TOOLS/apksigner" verify --print-certs "$APK"
           mkdir -p dist
-          cp "$APK" dist/MinTV-v0.1-arm-debug.apk
+          cp docs/apk-update-notice.txt dist/READ-BEFORE-INSTALL.txt
+          "$TOOLS/apksigner" verify --print-certs "$APK" > dist/SIGNING-CERTIFICATE.txt
+          cp "$APK" dist/MinTV-v0.2-arm-debug.apk
           cd dist
-          sha256sum MinTV-v0.1-arm-debug.apk > SHA256SUMS
+          sha256sum MinTV-v0.2-arm-debug.apk > SHA256SUMS
       - name: Upload installable prototype
         uses: actions/upload-artifact@v7
         with:
-          name: MinTV-v0.1-arm-debug
+          name: MinTV-v0.2-arm-debug
           path: |
-            dist/MinTV-v0.1-arm-debug.apk
+            dist/MinTV-v0.2-arm-debug.apk
             dist/SHA256SUMS
+            dist/READ-BEFORE-INSTALL.txt
+            dist/SIGNING-CERTIFICATE.txt
           if-no-files-found: error
           retention-days: 14
       - name: Upload test and lint reports

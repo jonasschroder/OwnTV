@@ -48,8 +48,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // Independent version sequence for Min TV. CI supplies a monotonically increasing code.
-        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
-        versionName = "0.1"
+        versionCode = (System.getenv("VERSION_CODE") ?: "2").toInt()
+        versionName = "0.2"
 
         // Opt-in local diagnostic APKs keep the rolling playback trace enabled even when they are
         // release-signed (so they can update an installed production build without changing its data).
@@ -129,6 +129,7 @@ android {
             ?: localSigningProps.getProperty(property)
 
     val releaseKeystore = signingValue("KEYSTORE_FILE", "owntv.keystoreFile")
+    val minTvDebugKeystore = signingValue("MINTV_DEBUG_KEYSTORE_FILE", "mintv.debugKeystoreFile")
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
@@ -136,6 +137,14 @@ android {
                 storePassword = signingValue("KEYSTORE_PASSWORD", "owntv.keystorePassword")
                 keyAlias = signingValue("KEY_ALIAS", "owntv.keyAlias")
                 keyPassword = signingValue("KEY_PASSWORD", "owntv.keyPassword")
+            }
+        }
+        if (minTvDebugKeystore != null) {
+            create("minTvDebug") {
+                storeFile = file(minTvDebugKeystore)
+                storePassword = signingValue("MINTV_DEBUG_KEYSTORE_PASSWORD", "mintv.debugKeystorePassword")
+                keyAlias = signingValue("MINTV_DEBUG_KEY_ALIAS", "mintv.debugKeyAlias")
+                keyPassword = signingValue("MINTV_DEBUG_KEY_PASSWORD", "mintv.debugKeyPassword")
             }
         }
     }
@@ -148,6 +157,7 @@ android {
 
     buildTypes {
         debug {
+            if (minTvDebugKeystore != null) signingConfig = signingConfigs.getByName("minTvDebug")
             // Pseudolocales (en-XA / ar-XB) are generated for the debug BuildType, NOT androidResources.
             // They are the Phase 3g QA sweep instrument; localeFilters below would otherwise strip them,
             // so the debug-only qualifiers are added back via the per-variant API in the androidComponents
@@ -433,6 +443,7 @@ dependencies {
 
     // Test
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     // Test-only, never packaged: android.jar's org.json is a stub, and isReturnDefaultValues turns
     // every JSONObject call into a silent null/0. Backup/restore is all JSON, so the unit tests need
     // the real implementation to mean anything.

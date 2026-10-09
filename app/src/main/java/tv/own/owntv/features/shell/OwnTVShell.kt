@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +60,7 @@ import tv.own.owntv.features.update.UpdateDialog
 import tv.own.owntv.features.update.UpdateStatusToast
 import tv.own.owntv.features.downloads.DownloadsScreen
 import tv.own.owntv.features.epg.EpgScreen
-import tv.own.owntv.features.home.HomeScreen
+import tv.own.owntv.features.home.MinTvContentHome
 import tv.own.owntv.features.home.HomeViewModel
 import tv.own.owntv.features.live.LiveScreen
 import tv.own.owntv.features.live.LiveViewModel
@@ -142,6 +143,7 @@ fun OwnTVShell(
     activeProfileId: Long?,
     pendingDeepLink: LauncherDeepLink?,
     onDeepLinkConsumed: () -> Unit,
+    normalAppEntry: Int = 0,
     isOffline: Boolean = false,
     onExitApp: () -> Unit,
     onSwitchProfile: () -> Unit,
@@ -149,6 +151,7 @@ fun OwnTVShell(
 ) {
     val colors = OwnTVTheme.colors
     val noSourceLabel = stringResource(R.string.shell_no_source)
+    val homeChannelUnavailable = stringResource(R.string.mintv_channel_unavailable)
     val subtitleLoadFailed = stringResource(R.string.content_subtitle_load_failed)
     val railSelection = remember { mutableStateMapOf<MainSection, Int>() }
     val selectedRail = railSelection[selectedSection] ?: 0
@@ -162,6 +165,8 @@ fun OwnTVShell(
     val contentFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val contentLtr = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Ltr
     val homeFirstRowFocus = remember { FocusRequester() }
+    val homeStateHolder = rememberSaveableStateHolder()
+    var homeTuneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var focusedLayer by remember { mutableStateOf(ShellLayer.SIDEBAR) }
     var showExit by remember { mutableStateOf(false) }
     var showAvatarPicker by remember { mutableStateOf(false) }
@@ -435,67 +440,9 @@ fun OwnTVShell(
     // Batch 7 — the single most-recent resumable item, surfaced as a shared top-bar "Continue" chip.
     val continueTarget by homeVm.continueTarget.collectAsStateWithLifecycle()
 
-    // Per-profile startup action runs once when the authenticated shell first appears. With one unlocked
-    // profile that is immediately; profile/PIN gates keep the shell out of composition until authorized.
-    val resumeSettings = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
-    val startupChannelUnavailable = androidx.compose.ui.res.stringResource(tv.own.owntv.R.string.settings_startup_channel_unavailable)
-    LaunchedEffect(Unit) {
-        if (playerMode != PlayerMode.NONE) return@LaunchedEffect
-        val pid = resumeSettings.activeProfileId.first()
-        when (resumeSettings.startupMode(pid).first()) {
-            tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL -> {
-                val ch = liveVm.lastWatchedLiveChannel()
-                if (ch != null && playerMode == PlayerMode.NONE) {
-                    zapSource = MainSection.LIVE_TV
-                    // There is no caller-owned browse rail here. Let LiveViewModel build the channel's
-                    // provider context instead of permanently arming a one-item list that disables CH+/CH-.
-                    liveVm.watchFullscreen(ch, emptyList())
-                    playerMode = PlayerMode.FULLSCREEN
-                }
-            }
-            // Open straight to Live TV on the Favorites folder, with focus landing inside the channel list
-            // (restoreFocus drives LiveScreen to focus the first/last channel, not the nav panel).
-            tv.own.owntv.core.settings.StartupMode.FAVORITES -> {
-                onSelectSection(MainSection.LIVE_TV)
-                liveVm.select(tv.own.owntv.core.live.LiveKey.Favorites)
-                restoreFocus = true
-            }
-            tv.own.owntv.core.settings.StartupMode.SPECIFIC_CHANNEL -> {
-                val ref = resumeSettings.startupChannel(pid).first()
-                var launch: LauncherLaunch? = null
-                if (ref != null) {
-                    if (!ref.remoteId.isNullOrBlank()) {
-                        launch = launcherIntegrationRepository.resolveLaunch(
-                            pid,
-                            LauncherDeepLink.Live(sourceId = ref.sourceId, remoteId = ref.remoteId),
-                        )
-                    }
-                    if (launch == null) {
-                        launch = launcherIntegrationRepository.resolveLaunch(
-                            pid,
-                            LauncherDeepLink.Live(sourceId = ref.sourceId, name = ref.name),
-                        )
-                    }
-                    if (launch == null && ref.itemId > 0L) {
-                        launch = launcherIntegrationRepository.resolveLaunch(
-                            pid,
-                            LauncherDeepLink.Live(sourceId = ref.sourceId, itemId = ref.itemId),
-                        )
-                    }
-                }
-                val channel = (launch as? LauncherLaunch.Live)?.channel
-                if (channel != null && liveVm.isVisibleToActiveProfile(channel) && playerMode == PlayerMode.NONE) {
-                    zapSource = MainSection.LIVE_TV
-                    liveVm.watchFullscreen(channel, emptyList())
-                    playerMode = PlayerMode.FULLSCREEN
-                } else {
-                    onSelectSection(MainSection.HOME)
-                    localSubToast.show(startupChannelUnavailable)
-                }
-            }
-            tv.own.owntv.core.settings.StartupMode.HOME -> Unit
-        }
-    }
+    // Min TV opens Home without autoplay. Keep stored legacy startup preferences intact,
+    // but do not execute LAST_CHANNEL/SPECIFIC_CHANNEL/FAVORITES actions on app launch.
+    // Deliberate Continue, channel picks and explicit playback links retain their normal paths.
 
     // Movies/Series/Live load on first open via their reactive Paging flows — their indexed first page is
     // cheap, so they need NO preloading (a Live-TV-only user pays nothing for them). The TV Guide is the ONE
@@ -550,6 +497,7 @@ fun OwnTVShell(
         liveVm.onFullscreenExited() // no longer full-screen on ExoPlayer → let the preview re-take the engine
         player.stop()
         subtitleController.clear() // leaving the player drops the OpenSubtitles item context
+        if (selectedSection == MainSection.HOME) liveVm.homePreview.endPromotion()
         if (selectedSection != MainSection.LIVE_TV) liveVm.clearLiveOnExo()
         restoreFocus = true
         runCatching { sidebarFocus.requestFocus() }
@@ -816,12 +764,22 @@ fun OwnTVShell(
         }
     }
 
+    LaunchedEffect(normalAppEntry) {
+        if (normalAppEntry > 0) {
+            if (playerMode != PlayerMode.NONE) exitPlayer()
+            liveVm.homePreview.endPromotion()
+            liveVm.stopPreview()
+            onSelectSection(MainSection.HOME)
+            restoreFocus = true
+        }
+    }
+
     // Stop a leftover live preview when you leave the Live section or the Guide, which previews through it
     // too (but never while fullscreen/mini plays).
     // The preview runs on the ExoPlayer live engine, not mpv: stopping only mpv here (as when the preview
     // was mpv) left it decoding and holding a provider connection after a shortcut or deep link out.
     LaunchedEffect(selectedSection, playerMode) {
-        if (selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopPreview()
+        if (selectedSection != MainSection.HOME && selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopPreview()
         if (selectedSection != MainSection.HOME || playerMode != PlayerMode.NONE) homeVm.stopPreview()
     }
 
@@ -1160,51 +1118,44 @@ fun OwnTVShell(
                                 .focusGroup(),
                         )
 
-                        selectedSection == MainSection.HOME -> HomeScreen(
+                        selectedSection == MainSection.HOME -> homeStateHolder.SaveableStateProvider(MainSection.HOME) { MinTvContentHome(
                             vm = homeVm,
-                            // Skip the fullscreen player when the global external-player toggle is on
-                            // (mounting it spins up mpv even though playback went to the external app).
-                            onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
-                            onPlayEpisode = { seriesId, epId, pos -> scope.launch { if (seriesVm.playFromHomeAsync(seriesId, epId, pos) && !seriesVm.externalPlayerOn.value) openFullscreen(MainSection.SERIES) } },
-                            onPlayChannel = { id, zap -> scope.launch { if (liveVm.ensurePlayingByIdAsync(id, zap)) openFullscreen(MainSection.LIVE_TV) } },
-                            onActivateTrending = { selected, onUnavailable ->
-                                scope.launch {
-                                    when (val current = homeVm.revalidateTrendingItem(selected)) {
-                                        is TrendingHomeItem.Movie -> {
-                                            val played = movieVm.playByIdAsync(current.movie.id)
-                                            if (!played) onUnavailable()
-                                            else if (!movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES)
+                            liveVm = liveVm,
+                            activeProfileId = activeProfileId,
+                            previewEnabled = playerMode == PlayerMode.NONE,
+                            onPlayChannel = { channel, favorites ->
+                                homeTuneJob?.cancel()
+                                liveVm.homePreview.beginPromotion()
+                                homeTuneJob = scope.launch {
+                                    when (liveVm.playHomeChannel(channel.id, favorites)) {
+                                        LiveViewModel.HomePlayback.IN_APP -> openFullscreen(MainSection.LIVE_TV)
+                                        LiveViewModel.HomePlayback.EXTERNAL -> liveVm.homePreview.endPromotion()
+                                        LiveViewModel.HomePlayback.UNAVAILABLE -> {
+                                            liveVm.homePreview.endPromotion()
+                                            localSubToast.show(homeChannelUnavailable)
                                         }
-                                        is TrendingHomeItem.Series -> {
-                                            seriesVm.openSeries(current.series)
-                                            restoreFocus = true
-                                            onSelectSection(MainSection.SERIES)
-                                        }
-                                        null -> onUnavailable()
                                     }
                                 }
                             },
-                            onOpenTrendingSearch = { query ->
-                                searchVm.setQuery(query)
-                                trendingSearchActive = true
-                                restoreTrendingSearchFocus = false
-                                onSelectSection(MainSection.SEARCH)
+                            onPauseOrDispose = {
+                                if (playerMode == PlayerMode.NONE) {
+                                    homeTuneJob?.cancel()
+                                    liveVm.homePreview.cancelPendingPromotion()
+                                }
                             },
+                            onLiveTv = { onSelectSection(MainSection.LIVE_TV) },
+                            onGuide = { onSelectSection(MainSection.EPG) },
+                            // The existing category browser/guide is the real sports navigation;
+                            // no invented sports schedule or provider-specific category name.
+                            onSport = { onSelectSection(MainSection.LIVE_TV) },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             restoreFocus = restoreFocus,
-                            restoreTrendingSearchFocus = restoreTrendingSearchFocus,
-                            onRestored = {
-                                restoreFocus = false
-                                restoreTrendingSearchFocus = false
-                            },
-                            previewEnabled = playerMode == PlayerMode.NONE,
+                            onRestored = { restoreFocus = false },
                             firstRowFocusRequester = homeFirstRowFocus,
-                            onContentScrolled = { contentScrolled = it },
-                            // Beside the resting capsule; a docked rail already reserves its own width.
                             onEntryHook = { homeEntry = it },
                             contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED) 64.mpx else 150.mpx,
                             modifier = Modifier.fillMaxSize(),
-                        )
+                        ) }
 
                         selectedSection == MainSection.SEARCH -> SearchScreen(
                             vm = searchVm,

@@ -35,6 +35,18 @@
         android:name="android.software.leanback"
         android:required="false" />
 
+    <!-- Android 11+ package visibility for explicit external TV shortcuts. -->
+    <queries>
+        <package android:name="org.smarttube.stable" />
+        <package android:name="org.smarttube.beta" />
+        <package android:name="app.smarttube.fdroid" />
+        <package android:name="com.teamsmart.videomanager.tv" />
+        <package android:name="com.liskovsoft.smarttubetv.beta" />
+        <package android:name="com.s0und.s0undtv" />
+        <package android:name="se.svt.android.svtplay" />
+        <package android:name="com.android.vending" />
+    </queries>
+
     <application
         android:name=".OwnTVApp"
         android:allowBackup="false"
@@ -72,20 +84,6 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
-
-        <!-- HOME remains enabled even when the IPTV app changes its launcher icon. -->
-        <activity
-            android:name="tv.own.owntv.home.MinTvHomeActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:taskAffinity="${applicationId}.home"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
 
         <!-- One launcher activity per icon colour (core's AppIcon); AppIconSwitcher keeps exactly one
              enabled. MainActivity is the default (Eggshell) and keeps its name, so an icon placed before this change still

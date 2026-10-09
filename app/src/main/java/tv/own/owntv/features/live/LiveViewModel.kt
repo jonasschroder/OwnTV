@@ -960,6 +960,45 @@ class LiveViewModel(
         live.preview(channel, muted = !livePreviewAudio.value)
     }
 
+    private var homeOwnsPreviewAudio = false
+
+    /** Home shares the Live engine/controller; it never honors the browse-pane audio toggle. */
+    val homePreview = tv.own.owntv.features.home.HomeLivePreviewController(
+        scope = viewModelScope,
+        key = { channel: ChannelEntity -> channel.id },
+        play = { channel ->
+            homeOwnsPreviewAudio = true
+            live.preview(channel, muted = true)
+        },
+        stop = {
+            homeOwnsPreviewAudio = false
+            live.stop()
+        },
+    )
+
+    /** No focus debounce for metadata; the caller cancels and clears the previous channel's answer. */
+    suspend fun homeNowNext(channel: ChannelEntity): EpgNowNext? {
+        val guide = epgReader.nowNext(channel, custom.value, epgOffset.value)
+        if (guide?.now?.stopMs?.let { it <= System.currentTimeMillis() } == true) {
+            epgReader.invalidate(channel.id)
+            return epgReader.nowNext(channel, custom.value, epgOffset.value)
+        }
+        return guide
+    }
+
+    enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
+
+    suspend fun playHomeChannel(channelId: Long, favorites: List<ChannelEntity>): HomePlayback {
+        val channel = channelDao.getById(channelId) ?: return HomePlayback.UNAVAILABLE
+        if (!isVisibleToActiveProfile(channel)) return HomePlayback.UNAVAILABLE
+        val pid = currentProfileId() ?: return HomePlayback.UNAVAILABLE
+        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return HomePlayback.UNAVAILABLE
+        homeOwnsPreviewAudio = false
+        if (!ensurePlayingByIdAsync(channelId, favorites)) return HomePlayback.UNAVAILABLE
+        // Protected channels stay in-app even with the global external-player preference enabled.
+        return if (externalPlayerOn.value && channel.drmConfig == null) HomePlayback.EXTERNAL else HomePlayback.IN_APP
+    }
+
     // --- Multiview: channels kept from the browse screen ------------------------------------------
     // The plan's second entry point: pick two to four channels from the Live list, then press play and
     // the grid opens already filled. Held here rather than in the shell because the context menu that
@@ -1113,7 +1152,7 @@ class LiveViewModel(
     init {
         viewModelScope.launch {
             livePreviewAudio.collect { on ->
-                if (!liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
+                if (!homeOwnsPreviewAudio && !liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
             }
         }
         viewModelScope.launch { player.archiveEnded.collect { continueAfterCatchup() } }

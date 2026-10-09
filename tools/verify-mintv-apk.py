@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the packaged identity/HOME contract without claiming device behavior."""
+"""Validate the packaged identity/normal-app contract without claiming device behavior."""
 import argparse
 import pathlib
 import subprocess
@@ -13,7 +13,6 @@ args = parser.parse_args()
 root = ET.parse(args.manifest).getroot()
 ns = "{http://schemas.android.com/apk/res/android}"
 package = "se.jonasschroder.mintv"
-home_class = "tv.own.owntv.home.MinTvHomeActivity"
 assert root.get("package") == package
 assert root.get(ns + "sharedUserId") is None
 app = root.find("application")
@@ -24,20 +23,8 @@ def categories(activity):
     return {c.get(ns + "name") for f in activity.findall("intent-filter") for c in f.findall("category")}
 
 homes = [a for a in activities if "android.intent.category.HOME" in categories(a)]
-assert len(homes) == 1
-home = homes[0]
-assert home.get(ns + "name") == home_class
-assert home.get(ns + "exported") == "true"
-assert home.get(ns + "enabled", "true") == "true"
-assert home.get(ns + "launchMode") == "singleTask"
-assert home.get(ns + "taskAffinity") == package + ".home"
-assert "android.intent.category.LEANBACK_LAUNCHER" not in categories(home)
-assert any(
-    {"android.intent.category.HOME", "android.intent.category.DEFAULT"}
-    <= {c.get(ns + "name") for c in f.findall("category")}
-    and any(a.get(ns + "name") == "android.intent.action.MAIN" for a in f.findall("action"))
-    for f in home.findall("intent-filter")
-)
+assert not homes, "Min TV v0.2 must never register as Android HOME"
+assert all(a.get(ns + "name") != "tv.own.owntv.home.MinTvHomeActivity" for a in activities)
 iptv = [a for a in activities if "android.intent.category.LEANBACK_LAUNCHER" in categories(a)]
 assert len(iptv) == 9, "Keep all supported AppIconSwitcher activity names"
 assert sum(a.get(ns + "enabled", "true") == "true" for a in iptv) == 1
@@ -55,4 +42,4 @@ assert "package: name='" + package + "'" in badging
 assert "application-label:'Min TV'" in badging
 assert "'arm64-v8a'" in badging and "'armeabi-v7a'" in badging
 assert pathlib.Path(args.apk).stat().st_size > 0
-print("PASS: Min TV identity, isolated providers/permissions, stable HOME, IPTV icon entries and ARM APK")
+print("PASS: Min TV identity, isolated providers/permissions, no Android HOME registration, IPTV icon entries and ARM APK")

@@ -103,6 +103,7 @@ open class MainActivity : ComponentActivity() {
     // The sole locale authority (SharedPreferences-backed; see docs/internationalization.md 0b).
     private val localeStore: tv.own.owntv.core.i18n.LocaleStore by inject()
     private var pendingDeepLink by mutableStateOf<LauncherDeepLink?>(null)
+    private var normalAppEntry by mutableStateOf(0)
 
     /**
      * Wrap the Activity base with the selected locale so its own `Resources` resolve correctly —
@@ -118,6 +119,7 @@ open class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN) normalAppEntry++
         pendingDeepLink = tv.own.owntv.home.MinTvIntents.parseDeepLink(intent.data)
         Log.d(TAG, "onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
     }
@@ -456,6 +458,7 @@ open class MainActivity : ComponentActivity() {
                                 weatherFahrenheit = weatherFahrenheit,
                                 activeProfileId = activeProfileId,
                                 pendingDeepLink = pendingDeepLink,
+                                normalAppEntry = normalAppEntry,
                                 onDeepLinkConsumed = { pendingDeepLink = null },
                                 isOffline = !isOnline,
                                 onExitApp = { finish() },

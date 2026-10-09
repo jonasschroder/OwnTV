@@ -1,4 +1,6 @@
-# Min TV v0.1 — Chromecast prototype
+# Min TV v0.1 — historical prototype
+
+**Superseded by [v0.2](min-tv-v0.2.md), which is a normal app and removes Android HOME registration.**
 
 Min TV is an independent debug app: **Min TV**, package **`se.jonasschroder.mintv`**,
 version **0.1**. It installs beside OwnTV (`tv.own.owntv`) with separate storage,
@@ -81,126 +83,16 @@ adb shell am start -n se.jonasschroder.mintv/tv.own.owntv.home.MinTvHomeActivity
 
 The second command previews HOME without changing the default launcher.
 
-## Choosing HOME on Chromecast with Google TV 4K
+## Historical launcher experiment withdrawn
 
-**No physical Chromecast was attached during development.** Android supports HOME
-resolution and a HOME role, but Google TV's settings/firmware determine whether a
-chooser is exposed and whether the choice persists. A source-code declaration
-alone cannot prove that this Chromecast will let you select Min TV directly.
-First try pressing Home after installation: if a chooser offers Min TV, select it
-and **Always**. If Settings offers **Default apps → Home app**, that is another
-manual route. Do not assume that either UI exists on Google TV.
+v0.1 registered a separate Android HOME entry. v0.2 removes it and runs entirely
+as a normal Google TV app. After a serious device boot problem, the previous
+activation/disabling instructions have been withdrawn. Do not disable, override
+or replace Google's launcher or any Google system package.
 
-For firmware without a chooser, use ADB from a trusted computer. On Chromecast,
-enable developer options by repeatedly selecting the Android TV OS build entry
-under **Settings → System → About**, then enable the debugging option offered by
-your firmware. Use network/wireless debugging only on a trusted LAN; authorize
-the computer's prompt on the TV. If pairing is required, use the pairing endpoint
-shown by the TV, then its separate connection endpoint:
-
-```bash
-adb pair TV_IP:PAIRING_PORT
-adb connect TV_IP:CONNECTION_PORT
-adb devices
-```
-
-On firmware exposing legacy network debugging, connection may instead be
-`adb connect TV_IP:5555`; use the endpoint the device actually offers, not an
-assumed port. Keep this connection available until rollback is tested.
-
-Record the current HOME component and inspect packages **before changing anything**:
-
-```bash
-adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-adb shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-adb shell pm list packages com.google.android.apps.tv
-adb shell pm list packages com.google.android.tungsten.setupwraith
-```
-
-Save the original component/package outside the TV. On Chromecast with Google TV,
-the historically documented stock package is **`com.google.android.apps.tv.launcherx`**
-(not an assumed `...launcher` package). Check your device's actual result.
-
-Try the non-disabling method first, entering the commands yourself:
-
-```bash
-adb shell cmd package set-home-activity --user 0 se.jonasschroder.mintv/tv.own.owntv.home.MinTvHomeActivity
-adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
-```
-
-AOSP's Android 12 and current shell implementations assign the HOME role and report
-`Success` or `Error: Failed to set default home.` This operation may be rejected or
-reverted by Google TV firmware. Confirm Min TV opens with the physical Home button
-and after a reboot. Package resolution is a useful check, not proof of button behavior.
-
-### Optional disabling experiment — explicit manual action only
-
-Disabling Google TV is **not a requirement imposed by Min TV**, and the app/workflow
-never runs system-modification commands. Historical Chromecast instructions in
-[FLauncher's documentation](https://gitlab.com/flauncher/flauncher/-/blob/master/README.md)
-disable both `launcherx` and `setupwraith`; the latter was documented as re-enabling
-the stock launcher. Those results are from another launcher on older firmware.
-They do not prove this is necessary or safe on your current Chromecast.
-
-Only if the non-disabling route fails, you explicitly choose to test this fallback,
-both packages match the discovery output, and you have saved working rollback
-commands/ADB access, you may manually enter:
-
-```bash
-adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
-adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
-adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
-```
-
-Select Min TV if a chooser appears. Do not disable/uninstall other Google packages.
-Do not uninstall the stock launcher or use an automated launcher-disabling script.
-`setupwraith` is a setup/recovery component; leave it enabled unless you deliberately
-choose this documented experiment. Firmware updates may change these behaviors.
-
-### Effects that need physical testing
-
-- The non-disabling role method leaves Google packages enabled. Replacing HOME
-  changes which screen the Home button opens; Min TV does not replace Cast services,
-  Google Home integration or the Chromecast remote service.
-- Disabling the stock launcher removes its discovery/recommendations UI.
-  FLauncher reports the **YouTube remote button stops working** in its disabling
-  scenario. Netflix, Assistant, power/input/volume, voice search and Settings
-  behavior on the current firmware must also be checked; do not promise they work.
-- Casting normally involves other system components, but keeping those components
-  installed does not prove casting/wake/return-to-home works. Test casting from a
-  phone, stopping a cast, wake from standby and Google Home's device/remote controls.
-- Pairing/setup, account features, screensaver, reboot and firmware updates may
-  involve Google TV components. Test recovery before relying on this as daily HOME.
-
-## Restore Google TV
-
-These are manual recovery commands. For a device confirmed to have the Chromecast
-packages above, re-enable **both** before restoring HOME:
-
-```bash
-adb shell pm enable --user 0 com.google.android.apps.tv.launcherx
-adb shell pm enable --user 0 com.google.android.tungsten.setupwraith
-adb shell cmd package set-home-activity --user 0 com.google.android.apps.tv.launcherx
-adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
-adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
-```
-
-The shell accepts a package as well as a full component. If discovery showed a
-different stock launcher, use the exact saved package/component instead. Do not
-guess names. Verify the physical Home button opens Google TV; reboot if necessary.
-After the original HOME works, uninstall Min TV via Settings or optionally:
-
-```bash
-adb uninstall se.jonasschroder.mintv
-```
-
-Uninstalling deletes **Min TV's** profiles and credentials; export a backup first
-if you want them. Original OwnTV's storage is separate. Restore Google TV before
-uninstalling a selected HOME app. Turn debugging off and revoke the computer's
-authorization after testing. If ADB access is lost, try physical remote Settings/
-the Min TV Settings button to recover; a factory reset is the last resort and
-erases device data, so do not begin disabling experiments without recovery access.
+Use the [v0.2 guide](min-tv-v0.2.md) for the current build, safe updates and USB ADB
+diagnostics. No launcher activation is needed. Historical v0.1 cloud results below
+do not establish physical-device compatibility or safety of a HOME replacement.
 
 ## Build, checks and signing
 
@@ -223,7 +115,7 @@ Debug APKs are signed by a development key and are debuggable. Fresh CI runners
 generate different debug keys, so an APK from another run/computer may fail an
 in-place update with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. A higher version code
 does not fix a certificate mismatch. Export Min TV data before uninstall/reinstall;
-if HOME is active, restore Google TV first. CI sets versionCode from its run number;
+do not proceed until a verified backup and a deliberate migration decision exist. CI sets versionCode from its run number;
 local builds default to 1. Debug builds are for trusted testing, not production.
 
 For stable updates, create a **unique Min TV signing key** offline, back it up

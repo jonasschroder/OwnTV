@@ -3,7 +3,32 @@
     <string name="app_name" translatable="false">Min TV</string>
     <string name="mintv_home_live">Live TV</string>
     <string name="mintv_home_settings">Android TV settings</string>
-    <string name="mintv_home_unavailable">Unable to open this screen. You can still use the remote Home button.</string>
+    <string name="mintv_guide">TV Guide</string>
+    <string name="mintv_sport">Sport</string>
+    <string name="mintv_preview_on">Preview: on</string>
+    <string name="mintv_preview_off">Preview: off</string>
+    <string name="mintv_preview_disabled">Live preview is disabled. Press OK on a favorite for fullscreen.</string>
+    <string name="mintv_preview_hint">Browse favorites with the remote to start a muted preview.</string>
+    <string name="mintv_preview_loading">Loading muted live preview…</string>
+    <string name="mintv_preview_unsupported">Preview unavailable. Press OK to try fullscreen playback.</string>
+    <string name="mintv_favorites_title">Your favorite channels</string>
+    <string name="mintv_favorites_empty">Add channels to Favorites in Live TV to browse them here.</string>
+    <string name="mintv_favorites_loading">Loading your favorites…</string>
+    <string name="mintv_channel_unavailable">This channel is no longer available for the active profile. Refresh your favorites.</string>
+    <string name="mintv_epg_unavailable">Programme information unavailable</string>
+    <string name="mintv_next">Next: %1$s</string>
+    <string name="mintv_ok_hint">Press OK on a favorite for fullscreen with sound.</string>
+    <string name="mintv_apps_title">More to watch</string>
+    <string name="mintv_twitch">Twitch · ohnePixel</string>
+    <string name="mintv_smarttube">YouTube · SmartTube</string>
+    <string name="mintv_svt">SVT Play</string>
+    <string name="mintv_feeds_deferred">App shortcuts only. Twitch live status and YouTube video feeds are not configured.</string>
+    <string name="mintv_install_soundtv">Install or update S0undTV from Google Play to open ohnePixel. Live status is unavailable in Min TV.</string>
+    <string name="mintv_install_smarttube">Install SmartTube with Downloader from the official smarttubeapp.github.io website, then return here. Recent video feeds are not configured.</string>
+    <string name="mintv_install_svt">Install the official SVT Play app from Google Play, then return here.</string>
+    <string name="mintv_external_failed">The app or store could not be opened. Install or update it manually, then try again.</string>
+    <string name="mintv_open_store">Open Google Play</string>
+    <string name="mintv_close">Close</string>
     <style name="Theme.MinTV.Starting" parent="Theme.OwnTV.Starting">
         <item name="windowSplashScreenAnimatedIcon">@mipmap/mintv_icon</item>
     </style>

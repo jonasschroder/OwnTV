@@ -344,6 +344,7 @@ class ShellViewModel(
     /** Which browse sections currently show as icons in the rail (v4.3.0 — Nav menu customization).
      *  The rule itself lives in core's [NavVisibility], shared with the mobile app's bottom bar. */
     val visibleSections: StateFlow<Set<MainSection>> = navVisibility.visibleSections()
+        .map { it + MainSection.HOME } // Min TV's normal app entry must always have its Home destination.
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainSection.allBrowse)
 
     init {

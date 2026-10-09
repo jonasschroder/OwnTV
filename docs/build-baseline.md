@@ -1,7 +1,7 @@
 # Reproducible debug build
 
-The Min TV prototype keeps this Core baseline. Its independent app identity and
-HOME/install workflow are documented in [Min TV v0.1](min-tv-v0.1.md).
+The Min TV prototype keeps this Core baseline. Its app identity, normal-app Home
+and safe installation workflow are documented in [Min TV v0.2](min-tv-v0.2.md).
 
 The app uses APIs and resources introduced after the published OwnTV Core 1.0.64
 artifacts. The default build therefore substitutes **both** `core` and `player-core`

@@ -38,13 +38,13 @@
     <application
         android:name=".OwnTVApp"
         android:allowBackup="false"
-        android:banner="@drawable/owntv_banner_eggshell"
+        android:banner="@drawable/mintv_banner"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/owntv_icon_eggshell"
+        android:icon="@mipmap/mintv_icon"
         android:label="@string/app_name"
         android:requestLegacyExternalStorage="true"
-        android:roundIcon="@mipmap/owntv_icon_eggshell"
+        android:roundIcon="@mipmap/mintv_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.OwnTV"
         android:usesCleartextTraffic="true"
@@ -73,20 +73,34 @@
                 tools:node="remove" />
         </provider>
 
+        <!-- HOME remains enabled even when the IPTV app changes its launcher icon. -->
+        <activity
+            android:name="tv.own.owntv.home.MinTvHomeActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.home"
+            android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- One launcher activity per icon colour (core's AppIcon); AppIconSwitcher keeps exactly one
              enabled. MainActivity is the default (Eggshell) and keeps its name, so an icon placed before this change still
              opens the app. Each carries its own icon, banner and launch-screen theme, and ALL intent
-             filters: a disabled activity resolves nothing, so the owntv:// links always reach the enabled
+             filters: a disabled activity resolves nothing, so the mintv:// links always reach the enabled
              one. LEANBACK_LAUNCHER shows it on TV launchers; LAUNCHER on phone/tablet/box home screens. -->
         <activity
             android:name=".MainActivityPetrol"
-            android:banner="@drawable/owntv_banner_petrol"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_petrol"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_petrol"
-            android:theme="@style/Theme.OwnTV.Starting.Petrol"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -97,24 +111,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivitySunflower"
-            android:banner="@drawable/owntv_banner_sunflower"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_sunflower"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_sunflower"
-            android:theme="@style/Theme.OwnTV.Starting.Sunflower"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -125,24 +136,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivityCobalt"
-            android:banner="@drawable/owntv_banner_cobalt"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_cobalt"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_cobalt"
-            android:theme="@style/Theme.OwnTV.Starting.Cobalt"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -153,24 +161,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivityTomato"
-            android:banner="@drawable/owntv_banner_tomato"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_tomato"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_tomato"
-            android:theme="@style/Theme.OwnTV.Starting.Tomato"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -181,24 +186,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivityBoard"
-            android:banner="@drawable/owntv_banner_board"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_board"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_board"
-            android:theme="@style/Theme.OwnTV.Starting.Board"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -209,24 +211,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivity"
-            android:banner="@drawable/owntv_banner_eggshell"
+            android:banner="@drawable/mintv_banner"
             android:enabled="true"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_eggshell"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_eggshell"
-            android:theme="@style/Theme.OwnTV.Starting.Eggshell"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -237,24 +236,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivityOlive"
-            android:banner="@drawable/owntv_banner_olive"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_olive"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_olive"
-            android:theme="@style/Theme.OwnTV.Starting.Olive"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -265,24 +261,21 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".MainActivityOliveCream"
-            android:banner="@drawable/owntv_banner_olive_cream"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_olive_cream"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_olive_cream"
-            android:theme="@style/Theme.OwnTV.Starting.OliveCream"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -293,25 +286,22 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 
 
         <activity
             android:name=".MainActivityPixel"
-            android:banner="@drawable/owntv_banner_pixel"
+            android:banner="@drawable/mintv_banner"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/owntv_icon_pixel"
+            android:icon="@mipmap/mintv_icon"
             android:launchMode="singleTop"
-            android:roundIcon="@mipmap/owntv_icon_pixel"
-            android:theme="@style/Theme.OwnTV.Starting.Pixel"
+            android:roundIcon="@mipmap/mintv_icon"
+            android:theme="@style/Theme.MinTV.Starting"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -322,12 +312,9 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="play"
-                    android:scheme="owntv" />
-                <data
-                    android:host="open"
-                    android:scheme="owntv" />
+                <data android:scheme="mintv" />
+                <data android:host="play" />
+                <data android:host="open" />
             </intent-filter>
         </activity>
 

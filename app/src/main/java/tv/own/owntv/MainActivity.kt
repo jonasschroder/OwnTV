@@ -118,7 +118,7 @@ open class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        pendingDeepLink = LauncherDeepLink.parse(intent.data)
+        pendingDeepLink = tv.own.owntv.home.MinTvIntents.parseDeepLink(intent.data)
         Log.d(TAG, "onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
     }
 
@@ -177,7 +177,7 @@ open class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
         splash.setKeepOnScreenCondition { !contentReady && SystemClock.uptimeMillis() < splashDeadline }
-        pendingDeepLink = LauncherDeepLink.parse(intent.data)
+        pendingDeepLink = tv.own.owntv.home.MinTvIntents.parseDeepLink(intent.data)
         Log.d(TAG, "onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
         val dbError = probeDatabase()
         if (dbError != null) {

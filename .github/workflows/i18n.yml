@@ -107,7 +107,9 @@ jobs:
           # action still asks for it by default, which fails the whole setup step.
           packages: 'platform-tools'
       - name: Assemble standard debug and both unsigned release identities
-        run: ./gradlew :app:assembleStandardDebug :app:assembleStandardRelease :app:assembleQaRelease :app:lintStandardRelease :app:lintQaRelease --max-workers=4 --console=plain
+        run: |
+          MINTV_VERSION_NAME=0.2.0 VERSION_CODE=1000001 ./gradlew :app:assembleStandardDebug :app:assembleStandardRelease :app:lintStandardRelease --max-workers=4 --console=plain
+          MINTV_VERSION_NAME=0.2.0-beta.1 VERSION_CODE=1000001 ./gradlew :app:assembleQaRelease :app:lintQaRelease --max-workers=4 --console=plain
       - name: Verify pseudolocale packaging
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
@@ -119,3 +121,5 @@ jobs:
           QA=app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk
           python3 tools/i18n/check_pseudo_locales.py --apk "$QA" --mode release
           python3 tools/verify-mintv-apk.py --qa --apk "$QA" --aapt2 "$ANDROID_HOME/build-tools/37.0.0/aapt2" --manifest app/build/intermediates/packaged_manifests/qaRelease/processQaReleaseManifestForPackage/AndroidManifest.xml --peer-manifest app/build/intermediates/packaged_manifests/standardRelease/processStandardReleaseManifestForPackage/AndroidManifest.xml
+      - name: Native signing negative/positive checks (disposable keys, no artifacts or secrets)
+        run: python3 tools/signing/test_signer.py --qa app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk --stable app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk --tools "$ANDROID_HOME/build-tools/37.0.0"

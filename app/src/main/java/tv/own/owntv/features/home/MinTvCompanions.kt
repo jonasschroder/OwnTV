@@ -42,6 +42,7 @@ import tv.own.owntv.ui.theme.mpx
 internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewModel, profileId: Long?,
     favorites: List<ChannelEntity>, onPlay: (ChannelEntity, List<ChannelEntity>) -> Unit, contentStart: Dp,
     onSources: () -> Unit,
+    homeCardModifier: Modifier = Modifier,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
@@ -260,7 +261,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     LaunchedEffect(restoreTarget, screen, selectedId, picker) {
         val target = restoreTarget ?: return@LaunchedEffect
-        withFrameNanos { }; runCatching { target.requestFocus() }.onFailure { runCatching { backFocus.requestFocus() } }
+        withFrameNanos { }; withFrameNanos { }; runCatching { target.requestFocus() }.onFailure { runCatching { backFocus.requestFocus() } }
         restoreTarget = null
     }
     LaunchedEffect(screen) {
@@ -333,33 +334,19 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
 
     Box(Modifier.fillMaxSize()) {
         homeContent({
-            if (selectedTeams.prominent) Column(verticalArrangement = Arrangement.spacedBy(10.mpx)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TvText(stringResource(R.string.mintv_my_sport), size = 26, color = MinTvTeal, bold = true)
-                    if (selectedTeams.teamIds.isNotEmpty()) HomeButton(stringResource(R.string.mintv_matchcenter), ::open, Modifier.focusRequester(entryFocus))
-                    else HomeButton(stringResource(R.string.mintv_choose_teams), { teamsOpen = true }, Modifier.focusRequester(entryFocus))
-                }
-                if (expanded) {
+            HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {
+                if (selectedTeams.teamIds.isEmpty()) teamsOpen = true else open()
+            }, Modifier.fillMaxWidth().then(homeCardModifier).focusRequester(entryFocus)) {
+                if (!selectedTeams.prominent) { /* Keep the entry reachable; hide prominent fixture information. */ }
+                else if (expanded) {
                     TvText(stringResource(R.string.mintv_my_matches_today), size = 22, bold = true)
                     myToday.take(3).forEach { game ->
-                        val key = fixtureKey(game.broadcastFixture())
-                        val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
-                        val channel = if (game == gameToMatch) directChannel else directCards[key].takeIf { resolvedCards[key]?.let { now < it.first } == true }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                            TvCard({ screen = true; choose(game) }, Modifier.weight(1f)) {
-                                TvText(pairLabel(game), size = 26, bold = true)
-                                TvText(fixtureWhen(game, now), color = MinTvMuted, size = 22)
-                                assignment?.channels?.filter { it.linear }?.joinToString { it.name }?.let { TvText(it, color = MinTvTeal, size = 22) }
-                            }
-                            HomeButton(stringResource(if (channel != null) R.string.mintv_watch_match else R.string.mintv_shl_choose), {
-                                if (channel != null) play(channel, listOf(channel))
-                                else { screen = true; choose(game); picker = true; restoreTarget = pickerFocus }
-                            })
-                        }
+                        TvText(pairLabel(game), size = 24, bold = true)
+                        TvText(fixtureWhen(game, now), color = MinTvMuted, size = 22)
                     }
-                } else if (next != null) TvCard({ screen = true; choose(next) }, Modifier.fillMaxWidth()) {
+                } else if (next != null) {
                     TvText(stringResource(R.string.mintv_shl_home_next, pairLabel(next), fixtureWhen(next, now)), size = 24)
-                } else if (selectedTeams.teamIds.isNotEmpty()) TvText(stringResource(if (!enabled) R.string.mintv_shl_disabled
+                } else TvText(stringResource(if (!enabled) R.string.mintv_shl_disabled
                     else if (requiredCompetitions.none { it.scheduleAvailable }) R.string.mintv_schedule_unavailable
                     else if (loading) R.string.mintv_companion_loading else R.string.mintv_shl_next_unknown), color = MinTvMuted, size = 20)
                 if (enabled && fetchedAt != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(fetchedAt, now)), size = 18, color = MinTvMuted, lines = 1)

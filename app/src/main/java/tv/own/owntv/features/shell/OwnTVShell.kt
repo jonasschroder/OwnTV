@@ -180,6 +180,7 @@ fun OwnTVShell(
     var playerMode by remember { mutableStateOf(PlayerMode.NONE) }
     // Deep-link: the Guide's "Add EPG" button switches to Settings and opens EPG Sources → add.
     var openEpgAdd by remember { mutableStateOf(false) }
+    var openHomeSources by remember { mutableStateOf(false) }
     // Setup's "Add a TV guide" (P10B-W9) lands on the same page once the shell is up.
     LaunchedEffect(Unit) {
         if (PendingShellRequest.addEpg) {
@@ -1120,6 +1121,8 @@ fun OwnTVShell(
                             // back there rather than to the rail — one level out, not two.
                             onBack = { restoreFocus = true; onSelectSection(MainSection.MORE) },
                             openEpgAdd = openEpgAdd,
+                            openSources = openHomeSources,
+                            onSourcesConsumed = { openHomeSources = false },
                             onEpgAddConsumed = { openEpgAdd = false },
                             start = settingsStart,
                             onStartConsumed = { settingsStart = null },
@@ -1167,6 +1170,7 @@ fun OwnTVShell(
                             onSources = {
                                 homeSetupOpen = true
                             },
+                            onManageSources = { openHomeSources = true; onSelectSection(MainSection.SETTINGS) },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             restoreFocus = restoreFocus,
                             onRestored = { restoreFocus = false },

@@ -20,7 +20,7 @@ import tv.own.owntv.R
 import tv.own.owntv.ui.theme.mpx
 
 @Composable
-internal fun TwitchCompanion(visible: Boolean, active: Boolean) {
+internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier) {
     val repository = koinInject<TwitchStatus>()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mintv-companion", 0) }
@@ -69,7 +69,7 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean) {
         else if (restore) { runCatching { entryFocus.requestFocus() }; restore = false }
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
-    TvCard({ setup = true; failure = false }, Modifier.fillMaxWidth().focusRequester(entryFocus)) {
+    TvCard({ setup = true; failure = false }, Modifier.fillMaxWidth().then(modifier).focusRequester(entryFocus)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
             TvText(stringResource(R.string.mintv_ohnepixel), size = 24, bold = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.mpx)) {

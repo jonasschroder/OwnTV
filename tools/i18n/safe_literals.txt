@@ -102,6 +102,13 @@
 2	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	_
 1	assertion	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	broadcast access requires review
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	|
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	FHD
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	HD
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	TV4 AND HOCKEY
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	TV4 HOCKEY
+1	regex	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	[^A-Z0-9]+
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	mintv-initial-live-favorite
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	profile:$profileId:${profile.createdAt}
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	episode:${episode.id}
@@ -120,6 +127,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-access-blocked
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-enabled
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-expand
+1	empty	app/src/main/java/tv/own/owntv/features/home/MinTvContentHome.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/home/MinTvContentHome.kt	mintv-shl
 2	technical	app/src/main/java/tv/own/owntv/features/home/MinTvContentHome.kt	mintv-twitch
 2	empty	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	\0

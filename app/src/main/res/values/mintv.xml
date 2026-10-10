@@ -125,4 +125,12 @@
     <string name="mintv_choose_teams">Choose teams</string>
     <string name="mintv_my_sport">My sport</string>
     <string name="mintv_my_matches_today">My matches today</string>
+    <string name="mintv_choose_favorite_teams">Choose your favorite teams</string>
+    <string name="mintv_no_source_help">Add a TV source to start watching.</string>
+    <string name="mintv_no_channels_title">No available TV channels</string>
+    <string name="mintv_no_channels_help">This source needs synchronization or has no visible channels. Manage the source to refresh or check its channels.</string>
+    <string name="mintv_choose_channels_title">Choose your favorite channels</string>
+    <string name="mintv_choose_channels_help">You already have TV channels. Mark the ones you want on Home.</string>
+    <string name="mintv_choose_channels">Choose channels</string>
+    <string name="mintv_manage_source">Manage TV source</string>
 </resources>

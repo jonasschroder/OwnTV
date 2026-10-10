@@ -66,6 +66,7 @@ fun MinTvContentHome(
     onLiveTv: () -> Unit,
     onGuide: () -> Unit,
     onSources: () -> Unit,
+    onManageSources: () -> Unit,
     onChildFocused: () -> Unit,
     restoreFocus: Boolean,
     onRestored: () -> Unit,
@@ -75,6 +76,7 @@ fun MinTvContentHome(
     modifier: Modifier = Modifier,
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val library by liveVm.homeLibraryState.collectAsStateWithLifecycle()
     val settings = koinInject<SettingsRepository>()
     val previewsOn by liveVm.livePreviewEnabled.collectAsStateWithLifecycle()
     val favorites = state.favoriteLive.takeIf { state.profileId == activeProfileId }.orEmpty()
@@ -97,6 +99,18 @@ fun MinTvContentHome(
     val previewState by liveVm.previewEngine.state.collectAsStateWithLifecycle()
     val blocked by liveVm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val navigation = rememberHomeDpadNavigation(firstRowFocusRequester)
+    LaunchedEffect(library) {
+        if (library.profileId == activeProfileId && library.status != HomeLibraryStatus.LOADING) vm.refresh(activeProfileId)
+    }
+    val emptyFocus = firstRowFocusRequester
+    var restoreFavoriteAfterLoad by remember(activeProfileId) { mutableStateOf(false) }
+    LaunchedEffect(favorites.isNotEmpty()) {
+        if (favorites.isNotEmpty() && restoreFavoriteAfterLoad) {
+            if (navigation.selected == 1) { withFrameNanos { }; navigation.focus[1].requestFocus() }
+            restoreFavoriteAfterLoad = false
+        }
+    }
     val favoriteListState = rememberLazyListState()
     val hockeyVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-shl" } } }
     val twitchVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-twitch" } } }
@@ -153,14 +167,14 @@ fun MinTvContentHome(
     DisposableEffect(firstRowFocusRequester, favorites.isEmpty()) {
         onEntryHook {
             if (matchcenterOpen) matchcenterEntry?.invoke() == true
-            else runCatching { if (favorites.isEmpty()) liveFocus.requestFocus() else firstRowFocusRequester.requestFocus() }.isSuccess
+            else runCatching { if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestFocus() else navigation.focus[navigation.selected].requestFocus() }.isSuccess
         }
         onDispose { onEntryHook(null) }
     }
     LaunchedEffect(restoreFocus, previewEnabled, favorites) {
         if (restoreFocus && previewEnabled) {
             withFrameNanos { }
-            runCatching { if (favorites.isEmpty()) liveFocus.requestFocus() else firstRowFocusRequester.requestFocus() }
+            runCatching { if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestFocus() else navigation.focus[navigation.selected].requestFocus() }
             onRestored()
         }
     }
@@ -185,6 +199,7 @@ fun MinTvContentHome(
         liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,
         contentStart = contentStart, onSources = { pauseOrDispose(); controller.setActive(false); onSources() },
         onMatchcenterEntry = { matchcenterEntry = it },
+        homeCardModifier = navigation.section(2),
     ) { shlCard, screen ->
         LaunchedEffect(screen) {
             matchcenterOpen = screen
@@ -203,13 +218,13 @@ fun MinTvContentHome(
                         if (favoriteRowFocused) controller.onRemoteNavigation()
                     }
                     false
-                }.onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
+                }.then(homeDpadModifier(navigation, listState, if (favorites.isEmpty()) listOf(0, 1, 2, 3, 4) else listOf(0, 2, 3, 4, 5))).onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
             ) {
                 item {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) navigation.selected = 0 }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.mintv_just_now), style = stageText(38, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
-                            HomeButton(stringResource(R.string.mintv_home_live), { pauseOrDispose(); controller.setActive(false); onLiveTv() }, Modifier.focusRequester(liveFocus))
+                            HomeButton(stringResource(R.string.mintv_home_live), { pauseOrDispose(); controller.setActive(false); onLiveTv() }, navigation.section(0).focusRequester(liveFocus))
                             HomeButton(stringResource(R.string.mintv_guide), { pauseOrDispose(); controller.setActive(false); onGuide() })
 
                         }
@@ -217,10 +232,31 @@ fun MinTvContentHome(
                 }
                 item {
                     if (favorites.isEmpty()) {
-                        TvCard({ pauseOrDispose(); controller.setActive(false); onSources() }, Modifier.fillMaxWidth()) {
-                            TvText(stringResource(if (state.isLoading) R.string.mintv_favorites_loading else R.string.mintv_empty_title), size = 30, bold = true)
-                            TvText(stringResource(R.string.mintv_empty_help), color = MinTvMuted)
-                            TvText(stringResource(R.string.mintv_add_source), color = MinTvTeal, bold = true)
+                        val status = if (library.profileId != activeProfileId || state.isLoading || state.profileId != activeProfileId || library.status == HomeLibraryStatus.READY) HomeLibraryStatus.LOADING else library.status
+                        TvCard({
+                            if (status != HomeLibraryStatus.LOADING) {
+                                pauseOrDispose(); controller.setActive(false)
+                                when (status) {
+                                    HomeLibraryStatus.NO_SOURCE -> onSources()
+                                    HomeLibraryStatus.NO_CHANNELS -> onManageSources()
+                                    else -> { liveVm.select(tv.own.owntv.core.live.LiveKey.All); liveVm.setSearchQuery(""); onLiveTv() }
+                                }
+                            }
+                        }, Modifier.fillMaxWidth().focusRequester(emptyFocus).onFocusChanged { if (it.hasFocus) { navigation.selected = 1; restoreFavoriteAfterLoad = true } }) {
+                            TvText(stringResource(when (status) {
+                                HomeLibraryStatus.LOADING -> R.string.mintv_favorites_loading
+                                HomeLibraryStatus.NO_SOURCE -> R.string.mintv_welcome
+                                HomeLibraryStatus.NO_CHANNELS -> R.string.mintv_no_channels_title
+                                else -> R.string.mintv_choose_channels_title
+                            }), size = 30, bold = true)
+                            if (status != HomeLibraryStatus.LOADING) {
+                                TvText(stringResource(when (status) {
+                                    HomeLibraryStatus.NO_SOURCE -> R.string.mintv_no_source_help
+                                    HomeLibraryStatus.NO_CHANNELS -> R.string.mintv_no_channels_help
+                                    else -> R.string.mintv_choose_channels_help
+                                }), color = MinTvMuted)
+                                TvText(stringResource(when (status) { HomeLibraryStatus.NO_SOURCE -> R.string.mintv_add_source; HomeLibraryStatus.NO_CHANNELS -> R.string.mintv_manage_source; else -> R.string.mintv_choose_channels }), color = MinTvTeal, bold = true)
+                            }
                         }
                     } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(36.mpx)) {
@@ -274,6 +310,7 @@ fun MinTvContentHome(
                             Text(stringResource(if (state.isLoading || state.profileId != activeProfileId) R.string.mintv_favorites_loading else R.string.mintv_favorites_empty), style = stageText(19, 400), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         } else {
                             LazyRow(state = favoriteListState, horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.onFocusChanged {
+                                if (it.hasFocus) navigation.selected = 1
                                 favoriteRowFocused = it.hasFocus
                                 if (!it.hasFocus) controller.focus(null)
                             }.focusRestorer().focusGroup()) {
@@ -297,20 +334,20 @@ fun MinTvContentHome(
                 }
                 item(key = "mintv-shl") { shlCard() }
                 item(key = "mintv-twitch") {
-                    TwitchCompanion(visible = twitchVisible, active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+                    TwitchCompanion(visible = twitchVisible, modifier = navigation.section(3), active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
                         && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
                 }
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Text(stringResource(R.string.mintv_apps_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
-                            ExternalShortcut.entries.forEach { shortcut ->
+                            ExternalShortcut.entries.forEachIndexed { index, shortcut ->
                                 HomeButton(stringResource(shortcut.label), {
                                     pauseOrDispose()
                                     controller.setActive(false)
                                     val intent = MinTvExternalApps.launch(context, shortcut.packages)
                                     if (intent != null) openExternal(intent) else missingApp = shortcut
-                                }, Modifier.weight(1f).height(82.mpx))
+                                }, Modifier.weight(1f).height(82.mpx).then(if (index == 0) navigation.section(4) else Modifier))
                             }
                             HomeButton(stringResource(R.string.mintv_companion_settings), { preferencesOpen = true }, Modifier.weight(1f).height(82.mpx))
                         }

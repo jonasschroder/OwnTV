@@ -211,6 +211,8 @@ fun SettingsScreen(
      */
     onBack: (() -> Unit)? = null,
     openEpgAdd: Boolean = false,
+    openSources: Boolean = false,
+    onSourcesConsumed: () -> Unit = {},
     onEpgAddConsumed: () -> Unit = {},
     /** More › Settings (until P10 redraws this screen): open at a root group, or with search open. */
     start: SettingsStart? = null,
@@ -443,6 +445,9 @@ fun SettingsScreen(
     // Opening a sub-screen the ordinary way cancels any pending Quick-shortcut return, or the Back
     // from it would aim at the shortcut instead of the row just used.
     val open: (SettingsTab) -> Unit = { lastTab = it; deepReturnKey = null; videoRowKey = null; tab = it }
+    LaunchedEffect(openSources) {
+        if (openSources) { open(SettingsTab.SOURCES); onSourcesConsumed() }
+    }
     LaunchedEffect(openEpgAdd) {
         if (openEpgAdd) { consumeEpgAdd = true; open(SettingsTab.EPG); onEpgAddConsumed() }
     }

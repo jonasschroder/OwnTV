@@ -134,6 +134,7 @@ class LiveViewModel(
     private val epgRepository: tv.own.owntv.core.repository.EpgRepository,
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
+    private val homeDefaults: tv.own.owntv.features.home.HomeChannelDefaults,
 ) : ViewModel() {
 
     // --- "Record what I'm watching" (Plan D, D3 mode b) -----------------------------------------
@@ -987,6 +988,9 @@ class LiveViewModel(
     }
 
     enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
+
+    internal val homeLibraryState = homeDefaults.observe(ctx.flatMapLatest { c -> combine(customize.observe(c.profileId, MediaType.LIVE), profileDao.observeById(c.profileId)) { _, _ -> Unit } }, ::isVisibleToActiveProfile)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.features.home.HomeLibraryState())
 
     /** Local library changes refresh the SHL empty state after adding/importing a source. */
     val homeLibraryContext = ctx.map { it.profileId to it.sourceIds }

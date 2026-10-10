@@ -121,4 +121,12 @@
     <string name="mintv_choose_teams">Välj lag</string>
     <string name="mintv_my_sport">Min sport</string>
     <string name="mintv_my_matches_today">Mina matcher idag</string>
+    <string name="mintv_choose_favorite_teams">Välj dina favoritlag</string>
+    <string name="mintv_no_source_help">Lägg till en TV-källa för att börja titta.</string>
+    <string name="mintv_no_channels_title">Inga tillgängliga TV-kanaler</string>
+    <string name="mintv_no_channels_help">Källan behöver synkroniseras eller saknar synliga kanaler. Hantera källan för att uppdatera eller kontrollera kanalerna.</string>
+    <string name="mintv_choose_channels_title">Välj dina favoritkanaler</string>
+    <string name="mintv_choose_channels_help">Du har redan TV-kanaler. Markera de du vill ha på startsidan.</string>
+    <string name="mintv_choose_channels">Välj kanaler</string>
+    <string name="mintv_manage_source">Hantera TV-källa</string>
 </resources>

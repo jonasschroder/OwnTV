@@ -45,7 +45,7 @@ The review was completed before implementation:
   reuses it. It starts nothing on initial/restored focus; deliberate D-pad movement
   within the favorite row arms preview after startup/resume. Leaving that row
   cancels/stops preview; EPG polling runs only while the Activity is resumed. The existing preference can disable
-  preview entirely using **Preview: on/off** in the Home toolbar (shared with Live TV).
+  preview entirely using **Förhandsvisning: på/av** in Home’s **Inställningar** panel (shared with Live TV).
 - The channel name/EPG selection changes immediately on focus. Home calls the shared
   `LiveEpgReader` without Live's 350 ms metadata debounce. Old results are cleared and
   their coroutine is cancelled; bulk guide/cache is preferred, with existing provider
@@ -92,9 +92,10 @@ without autoplay after the normal profile/onboarding gate.
 ## Home and external content
 
 The navy/teal Home contains actual live video, current/next EPG/progress and a real
-favorite-channel row. **Live TV** opens the existing browser, **TV Guide** opens the
-existing guide. **Sport** currently opens Live TV so the user can choose their
-provider's sports category; no universal sports classification/schedule is invented.
+favorite-channel row. **TV-kanaler** opens the existing browser and **TV-guide**
+opens the existing guide. The redundant Sport button is removed; existing sports
+categories remain available through the Live TV browser. See the
+[full-screen SHL/TV redesign](min-tv-redesign.md) for the current Swedish UI.
 
 - **ohnePixel status:** optional public-client Twitch device-code login and a
   compact Helix status row. No playback, S0undTV route/query or installation

@@ -11,23 +11,24 @@ Use **Min TV Test**, package `se.jonasschroder.mintv.qa`.
 ## Use the prototype
 
 IPTV favorites and the existing muted preview remain above companion content.
-On Home, **Show all SHL games** opens Matchcenter. Select **Enable experimental
-reader** only for permitted personal testing; **Disable reader** cancels its
-requests and timers. It is off by default. No lineup or live-period requests are
+On Home, the Färjestad card opens the full-screen Matchcenter. In **Inställningar**,
+select **Aktivera experimentell SHL-data** only for permitted personal testing;
+**Stäng av SHL-data** cancels its requests and timers. It is off by default. No lineup or live-period requests are
 made. This setting is stored separately in this installation, outside Core's
 IPTV backup format; importing a backup does not enable the reader.
 
 On ordinary days, hockey occupies one horizontal FBK row showing the next
 scheduled game, when known, and the Matchcenter shortcut. Matchdays use Stockholm
 dates and expand modestly below Favorites: FBK first, time/result snapshot,
-Watch/Choose TV channel, up to two other pairings, FBK position/points and the
-shortcut. **Collapse** persists compact-only presentation; **Expand matchdays**
-reenables automatic expansion. At midnight the layout becomes compact if the
+up to two other pairings and the shortcut. Match details offer **Se matchen** /
+**Välj TV-kanal**, while **Tabell** shows standings and highlights Färjestad.
+**Kompakt på Home** in Matchcenter settings persists compact-only presentation;
+**Utöka på matchdagar** reenables automatic expansion. At midnight the layout becomes compact if the
 new day has no games. Full standings are displayed only in Matchcenter.
 
 Results are **schedule snapshots, not confirmed live scores or final status**.
-Matchday/Matchcenter shows both the fetch time and the source's reported update
-time, when available. Refresh failures retain clearly labeled cached data; no
+The main view shows a single **Uppdaterad** indicator. **Datakälla och uppdatering**
+in settings shows the fetch time and source-reported update time when available. Refresh failures retain clearly labeled cached data; no
 data means unavailable. No lineup, live period, provisional table, placeholder
 score or generated match is supplied.
 
@@ -94,15 +95,16 @@ No avatar is fetched in this iteration; no screenshots, thumbnails or video exis
    enable the required account 2FA and register your personal app as **Public**
    client type. If a redirect URL is required, use `http://localhost`; device-code
    login does not start a redirect listener. Do not generate/share a client secret.
-2. In Min TV Test → **Twitch status setup**, enter the **public Client ID**, then
-   **Connect with device code**. Use the Google TV keyboard/input facility to type
-   it; entering a Client ID does not grant account access.
-3. On your Mac visit `https://www.twitch.tv/activate`, enter the displayed code and
-   approve only your own app. No account scopes are requested. Keep the TV dialog
-   visible until login completes. Back/Close/background cancels pending login.
+2. Configure the legitimate public ID once through the optional build variable
+   **MINTV_TWITCH_CLIENT_ID**, or enter it once on the TV. See the
+   [registration/build instructions](min-tv-redesign.md#one-time-public-twitch-client-id).
+   In Min TV Test → ohnePixel, select **Anslut Twitch**.
+3. On your Mac open the validated Twitch activation URL shown on TV (including
+   `public=true` and device code), enter the code if requested and approve your own app. No account scopes are requested. Keep the TV dialog
+   visible until login completes. Back/Stäng/background cancels pending login.
 4. Return to the visible Twitch row. It queries approximately once per minute
    while foreground and pauses during favorite-row focus/preview loading.
-   **Forget local login** removes local credentials. For server-side revocation,
+   **Koppla från** removes local credentials. For server-side revocation,
    remove the connection in Twitch account settings; forgetting locally does not
    send a revocation request.
 
@@ -122,7 +124,7 @@ interval and expiry. There is no background login or status service.
 - Reuses Core's ordinary OkHttp client and connection pool. Every call has an
   eight-second total timeout and cancels with its coroutine. Parsing/file work
   runs on IO/OkHttp workers. Companion clients share that pool/dispatcher and disable all redirects.
-- Only actually visible LazyColumn items or their open dialog activate companion
+- Only actually visible Home cards, full-screen Matchcenter or open Twitch setup activate companion
   work. Leaving Home, fullscreen, background, favorite-row focus or preview
   loading cancels requests. Disabled SHL has no requests or timers. Initial Home
   rendering never waits for hockey/Twitch; watching IPTV never waits for them.
@@ -185,7 +187,7 @@ packages for these checks. No numeric Chromecast memory delta is claimed yet.
 
 Required device checks: zero requests with SHL off; request cancellation on
 Back/Home/background/fullscreen; cold Home responsiveness; matchday/midnight/DST
-layout; cached timestamps/errors; D-pad dialog scrolling/focus restoration;
+layout; cached timestamps/errors; D-pad screen/picker scrolling and focus restoration;
 real EPG aliases/timing/multi-channel/manual choice; no hockey autoplay; unchanged
 muted-preview/fullscreen/audio/Stalker/provider limits; Twitch public-client
 approval/refresh/logout/offline/error; SmartTube Stable startup/video link; and

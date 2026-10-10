@@ -28,7 +28,12 @@ class SameSignerUpgradeTest {
         val arguments = InstrumentationRegistry.getArguments()
         // The host script also verifies ro.kernel.qemu and emulator serial before any installation.
         assertEquals("true", arguments.getString("disposableEmulator"))
-        assertTrue(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
+        // AOSP's TV image is labelled "Android TV", not "generic"/"sdk". Check the actual
+        // read-only emulator property, matching the host's pre-install guard, instead of labels.
+        val emulator = Runtime.getRuntime().exec(arrayOf("/system/bin/getprop", "ro.kernel.qemu"))
+        val marker = emulator.inputStream.bufferedReader().use { it.readText().trim() }
+        assertEquals(0, emulator.waitFor())
+        assertEquals("This test requires a disposable emulator", "1", marker)
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val installed = app.packageManager.getPackageInfo(app.packageName, 0)
         assertEquals(arguments.getString("expectedCode")!!.toLong(), installed.longVersionCode)

@@ -17,6 +17,22 @@ def signing_run(run, jobs, channel):
     required_jobs(jobs, {'preflight', 'unsigned-build', 'sign-' + channel})
 
 
+def published_history(channel, code, fetch_page):
+    # Many QA releases can hide the newest Stable beyond the first page (or vice versa).
+    # A bounded but unexhausted history cannot prove that publication is monotonic.
+    for page in range(1, 4):
+        items = fetch_page(page)
+        if not isinstance(items, list) or len(items) > 100:
+            raise ValueError('Invalid publication history')
+        for item in items:
+            tag = item.get('tag_name', '')
+            if re.fullmatch(channel + '-[1-9][0-9]{6,9}', tag) and int(tag.split('-')[1]) >= code:
+                raise ValueError('A same or newer channel release already exists; never overwrite/downgrade')
+        if len(items) < 100:
+            return
+    raise ValueError('Publication history window exhausted; cannot prove monotonic channel order')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--verify', action='store_true')
@@ -38,11 +54,7 @@ def main():
             raise ValueError('Production candidate is not newer than installed v0.1')
         # The signed payload binds source/notes/hash as well as package and code.
         command(['git', 'merge-base', '--is-ancestor', data['source_commit'], 'origin/main'])
-        published = api('releases?per_page=20')
-        for item in published:
-            tag = item.get('tag_name', '')
-            if re.fullmatch(channel + '-[1-9][0-9]{6,9}', tag) and int(tag.split('-')[1]) >= data['version_code']:
-                raise ValueError('A same or newer channel release already exists; never overwrite/downgrade')
+        published_history(channel, data['version_code'], lambda page: api(f'releases?per_page=100&page={page}'))
         if api(f"git/matching-refs/tags/{data['tag']}"):
             raise ValueError('Release tag already exists; do not change or reuse it')
         public = Path('public'); public.mkdir()

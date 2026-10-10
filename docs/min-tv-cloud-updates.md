@@ -58,7 +58,11 @@ successful approved main signing run, the matching channel/code artifact,
 main ancestry, the committed certificate, authenticated manifest and actual
 APK package/version/ABI/signatures/hash. It has no signing secrets. Only its
 protected publication job has `contents: write`. It refuses existing tags or
-same/newer channel versions; no clobber/overwrite operation exists.
+same/newer channel versions; no clobber/overwrite operation exists. Publication
+checks up to three pages of100 releases, so a busy QA channel cannot hide a newer
+Stable behind the first page. An unexhausted300-release window blocks publication
+rather than assuming no newer version exists. A separate regression test covers
+that cross-channel history case (CLI suite now30; total unit/CLI1,858).
 
 Before using it later, create `mintv-qa-distribution` with the same reviewer,
 main-only branch and administrator-bypass protections as the signing environment.

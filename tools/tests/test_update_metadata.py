@@ -10,7 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/signing'))
 from update_metadata import validate, verify
-from distribution_guard import signing_run
+from distribution_guard import signing_run, published_history
 
 
 class AuthenticatedMetadataTest(unittest.TestCase):
@@ -53,6 +53,23 @@ class AuthenticatedMetadataTest(unittest.TestCase):
             changed = dict(run); changed[key] = value
             with self.subTest(key=key), self.assertRaises(ValueError): signing_run(changed, jobs, 'qa')
         with self.assertRaises(ValueError): signing_run(run, jobs, 'stable')
+
+    def test_publication_scans_other_channel_history_and_rejects_unproven_order(self):
+        qa_page = [{'tag_name': 'qa-1000200'}] * 100
+        requests = []
+        def fetch(page):
+            requests.append(page)
+            return qa_page if page == 1 else [{'tag_name': 'stable-1000102'}]
+        with self.assertRaises(ValueError): published_history('stable', 1000101, fetch)
+        self.assertEqual([1, 2], requests)
+        with self.assertRaises(ValueError): published_history('stable', 1000102, fetch)
+        requests.clear()
+        published_history('stable', 1000103, fetch)
+        self.assertEqual([1, 2], requests)
+        requests.clear()
+        def full(page): requests.append(page); return qa_page
+        with self.assertRaises(ValueError): published_history('stable', 1000103, full)
+        self.assertEqual([1, 2, 3], requests)
 
 
 if __name__ == '__main__': unittest.main()

@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION_CODE: ${{ github.run_number }}
+      # Legitimate registered PUBLIC client identifier; never a secret or token. Empty is supported.
+      MINTV_TWITCH_CLIENT_ID: ${{ vars.MINTV_TWITCH_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -68,6 +70,9 @@ jobs:
           mkdir -p dist-qa
           cp docs/apk-qa-notice.txt dist-qa/READ-BEFORE-INSTALL.txt
           cp docs/min-tv-companions.md dist-qa/COMPANION-SETUP.md
+          cp docs/min-tv-redesign.md dist-qa/TV-REDESIGN-AND-SETUP.md
+          # Include linked source guides so the downloaded Markdown works offline.
+          cp docs/min-tv-qa.md docs/min-tv-v0.2.md docs/min-tv-signing.md docs/min-tv-companions.md docs/min-tv-redesign.md dist-qa/
           cp docs/min-tv-signing.md dist-qa/SIGNING-PLAN.md
           "$TOOLS/apksigner" verify --print-certs "$APK" > dist-qa/SIGNING-CERTIFICATE.txt
           cp "$APK" dist-qa/MinTV-v0.2-QA.apk
@@ -94,6 +99,8 @@ jobs:
             dist-qa/READ-BEFORE-INSTALL.txt
             dist-qa/SIGNING-CERTIFICATE.txt
             dist-qa/COMPANION-SETUP.md
+            dist-qa/TV-REDESIGN-AND-SETUP.md
+            dist-qa/min-tv-*.md
             dist-qa/SIGNING-PLAN.md
           if-no-files-found: error
           retention-days: 14

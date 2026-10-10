@@ -1153,9 +1153,11 @@ fun OwnTVShell(
                             },
                             onLiveTv = { onSelectSection(MainSection.LIVE_TV) },
                             onGuide = { onSelectSection(MainSection.EPG) },
-                            // The existing category browser/guide is the real sports navigation;
-                            // no invented sports schedule or provider-specific category name.
-                            onSport = { onSelectSection(MainSection.LIVE_TV) },
+                            onSources = {
+                                settingsStart = tv.own.owntv.features.shell.components.SettingsStart(
+                                    tv.own.owntv.features.shell.components.SettingsGroup.SOURCES.ordinal, false)
+                                onSelectSection(MainSection.SETTINGS)
+                            },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             restoreFocus = restoreFocus,
                             onRestored = { restoreFocus = false },

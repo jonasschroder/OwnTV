@@ -53,6 +53,11 @@ android {
         manifestPlaceholders["minTvLinkScheme"] = "mintv"
         manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
         buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")
+        // Public identifier only. Register your own Twitch public client; never supply a secret/token.
+        val twitchClientId = System.getenv("MINTV_TWITCH_CLIENT_ID")
+            ?: providers.gradleProperty("mintv.twitchClientId").orNull ?: ""
+        require(twitchClientId.isEmpty() || twitchClientId.matches(Regex("[a-zA-Z0-9]{8,128}")))
+        buildConfigField("String", "TWITCH_CLIENT_ID", "\"$twitchClientId\"")
 
         // Opt-in local diagnostic APKs keep the rolling playback trace enabled even when they are
         // release-signed (so they can update an installed production build without changing its data).

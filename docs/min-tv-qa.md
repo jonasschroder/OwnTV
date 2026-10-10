@@ -1,5 +1,8 @@
 # Min TV Test — side-by-side Chromecast QA
 
+For the latest full-screen TV redesign, broadcast-source feasibility, Twitch build
+configuration and device checklist, see [the redesign guide](min-tv-redesign.md).
+
 Use this build for isolated physical Chromecast testing. It is a **separate app**,
 not an update or migration of the working Min TV v0.1 installation.
 

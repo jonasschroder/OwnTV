@@ -65,7 +65,7 @@ fun MinTvContentHome(
     onPauseOrDispose: () -> Unit,
     onLiveTv: () -> Unit,
     onGuide: () -> Unit,
-    onSport: () -> Unit,
+    onSources: () -> Unit,
     onChildFocused: () -> Unit,
     restoreFocus: Boolean,
     onRestored: () -> Unit,
@@ -83,7 +83,10 @@ fun MinTvContentHome(
     val controller = liveVm.homePreview
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val lifecycleState by lifecycle.currentStateFlow.collectAsState()
-    val active = previewEnabled && previewsOn && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+    var matchcenterEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    var matchcenterOpen by remember { mutableStateOf(false) }
+    var preferencesOpen by remember { mutableStateOf(false) }
+    val active = previewEnabled && !matchcenterOpen && previewsOn && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val liveFocus = remember { FocusRequester() }
@@ -146,7 +149,10 @@ fun MinTvContentHome(
         }
     }
     DisposableEffect(firstRowFocusRequester, favorites.isEmpty()) {
-        onEntryHook { runCatching { if (favorites.isEmpty()) liveFocus.requestFocus() else firstRowFocusRequester.requestFocus() }.isSuccess }
+        onEntryHook {
+            if (matchcenterOpen) matchcenterEntry?.invoke() == true
+            else runCatching { if (favorites.isEmpty()) liveFocus.requestFocus() else firstRowFocusRequester.requestFocus() }.isSuccess
+        }
         onDispose { onEntryHook(null) }
     }
     LaunchedEffect(restoreFocus, previewEnabled, favorites) {
@@ -171,131 +177,156 @@ fun MinTvContentHome(
         }
     }
 
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 112.mpx, bottom = 48.mpx),
-        verticalArrangement = Arrangement.spacedBy(26.mpx),
-        modifier = modifier.background(HomeNavy).onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyDown && event.key in listOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)) {
-                // Re-enable after a failed external launch, but never on automatic focus restoration.
-                remoteNavigationSeen = true
-                controller.setActive(active)
-                if (favoriteRowFocused) controller.onRemoteNavigation()
-            }
-            false
-        }.onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
-    ) {
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.app_name), style = stageText(38, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
-                    HomeButton(stringResource(R.string.mintv_home_live), { pauseOrDispose(); controller.setActive(false); onLiveTv() }, Modifier.focusRequester(liveFocus))
-                    HomeButton(stringResource(R.string.mintv_guide), { pauseOrDispose(); controller.setActive(false); onGuide() })
-                    HomeButton(stringResource(R.string.mintv_sport), { pauseOrDispose(); controller.setActive(false); onSport() })
-                    HomeButton(stringResource(if (previewsOn) R.string.mintv_preview_on else R.string.mintv_preview_off), {
-                        controller.setActive(false)
-                        scope.launch { settings.setLivePreviewEnabled(!previewsOn) }
-                    })
-                }
-            }
+    ShlCompanion(
+        visible = hockeyVisible,
+        active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
+        liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,
+        contentStart = contentStart, onExternal = { openExternal(it) },
+        onMatchcenterEntry = { matchcenterEntry = it },
+    ) { shlCard, screen ->
+        LaunchedEffect(screen) {
+            matchcenterOpen = screen
+            if (screen) { favoriteRowFocused = false; pauseOrDispose(); controller.setActive(false) }
         }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(36.mpx)) {
-                Box(Modifier.weight(1.3f).aspectRatio(16f / 9f).clip(RoundedCornerShape(22.mpx)).background(Color.Black), contentAlignment = Alignment.Center) {
-                    val hasVideo = active && selected != null && previewState != LivePreviewEngine.State.IDLE && previewState != LivePreviewEngine.State.ERROR
-                    if (hasVideo) {
-                        // Protected video needs the same SurfaceView path as the existing Live pane.
-                        ExoPreviewSurface(liveVm.previewEngine, Modifier.fillMaxSize(), useTextureView = selected.drmConfig == null)
+        if (!screen) {
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 112.mpx, bottom = 48.mpx),
+                verticalArrangement = Arrangement.spacedBy(26.mpx),
+                modifier = modifier.background(HomeNavy).onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.key in listOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)) {
+                        // Re-enable after a failed external launch, but never on automatic focus restoration.
+                        remoteNavigationSeen = true
+                        controller.setActive(active)
+                        if (favoriteRowFocused) controller.onRemoteNavigation()
+                    }
+                    false
+                }.onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
+            ) {
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.mintv_just_now), style = stageText(38, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
+                            HomeButton(stringResource(R.string.mintv_home_live), { pauseOrDispose(); controller.setActive(false); onLiveTv() }, Modifier.focusRequester(liveFocus))
+                            HomeButton(stringResource(R.string.mintv_guide), { pauseOrDispose(); controller.setActive(false); onGuide() })
+
+                        }
+                    }
+                }
+                item {
+                    if (favorites.isEmpty()) {
+                        TvCard({ pauseOrDispose(); controller.setActive(false); onSources() }, Modifier.fillMaxWidth()) {
+                            TvText(stringResource(if (state.isLoading) R.string.mintv_favorites_loading else R.string.mintv_empty_title), size = 30, bold = true)
+                            TvText(stringResource(R.string.mintv_empty_help), color = MinTvMuted)
+                            TvText(stringResource(R.string.mintv_add_source), color = MinTvTeal, bold = true)
+                        }
                     } else {
-                        selected?.displayLogoUrl?.let { logo ->
-                            AsyncImage(model = logo, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(150.mpx).padding(12.mpx))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(36.mpx)) {
+                        Box(Modifier.weight(1.3f).aspectRatio(16f / 9f).clip(RoundedCornerShape(22.mpx)).background(Color.Black), contentAlignment = Alignment.Center) {
+                            val hasVideo = active && selected != null && previewState != LivePreviewEngine.State.IDLE && previewState != LivePreviewEngine.State.ERROR
+                            if (hasVideo) {
+                                // Protected video needs the same SurfaceView path as the existing Live pane.
+                                ExoPreviewSurface(liveVm.previewEngine, Modifier.fillMaxSize(), useTextureView = selected.drmConfig == null)
+                            } else {
+                                selected?.displayLogoUrl?.let { logo ->
+                                    AsyncImage(model = logo, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(150.mpx).padding(12.mpx))
+                                }
+                            }
+                            val message = when {
+                                selected == null -> R.string.mintv_favorites_empty
+                                !previewsOn -> R.string.mintv_preview_disabled
+                                blocked -> R.string.content_preview_single_stream
+                                previewState == LivePreviewEngine.State.ERROR -> R.string.mintv_preview_unsupported
+                                previewState == LivePreviewEngine.State.LOADING && active -> R.string.mintv_preview_loading
+                                previewState == LivePreviewEngine.State.IDLE -> R.string.mintv_preview_hint
+                                else -> null
+                            }
+                            message?.let {
+                                Text(stringResource(it), style = stageText(19, 500), color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(HomeNavy.copy(alpha = 0.9f)).padding(20.mpx))
+                            }
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
+                            Text(selected?.name ?: stringResource(R.string.mintv_favorites_title), style = stageText(28, 700), color = HomeTeal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            val now = guide?.now?.takeIf { clock in it.startMs until it.stopMs }
+                            Text(now?.title ?: stringResource(R.string.mintv_epg_unavailable), style = stageText(36, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            now?.let {
+                                val progress = ((clock - it.startMs).toFloat() / (it.stopMs - it.startMs).coerceAtLeast(1)).coerceIn(0f, 1f)
+                                Box(Modifier.fillMaxWidth().height(6.mpx).background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(3.mpx))) {
+                                    Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(HomeTeal, RoundedCornerShape(3.mpx)))
+                                }
+                                it.description?.takeIf(String::isNotBlank)?.let { description ->
+                                    Text(description, style = stageText(18, 400), color = Color.LightGray, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            Text(stringResource(R.string.mintv_next, guide?.next?.title ?: stringResource(R.string.mintv_epg_unavailable)), style = stageText(19, 500), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.mintv_ok_hint), style = stageText(17, 400), color = HomeTeal, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                    val message = when {
-                        selected == null -> R.string.mintv_favorites_empty
-                        !previewsOn -> R.string.mintv_preview_disabled
-                        blocked -> R.string.content_preview_single_stream
-                        previewState == LivePreviewEngine.State.ERROR -> R.string.mintv_preview_unsupported
-                        previewState == LivePreviewEngine.State.LOADING && active -> R.string.mintv_preview_loading
-                        previewState == LivePreviewEngine.State.IDLE -> R.string.mintv_preview_hint
-                        else -> null
-                    }
-                    message?.let {
-                        Text(stringResource(it), style = stageText(19, 500), color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(HomeNavy.copy(alpha = 0.9f)).padding(20.mpx))
                     }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    Text(selected?.name ?: stringResource(R.string.mintv_favorites_title), style = stageText(28, 700), color = HomeTeal, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val now = guide?.now?.takeIf { clock in it.startMs until it.stopMs }
-                    Text(now?.title ?: stringResource(R.string.mintv_epg_unavailable), style = stageText(36, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    now?.let {
-                        val progress = ((clock - it.startMs).toFloat() / (it.stopMs - it.startMs).coerceAtLeast(1)).coerceIn(0f, 1f)
-                        Box(Modifier.fillMaxWidth().height(6.mpx).background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(3.mpx))) {
-                            Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(HomeTeal, RoundedCornerShape(3.mpx)))
-                        }
-                        it.description?.takeIf(String::isNotBlank)?.let { description ->
-                            Text(description, style = stageText(18, 400), color = Color.LightGray, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (favorites.isNotEmpty()) item {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                        Text(stringResource(R.string.mintv_favorites_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (favorites.isEmpty()) {
+                            Text(stringResource(if (state.isLoading || state.profileId != activeProfileId) R.string.mintv_favorites_loading else R.string.mintv_favorites_empty), style = stageText(19, 400), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        } else {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.onFocusChanged {
+                                favoriteRowFocused = it.hasFocus
+                                if (!it.hasFocus) controller.focus(null)
+                            }.focusRestorer().focusGroup()) {
+                                itemsIndexed(favorites, key = { _, channel -> channel.id }) { _, channel ->
+                                    ChannelCard(channel.name, channel.displayLogoUrl, null, { onPlayChannel(channel, favorites) },
+                                        Modifier.width(330.mpx).height(116.mpx)
+                                            .then(if (channel.id == selected?.id) Modifier.focusRequester(firstRowFocusRequester) else Modifier)
+                                            .onFocusChanged { if (it.hasFocus) {
+                                                selectedId = channel.id
+                                                controller.focus(channel)
+                                                if (remoteNavigationSeen) controller.onRemoteNavigation()
+                                                liveVm.onChannelFocused(channel)
+                                                onChildFocused()
+                                            } },
+                                        selected = channel.id == selected?.id,
+                                    )
+                                }
+                            }
                         }
                     }
-                    Text(stringResource(R.string.mintv_next, guide?.next?.title ?: stringResource(R.string.mintv_epg_unavailable)), style = stageText(19, 500), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(stringResource(R.string.mintv_ok_hint), style = stageText(17, 400), color = HomeTeal, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                item(key = "mintv-shl") { shlCard() }
+                item(key = "mintv-twitch") {
+                    TwitchCompanion(visible = twitchVisible, active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+                        && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
+                }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                        Text(stringResource(R.string.mintv_apps_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+                            ExternalShortcut.entries.forEach { shortcut ->
+                                HomeButton(stringResource(shortcut.label), {
+                                    pauseOrDispose()
+                                    controller.setActive(false)
+                                    val intent = MinTvExternalApps.launch(context, shortcut.packages)
+                                    if (intent != null) openExternal(intent) else missingApp = shortcut
+                                }, Modifier.weight(1f).height(82.mpx))
+                            }
+                            HomeButton(stringResource(R.string.mintv_companion_settings), { preferencesOpen = true }, Modifier.weight(1f).height(82.mpx))
+                        }
+                    }
                 }
             }
         }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-                Text(stringResource(R.string.mintv_favorites_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (favorites.isEmpty()) {
-                    Text(stringResource(if (state.isLoading || state.profileId != activeProfileId) R.string.mintv_favorites_loading else R.string.mintv_favorites_empty), style = stageText(19, 400), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                } else {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.onFocusChanged {
-                        favoriteRowFocused = it.hasFocus
-                        if (!it.hasFocus) controller.focus(null)
-                    }.focusRestorer().focusGroup()) {
-                        itemsIndexed(favorites, key = { _, channel -> channel.id }) { _, channel ->
-                            HomeButton(channel.name, { onPlayChannel(channel, favorites) },
-                                Modifier.width(250.mpx).height(112.mpx)
-                                    .then(if (channel.id == selected?.id) Modifier.focusRequester(firstRowFocusRequester) else Modifier)
-                                    .onFocusChanged { if (it.hasFocus) {
-                                        selectedId = channel.id
-                                        controller.focus(channel)
-                                        if (remoteNavigationSeen) controller.onRemoteNavigation()
-                                        liveVm.onChannelFocused(channel)
-                                        onChildFocused()
-                                    } },
-                                logo = channel.displayLogoUrl,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item(key = "mintv-shl") {
-            ShlCompanion(
-                visible = hockeyVisible,
-                active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
-                liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,
-            )
-        }
-        item(key = "mintv-twitch") {
-            TwitchCompanion(visible = twitchVisible, active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
-                && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-                Text(stringResource(R.string.mintv_apps_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
-                    ExternalShortcut.entries.forEach { shortcut ->
-                        HomeButton(stringResource(shortcut.label), {
-                            pauseOrDispose()
-                            controller.setActive(false)
-                            val intent = MinTvExternalApps.launch(context, shortcut.packages)
-                            if (intent != null) openExternal(intent) else missingApp = shortcut
-                        }, Modifier.weight(1f).height(82.mpx))
-                    }
-                    HomeButton(stringResource(R.string.mintv_home_settings), { openExternal(MinTvIntents.settings()) }, Modifier.weight(1f).height(82.mpx))
-                }
+    }
+    if (preferencesOpen) {
+        Dialog(onDismissRequest = { preferencesOpen = false }) {
+            Column(Modifier.width(720.mpx).background(HomeNavy, RoundedCornerShape(14.mpx)).padding(32.mpx), verticalArrangement = Arrangement.spacedBy(20.mpx)) {
+                TvText(stringResource(R.string.mintv_companion_settings), size = 30, bold = true)
+                HomeButton(stringResource(if (previewsOn) R.string.mintv_preview_on else R.string.mintv_preview_off), {
+                    controller.setActive(false); scope.launch { settings.setLivePreviewEnabled(!previewsOn) }
+                })
+                HomeButton(stringResource(R.string.mintv_add_source), { preferencesOpen = false; pauseOrDispose(); controller.setActive(false); onSources() })
+                HomeButton(stringResource(R.string.mintv_home_settings), { preferencesOpen = false; openExternal(MinTvIntents.settings()) })
+                HomeButton(stringResource(R.string.mintv_close), { preferencesOpen = false })
             }
         }
     }
@@ -323,11 +354,13 @@ private enum class ExternalShortcut(val label: Int, val instructions: Int, val p
 internal fun HomeButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, logo: String? = null) {
     Button(
         onClick = onClick, modifier = modifier,
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(10.mpx)),
+        contentPadding = PaddingValues(horizontal = 22.mpx, vertical = 15.mpx),
         colors = ButtonDefaults.colors(containerColor = Color(0xFF1B2B36), contentColor = Color.White, focusedContainerColor = HomeTeal, focusedContentColor = HomeNavy),
         border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.mpx, Color.White))),
         scale = ButtonDefaults.scale(focusedScale = 1.03f),
     ) {
         logo?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(48.mpx).padding(end = 10.mpx)) }
-        Text(label, style = stageText(18, 600), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(label, style = stageText(22, 600), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }

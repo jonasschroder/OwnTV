@@ -59,16 +59,18 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
         catch (e: Exception) { file.failWrite(stream); throw e }
     }
 
+    suspend fun connected(): Boolean = authMutex.withLock { withContext(Dispatchers.IO) { read() != null } }
+
     suspend fun disconnect() = authMutex.withLock { withContext(Dispatchers.IO) { file.delete(); validatedAt = 0 } }
 
-    suspend fun login(clientId: String, onCode: (String) -> Unit) = authMutex.withLock { withContext(Dispatchers.IO) {
+    suspend fun login(clientId: String, onCode: (TwitchActivation) -> Unit) = authMutex.withLock { withContext(Dispatchers.IO) {
         require(clientId.matches(Regex("[a-zA-Z0-9]{8,128}")))
         val device = post("device", mapOf("client_id" to clientId, "scopes" to ""))
         require(device.first == 200)
         val data = JSONObject(device.second)
         val code = data.getString("user_code")
         require(code.matches(Regex("[A-Z0-9]{4,16}")))
-        onCode(code)
+        onCode(TwitchActivation.parse(code, data.getString("verification_uri")))
         val until = System.currentTimeMillis() + data.getLong("expires_in").coerceIn(1, 1800) * 1000
         val interval = data.getLong("interval").coerceIn(5, 60) * 1000
         while (System.currentTimeMillis() < until) {

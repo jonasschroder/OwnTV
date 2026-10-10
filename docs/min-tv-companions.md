@@ -1,5 +1,8 @@
 # Min TV v0.2 — lightweight hockey and Twitch status
 
+For the latest full-screen TV redesign, broadcast-source feasibility, Twitch build
+configuration and device checklist, see [the redesign guide](min-tv-redesign.md).
+
 This continues PR #3. The user has installed and exercised the earlier v0.2 QA
 on Chromecast with Google TV 4K / Android 14. The changes described here still
 need physical testing. Regular Min TV v0.1 is not migrated, replaced or modified.

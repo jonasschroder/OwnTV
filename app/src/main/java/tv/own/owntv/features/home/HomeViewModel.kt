@@ -72,6 +72,7 @@ data class TrendingDetailsMetadata(
 
 @Immutable
 data class HomeUiState(
+    val profileId: Long = -1L,
     val trendingItems: List<TrendingHomeItem> = emptyList(),
     val activeTrendingIndex: Int = 0,
     val trendingPreferredLanguage: String = "EN",
@@ -172,6 +173,14 @@ class HomeViewModel(
         viewModelScope.launch {
             trendingDao.observeAllItems().drop(1).collect {
                 reloadRequests.emit(null)
+            }
+        }
+        viewModelScope.launch {
+            settings.activeProfileId.collectLatest { pid ->
+                _uiState.value = HomeUiState()
+                if (pid >= 0) {
+                    channelDao.favoritesListAlpha(pid).collect { reloadRequests.emit(pid) }
+                }
             }
         }
     }
@@ -376,7 +385,9 @@ class HomeViewModel(
     private suspend fun loadHomeData(profileId: Long) {
         val previous = _uiState.value
         val data = feed.load(profileId)
+        if (settings.activeProfileId.first() != profileId) return
         _uiState.value = HomeUiState(
+            profileId = profileId,
             trendingItems = data.trendingItems,
             activeTrendingIndex = previous.activeTrendingIndex
                 .coerceIn(0, (data.trendingItems.size - 1).coerceAtLeast(0)),

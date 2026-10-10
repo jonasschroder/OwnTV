@@ -3,6 +3,7 @@
 .gradle-cache/
 .idea/
 .kotlin/
+__pycache__/
 local.properties
 .DS_Store
 **/build/
@@ -23,6 +24,10 @@ AGENT_HANDOVER.md
 # Signing keys & secrets — NEVER commit these
 *.keystore
 *.jks
+*.p12
+*.pfx
+*.p12.gpg
+*.pfx.gpg
 keystore.properties
 signing.properties
 

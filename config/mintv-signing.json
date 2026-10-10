@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "qa": {
+    "application_id": "se.jonasschroder.mintv.qa",
+    "certificate_sha256": "d20b2f58f4e12b956e1e1dc40e47873d9b9ee6a666a2de1af2a6b8ac3d40547c"
+  },
+  "stable": {
+    "application_id": "se.jonasschroder.mintv",
+    "certificate_sha256": "d20b2f58f4e12b956e1e1dc40e47873d9b9ee6a666a2de1af2a6b8ac3d40547c",
+    "installed_v01_certificate_sha256": null,
+    "installed_v01_version_code": null,
+    "initial_adoption": "owner-approved-clean-install"
+  },
+  "allow_shared_qa_production_certificate": true
+}

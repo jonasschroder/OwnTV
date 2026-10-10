@@ -16,6 +16,12 @@ import tv.own.owntv.core.home.HomeFeedReader
 import tv.own.owntv.core.live.GuideReader
 import tv.own.owntv.core.live.LiveEpgReader
 import tv.own.owntv.features.home.HomeViewModel
+import tv.own.owntv.features.home.ShlRepository
+import tv.own.owntv.features.home.SportsPreferences
+import tv.own.owntv.features.home.SportsRepository
+import tv.own.owntv.features.home.ShlChannelOverrides
+import tv.own.owntv.features.home.TvmatchenBroadcastSource
+import tv.own.owntv.features.home.TwitchStatus
 import tv.own.owntv.features.live.LiveViewModel
 import tv.own.owntv.features.movies.MovieViewModel
 import tv.own.owntv.features.profiles.ProfileGateSessionViewModel
@@ -46,6 +52,7 @@ import tv.own.owntv.features.subtitles.SubtitleSearchViewModel
  * reordering is safe and a missing binding fails immediately, naming the type.
  */
 val appModule = module {
+    single { tv.own.owntv.features.update.MinTvUpdater(get(), get()) }
     viewModelOf(::ShellViewModel)
     // Home's rails are core's, shared with the phone app; the view model only decorates them.
     // LiveEpgReader is registered because GuideReader now needs one: a guide row whose stored data
@@ -56,6 +63,12 @@ val appModule = module {
     singleOf(::GuideReader)
     singleOf(::SearchReader)
     singleOf(::HomeFeedReader)
+    singleOf(::ShlRepository)
+    singleOf(::SportsPreferences)
+    singleOf(::SportsRepository)
+    singleOf(::TvmatchenBroadcastSource)
+    singleOf(::ShlChannelOverrides)
+    singleOf(::TwitchStatus)
     viewModelOf(::HomeViewModel)
     viewModelOf(::SetupViewModel)
     viewModelOf(::DisplaySizeViewModel)
@@ -65,8 +78,10 @@ val appModule = module {
     // up to 22 constructor parameters and this class now has 24. The failure is a "none of the
     // following candidates is applicable" at the call above, which says nothing about arity — hence
     // this note. Every argument is resolved by type, so the order here does not matter.
+    single { tv.own.owntv.features.home.HomeChannelDefaults(context = get(), db = get(), settings = get(), scheduler = get()) }
     viewModel {
         LiveViewModel(
+            get(),
             get(),
             get(),
             get(),

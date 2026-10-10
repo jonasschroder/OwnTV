@@ -103,6 +103,16 @@ open class MainActivity : ComponentActivity() {
     // The sole locale authority (SharedPreferences-backed; see docs/internationalization.md 0b).
     private val localeStore: tv.own.owntv.core.i18n.LocaleStore by inject()
     private var pendingDeepLink by mutableStateOf<LauncherDeepLink?>(null)
+    private var normalAppEntry by mutableStateOf(0)
+    private var allowPlaybackResume = false
+    private val foregroundPolicy = tv.own.owntv.home.MinTvForegroundPolicy(
+        discardRestore = {
+            player.discardBackgroundRestore()
+            previewEngine.discardBackgroundRestore()
+            if (intent.action == Intent.ACTION_MAIN) get<tv.own.owntv.player.LiveEnginePool>().releaseAll()
+        },
+        restore = { engines.onAppForegrounded() },
+    )
 
     /**
      * Wrap the Activity base with the selected locale so its own `Resources` resolve correctly —
@@ -118,6 +128,10 @@ open class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN) {
+            foregroundPolicy.onNormalAppEntry()
+            normalAppEntry++
+        }
         pendingDeepLink = tv.own.owntv.home.MinTvIntents.parseDeepLink(intent.data)
         Log.d(TAG, "onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
     }
@@ -133,13 +147,16 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        // Paired with onStop: bring back what was freed while backgrounded (notably the TV screensaver, which
-        // kicks in during a long pause) — a VOD restored paused at its position, and a live channel re-tuned
-        // to the live edge — so Play resumes instead of sitting on a dead/empty stream. No-op on fresh launch.
-        engines.onAppForegrounded()
         // Staleness-based auto refresh on resume (interval modes only — STARTUP is cold-start only). The
         // ViewModel throttles this internally so a quick toggle doesn't re-run the check.
         shellViewModel.checkAutoRefresh(includeStartup = false)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // A normal app-icon intent must suppress restoration before it reconnects anything.
+        // Ordinary task/screensaver return still resumes the existing fullscreen session.
+        foregroundPolicy.onResume(allowPlaybackResume)
     }
 
     /**
@@ -179,6 +196,7 @@ open class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition { !contentReady && SystemClock.uptimeMillis() < splashDeadline }
         pendingDeepLink = tv.own.owntv.home.MinTvIntents.parseDeepLink(intent.data)
         Log.d(TAG, "onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
+        normalAppEntry = if (intent.action == Intent.ACTION_MAIN) 1 else 0
         val dbError = probeDatabase()
         if (dbError != null) {
             contentReady = true // the recovery screen IS the destination — don't hold the splash over it
@@ -197,6 +215,10 @@ open class MainActivity : ComponentActivity() {
             return
         }
         Perf.stamp("db-probed") // main thread was blocked here: everything above is pre-composition
+        // A new Activity has no retained grid, and must not resurrect a former Activity's engines.
+        player.discardBackgroundRestore()
+        previewEngine.discardBackgroundRestore()
+        get<tv.own.owntv.player.LiveEnginePool>().releaseAll()
         setContent {
             // First composition pass — splits "process start → Compose is running" from
             // "Compose is running → the destination's data arrived".
@@ -403,26 +425,23 @@ open class MainActivity : ComponentActivity() {
                         when {
                             profile == null || !profilesLoaded -> Unit // active id / Room list loading
                             // Adding a profile from the gate → onboard the new profile.
-                            addingProfile -> Onboarding(
-                                firstRun = false,
-                                onDone = { profileId -> gateSession.completeAddingProfile(profileId) },
-                                onCancel = { gateSession.cancelAddingProfile() },
-                                modifier = Modifier.fillMaxSize(),
+                            addingProfile -> tv.own.owntv.features.profiles.ProfileEditorDialog(
+                                initial = null,
+                                onConfirm = { name, avatar, kids, pin ->
+                                    profilesVm.createAndActivate(name, avatar, kids, pin, getString(R.string.setup_default_profile), gateSession::completeAddingProfile)
+                                },
+                                onDismiss = gateSession::cancelAddingProfile,
+                                takenNames = profiles.map { it.name.trim().lowercase() }.toSet(),
                             )
                             // First run (no profile yet) → full onboarding.
-                            profile < 0L -> Onboarding(
-                                firstRun = true,
-                                onDone = { profileId -> gateSession.authenticateProfile(profileId) },
-                                onCancel = {},
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                            tv.own.owntv.features.setup.minTvFirstRunRequired(profile, profilesLoaded, profiles.size) ->
+                                tv.own.owntv.features.setup.MinTvFirstRun(profilesVm, Modifier.fillMaxSize())
                             // A loaded list that does not contain the persisted active id is also
                             // recovery/onboarding, never permission to enter OwnTVShell. This covers
                             // both an empty restore window and a stale id left by an interrupted restore.
-                            !activeProfileKnown -> Onboarding(
-                                firstRun = false,
-                                onDone = { profileId -> gateSession.authenticateProfile(profileId) },
-                                onCancel = {},
+                            !activeProfileKnown || profile < 0 -> ProfileGate(
+                                onEnter = { id -> gateSession.authenticateProfile(id) },
+                                onAddProfile = gateSession::startAddingProfile,
                                 modifier = Modifier.fillMaxSize(),
                             )
                             // Run 2+ (or a single locked profile): "Who's watching?" — choose a profile or add one.
@@ -456,6 +475,8 @@ open class MainActivity : ComponentActivity() {
                                 weatherFahrenheit = weatherFahrenheit,
                                 activeProfileId = activeProfileId,
                                 pendingDeepLink = pendingDeepLink,
+                                normalAppEntry = normalAppEntry,
+                                onPlaybackResumeAllowed = { allowPlaybackResume = it },
                                 onDeepLinkConsumed = { pendingDeepLink = null },
                                 isOffline = !isOnline,
                                 onExitApp = { finish() },

@@ -1,0 +1,211 @@
+name: Min TV approved signing
+
+# Preparation only. No push/PR/tag trigger; no release publication or contents write permission.
+# This workflow must first be reviewed and land on main through a USER-approved merge.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Application to sign (isolated keys and packages)
+        type: choice
+        options: [qa, stable]
+        default: qa
+        required: true
+      source_sha:
+        description: Reviewed main commit, EXACT lowercase 40-character SHA, with green main CI
+        required: true
+        type: string
+      version_name:
+        description: X.Y.Z-beta.N for QA, X.Y.Z for Stable
+        required: true
+        type: string
+      release_notes:
+        description: Human-readable changes and remaining device checks (no secrets)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: mintv-approved-signing-${{ inputs.channel }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.repository == 'jonasschroder/OwnTV' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.gate.outputs.code }}
+      name: ${{ steps.gate.outputs.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify public pins, protected environment and exact-commit green CI
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ inputs.channel }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: python3 tools/signing/release_guard.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: mintv-signing-input-${{ github.run_id }}
+          path: |
+            release-notes.md
+            ci-evidence.json
+          if-no-files-found: error
+          retention-days: 1
+
+  unsigned-build:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VERSION_CODE: ${{ needs.preflight.outputs.code }}
+      MINTV_VERSION_NAME: ${{ needs.preflight.outputs.name }}
+      CHANNEL: ${{ inputs.channel }}
+      MINTV_TWITCH_CLIENT_ID: ${{ vars.MINTV_TWITCH_CLIENT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - run: bash tools/prepare-core.sh
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platform-tools'
+      # Deliberately NO Gradle cache/upload step. No environment or signing secrets in this job.
+      - name: Full unit suites and variant lint
+        run: |
+          python3 -m unittest discover -s tools/tests -v
+          ./gradlew :app:testStandardDebugUnitTest :app:testQaDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest :app:lintStandardRelease :app:lintQaRelease --max-workers=4 --stacktrace
+      - name: Compile unsigned release candidate
+        run: |
+          set -euo pipefail
+          if [ "$CHANNEL" = qa ]; then
+            ./gradlew :app:assembleQaRelease --max-workers=4
+            mkdir unsigned
+            cp app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk unsigned/candidate.apk
+          else
+            ./gradlew :app:assembleStandardRelease --max-workers=4
+            mkdir unsigned
+            cp app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk unsigned/candidate.apk
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: mintv-unsigned-${{ inputs.channel }}-${{ github.run_id }}
+          path: unsigned/candidate.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  sign-qa:
+    if: inputs.channel == 'qa'
+    needs: [preflight, unsigned-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: mintv-qa-signing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'build-tools;37.0.0'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: mintv-unsigned-qa-${{ github.run_id }}
+          path: unsigned
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: mintv-signing-input-${{ github.run_id }}
+          path: evidence
+      - name: Sign ONLY the approved QA release candidate, outside Gradle
+        env:
+          MINTV_KEYSTORE_BASE64: ${{ secrets.MINTV_KEYSTORE_BASE64 }}
+          MINTV_KEYSTORE_PASSWORD: ${{ secrets.MINTV_KEYSTORE_PASSWORD }}
+          MINTV_KEY_ALIAS: ${{ secrets.MINTV_KEY_ALIAS }}
+          MINTV_KEY_PASSWORD: ${{ secrets.MINTV_KEY_PASSWORD }}
+          VERSION_CODE: ${{ needs.preflight.outputs.code }}
+          VERSION_NAME: ${{ needs.preflight.outputs.name }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: python3 tools/signing/sign_apk.py --channel qa --config config/mintv-signing.json --unsigned unsigned/candidate.apk --tools "$ANDROID_HOME/build-tools/37.0.0" --code "$VERSION_CODE" --name "$VERSION_NAME" --source "$SOURCE_SHA" --notes evidence/release-notes.md --output signed
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: MinTV-approved-QA-${{ needs.preflight.outputs.code }}
+          path: |
+            signed/*.apk
+            signed/SHA256SUMS
+            signed/SIGNING-CERTIFICATE.txt
+            signed/RELEASE-NOTES.md
+            signed/release-candidate.json
+            signed/MinTV-*-update.json
+            evidence/ci-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+
+  sign-stable:
+    if: inputs.channel == 'stable'
+    needs: [preflight, unsigned-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: mintv-production-signing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'build-tools;37.0.0'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: mintv-unsigned-stable-${{ github.run_id }}
+          path: unsigned
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: mintv-signing-input-${{ github.run_id }}
+          path: evidence
+      - name: Sign ONLY verified production identity, outside Gradle
+        env:
+          MINTV_KEYSTORE_BASE64: ${{ secrets.MINTV_KEYSTORE_BASE64 }}
+          MINTV_KEYSTORE_PASSWORD: ${{ secrets.MINTV_KEYSTORE_PASSWORD }}
+          MINTV_KEY_ALIAS: ${{ secrets.MINTV_KEY_ALIAS }}
+          MINTV_KEY_PASSWORD: ${{ secrets.MINTV_KEY_PASSWORD }}
+          VERSION_CODE: ${{ needs.preflight.outputs.code }}
+          VERSION_NAME: ${{ needs.preflight.outputs.name }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: python3 tools/signing/sign_apk.py --channel stable --config config/mintv-signing.json --unsigned unsigned/candidate.apk --tools "$ANDROID_HOME/build-tools/37.0.0" --code "$VERSION_CODE" --name "$VERSION_NAME" --source "$SOURCE_SHA" --notes evidence/release-notes.md --output signed
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: MinTV-approved-Stable-${{ needs.preflight.outputs.code }}
+          path: |
+            signed/*.apk
+            signed/SHA256SUMS
+            signed/SIGNING-CERTIFICATE.txt
+            signed/RELEASE-NOTES.md
+            signed/release-candidate.json
+            signed/MinTV-*-update.json
+            evidence/ci-evidence.json
+          if-no-files-found: error
+          retention-days: 14

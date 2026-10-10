@@ -1,0 +1,42 @@
+MIN TV TEST — SIDE-BY-SIDE QA, NOT AN UPDATE TO MIN TV
+
+If Min TV Test already contains real data, DO NOT reinstall yet.
+Read min-tv-safe-qa-update.md first: verify your encrypted backup and installed
+QA certificate/versionCode. This ephemeral CI APK is a validation build; a new
+key cannot update an unrelated installed certificate. Keep both apps unchanged.
+For a first installation in a disposable test environment, use only
+MinTV-v0.2-QA.apk from this ZIP.
+App name: Min TV Test
+Application ID: se.jonasschroder.mintv.qa
+The existing se.jonasschroder.mintv app and its private data remain separate.
+Do not install the regular Min TV artifact for this test. Do not uninstall,
+clear data, downgrade or change system launchers/Google packages.
+
+Configure your permitted IPTV sources manually in Min TV Test, or export a
+passphrase-protected backup from Min TV, save it on your Mac, then use Min TV
+Test's Backup & Restore to import a COPY. Check the title/app name before restore.
+Use only one remote-backup server/playback session at a time; the apps share
+the same device/network and provider account limits despite separate storage.
+Never serve backups from the public APK-transfer folder or upload credentials.
+
+Each fresh CI runner normally generates a different debug signing key. The first
+QA installation does not need to match regular Min TV's signing certificate.
+Later QA updates DO need to match QA's installed key and increase versionCode;
+never remove regular Min TV to solve a QA signature error.
+
+If QA is already installed, export and verify its encrypted IPTV backup before
+any update attempt. Stop on a certificate mismatch; neither app is removed
+automatically. Read TV-REDESIGN-AND-SETUP.md for the new Swedish TV UI,
+optional Twitch Client ID, experimental TVmatchen reader and in-app channel selection and device checklist.
+Linked installation/signing guides are included in this ZIP.
+
+Read docs/min-tv-qa.md in jonasschroder/OwnTV at this workflow's exact commit.
+Real Chromecast video/promotion/performance and backup import must be tested
+on hardware; compilation is not proof of those behaviors. GPLv3 applies;
+corresponding source is this app commit plus the pinned OwnTV_Core revision.
+
+Read min-tv-broadcasts.md for current SHL opt-in, limits and physical test steps.
+
+Read min-tv-personalization.md for per-profile teams, short onboarding, system
+language and the off-by-default SHL/HockeyAllsvenskan reader. Football fixtures
+remain unavailable pending verified permitted data access.

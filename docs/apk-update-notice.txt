@@ -1,0 +1,33 @@
+Min TV v0.2 TEST APK — READ BEFORE INSTALLING
+
+This APK is an expiring, debuggable test build, not a public release.
+It is a normal app. It must not replace, disable or override Google's launcher.
+
+Every clean GitHub Actions runner normally generates a DIFFERENT debug signing
+key. This APK will usually NOT update the v0.1 CI APK already on your Chromecast.
+Increasing the version code does not fix a signer mismatch.
+
+DO NOT uninstall Min TV, clear storage, or use adb uninstall to bypass an update
+error. Those actions delete profiles, favorites, source settings and credentials.
+Android's failed in-place update leaves the existing application/data intact.
+
+First export a backup with the installed Min TV app's Backup & Restore settings.
+Transfer it off the Chromecast, verify it, and keep it private/encrypted: source
+credentials and other sensitive data may be inside. Never attach it to a PR.
+
+Compare the installed/original APK and this APK using tools/check-apk-update.py
+from this PR. SIGNING-CERTIFICATE.txt contains this APK's public certificate.
+Only update in place if certificates match and versionCode increases.
+
+If certificates differ, the preferred solution is a build using the SAME existing
+signing key. If that key was an ephemeral CI key and is gone, STOP and keep v0.1
+installed until you have a verified backup and deliberately choose a migration.
+There is no automatic, guaranteed data-preserving update across unrelated keys.
+
+See docs/min-tv-v0.2.md at the exact source commit for installation, optional
+manual backed-up migration, Chromecast tests, and USB ADB diagnostics.
+
+GPLv3: Min TV is based on OwnTV. Source is jonasschroder/OwnTV at the workflow's
+head commit; compatible OwnTV_Core source is pinned in gradle/owntv-core.commit.
+The repository LICENSE and pinned Core LICENSE apply; keep these with any
+redistribution and provide corresponding source. No IPTV channels are bundled.

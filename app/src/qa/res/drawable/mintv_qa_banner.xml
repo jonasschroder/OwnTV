@@ -1,0 +1,5 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/mintv_banner" />
+    <item android:drawable="@drawable/mintv_qa_badge" android:gravity="bottom|right"
+        android:right="8dp" android:bottom="8dp" />
+</layer-list>

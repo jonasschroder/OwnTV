@@ -48,8 +48,19 @@ android {
         minSdk = 26
         targetSdk = 36
         // Independent version sequence for Min TV. CI supplies a monotonically increasing code.
-        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
-        versionName = "0.1"
+        versionCode = (System.getenv("VERSION_CODE") ?: "2").toInt()
+        versionName = System.getenv("MINTV_VERSION_NAME") ?: "0.2"
+        manifestPlaceholders["minTvLinkScheme"] = "mintv"
+        manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
+        buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")
+        val pins = groovy.json.JsonSlurper().parse(rootProject.file("config/mintv-signing.json")) as Map<*, *>
+        val stablePin = (pins["stable"] as Map<*, *>)["certificate_sha256"] as? String ?: ""
+        buildConfigField("String", "UPDATE_CERTIFICATE_SHA256", "\"$stablePin\"")
+        // Public identifier only. Register your own Twitch public client; never supply a secret/token.
+        val twitchClientId = System.getenv("MINTV_TWITCH_CLIENT_ID")
+            ?: providers.gradleProperty("mintv.twitchClientId").orNull ?: ""
+        require(twitchClientId.isEmpty() || twitchClientId.matches(Regex("[a-zA-Z0-9]{8,128}")))
+        buildConfigField("String", "TWITCH_CLIENT_ID", "\"$twitchClientId\"")
 
         // Opt-in local diagnostic APKs keep the rolling playback trace enabled even when they are
         // release-signed (so they can update an installed production build without changing its data).
@@ -106,6 +117,22 @@ android {
             dimension = "abi"
             ndk { abiFilters += listOf("x86_64") }
         }
+        // Side-by-side device QA: same app/source, separate Android sandbox and link protocol.
+        create("qa") {
+            dimension = "abi"
+            applicationIdSuffix = ".qa"
+            manifestPlaceholders["minTvLinkScheme"] = "mintv-qa"
+            manifestPlaceholders["minTvBanner"] = "@drawable/mintv_qa_banner"
+            buildConfigField("String", "APP_LINK_SCHEME", "\"mintv-qa\"")
+            val pins = groovy.json.JsonSlurper().parse(rootProject.file("config/mintv-signing.json")) as Map<*, *>
+            val qaPin = (pins["qa"] as Map<*, *>)["certificate_sha256"] as? String ?: ""
+            buildConfigField("String", "UPDATE_CERTIFICATE_SHA256", "\"$qaPin\"")
+            // Only disposable upgrade-test emulators use this override. Distribution verification
+            // requires both ARM ABIs and rejects emulator-only APKs. No extra shipped variant.
+            val upgradeTestAbi = providers.gradleProperty("mintv.upgradeTestAbi").orNull
+            require(upgradeTestAbi == null || upgradeTestAbi == "x86_64")
+            ndk { abiFilters += if (upgradeTestAbi == null) listOf("arm64-v8a", "armeabi-v7a") else listOf(upgradeTestAbi) }
+        }
     }
 
     // Release signing: env vars first (that is how CI injects the GitHub secrets), then Gradle
@@ -129,6 +156,7 @@ android {
             ?: localSigningProps.getProperty(property)
 
     val releaseKeystore = signingValue("KEYSTORE_FILE", "owntv.keystoreFile")
+    val minTvDebugKeystore = signingValue("MINTV_DEBUG_KEYSTORE_FILE", "mintv.debugKeystoreFile")
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
@@ -138,6 +166,14 @@ android {
                 keyPassword = signingValue("KEY_PASSWORD", "owntv.keyPassword")
             }
         }
+        if (minTvDebugKeystore != null) {
+            create("minTvDebug") {
+                storeFile = file(minTvDebugKeystore)
+                storePassword = signingValue("MINTV_DEBUG_KEYSTORE_PASSWORD", "mintv.debugKeystorePassword")
+                keyAlias = signingValue("MINTV_DEBUG_KEY_ALIAS", "mintv.debugKeyAlias")
+                keyPassword = signingValue("MINTV_DEBUG_KEY_PASSWORD", "mintv.debugKeyPassword")
+            }
+        }
     }
 
     testOptions {
@@ -145,9 +181,11 @@ android {
         // etc.); return defaults (no-op log, 0 clock) instead of "not mocked" crashes.
         unitTests.isReturnDefaultValues = true
     }
+    sourceSets.getByName("androidTest").assets.srcDir("src/test/resources/swehockey-2026-10-10")
 
     buildTypes {
         debug {
+            if (minTvDebugKeystore != null) signingConfig = signingConfigs.getByName("minTvDebug")
             // Pseudolocales (en-XA / ar-XB) are generated for the debug BuildType, NOT androidResources.
             // They are the Phase 3g QA sweep instrument; localeFilters below would otherwise strip them,
             // so the debug-only qualifiers are added back via the per-variant API in the androidComponents
@@ -164,10 +202,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            if (releaseKeystore != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
         }
+    }
+
+    // Legacy local production signing belongs ONLY to the regular identity. Never let a
+    // developer's KEYSTORE_FILE accidentally sign QA release with the production key.
+    // Debug's build-type signer still takes precedence, preserving existing debug behavior.
+    if (releaseKeystore != null) {
+        productFlavors.getByName("standard").signingConfig = signingConfigs.getByName("release")
+        productFlavors.getByName("x86_64").signingConfig = signingConfigs.getByName("release")
     }
 
     buildFeatures {
@@ -233,6 +276,8 @@ android {
 // the AGP 9.2.1 variant API (ApplicationAndroidComponentsExtension.onVariants +
 // ApplicationAndroidResources.localeFilters: SetProperty<String>); re-verify before deviating.
 androidComponents {
+    // QA release is built unsigned in an isolated job, then signed outside Gradle in its own
+    // protected environment. Ordinary PR builds retain their existing QA debug behavior.
     onVariants(selector().withBuildType("debug")) { variant ->
         variant.androidResources.localeFilters.addAll("en-rXA", "ar-rXB")
     }
@@ -433,10 +478,14 @@ dependencies {
 
     // Test
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     // Test-only, never packaged: android.jar's org.json is a stub, and isReturnDefaultValues turns
     // every JSONObject call into a silent null/0. Backup/restore is all JSON, so the unit tests need
     // the real implementation to mean anything.
     testImplementation(libs.org.json)
+    androidTestImplementation("androidx.sqlite:sqlite-bundled:2.6.2") // match pinned Core, test driver only
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

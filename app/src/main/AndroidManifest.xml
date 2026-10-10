@@ -35,10 +35,21 @@
         android:name="android.software.leanback"
         android:required="false" />
 
+    <!-- Android 11+ package visibility for explicit external TV shortcuts. -->
+    <queries>
+        <package android:name="org.smarttube.stable" />
+        <package android:name="org.smarttube.beta" />
+        <package android:name="app.smarttube.fdroid" />
+        <package android:name="com.teamsmart.videomanager.tv" />
+        <package android:name="com.liskovsoft.smarttubetv.beta" />
+        <package android:name="se.svt.android.svtplay" />
+        <package android:name="com.android.vending" />
+    </queries>
+
     <application
         android:name=".OwnTVApp"
         android:allowBackup="false"
-        android:banner="@drawable/mintv_banner"
+        android:banner="${minTvBanner}"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/mintv_icon"
@@ -73,28 +84,14 @@
                 tools:node="remove" />
         </provider>
 
-        <!-- HOME remains enabled even when the IPTV app changes its launcher icon. -->
-        <activity
-            android:name="tv.own.owntv.home.MinTvHomeActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:taskAffinity="${applicationId}.home"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
         <!-- One launcher activity per icon colour (core's AppIcon); AppIconSwitcher keeps exactly one
              enabled. MainActivity is the default (Eggshell) and keeps its name, so an icon placed before this change still
              opens the app. Each carries its own icon, banner and launch-screen theme, and ALL intent
-             filters: a disabled activity resolves nothing, so the mintv:// links always reach the enabled
+             filters: a disabled activity resolves nothing, so each variant's links always reach the enabled
              one. LEANBACK_LAUNCHER shows it on TV launchers; LAUNCHER on phone/tablet/box home screens. -->
         <activity
             android:name=".MainActivityPetrol"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -111,7 +108,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -119,7 +116,7 @@
 
         <activity
             android:name=".MainActivitySunflower"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -136,7 +133,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -144,7 +141,7 @@
 
         <activity
             android:name=".MainActivityCobalt"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -161,7 +158,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -169,7 +166,7 @@
 
         <activity
             android:name=".MainActivityTomato"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -186,7 +183,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -194,7 +191,7 @@
 
         <activity
             android:name=".MainActivityBoard"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -211,7 +208,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -219,7 +216,7 @@
 
         <activity
             android:name=".MainActivity"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -236,7 +233,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -244,7 +241,7 @@
 
         <activity
             android:name=".MainActivityOlive"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -261,7 +258,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -269,7 +266,7 @@
 
         <activity
             android:name=".MainActivityOliveCream"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -286,7 +283,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
@@ -295,7 +292,7 @@
 
         <activity
             android:name=".MainActivityPixel"
-            android:banner="@drawable/mintv_banner"
+            android:banner="${minTvBanner}"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/mintv_icon"
@@ -312,12 +309,13 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mintv" />
+                <data android:scheme="${minTvLinkScheme}" />
                 <data android:host="play" />
                 <data android:host="open" />
             </intent-filter>
         </activity>
 
+        <receiver android:name=".features.update.UpdateInstallReceiver" android:exported="false" />
     </application>
 
 </manifest>

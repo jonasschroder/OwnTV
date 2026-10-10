@@ -86,10 +86,9 @@ jobs:
         run: python3 tools/i18n/check_text_overflow.py
 
   pseudo:
-    # Builds the debug + release standard APKs and inspects their resource tables. Heavier than the
-    # other two jobs, so it is its own job rather than piggy-backed on android.yml — and skipped on
-    # push, where android.yml already assembles main.
-    if: ${{ github.event_name != 'push' && !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'bump/core-')) }}
+    # Release identities and native signer checks must also pass on the EXACT main commit before
+    # protected signing. Prototype CI builds debug APKs; it does not replace this release check.
+    if: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'bump/core-')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -106,8 +105,10 @@ jobs:
           # 'tools' is obsolete and Google removed it from the SDK repository; the
           # action still asks for it by default, which fails the whole setup step.
           packages: 'platform-tools'
-      - name: Assemble standard debug + release APKs
-        run: ./gradlew :app:assembleStandardDebug :app:assembleStandardRelease --console=plain
+      - name: Assemble standard debug and both unsigned release identities
+        run: |
+          MINTV_VERSION_NAME=0.2.0 VERSION_CODE=1000001 ./gradlew :app:assembleStandardDebug :app:assembleStandardRelease :app:lintStandardRelease --max-workers=4 --console=plain
+          MINTV_VERSION_NAME=0.2.0-beta.1 VERSION_CODE=1000001 ./gradlew :app:assembleQaRelease :app:lintQaRelease --max-workers=4 --console=plain
       - name: Verify pseudolocale packaging
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
@@ -116,3 +117,8 @@ jobs:
           REL=$(ls app/build/outputs/apk/standard/release/*.apk | head -1)
           python3 tools/i18n/check_pseudo_locales.py --apk "$DBG" --mode debug
           python3 tools/i18n/check_pseudo_locales.py --apk "$REL" --mode release
+          QA=app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk
+          python3 tools/i18n/check_pseudo_locales.py --apk "$QA" --mode release
+          python3 tools/verify-mintv-apk.py --qa --apk "$QA" --aapt2 "$ANDROID_HOME/build-tools/37.0.0/aapt2" --manifest app/build/intermediates/packaged_manifests/qaRelease/processQaReleaseManifestForPackage/AndroidManifest.xml --peer-manifest app/build/intermediates/packaged_manifests/standardRelease/processStandardReleaseManifestForPackage/AndroidManifest.xml
+      - name: Native signing negative/positive checks (disposable keys, no artifacts or secrets)
+        run: python3 tools/signing/test_signer.py --qa app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk --stable app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk --tools "$ANDROID_HOME/build-tools/37.0.0"

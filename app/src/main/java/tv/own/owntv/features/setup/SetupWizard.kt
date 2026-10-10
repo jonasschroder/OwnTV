@@ -76,16 +76,18 @@ private enum class Step { WELCOME, DISPLAY_SIZE, DISCLAIMER, SETUP_CHOICE, SYNC_
  * reuses the Settings › Add a source pages (P10B step 4).
  */
 @Composable
-fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier,
+    minTvProfileId: Long? = null) {
     val vm: SetupViewModel = koinViewModel()
     val defaultProfileName = stringResource(R.string.setup_default_profile)
     val defaultIptvName = stringResource(R.string.setup_default_iptv)
     val defaultPlaylistName = stringResource(R.string.setup_name_default_playlist)
     val defaultPortalName = stringResource(R.string.setup_default_portal)
-    var step by rememberSaveable(firstRun) { mutableStateOf(if (firstRun) Step.WELCOME else Step.CREATE_PROFILE) }
+    var step by rememberSaveable(firstRun, minTvProfileId) { mutableStateOf(if (minTvProfileId != null) Step.ADD_CONTENT else if (firstRun) Step.WELCOME else Step.CREATE_PROFILE) }
     val importState by vm.state.collectAsStateWithLifecycle()
     val progress by vm.progress.collectAsStateWithLifecycle()
     val epgSync by vm.epgSync.collectAsStateWithLifecycle()
+    val importReady by vm.importReady.collectAsStateWithLifecycle()
     var existing by remember { mutableStateOf<List<SourceEntity>>(emptyList()) }
     // Where "Try Again" returns to when an import fails (new source vs. linking existing).
     var importOrigin by remember { mutableStateOf(Step.ADD_SOURCE) }
@@ -99,6 +101,14 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
     var restoreSections by remember { mutableStateOf<Set<tv.own.owntv.core.backup.BackupManager.Section>?>(null) }
     // "Hardware settings from the other device" — asked with the sections, carried like them.
     val restoreDeviceSettings = remember { mutableStateOf(false) }
+
+    LaunchedEffect(minTvProfileId) { minTvProfileId?.let(vm::useExistingProfile) }
+    // Source/EPG safety and opt-in stay intact; only the final "All set" click is unnecessary.
+    LaunchedEffect(importState, epgSync, step, importReady) {
+        if (minTvProfileId != null && importReady && step == Step.IMPORTING && importState is SourceImporter.ImportState.Success &&
+            epgSync is tv.own.owntv.features.settings.EpgSyncUi.Hidden) vm.finish(onDone)
+    }
+    androidx.activity.compose.BackHandler(enabled = minTvProfileId != null && step == Step.ADD_CONTENT, onBack = onCancel)
 
     // Refresh the "existing playlists" availability whenever we land on the add-content step.
     LaunchedEffect(step) { if (step == Step.ADD_CONTENT) existing = runCatching { vm.availableExistingSources() }.getOrDefault(emptyList()) }

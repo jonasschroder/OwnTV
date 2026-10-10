@@ -134,6 +134,7 @@ class LiveViewModel(
     private val epgRepository: tv.own.owntv.core.repository.EpgRepository,
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
+    private val homeDefaults: tv.own.owntv.features.home.HomeChannelDefaults,
 ) : ViewModel() {
 
     // --- "Record what I'm watching" (Plan D, D3 mode b) -----------------------------------------
@@ -960,6 +961,155 @@ class LiveViewModel(
         live.preview(channel, muted = !livePreviewAudio.value)
     }
 
+    private var homeOwnsPreviewAudio = false
+
+    /** Home shares the Live engine/controller; it never honors the browse-pane audio toggle. */
+    val homePreview = tv.own.owntv.features.home.HomeLivePreviewController(
+        scope = viewModelScope,
+        key = { channel: ChannelEntity -> channel.id },
+        play = { channel ->
+            homeOwnsPreviewAudio = true
+            live.preview(channel, muted = true)
+        },
+        stop = {
+            homeOwnsPreviewAudio = false
+            live.stop()
+        },
+    )
+
+    /** No focus debounce for metadata; the caller cancels and clears the previous channel's answer. */
+    suspend fun homeNowNext(channel: ChannelEntity): EpgNowNext? {
+        val guide = epgReader.nowNext(channel, custom.value, epgOffset.value)
+        if (guide?.now?.stopMs?.let { it <= System.currentTimeMillis() } == true) {
+            epgReader.invalidate(channel.id)
+            return epgReader.nowNext(channel, custom.value, epgOffset.value)
+        }
+        return guide
+    }
+
+    enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
+
+    internal val homeLibraryState = homeDefaults.observe(ctx.flatMapLatest { c -> combine(customize.observe(c.profileId, MediaType.LIVE), profileDao.observeById(c.profileId)) { _, _ -> Unit } }) { profileId, sourceIds ->
+        val snapshot = ctx.value
+        if (snapshot.profileId != profileId || snapshot.sourceIds != sourceIds) null
+        else {
+            val visible: suspend (ChannelEntity) -> Boolean = { channel -> isVisibleInContext(channel, snapshot) }
+            visible
+        }
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.features.home.HomeLibraryState())
+
+    /** Local library changes refresh the SHL empty state after adding/importing a source. */
+    val homeLibraryContext = ctx.map { it.profileId to it.sourceIds }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, -1L to emptyList())
+    val homeChannelCount = ctx.flatMapLatest { c -> channelDao.countAll(c.sourceIds.ifEmpty { listOf(-1L) }).map { c.profileId to it } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, -1L to 0)
+
+    suspend fun homeHasChannels(expectedProfileId: Long): Boolean = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        current.profileId == expectedProfileId && current.sourceIds.any { channelDao.countForSourceOnce(it) > 0 }
+    }
+
+    suspend fun homeChannel(channelId: Long, expectedProfileId: Long): ChannelEntity? = withContext(Dispatchers.IO) {
+        if (ctx.value.profileId != expectedProfileId) return@withContext null
+        channelDao.getById(channelId)?.takeIf { isVisibleToActiveProfile(it) }
+    }
+
+    data class HomeChannelCandidates(val channels: List<ChannelEntity>, val truncated: Boolean)
+
+    internal suspend fun homeBroadcastCandidates(broadcasters: List<tv.own.owntv.features.home.BroadcastChannel>, expectedProfileId: Long): HomeChannelCandidates = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext HomeChannelCandidates(emptyList(), false)
+        var truncated = false
+        val rows = broadcasters.filter { it.linear }.distinctBy { it.name }.take(8).flatMap { broadcaster ->
+            val tokens = tv.own.owntv.features.home.BroadcastResolver.searchTokens(broadcaster)
+            if (tokens.isEmpty()) emptyList() else {
+                // FTS requires every identity token, so PPV TV4 rows cannot consume this limit.
+                val exact = channelDao.searchListDetailedFts(tokens.joinToString(" AND ") { "\"$it\"" }, current.sourceIds, 129)
+                    .map { it.channel }
+                val fallback = channelDao.searchList(tokens.takeLast(2).joinToString(" "), current.sourceIds, 129)
+                if (exact.size == 129 || fallback.size == 129) truncated = true
+                exact + fallback
+            }
+        }
+        val matches = rows.distinctBy { it.id }.filter { channel -> broadcasters.any {
+            tv.own.owntv.features.home.BroadcastResolver.matches(it, channel.name)
+        } && isVisibleToActiveProfile(channel) }
+        HomeChannelCandidates(matches.take(128), truncated || matches.size > 128)
+    }
+
+    data class HomeSportsCategory(val id: Long, val name: String, val sourceId: Long)
+
+    suspend fun homeSportsCategories(expectedProfileId: Long): List<HomeSportsCategory> = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext emptyList()
+        val hidden = customize.observe(current.profileId, MediaType.LIVE).first().hiddenCategories
+        categoryDao.observe(current.sourceIds, MediaType.LIVE).first().filter {
+            CustomizeKeys.category(it) !in hidden &&
+                tv.own.owntv.core.content.AdultCategoryClassifier.allows(current.profileId, it.id, profileDao, categoryDao)
+        }.sortedBy { it.name.lowercase(java.util.Locale.ROOT) }.take(256).map { HomeSportsCategory(it.id, it.name, it.sourceId) }
+    }
+
+    /** Paged local category browser: nothing is fetched from an IPTV provider on this path. */
+    suspend fun homeCategoryChannels(categoryId: Long, page: Int, expectedProfileId: Long): HomeChannelCandidates = withContext(Dispatchers.IO) {
+        if (ctx.value.profileId != expectedProfileId || homeSportsCategories(expectedProfileId).none { it.id == categoryId })
+            return@withContext HomeChannelCandidates(emptyList(), false)
+        val source = channelDao.pagingByCategory(categoryId)
+        try {
+            val result = source.load(PagingSource.LoadParams.Refresh(page.coerceIn(0, 1000) * 48, 49, false))
+            val rows = (result as? PagingSource.LoadResult.Page)?.data.orEmpty()
+            HomeChannelCandidates(rows.take(48).filter { isVisibleToActiveProfile(it) }, rows.size > 48)
+        } finally { source.invalidate() }
+    }
+
+    /** Query all relevant names broadly before normalizing; truncation must never imply uniqueness. */
+    suspend fun homeMatchCandidates(query: String, favorites: List<ChannelEntity>, expectedProfileId: Long,
+        broadcasterNames: List<String>): HomeChannelCandidates = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext HomeChannelCandidates(emptyList(), false)
+        val terms = if (query.isNotBlank()) listOf(query.take(80)) else
+            (broadcasterNames.map { it.substringBefore(' ') } + listOf("TV4", "hockey", "sport", "SHL", "C More")).distinct()
+        var truncated = false
+        val found = (if (query.isBlank()) favorites else emptyList()) + terms.flatMap {
+            val rows = channelDao.searchList(it, current.sourceIds, 129)
+            if (rows.size == 129) truncated = true
+            rows
+        }
+        val visible = found.distinctBy { it.id }.filter { isVisibleToActiveProfile(it) }
+        HomeChannelCandidates(visible.take(128), truncated || visible.size > 128)
+    }
+
+    /** Bounded, local-only hockey discovery; no provider request and no preview on focus. */
+    suspend fun homeSportsChannels(query: String, favorites: List<ChannelEntity>, expectedProfileId: Long): List<ChannelEntity> = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext emptyList()
+        val terms = if (query.isNotBlank()) listOf(query.take(80)) else listOf("sport", "hockey", "SHL", "TV4", "C More")
+        val candidates = (favorites + terms.flatMap { channelDao.searchList(it, current.sourceIds, 24) }).distinctBy { it.id }.take(128)
+        candidates.filter { isVisibleToActiveProfile(it) }
+    }
+
+    /** Honors existing manual EPG mapping and guide offsets; only reads already stored programmes. */
+    suspend fun homeStoredProgrammes(channel: ChannelEntity, from: Long, to: Long): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> = withContext(Dispatchers.IO) {
+        if (!isVisibleToActiveProfile(channel)) return@withContext emptyList()
+        val cust = custom.value
+        val key = (cust.epgMatchResolver.epgIdFor(channel) ?: channel.epgChannelId)?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+            ?: return@withContext emptyList()
+        val shift = tv.own.owntv.core.epg.EpgShift.minutesFor(cust, channel, epgOffset.value)
+        epgDao.programmesForChannel(key, tv.own.owntv.core.epg.EpgShift.toStored(from, shift), tv.own.owntv.core.epg.EpgShift.toStored(to, shift))
+            .take(12).map { tv.own.owntv.core.epg.EpgShift.apply(it, shift) }
+    }
+
+    suspend fun playHomeChannel(channelId: Long, favorites: List<ChannelEntity>): HomePlayback {
+        val channel = channelDao.getById(channelId) ?: return HomePlayback.UNAVAILABLE
+        if (!isVisibleToActiveProfile(channel)) return HomePlayback.UNAVAILABLE
+        val pid = currentProfileId() ?: return HomePlayback.UNAVAILABLE
+        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return HomePlayback.UNAVAILABLE
+        homeOwnsPreviewAudio = false
+        if (!ensurePlayingByIdAsync(channelId, favorites)) return HomePlayback.UNAVAILABLE
+        // Protected channels stay in-app even with the global external-player preference enabled.
+        return if (externalPlayerOn.value && channel.drmConfig == null) HomePlayback.EXTERNAL else HomePlayback.IN_APP
+    }
+
     // --- Multiview: channels kept from the browse screen ------------------------------------------
     // The plan's second entry point: pick two to four channels from the Live list, then press play and
     // the grid opens already filled. Held here rather than in the shell because the context menu that
@@ -1113,7 +1263,7 @@ class LiveViewModel(
     init {
         viewModelScope.launch {
             livePreviewAudio.collect { on ->
-                if (!liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
+                if (!homeOwnsPreviewAudio && !liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
             }
         }
         viewModelScope.launch { player.archiveEnded.collect { continueAfterCatchup() } }
@@ -1161,7 +1311,11 @@ class LiveViewModel(
 
     /** Final startup/deep-entry visibility check, including profile source and Customize policy. */
     suspend fun isVisibleToActiveProfile(channel: ChannelEntity): Boolean {
-        val current = ctx.first { it.profileId >= 0L }
+        return isVisibleInContext(channel, ctx.first { it.profileId >= 0L })
+    }
+
+    /** A fixed profile/source snapshot keeps shared-source hidden/kids policy from following a switch. */
+    private suspend fun isVisibleInContext(channel: ChannelEntity, current: Ctx): Boolean {
         if (channel.sourceId !in current.sourceIds) return false
         if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(current.profileId, channel.categoryId, profileDao, categoryDao)) return false
         val customizations = customize.observe(current.profileId, MediaType.LIVE).first()

@@ -67,6 +67,7 @@ internal fun WizardFrame(
     width: Dp = 1040.mpx,
     /** More buttons beside Back (the display step's Reset). */
     extraLeft: List<WizardAction> = emptyList(),
+    showProgress: Boolean = true,
     body: @Composable ColumnScope.() -> Unit = {},
 ) {
     if (onBack != null) BackHandler { onBack() }
@@ -83,7 +84,7 @@ internal fun WizardFrame(
             }
             Text(stringResource(R.string.app_name), style = stageText(24, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        StepDots(step, Modifier.align(Alignment.TopEnd).padding(end = 64.mpx, top = 66.mpx))
+        if (showProgress) StepDots(step, Modifier.align(Alignment.TopEnd).padding(end = 64.mpx, top = 66.mpx))
 
         Column(
             Modifier

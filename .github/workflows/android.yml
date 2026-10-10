@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION_CODE: ${{ github.run_number }}
+      # Legitimate registered PUBLIC client identifier; never a secret or token. Empty is supported.
+      MINTV_TWITCH_CLIENT_ID: ${{ vars.MINTV_TWITCH_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -37,12 +39,14 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Unit tests
-        run: ./gradlew :app:testStandardDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
+        run: |
+          python3 -m unittest discover -s tools/tests -v
+          ./gradlew :app:testStandardDebugUnitTest :app:testQaDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
       - name: Lint
         if: always()
-        run: ./gradlew :app:lintStandardDebug --stacktrace
+        run: ./gradlew :app:lintStandardDebug :app:lintQaDebug --stacktrace
       - name: Assemble ARM debug APK and device tests
-        run: ./gradlew :app:assembleStandardDebug :app:assembleStandardDebugAndroidTest --stacktrace
+        run: ./gradlew :app:assembleStandardDebug :app:assembleQaDebug :app:assembleStandardDebugAndroidTest :app:assembleQaDebugAndroidTest --stacktrace
       - name: Verify and stage Min TV APK
         shell: bash
         run: |
@@ -52,18 +56,35 @@ jobs:
           python3 tools/verify-mintv-apk.py --apk "$APK" --aapt2 "$TOOLS/aapt2"
           "$TOOLS/apksigner" verify --print-certs "$APK"
           mkdir -p dist
-          cp "$APK" dist/MinTV-v0.1-arm-debug.apk
+          cp docs/apk-update-notice.txt dist/READ-BEFORE-INSTALL.txt
+          "$TOOLS/apksigner" verify --print-certs "$APK" > dist/SIGNING-CERTIFICATE.txt
+          cp "$APK" dist/MinTV-v0.2-arm-debug.apk
           cd dist
-          sha256sum MinTV-v0.1-arm-debug.apk > SHA256SUMS
-      - name: Upload installable prototype
-        uses: actions/upload-artifact@v7
-        with:
-          name: MinTV-v0.1-arm-debug
-          path: |
-            dist/MinTV-v0.1-arm-debug.apk
-            dist/SHA256SUMS
-          if-no-files-found: error
-          retention-days: 14
+          sha256sum MinTV-v0.2-arm-debug.apk > SHA256SUMS
+      - name: Verify and stage isolated QA APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/qa/debug/app-qa-debug.apk
+          TOOLS="$ANDROID_HOME/build-tools/37.0.0"
+          python3 tools/verify-mintv-apk.py --qa --apk "$APK" --aapt2 "$TOOLS/aapt2" --peer-manifest app/build/intermediates/packaged_manifests/standardDebug/processStandardDebugManifestForPackage/AndroidManifest.xml
+          python3 tools/i18n/check_pseudo_locales.py --apk "$APK" --mode debug --aapt2 "$TOOLS/aapt2"
+          mkdir -p dist-qa
+          cp docs/apk-qa-notice.txt dist-qa/READ-BEFORE-INSTALL.txt
+          cp docs/min-tv-companions.md dist-qa/COMPANION-SETUP.md
+          cp docs/min-tv-redesign.md dist-qa/TV-REDESIGN-AND-SETUP.md
+          # Include linked source guides so the downloaded Markdown works offline.
+          cp docs/min-tv-qa.md docs/min-tv-v0.2.md docs/min-tv-signing.md docs/min-tv-companions.md docs/min-tv-redesign.md docs/min-tv-broadcasts.md dist-qa/
+          cp docs/min-tv-personalization.md docs/min-tv-safe-qa-update.md docs/min-tv-home-recovery.md docs/min-tv-sports-recovery.md dist-qa/
+          cp tools/check-apk-update.py dist-qa/check-apk-update.py
+          cp docs/min-tv-signing.md dist-qa/SIGNING-PLAN.md
+          "$TOOLS/apksigner" verify --print-certs "$APK" | tee dist-qa/SIGNING-CERTIFICATE.txt
+          cp "$APK" dist-qa/MinTV-v0.2-QA.apk
+          cd dist-qa
+          sha256sum MinTV-v0.2-QA.apk | tee SHA256SUMS
+          stat -c 'QA APK bytes: %s' MinTV-v0.2-QA.apk
+      # Compile and verify ordinary debug APKs, but stop uploading ephemeral-key installers.
+      # Only mintv-sign.yml may produce an approved permanently signed candidate artifact.
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -77,3 +98,98 @@ jobs:
             .gradle-cache/OwnTV_Core/player-core/build/reports/tests/**
           include-hidden-files: true
           if-no-files-found: warn
+
+  home-device-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare pinned Core source
+        run: bash tools/prepare-core.sh
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android D-pad and database regressions (synthetic emulator data)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          profile: tv_1080p
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite --max-workers=4 --stacktrace
+      - name: Require all six regression tests to execute
+        run: |
+          python3 - <<'PYTEST'
+          from pathlib import Path
+          import xml.etree.ElementTree as E
+          required = {
+              ('tv.own.owntv.home.HomeDpadTraversalTest', 'noTeamsChooseTeamsAndBack'),
+              ('tv.own.owntv.home.HomeDpadTraversalTest', 'multipleTeamsMatchcenterAndBack'),
+              ('tv.own.owntv.home.HomeChannelDefaultsStorageTest', 'preservesFavoritesRemovalRestartSyncAndProfileIsolation'),
+              ('tv.own.owntv.home.SportsReaderIntegrationTest', 'officialPagesSurviveRecreationFailuresAndAccessBlocks'),
+              ('tv.own.owntv.home.SportsProfileStorageTest', 'migrationIsolationPersistenceAndDatabaseIdReuse'),
+              ('tv.own.owntv.home.HomeContentViewportTest', 'programmeDescriptionIsBoundedAndCannotScrollAcrossClockArea'),
+          }
+          found = set()
+          for path in Path('app/build/outputs/androidTest-results').rglob('TEST-*.xml'):
+              root = E.parse(path).getroot()
+              for case in root.iter('testcase'):
+                  assert not any(case.find(tag) is not None for tag in ('failure', 'error', 'skipped')), E.tostring(case)
+                  found.add((case.get('classname'), case.get('name')))
+          assert required <= found, ('Missing executed tests', required - found)
+          print('All 6 Home/sports/layout/profile regressions executed and passed')
+          PYTEST
+      - name: Upload device regression reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mintv-home-device-reports
+          path: |
+            app/build/reports/androidTests/**
+            app/build/outputs/androidTest-results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  signing-upgrade-regressions:
+    # NO protected environment, production secrets, private artifact or cache upload.
+    # The two ephemeral keys are deliberately disposable TEST fixtures, never distribution keys.
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: bash tools/prepare-core.sh
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platform-tools'
+      - name: Enable disposable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android 14 same-signer upgrades and persistent synthetic data
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.35.0
+        with:
+          api-level: 34
+          profile: tv_1080p
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 tools/signing/test_upgrade.py --tools "$ANDROID_HOME/build-tools/37.0.0"
+      # No APK uploads from this job, so nobody accidentally installs a fixture-signed build.

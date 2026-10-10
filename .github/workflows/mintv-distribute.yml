@@ -1,0 +1,92 @@
+name: Min TV approved distribution
+
+# Manual publication ONLY; this file does not publish by being pushed or merged.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: choice
+        options: [qa, stable]
+        required: true
+        default: qa
+      candidate_run_id:
+        description: Successful approved signing workflow run ID (not a PR/debug build)
+        type: string
+        required: true
+      confirm_publication:
+        description: Type PUBLISH-QA or PUBLISH-STABLE; this makes APKs PUBLIC
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+concurrency:
+  group: mintv-distribution-${{ inputs.channel }}
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.repository == 'jonasschroder/OwnTV' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      artifact: ${{ steps.gate.outputs.artifact }}
+      code: ${{ steps.gate.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ inputs.channel }}
+          CONFIRM: ${{ inputs.confirm_publication }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+        run: python3 tools/signing/distribution_guard.py
+  publish:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.channel == 'qa' && 'mintv-qa-distribution' || 'mintv-production-distribution' }}
+    permissions:
+      contents: write
+      actions: read
+    env:
+      CHANNEL: ${{ inputs.channel }}
+      EXPECTED_CODE: ${{ needs.preflight.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'build-tools;37.0.0'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ${{ needs.preflight.outputs.artifact }}
+          run-id: ${{ inputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+          path: candidate
+      - id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/signing/distribution_guard.py --verify --tools "$ANDROID_HOME/build-tools/37.0.0"
+      - name: Create new public channel release; never replace an existing tag/asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.verify.outputs.tag }}
+          SOURCE: ${{ steps.verify.outputs.source }}
+          NAME: ${{ steps.verify.outputs.name }}
+        run: |
+          set -euo pipefail
+          flags=()
+          if [ "$CHANNEL" = qa ]; then flags+=(--prerelease); fi
+          gh release create "$TAG" public/*.apk public/MinTV-*-update.json public/SHA256SUMS \
+            --repo jonasschroder/OwnTV --target "$SOURCE" --title "Min TV $CHANNEL $NAME" \
+            --notes-file public/RELEASE-NOTES.md --latest=false "${flags[@]}"

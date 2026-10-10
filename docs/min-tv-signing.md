@@ -93,3 +93,8 @@ reinstall / restore migration with local-data loss understood. That decision is
 outside this PR. Neither app is removed or cleared automatically; no installer
 or workflow here performs migration. Twitch credentials and the experimental
 SHL setting are intentionally outside the IPTV backup and require new setup.
+
+For the already populated **Min TV Test** installation, use [the safe QA update
+gate](min-tv-safe-qa-update.md), including the explicitly selected QA checker.
+New sports preferences are local settings outside the IPTV backup and must be
+reselected after an authorized restore.

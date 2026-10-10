@@ -8,7 +8,17 @@ on Chromecast with Google TV 4K / Android 14. The changes described here still
 need physical testing. Regular Min TV v0.1 is not migrated, replaced or modified.
 Use **Min TV Test**, package `se.jonasschroder.mintv.qa`.
 
-## Use the prototype
+## Current personalization update
+
+The latest build replaces the hardcoded FBK Home with per-profile **My sport /
+Min sport** and optional **My teams / Mina lag**. Follow [the personalization
+guide](min-tv-personalization.md) for SHL/HockeyAllsvenskan, football availability,
+visibility/request limits and system-language/short-onboarding changes. Before
+updating a populated QA app, follow [the safe update gate](min-tv-safe-qa-update.md).
+The following section describes the earlier single-team companion baseline;
+the linked personalization guide defines current team selection and caching.
+
+## Use the earlier companion baseline
 
 IPTV favorites and the existing muted preview remain above companion content.
 On Home, the Färjestad card opens the full-screen Matchcenter. In **Inställningar**,

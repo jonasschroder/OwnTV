@@ -10,6 +10,8 @@ parser.add_argument("--previous", required=True, help="APK installed on the devi
 parser.add_argument("--candidate", required=True)
 parser.add_argument("--aapt2", required=True)
 parser.add_argument("--apksigner", required=True)
+parser.add_argument("--application-id", choices=("se.jonasschroder.mintv", "se.jonasschroder.mintv.qa"),
+                    default="se.jonasschroder.mintv", help="Expected installed package; select QA explicitly")
 args = parser.parse_args()
 
 
@@ -33,7 +35,7 @@ except (ValueError, subprocess.CalledProcessError) as error:
 
 print(f"Previous: {previous[0]}, versionCode={previous[1]}, signer={','.join(sorted(previous[2]))}")
 print(f"Candidate: {candidate[0]}, versionCode={candidate[1]}, signer={','.join(sorted(candidate[2]))}")
-if previous[0] != candidate[0] or candidate[0] != "se.jonasschroder.mintv":
+if previous[0] != candidate[0] or candidate[0] != args.application_id:
     sys.exit("BLOCKED: application IDs differ or are not Min TV. Do not uninstall/clear data.")
 if previous[2] != candidate[2]:
     sys.exit("BLOCKED: signer certificates differ. Do not uninstall/clear data. See docs/min-tv-v0.2.md.")

@@ -130,6 +130,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val next = mine.firstOrNull { it.faceoff >= now }
     val expanded = enabled && expansion && myToday.isNotEmpty()
     val available = active && (visible && selectedTeams.prominent || screen) && selection != null && selectedTeams.teamIds.isNotEmpty()
+    val scheduleAvailable = available && sportsScheduleVisible(visible, screen, section, selectedId != null, teamsOpen)
     val selected = selectedId?.let { id -> allGames.firstOrNull { it.id == id } }
     val fetchedAt = data.values.minOfOrNull { it.fetchedAt }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -140,12 +141,13 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     LaunchedEffect(profileId, libraryContext, libraryCount, favorites) { resolvedCards.clear(); directCards.clear() }
 
-    LaunchedEffect(available, enabled) {
-        if (available && enabled && requiredCompetitions.any { it.scheduleAvailable }) while (true) { now = System.currentTimeMillis(); delay(30_000) }
+    val clockActive = scheduleAvailable && enabled && requiredCompetitions.any { it.scheduleAvailable }
+    LaunchedEffect(clockActive) {
+        if (clockActive) while (true) { now = System.currentTimeMillis(); delay(30_000) }
     }
-    LaunchedEffect(available, enabled, profileId, requiredCompetitions) {
+    LaunchedEffect(scheduleAvailable, enabled, profileId, requiredCompetitions) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
-        if (!available || !enabled) return@LaunchedEffect
+        if (!scheduleAvailable || !enabled) return@LaunchedEffect
         val competitions = sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled)
         if (competitions.isEmpty()) return@LaunchedEffect
         data = competitions.mapNotNull { c -> sports.cached(c)?.let { c.id to it } }.toMap()
@@ -164,9 +166,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             delay(retry)
         }
     }
-    LaunchedEffect(available, enabled, screen, section, selectedCompetition, data[selectedCompetition.id]?.seasonId) {
+    LaunchedEffect(available, enabled, screen, section, selectedId, teamsOpen, selectedCompetition, data[selectedCompetition.id]?.seasonId) {
         standings = emptyList(); standingsAt = 0
-        if (!available || !enabled || !screen || section !in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)) return@LaunchedEffect
+        if (!available || !enabled || !screen || teamsOpen || selectedId != null || section !in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)) return@LaunchedEffect
         val season = data[selectedCompetition.id]?.seasonId ?: return@LaunchedEffect
         while (true) {
             try { standings = sports.standings(selectedCompetition, season, System.currentTimeMillis()); standingsAt = repository.standingsFetchedAt }
@@ -176,7 +178,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         }
     }
     val scheduleFresh = !failed && data.isNotEmpty() && data.values.all { now - it.fetchedAt in 0 until 6 * 60 * 60_000L }
-    val gameToMatch = if (!broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
+    val gameToMatch = if (teamsOpen || !broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
         else if (selectedId != null) selected else myToday.firstOrNull().takeIf { expanded }
     LaunchedEffect(available, enabled, broadcastEnabled, gameToMatch, scheduleFresh) {
         broadcast = null
@@ -197,9 +199,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     // Resolve at most the three visible favorite cards. Extra cards share the existing HTTP budget
     // and local bounded queries; no decoder, provider import or background worker is involved.
     val extraHomeGames = myToday.take(3).drop(1)
-    LaunchedEffect(available, visible, screen, enabled, expanded, profileId, extraHomeGames,
+    LaunchedEffect(available, visible, screen, teamsOpen, enabled, expanded, profileId, extraHomeGames,
         scheduleFresh, broadcastEnabled, libraryContext, libraryCount, favorites, choiceVersion) {
-        if (!available || !visible || screen || !enabled || !expanded || profileId == null) return@LaunchedEffect
+        if (!available || !visible || screen || teamsOpen || !enabled || !expanded || profileId == null) return@LaunchedEffect
         while (true) {
             for (game in extraHomeGames) {
                 val key = fixtureKey(game.broadcastFixture())

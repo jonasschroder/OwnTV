@@ -52,6 +52,14 @@ class SportsModelsTest {
         assertEquals(listOf(SportsCatalog.shl, SportsCatalog.allsvenskan), sportsRequestCompetitions(teams, true, true, false, true))
         assertEquals(2, sportsRequestCompetitions(teams.copy(prominent = false), true, false, true, true).size)
     }
+    @Test fun teamPickerAndSettingsHideNetworkBackedContent() {
+        assertFalse(sportsScheduleVisible(true, false, MatchcenterSection.MATCHES, false, true))
+        assertFalse(sportsScheduleVisible(true, true, MatchcenterSection.SETTINGS, false, false))
+        assertFalse(sportsScheduleVisible(false, false, MatchcenterSection.MATCHES, false, false))
+        assertTrue(sportsScheduleVisible(false, true, MatchcenterSection.TABLE, false, false))
+        assertTrue(sportsScheduleVisible(false, true, MatchcenterSection.SETTINGS, true, false))
+        assertFalse(sportsScheduleVisible(false, true, MatchcenterSection.MATCHES, true, true))
+    }
     @Test fun personalFixturesKeepOverlappingMatchesAndRemoveUnfollowedOrPastDays() {
         val games = listOf(
             fixture("b", "BIK Karlskoga", "MoDo Hockey", "2026-10-10T13:15:00Z", SportsCatalog.allsvenskan),

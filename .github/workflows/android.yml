@@ -39,7 +39,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Unit tests
-        run: ./gradlew :app:testStandardDebugUnitTest :app:testQaDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
+        run: |
+          python3 -m unittest discover -s tools/tests -v
+          ./gradlew :app:testStandardDebugUnitTest :app:testQaDebugUnitTest :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest --stacktrace
       - name: Lint
         if: always()
         run: ./gradlew :app:lintStandardDebug :app:lintQaDebug --stacktrace
@@ -73,6 +75,8 @@ jobs:
           cp docs/min-tv-redesign.md dist-qa/TV-REDESIGN-AND-SETUP.md
           # Include linked source guides so the downloaded Markdown works offline.
           cp docs/min-tv-qa.md docs/min-tv-v0.2.md docs/min-tv-signing.md docs/min-tv-companions.md docs/min-tv-redesign.md docs/min-tv-broadcasts.md dist-qa/
+          cp docs/min-tv-personalization.md docs/min-tv-safe-qa-update.md dist-qa/
+          cp tools/check-apk-update.py dist-qa/check-apk-update.py
           cp docs/min-tv-signing.md dist-qa/SIGNING-PLAN.md
           "$TOOLS/apksigner" verify --print-certs "$APK" | tee dist-qa/SIGNING-CERTIFICATE.txt
           cp "$APK" dist-qa/MinTV-v0.2-QA.apk
@@ -103,6 +107,7 @@ jobs:
             dist-qa/TV-REDESIGN-AND-SETUP.md
             dist-qa/min-tv-*.md
             dist-qa/SIGNING-PLAN.md
+            dist-qa/check-apk-update.py
           if-no-files-found: error
           retention-days: 14
       - name: Upload test and lint reports

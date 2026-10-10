@@ -6,6 +6,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 internal enum class MatchcenterSection { MATCHES, TABLE, FARJESTAD, SETTINGS }
+internal fun sportsScheduleVisible(homeVisible: Boolean, screen: Boolean, section: MatchcenterSection,
+    selectedFixture: Boolean, teamPickerOpen: Boolean): Boolean = !teamPickerOpen &&
+    (if (screen) selectedFixture || section != MatchcenterSection.SETTINGS else homeVisible)
 internal fun broadcastContentVisible(homeVisible: Boolean, screen: Boolean, section: MatchcenterSection,
     selectedFixture: Boolean, upcoming: Boolean): Boolean = if (!screen) homeVisible else
     selectedFixture || !upcoming && section in listOf(MatchcenterSection.MATCHES, MatchcenterSection.FARJESTAD)

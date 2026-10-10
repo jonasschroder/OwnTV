@@ -26,6 +26,8 @@ Do not clear data, uninstall Min TV, or disable/change Google TV or system apps.
 There is no Android HOME registration, launcher activation or device modification.
 The remote's physical Home button still opens Google TV.
 
+**If Min TV Test is already installed with real IPTV data, first complete the [safe QA update gate](min-tv-safe-qa-update.md). Do not use these first-install steps for a populated QA app until its backup, certificate and increasing versionCode are verified.**
+
 ## Install from a Mac using Downloader
 
 1. Sign into GitHub on your Mac. Open PR #3 → Checks → **Min TV prototype**, then
@@ -92,8 +94,8 @@ To copy the working configuration instead:
    Stop any original IPTV playback/recording before testing the same provider in QA.
    Only one remote backup server should run at a time: both apps use the same device
    port. Separate apps still share provider account/device connection limits.
-4. Open **Min TV Test**. Complete the normal introductory/profile screens; if source
-   entry is optional, skip it. Open **More/Settings → Backup & Restore → Restore →
+4. Open **Min TV Test**. A fresh install now acknowledges the necessary notice and creates a default
+   profile directly; optional source setup can be opened from Home. Open **More/Settings → Backup & Restore → Restore →
    Remote**. Open the address/code now displayed by **QA** on the Mac and upload a
    **copy** of the encrypted backup. The local file restore option also remains available.
 5. Enter the backup passphrase in QA, review the available sections/counts, select

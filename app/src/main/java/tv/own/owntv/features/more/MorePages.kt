@@ -60,7 +60,7 @@ import tv.own.owntv.BuildConfig
 import tv.own.owntv.R
 import tv.own.owntv.core.i18n.SupportedLocales
 import tv.own.owntv.core.model.MediaType
-import tv.own.owntv.core.update.UpdateManager
+import tv.own.owntv.features.update.MinTvUpdater
 import tv.own.owntv.features.downloads.recordingWhen
 import tv.own.owntv.features.home.ChannelPlate
 import tv.own.owntv.features.home.OnNowCard
@@ -629,7 +629,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
 @Composable
 internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLanguage: () -> Unit) {
     val context = LocalContext.current
-    val manager: UpdateManager = koinInject()
+    val manager: MinTvUpdater = koinInject()
     val updateState by manager.state.collectAsStateWithLifecycle()
     val checkedAt by vm.lastUpdateCheckAt.collectAsStateWithLifecycle()
     var showUpdate by remember { mutableStateOf(false) }
@@ -649,8 +649,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                     Text(stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME), style = stageText(22, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     // Only what a real check said: no tag before one has run.
                     val tag = when (updateState) {
-                        UpdateManager.State.UpToDate -> stringResource(R.string.more_about_up_to_date)
-                        is UpdateManager.State.Available -> stringResource(R.string.update_available)
+                        MinTvUpdater.State.UpToDate -> stringResource(R.string.more_about_up_to_date)
+                        is MinTvUpdater.State.Available -> stringResource(R.string.update_available)
                         else -> null
                     }
                     tag?.let {

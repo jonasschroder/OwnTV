@@ -120,11 +120,11 @@ class SigningPolicyTest(unittest.TestCase):
             with self.assertRaises(ValueError): required_jobs(invalid, expected)
 
     def test_human_approval_and_main_only_environment_mandatory(self):
-        info = {'protection_rules': [{'type': 'required_reviewers', 'reviewers': [{'reviewer': {'id': 1}}]}],
+        info = {'can_admins_bypass': False, 'protection_rules': [{'type': 'required_reviewers', 'reviewers': [{'reviewer': {'id': 1}}]}],
                 'deployment_branch_policy': {'custom_branch_policies': True}}
         policies = {'branch_policies': [{'name': 'main', 'type': 'branch'}]}
         protected_environment(info, policies)
-        for invalid in ({}, {**info, 'protection_rules': []}, {**info, 'deployment_branch_policy': {}}):
+        for invalid in ({}, {**info, 'can_admins_bypass': True}, {**info, 'protection_rules': []}, {**info, 'deployment_branch_policy': {}}):
             with self.assertRaises(ValueError): protected_environment(invalid, policies)
         for invalid in ({}, {'branch_policies': [{'name': '*'}]}, {'branch_policies': [{'name': 'main', 'type': 'tag'}]},
                         {'branch_policies': [{'name': 'main'}, {'name': 'feat/*'}]}):

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Min TV</string>
-    <string name="mintv_update_setup_pending">Secure Min TV updates are being prepared. This build has no enabled update source. Your installed app and data are kept.</string>
+    <string name="mintv_update_setup_pending">This build does not have a verified permanent update identity, or its Android version is unsupported. No update requests or installation are performed.</string>
     <string name="mintv_home_live">TV channels</string>
     <string name="mintv_home_settings">Android TV settings</string>
     <string name="mintv_guide">TV guide</string>
@@ -146,4 +146,21 @@
     <string name="mintv_sports_no_error">No recorded fetch failure.</string>
     <string name="mintv_sports_diagnostic">%1$s · %2$s · HTTP %3$s · %4$s</string>
     <string name="mintv_sports_budget">Swehockey requests: %1$d / 12 in the shared two-hour window.</string>
+    <string name="mintv_update_about">About Min TV</string>
+    <string name="mintv_update_identity">Version %1$s · Build %2$s · Channel %3$s</string>
+    <string name="mintv_update_last_check">Last successful check: %1$s</string>
+    <string name="mintv_update_never">Never</string>
+    <string name="mintv_update_automatic">Automatic update checks: %1$s</string>
+    <string name="mintv_update_ready">Check for an approved update. Installation always requires your approval.</string>
+    <string name="mintv_update_available">A new Min TV version is available: %1$s</string>
+    <string name="mintv_update_permission">The verified update is downloaded. Allow Min TV to install apps in Android settings, then return here and choose Update.</string>
+    <string name="mintv_update_permission_action">Open installation settings</string>
+    <string name="mintv_update_confirm">Continue to Android installer</string>
+    <string name="mintv_update_confirm_explanation">Android requires your approval. Continue to the system installer; you can cancel there.</string>
+    <string name="mintv_update_cancelled">Installation cancelled. Your app and its data are unchanged.</string>
+    <string name="mintv_update_rate_limit">Update checks are temporarily limited. Try again later.</string>
+    <string name="mintv_update_storage">There is not enough free storage for a safe update. Free some space and retry.</string>
+    <string name="mintv_update_invalid">The update could not be verified. Nothing was installed.</string>
+    <string name="mintv_update_channel_test">Test</string>
+    <string name="mintv_update_channel_stable">Stable</string>
 </resources>

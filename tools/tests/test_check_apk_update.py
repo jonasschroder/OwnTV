@@ -23,7 +23,7 @@ class UpdateGateTest(unittest.TestCase):
 v = json.load(open(sys.argv[-1]))
 if 'verify' in sys.argv:
     if v.get('invalid'): sys.exit(1)
-    if v.get('signer'): print('Signer #1: certificate SHA-256 digest: ' + v['signer'])
+    if v.get('signer'): print(v.get('signer_label', 'Signer #1:') + ' certificate SHA-256 digest: ' + v['signer'])
 else:
     print("package: name='%s' versionCode='%s'" % (v['package'], v['version']))
 ''')
@@ -39,6 +39,13 @@ else:
     def test_qa_must_be_selected_explicitly(self):
         self.assertNotEqual(0, self.gate(self.data(), self.data(version=21)).returncode)
         self.assertEqual(0, self.gate(self.data(), self.data(version=21), 'se.jonasschroder.mintv.qa').returncode)
+
+    def test_real_old_and_sdk37_certificate_shapes(self):
+        for label in ('Signer #1', 'Signer #1:', 'V2 Signer:', 'V3 Signer:', 'V3.1 Signer:'):
+            old = {**self.data(), 'signer_label': label}
+            new = {**self.data(version=21), 'signer_label': label}
+            with self.subTest(label=label):
+                self.assertEqual(0, self.gate(old, new, 'se.jonasschroder.mintv.qa').returncode)
 
     def test_regular_identity_retains_default(self):
         self.assertEqual(0, self.gate(self.data('se.jonasschroder.mintv'), self.data('se.jonasschroder.mintv', 21)).returncode)

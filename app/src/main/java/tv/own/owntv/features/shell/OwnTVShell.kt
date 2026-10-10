@@ -59,9 +59,7 @@ import tv.own.owntv.core.launcher.LauncherDeepLink
 import tv.own.owntv.core.nav.MainSection
 import tv.own.owntv.core.launcher.LauncherIntegrationRepository
 import tv.own.owntv.core.launcher.LauncherLaunch
-import tv.own.owntv.core.update.UpdateManager
 import tv.own.owntv.features.update.UpdateDialog
-import tv.own.owntv.features.update.UpdateStatusToast
 import tv.own.owntv.features.downloads.DownloadsScreen
 import tv.own.owntv.features.epg.EpgScreen
 import tv.own.owntv.features.home.MinTvContentHome
@@ -1906,35 +1904,11 @@ fun OwnTVShell(
             )
     }
 
-        val updateManager = koinInject<UpdateManager>()
-        var showStartupToast by remember { mutableStateOf(false) }
-        var showChangelog by remember { mutableStateOf(false) }
-        val settingsRepo = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
-        val updateCheckOnStart by settingsRepo.updateCheckOnStart.collectAsStateWithLifecycle(initialValue = false)
-        LaunchedEffect(updateCheckOnStart) {
-            if (tv.own.owntv.features.update.MinTvUpdateGate.legacyUpdaterAllowed && updateCheckOnStart && !showStartupToast) {
-                kotlinx.coroutines.delay(5_000)
-                showStartupToast = true
-                updateManager.check()
-            }
-        }
-        if (showChangelog) {
-            // Full "What's New" changelog (same dialog the manual Settings check uses), shown when
-            // the startup card's "What's New" is pressed. No re-check — the release is already loaded.
-            val dismissChangelog: () -> Unit = {
-                showChangelog = false
-                showStartupToast = false
-                updateManager.reset()
-            }
-            UpdateDialog(onDismiss = dismissChangelog, checkOnOpen = false)
-        } else if (showStartupToast && selectedSection != MainSection.SETTINGS && playerMode == PlayerMode.NONE) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
-                UpdateStatusToast(
-                    onDone = { showStartupToast = false; updateManager.reset() },
-                    onViewChangelog = { showChangelog = true },
-                )
-            }
-        }
+        tv.own.owntv.features.update.UpdateForegroundHost(
+            homeUsable = selectedSection == MainSection.HOME && playerMode == PlayerMode.NONE,
+            allowPrompt = playerMode == PlayerMode.NONE && selectedSection != MainSection.SETTINGS,
+        )
+
     }
     }
 }

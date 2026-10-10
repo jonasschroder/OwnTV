@@ -3,6 +3,12 @@
 Source baseline: PR #3, `da65a3bbb246e8c5107c944c1c6606b1525a7662`.
 Pinned Core is unchanged at `adca2bcd653f19e6e5d659c2722309e6aef4ec15`.
 
+Current continuation: [cloud-update implementation and acceptance](min-tv-cloud-updates.md).
+The owner now reports all QA environment secrets configured, and the required
+reviewer/main-only/no-admin-bypass protections were verified via read-only API.
+Historical Phase A audit below is retained; Phase B/C source implementation now
+exists in this PR, with actual permanent signing/publication still blocked.
+
 ## Existing implementation
 
 Core `core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt` already has
@@ -26,11 +32,10 @@ It is **not safe to expose Min TV's two future release channels as-is**:
 | Dynamic install receiver and fixed Core action | Durable package-specific callback/session state, pending-approval and process recreation |
 | No unknown-source permission flow | Supported canRequestPackageInstalls/settings flow with explicit user choice |
 
-We keep the pinned Core source untouched. The host's Phase A safety gate stops
-the legacy startup check and manual updater before any call. Settings gives an
-honest localized preparation message and Close/Back; no placeholder update is
-offered. Re-enable only after the verified Min TV host adapter replaces the
-incompatible selector. Other IPTV/player functionality is unchanged.
+We keep the pinned Core source untouched. The host no longer calls the legacy startup/manual selector. The MinTvUpdater
+adapter uses authenticated channel metadata and exact-package validation instead.
+Builds without a matching permanent installed identity fail closed before any
+network call and explain that state in Settings. No placeholder update is offered. Other IPTV/player functionality is unchanged.
 
 ## Phase A preparation
 
@@ -66,21 +71,16 @@ already signed; GitHub does not guarantee FIFO concurrency ordering.
 
 ## External prerequisites — NOT completed by code
 
-Read-only repository API returned zero protected environments during this audit.
-Listing repository secret names returned GitHub HTTP 403 "Resource not accessible
-by integration"; existing repository secrets are unknown, not presumed absent.
-No relevant signing keystore inputs are bound locally. On 10 October 2026, the
-owner reported creating the permanent QA key on Mac with JDK 21 and completing
-the encrypted backup process. The supplied public SHA256 certificate fingerprint
-is committed in `config/mintv-signing.json`:
-`d20b2f58f4e12b956e1e1dc40e47873d9b9ee6a666a2de1af2a6b8ac3d40547c`.
-The owner explicitly reported that GitHub environment secrets are NOT configured
-yet. Next is `mintv-qa-signing` protection and its four secrets as described in
-[step 5 of the Mac guide](min-tv-permanent-updates-mac.md#5-konfigurera-github-i-webbläsaren).
-Codex has not received the private key or independently verified the backups.
-Production still needs its own original key/installed identity investigation.
-Workflow is not registered on main until a user-reviewed merge; no merge is
-performed here.
+At the initial audit, no protected environments were present. The owner has since
+reported the QA key and encrypted backups complete and all four environment
+secrets configured. API verification confirms reviewer jonasschroder, main-only
+branch and disabled administrator bypass. Secret-name listing returns HTTP403;
+Codex cannot independently confirm their contents. The supplied public QA pin is
+committed in config/mintv-signing.json. Private keys/backups have not been received.
+GitHub returns404 for the signing workflow because it only exists in this PR.
+Main-only signing therefore remains blocked until future user-approved reviewed
+integration; no merge or branch-policy bypass is performed. Production remains
+blocked pending its original key/installed identity investigation.
 
 The Android 14 disposable emulator test can prove the system's same-signer/data
 semantics with test fixtures. It cannot claim owner's permanent keys are configured
@@ -88,18 +88,15 @@ or that the physical apps/backups are verified. Those acceptance checks remain
 blocked. Ordinary PR APK uploads cease to avoid offering another ephemeral-signed
 APK as the permanent-signing solution. Existing downloaded builds remain unchanged.
 
-## Phase B/C follow-up
+## Phase B/C implementation
 
-No public Release has approval yet. Prefer versioned GitHub Releases with explicit
-QA prerelease/stable channel and exact asset names, a separately approved publication
-workflow and immutable release metadata cryptographically authenticated under
-each channel's pinned signing trust anchor. A checksum file next to an arbitrary
-APK is not authentication; candidate JSON here is not an update manifest.
-No GitHub token belongs in the app. Public repo Releases make APKs public, while
-Actions artifacts expire and typically require login. Never distribute production
-to QA, or QA to production. Define redirect/metadata validation before enabling
-the host updater. Phase B distribution and Phase C full Settings/notification/
-download/validation/installer flow remain pending the secure signing setup.
+The reviewed-source implementation now includes a separately approved publication
+workflow, exact QA/stable tags, a JCA-signed exact-byte update manifest, a bounded
+foreground-only native host updater and durable normal PackageInstaller handoff.
+See [the implementation and acceptance report](min-tv-cloud-updates.md) for its
+precise limits and remaining tests. Candidate JSON is still build evidence only;
+the separate signature envelope authenticates metadata. No GitHub token is in the
+app. Public Releases make APKs public; no Release has been published/approved here.
 
 The owner has authorized PLANNING a one-time clean QA installation after a
 verified retained QA key is ready, accepting QA configuration loss. This is not

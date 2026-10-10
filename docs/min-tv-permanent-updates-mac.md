@@ -2,7 +2,7 @@
 
 **Fas A är förberedd. Ägaren har den 10 oktober 2026 bekräftat att QA-nyckeln
 har skapats på Mac med JDK 21 och att de krypterade säkerhetskopiorna är klara.
-GitHub-miljöns hemligheter är ännu inte konfigurerade. Ingen Release har
+Ägaren har därefter bekräftat att GitHub-miljöns fyra hemligheter är konfigurerade. Ingen Release har
 publicerats. Installera inte om någon app nu.**
 
 QA-certifikatets publika SHA256 är incheckat i `config/mintv-signing.json`:
@@ -12,14 +12,20 @@ D2:0B:2F:58:F4:E1:2B:95:6E:1E:1D:C4:0E:47:87:3D:9B:9E:E6:A6:66:A2:DE:1A:F2:A6:B8
 ```
 
 Steg 1–3 nedan beskriver den redan genomförda nyckelförberedelsen; skapa inte
-en ny ersättningsnyckel. Nästa steg är **5: skyddad GitHub-miljö och hemligheter**.
+en ny ersättningsnyckel. Steg 5 har nu genomförts enligt ägarens bekräftelse.
 Nyckelfilen har inte lämnats till Codex. Faktisk signering och verifiering av
 nyckeln i GitHub återstår. Produktionsnyckeln behandlas separat i steg 4.
-Fas B (godkänd molndistribution) och C (säker uppdatering i TV:n) återstår.
+Fas B/C har nu en implementation i PR #3; verklig signering, publicering och
+acceptanstest är fortfarande spärrade i väntan på separata godkännanden.
 
 Vanliga CI-tester bygger fortfarande båda debug-apparna, men nya APK:er med
 tillfälliga CI-certifikat laddas inte längre upp som installationsfiler.
 Tidigare artefakter är inte permanenta uppdateringar. Behåll fungerande Min TV v0.1.
+
+Aktuell fortsättning: [molnuppdateringar och verifieringsgränser](min-tv-cloud-updates.md).
+Ägaren har nu bekräftat att QA-miljöns fyra secrets är konfigurerade. Skyddsreglerna
+är verifierade via API. Faktisk permanent signering väntar på en granskad workflow
+på main; PR #3 mergas inte automatiskt. Steg 1–5 är bevarade som återställningsguide.
 
 ## 1. Installera bara verktyget för nycklar
 

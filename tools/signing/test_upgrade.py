@@ -121,6 +121,14 @@ def main():
                 run_instrumentation(adb, PACKAGES['stable'], 'verify', 1000101)
             install(apks[channel, 1000101], 'INSTALL_FAILED_VERSION_DOWNGRADE')
             run_instrumentation(adb, package, 'verify', 1000102)
+        result = subprocess.run([adb, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+                                 'tv.own.owntv.update.UpdateInstallReceiverTest,tv.own.owntv.update.UpdateDialogNavigationTest',
+                                 '-e', 'disposableEmulator', 'true', PACKAGES['qa'] + '.test/androidx.test.runner.AndroidJUnitRunner'],
+                                capture_output=True, text=True)
+        if result.returncode or 'OK (5 tests)' not in result.stdout or 'FAILURES' in result.stdout:
+            print(result.stdout[-12000:])
+            raise ValueError('Required installer callback/About D-pad tests failed or did not execute')
+        print('5 actual Android callback/confirmation/cancellation/About D-pad/OK/Back cases PASS')
         print('PASS: two separate fixture certificates, two builds each, same-signer upgrades accepted; data preserved; wrong signer/downgrades rejected; QA leaves regular data/version untouched.')
         print('8 actual persistent-data instrumentation executions passed. NOT acceptance of owner permanent keys, PackageInstaller UI or physical Chromecast.')
 

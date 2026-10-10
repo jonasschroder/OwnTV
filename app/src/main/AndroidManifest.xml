@@ -315,6 +315,7 @@
             </intent-filter>
         </activity>
 
+        <receiver android:name=".features.update.UpdateInstallReceiver" android:exported="false" />
     </application>
 
 </manifest>

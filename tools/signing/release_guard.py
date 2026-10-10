@@ -37,6 +37,8 @@ def required_jobs(jobs, expected):
 
 
 def protected_environment(info, policies):
+    if info.get('can_admins_bypass', True):
+        raise ValueError('Disable administrator bypass of required environment approval')
     rules = info.get('protection_rules', [])
     if not any(rule.get('type') == 'required_reviewers' and rule.get('reviewers') for rule in rules):
         raise ValueError('Configure required human reviewers before signing')

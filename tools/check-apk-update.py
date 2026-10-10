@@ -17,7 +17,7 @@ args = parser.parse_args()
 
 def inspect(path):
     certificates = subprocess.check_output([args.apksigner, "verify", "--print-certs", path], text=True)
-    digests = set(re.findall(r"^(?:Signer #\d+|V\d+ Signer): certificate SHA-256 digest: ([0-9a-f]+)$", certificates, re.M))
+    digests = set(re.findall(r"^(?:Signer #\d+:?|V\d+(?:\.\d+)? Signer:) certificate SHA-256 digest: ([0-9a-f]+)$", certificates, re.M))
     if not digests:
         raise ValueError("No verified signer certificate")
     badging = subprocess.check_output([args.aapt2, "dump", "badging", path], text=True)

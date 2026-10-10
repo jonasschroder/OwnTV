@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from update_metadata import payload, sign as sign_metadata, verify as verify_metadata
 from signing_policy import (PACKAGES, anchor, badging, check_certificates, check_identity,
                             command, no_key_material, read_config, sha256, version_name)
 
@@ -86,20 +87,25 @@ def main():
                      '--ks-key-alias', os.environ['MINTV_KEY_ALIAS'], '--v1-signing-enabled', 'true',
                      '--v2-signing-enabled', 'true', '--v3-signing-enabled', 'true',
                      '--v4-signing-enabled', 'false', '--out', str(signed), str(apk)])
-        certs = command([str(tools / 'apksigner'), 'verify', '--verbose', '--print-certs', '--Werr', str(signed)])
-        check_certificates(certs, expected)
-        check_identity(badging(command([str(tools / 'aapt2'), 'dump', 'badging', str(signed)])), args.channel, args.code, args.name)
-        checksum = sha256(signed)
-        (out / 'SHA256SUMS').write_text(f'{checksum}  {name}\n')
-        (out / 'SIGNING-CERTIFICATE.txt').write_text(certs)
-        (out / 'RELEASE-NOTES.md').write_text(notes)
-        (out / 'release-candidate.json').write_text(json.dumps({
-            'schema': 1, 'channel': args.channel, 'application_id': PACKAGES[args.channel],
-            'source_commit': args.source, 'version_code': args.code, 'version_name': args.name,
-            'certificate_sha256': expected, 'apk': name, 'apk_sha256': checksum,
-            'apk_bytes': signed.stat().st_size, 'distribution': 'not-published',
-            'notice': 'Build evidence only; NOT an authenticated in-app update manifest.'
-        }, indent=2) + '\n')
+            certs = command([str(tools / 'apksigner'), 'verify', '--verbose', '--print-certs', '--Werr', str(signed)])
+            check_certificates(certs, expected)
+            check_identity(badging(command([str(tools / 'aapt2'), 'dump', 'badging', str(signed)])), args.channel, args.code, args.name)
+            checksum = sha256(signed)
+            (out / 'SHA256SUMS').write_text(f'{checksum}  {name}\n')
+            (out / 'SIGNING-CERTIFICATE.txt').write_text(certs)
+            (out / 'RELEASE-NOTES.md').write_text(notes)
+            candidate = {
+                'schema': 1, 'channel': args.channel, 'application_id': PACKAGES[args.channel],
+                'source_commit': args.source, 'version_code': args.code, 'version_name': args.name,
+                'certificate_sha256': expected, 'apk': name, 'apk_sha256': checksum,
+                'apk_bytes': signed.stat().st_size, 'distribution': 'not-published',
+                'notice': 'Build evidence only; NOT an authenticated in-app update manifest.'
+            }
+            (out / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')
+            info = badging(command([str(tools / 'aapt2'), 'dump', 'badging', str(signed)]))
+            manifest = out / ('MinTV-' + args.channel + '-update.json')
+            sign_metadata(store, der, payload(candidate, info, notes), manifest, private)
+            verify_metadata(manifest, config, args.channel, signed)
         print(f'Verified {PACKAGES[args.channel]} code {args.code}; signed release candidate only. Nothing published.')
     except BaseException:
         shutil.rmtree(out, ignore_errors=True)

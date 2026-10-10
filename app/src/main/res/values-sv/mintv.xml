@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="mintv_update_setup_pending">Säkra Min TV-uppdateringar förbereds. Den här versionen har ingen aktiverad uppdateringskälla. Din installerade app och dina data behålls.</string>
+    <string name="mintv_update_setup_pending">Den här versionen saknar en verifierad permanent uppdateringsidentitet, eller har en Android-version som inte stöds. Inga uppdateringsanrop eller installationer görs.</string>
     <string name="mintv_home_live">TV-kanaler</string>
     <string name="mintv_home_settings">Android TV-inställningar</string>
     <string name="mintv_guide">TV-guide</string>
@@ -142,4 +142,21 @@
     <string name="mintv_sports_no_error">Inget registrerat hämtfel.</string>
     <string name="mintv_sports_diagnostic">%1$s · %2$s · HTTP %3$s · %4$s</string>
     <string name="mintv_sports_budget">Swehockey-förfrågningar: %1$d / 12 i det gemensamma tvåtimmarsfönstret.</string>
+    <string name="mintv_update_about">Om Min TV</string>
+    <string name="mintv_update_identity">Version %1$s · Bygge %2$s · Kanal %3$s</string>
+    <string name="mintv_update_last_check">Senaste lyckade kontroll: %1$s</string>
+    <string name="mintv_update_never">Aldrig</string>
+    <string name="mintv_update_automatic">Automatisk uppdateringskontroll: %1$s</string>
+    <string name="mintv_update_ready">Sök efter en godkänd uppdatering. Installation kräver alltid ditt godkännande.</string>
+    <string name="mintv_update_available">En ny version av Min TV finns: %1$s</string>
+    <string name="mintv_update_permission">Den verifierade uppdateringen är hämtad. Tillåt Min TV att installera appar i Androids inställningar. Återvänd hit och välj Uppdatera.</string>
+    <string name="mintv_update_permission_action">Öppna installationsinställningar</string>
+    <string name="mintv_update_confirm">Fortsätt till Androids installation</string>
+    <string name="mintv_update_confirm_explanation">Android behöver ditt godkännande. Fortsätt till systemets installation; du kan avbryta där.</string>
+    <string name="mintv_update_cancelled">Installationen avbröts. Appen och dess data är oförändrade.</string>
+    <string name="mintv_update_rate_limit">Uppdateringskontroller är tillfälligt begränsade. Försök igen senare.</string>
+    <string name="mintv_update_storage">Det finns inte tillräckligt med ledigt utrymme för en säker uppdatering. Frigör utrymme och försök igen.</string>
+    <string name="mintv_update_invalid">Uppdateringen kunde inte verifieras. Ingenting installerades.</string>
+    <string name="mintv_update_channel_test">Test</string>
+    <string name="mintv_update_channel_stable">Stabil</string>
 </resources>

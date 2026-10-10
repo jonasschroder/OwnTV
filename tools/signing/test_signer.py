@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 from signing_policy import PACKAGES, badging, command
+from update_metadata import verify as verify_metadata
 
 
 def main():
@@ -65,10 +66,13 @@ def main():
                 evidence = json.loads((out / 'release-candidate.json').read_text())
                 assert evidence['certificate_sha256'] == pins[channel]
                 assert evidence['application_id'] == PACKAGES[channel]
+                verified = verify_metadata(out / ('MinTV-' + channel + '-update.json'), config, channel, out / evidence['apk'])
+                assert verified['version_code'] == info['version_code']
                 with (out / evidence['apk']).open('rb') as file:
                     assert hashlib.file_digest(file, 'sha256').hexdigest() == evidence['apk_sha256']
                 assert set(path.name for path in out.iterdir()) == {evidence['apk'], 'SHA256SUMS',
-                        'SIGNING-CERTIFICATE.txt', 'RELEASE-NOTES.md', 'release-candidate.json'}
+                        'SIGNING-CERTIFICATE.txt', 'RELEASE-NOTES.md', 'release-candidate.json',
+                        'MinTV-' + channel + '-update.json'}
             else:
                 assert result.returncode != 0, label
                 assert not out.exists(), label

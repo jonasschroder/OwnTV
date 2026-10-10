@@ -53,6 +53,9 @@ android {
         manifestPlaceholders["minTvLinkScheme"] = "mintv"
         manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
         buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")
+        val pins = groovy.json.JsonSlurper().parse(rootProject.file("config/mintv-signing.json")) as Map<*, *>
+        val stablePin = (pins["stable"] as Map<*, *>)["certificate_sha256"] as? String ?: ""
+        buildConfigField("String", "UPDATE_CERTIFICATE_SHA256", "\"$stablePin\"")
         // Public identifier only. Register your own Twitch public client; never supply a secret/token.
         val twitchClientId = System.getenv("MINTV_TWITCH_CLIENT_ID")
             ?: providers.gradleProperty("mintv.twitchClientId").orNull ?: ""
@@ -121,6 +124,9 @@ android {
             manifestPlaceholders["minTvLinkScheme"] = "mintv-qa"
             manifestPlaceholders["minTvBanner"] = "@drawable/mintv_qa_banner"
             buildConfigField("String", "APP_LINK_SCHEME", "\"mintv-qa\"")
+            val pins = groovy.json.JsonSlurper().parse(rootProject.file("config/mintv-signing.json")) as Map<*, *>
+            val qaPin = (pins["qa"] as Map<*, *>)["certificate_sha256"] as? String ?: ""
+            buildConfigField("String", "UPDATE_CERTIFICATE_SHA256", "\"$qaPin\"")
             // Only disposable upgrade-test emulators use this override. Distribution verification
             // requires both ARM ABIs and rejects emulator-only APKs. No extra shipped variant.
             val upgradeTestAbi = providers.gradleProperty("mintv.upgradeTestAbi").orNull

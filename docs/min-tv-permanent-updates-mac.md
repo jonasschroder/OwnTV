@@ -1,9 +1,21 @@
 # Så förbereder du permanenta Min TV-uppdateringar på din Mac
 
-**Fas A är förberedd, men inga permanenta nycklar eller GitHub-hemligheter har
-skapats åt dig. Ingen Release har publicerats. Installera inte om någon app nu.**
+**Fas A är förberedd. Ägaren har den 10 oktober 2026 bekräftat att QA-nyckeln
+har skapats på Mac med JDK 21 och att de krypterade säkerhetskopiorna är klara.
+GitHub-miljöns hemligheter är ännu inte konfigurerade. Ingen Release har
+publicerats. Installera inte om någon app nu.**
+
+QA-certifikatets publika SHA256 är incheckat i `config/mintv-signing.json`:
+
+```text
+D2:0B:2F:58:F4:E1:2B:95:6E:1E:1D:C4:0E:47:87:3D:9B:9E:E6:A6:66:A2:DE:1A:F2:A6:B8:AC:3D:40:54:7C
+```
+
+Steg 1–3 nedan beskriver den redan genomförda nyckelförberedelsen; skapa inte
+en ny ersättningsnyckel. Nästa steg är **5: skyddad GitHub-miljö och hemligheter**.
+Nyckelfilen har inte lämnats till Codex. Faktisk signering och verifiering av
+nyckeln i GitHub återstår. Produktionsnyckeln behandlas separat i steg 4.
 Fas B (godkänd molndistribution) och C (säker uppdatering i TV:n) återstår.
-Det behövs en permanent QA-nyckel med verifierade säkerhetskopior först.
 
 Vanliga CI-tester bygger fortfarande båda debug-apparna, men nya APK:er med
 tillfälliga CI-certifikat laddas inte längre upp som installationsfiler.

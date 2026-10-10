@@ -53,7 +53,9 @@ package/version. The signer validates the actual keystore cert BEFORE signing,
 then the actual signed APK, exact one signer, v2 AND v3 verified schemes, manifest
 identity, ABIs, minSdk and lack of keystore entries; a failure removes output.
 Production is deliberately blocked without matching installed-v0.1 evidence.
-Null anchors are intentional fail-closed configuration, never manufactured keys.
+Missing production anchors are intentional fail-closed configuration. The QA
+anchor is the public certificate fingerprint supplied by the owner; no private
+key is manufactured or obtained by Codex.
 
 One signing workflow generates `1_000_000 + github.run_number` (both channels
 have increasing per-package subsequences). Every rerun is rejected to prevent
@@ -67,12 +69,18 @@ already signed; GitHub does not guarantee FIFO concurrency ordering.
 Read-only repository API returned zero protected environments during this audit.
 Listing repository secret names returned GitHub HTTP 403 "Resource not accessible
 by integration"; existing repository secrets are unknown, not presumed absent.
-No relevant signing keystore inputs are bound locally. No key/secret/environment
-was provisioned. The owner must follow [the Mac guide](min-tv-permanent-updates-mac.md),
-verify offline backups, configure `mintv-qa-signing` and submit ONLY its public
-certificate fingerprint for a reviewed pin. Production needs its own original
-key/installed identity investigation. Workflow is not registered on main until
-a user-reviewed merge; no merge is performed here.
+No relevant signing keystore inputs are bound locally. On 10 October 2026, the
+owner reported creating the permanent QA key on Mac with JDK 21 and completing
+the encrypted backup process. The supplied public SHA256 certificate fingerprint
+is committed in `config/mintv-signing.json`:
+`d20b2f58f4e12b956e1e1dc40e47873d9b9ee6a666a2de1af2a6b8ac3d40547c`.
+The owner explicitly reported that GitHub environment secrets are NOT configured
+yet. Next is `mintv-qa-signing` protection and its four secrets as described in
+[step 5 of the Mac guide](min-tv-permanent-updates-mac.md#5-skapa-skyddad-github-miljö-och-secrets).
+Codex has not received the private key or independently verified the backups.
+Production still needs its own original key/installed identity investigation.
+Workflow is not registered on main until a user-reviewed merge; no merge is
+performed here.
 
 The Android 14 disposable emulator test can prove the system's same-signer/data
 semantics with test fixtures. It cannot claim owner's permanent keys are configured

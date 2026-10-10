@@ -17,7 +17,15 @@ import tv.own.owntv.features.update.UpdateDialog
 
 class UpdateDialogNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-    @Before fun disposableOnly() { assertEquals("true", InstrumentationRegistry.getArguments().getString("disposableEmulator")) }
+    @Suppress("DEPRECATION")
+    @Before fun disposableOnly() {
+        assertEquals("true", InstrumentationRegistry.getArguments().getString("disposableEmulator"))
+        // Foundation clickable uses SystemDefined focusability and excludes touchscreen mode.
+        // Model a TV remote without requesting focus on any node or changing physical settings.
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        compose.waitForIdle()
+        assertFalse(compose.activity.window.decorView.isInTouchMode)
+    }
     private fun key(code: Int) { InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code); compose.waitForIdle() }
     private fun mount(): MutableState<Boolean> {
         val open = mutableStateOf(true)
@@ -25,9 +33,14 @@ class UpdateDialogNavigationTest {
         compose.waitForIdle()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         // A platform dialog attaches asynchronously; require actual focus without forcing it in test.
-        compose.waitUntil(5_000) {
-            compose.onNodeWithText(context.getString(R.string.settings_close)).fetchSemanticsNode()
-                .config.getOrElse(SemanticsProperties.Focused) { false }
+        try {
+            compose.waitUntil(5_000) {
+                compose.onNodeWithText(context.getString(R.string.settings_close)).fetchSemanticsNode()
+                    .config.getOrElse(SemanticsProperties.Focused) { false }
+            }
+        } catch (error: Throwable) {
+            runCatching { compose.onNode(isDialog()).printToLog("MinTvAboutFocus") }
+            throw error
         }
         return open
     }

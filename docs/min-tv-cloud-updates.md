@@ -114,6 +114,40 @@ Android confirmation; after process recreation a Continue button resumes it.
 Declining is shown as cancellation. Installer failures are reported without
 resetting any IPTV/database/preferences. Uncommitted failed sessions are abandoned.
 
+## Verified build/test snapshot
+
+Signing/updater implementation `5a8ccf1831f1ac6e092af1d107da2bf43edb21a8`:
+
+| Check | Actual result |
+|---|---|
+| App unit tests | 309 QA + 309 regular, no failure/error/skip |
+| Pinned Core/player unit tests | 939 + 271, no failure/error/skip |
+| Python policy/update tests | 29 passed; total unit/CLI executions 1,857 |
+| ARM debug + instrumentation compile/package | Both identities passed |
+| Unsigned optimized ARM release builds | QA and regular passed; minSdk26, ARM64 + ARMv7, not debuggable |
+| Debug/release lint | Zero errors; 130 debug / 127 release warnings per identity |
+| Actual native signing/metadata fixtures | All28 passed with one shared disposable certificate; wrong key/package/channel/corrupt/signed input rejected |
+| Packaging/i18n/actionlint | Provider/permission/link/package isolation, no HOME, correct pseudolocale packaging and workflow syntax passed |
+
+The native fixtures invoke signing independently twice per package and validate
+actual v2/v3 signatures, manifests, hashes and the public-output whitelist. Their
+private files/APKs are deleted; these are not owner-key acceptance artifacts.
+Lint warnings include intentional synchronous installer-state persistence and
+existing style warnings; no blanket suppression/baseline hides an error.
+The current dialog focus follow-up must also pass the strict Android tests in
+[PR #3's current Checks](https://github.com/jonasschroder/OwnTV/pull/3/checks).
+The remote test explicitly establishes keyboard input mode without requesting
+node focus; the app must select Close and handle actual D-pad/OK/Back events.
+
+Reproduce unit/CLI/debug validation with the commands in `android.yml`. Build
+unsigned releases with `VERSION_CODE=1000001`, `MINTV_VERSION_NAME=0.2.0` and
+`:app:assembleStandardRelease :app:lintStandardRelease`, then
+`MINTV_VERSION_NAME=0.2.0-beta.1` with the corresponding Qa tasks. These are TEST
+version inputs, not the permanent production counter. `i18n.yml` runs
+`tools/signing/test_signer.py` against both real unsigned releases. Ordinary
+Gradle builds require JDK21, SDK/BuildTools37 and `bash tools/prepare-core.sh`.
+No private signing secret is needed for these checks.
+
 ## Acceptance that remains mandatory
 
 Local/CI fixture tests do not prove possession of the permanent owner key.

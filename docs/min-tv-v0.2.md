@@ -1,5 +1,14 @@
 # Min TV v0.2 — live IPTV Home inside a normal app
 
+**Permanent signing continuation:** ordinary PR Actions no longer upload ephemeral
+installer APKs. The owner chose one retained shared key for QA/Stable and accepts
+planning an initial clean adoption of both apps; physical execution still needs
+approval. Both protected signing environments are reported configured. Actual
+owner-key signing is blocked by the still-unmerged main workflow. Use
+[the current Mac/TV guide](min-tv-permanent-updates-mac.md) and
+[acceptance report](min-tv-cloud-updates.md); the older debug-transfer examples
+below are historical and do not identify a currently available permanent APK.
+
 For first physical testing while retaining v0.1, use the separate
 **[Min TV Test QA build and Mac installation guide](min-tv-qa.md)**
 (`se.jonasschroder.mintv.qa`). The regular APK below remains an update candidate;
@@ -124,9 +133,11 @@ These verify contracts, not installed-app behavior on the target hardware.
 
 ## Safe installation/update — read first
 
-The Actions ZIP is named **MinTV-v0.2-arm-debug** and includes an APK, SHA256SUMS,
-READ-BEFORE-INSTALL.txt and its public signing certificate. Download it from the
-PR's **Min TV prototype** run while signed into GitHub and unzip it on a computer.
+The historical Actions ZIP was named **MinTV-v0.2-arm-debug** and included an APK, SHA256SUMS,
+READ-BEFORE-INSTALL.txt and its public signing certificate. Current prototype
+runs upload reports only. Future approved permanent candidates come from
+**Min TV approved signing**, with exact filenames in their signed metadata;
+follow the current guide and do not install a historical debug ZIP as an update.
 It expires after 14 days. It is a debuggable test build, not a public Release.
 
 **A fresh CI runner normally signs with a new debug key. Do not assume this APK
@@ -194,11 +205,13 @@ higher than the installed APK's code. Never put passwords on a logged command li
 or commit/upload keys. Regular PR CI uses its ordinary ephemeral debug key and
 does not access signing secrets.
 
-For stable distribution, create one unique Min TV key offline, store an encrypted
-backup in a secure vault and sign through a protected, manually approved workflow
-or signing service. Use the same certificate and increasing version codes. Do not
-expose the key to fork/PR jobs or caches/artifacts. A transition from an unrelated
-debug certificate needs the explicitly backed-up migration described above.
+For permanent distribution, retain the owner-created key already configured in
+both protected signing environments. Do not regenerate it. QA and Stable use the
+same public certificate by explicit owner choice, but keep different packages,
+private data and authenticated update channels. Secret-free unsigned builds and
+native signing outside Gradle are implemented; real signing requires reviewed
+main integration and manual environment approval. Release publication is separate
+and is not authorized here. See [the current signing guide](min-tv-signing.md).
 
 ## Reproducible build and automated checks
 

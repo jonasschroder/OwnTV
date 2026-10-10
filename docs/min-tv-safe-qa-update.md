@@ -1,15 +1,18 @@
 # Safe update of the populated Min TV Test installation
 
-**New owner decision:** a one-time clean QA installation may be planned once a
-retained QA key and its backups are verified, accepting existing QA configuration
-loss. See [permanent update setup](min-tv-permanent-updates-mac.md). This is not
-an instruction to reinstall now. Regular v0.1 remains untouched; the backup/read-only
-checks below remain useful. Future same-signer QA updates preserve all private stores.
+**Current owner decision:** planning one clean adoption of BOTH applications is
+accepted once permanent signing and acceptance succeed. The retained shared key
+and backups and both protected signing environments are reported configured;
+actual owner-key verification is still blocked by the unmerged main workflow.
+See [the current setup guide](min-tv-permanent-updates-mac.md). This is not an
+instruction to reinstall now. Keep both existing apps/data until execution is
+separately approved. No ordinary PR job now uploads an ephemeral installer APK.
 
-**Keep both existing apps and their data. Do not reinstall yet.** The final PR #3
-artifact is a validation build until its certificate and versionCode match your
-installed QA app. A new persistent key cannot update an unrelated old certificate.
-Nothing in this PR installs/uninstalls apps, clears data or changes system settings.
+The checks below assess a verified compatible update; a new certificate cannot
+update an unrelated old signer. Existing physical certificates and real backup
+restore have not been verified in the cloud. Future same-key/package updates
+must retain private stores. Nothing here installs/uninstalls/clears physical apps
+or changes Android settings.
 
 ## 1. Make and verify the real IPTV backup first
 
@@ -64,7 +67,7 @@ exact APK you installed, it can be used instead after confirming its identity.
 Record the public certificate SHA-256 and versionCode. Do not assume that the
 last GitHub run is the build currently installed on the Chromecast.
 
-Download the final PR artifact ZIP on your Mac and extract it. Verify SHA256SUMS.
+After actual permanent signing, download the approved QA candidate ZIP on your Mac and extract it. Verify SHA256SUMS.
 Run the repository's read-only checker, explicitly selecting QA:
 
 ```bash
@@ -76,9 +79,9 @@ python3 tools/check-apk-update.py \
   --apksigner "$ANDROID_HOME/build-tools/37.0.0/apksigner"
 ```
 
-The artifact also includes `check-apk-update.py` directly; from the extracted
-ZIP folder use `python3 check-apk-update.py` with the same arguments if you have
-not cloned the repository.
+The checker is in this repository; use its reviewed PR revision on your Mac.
+Replace the example candidate path with the exact signed QA APK filename from
+the approved artifact. Artifacts contain only explicit public signing outputs.
 
 It must report the same QA package, the same verified signer certificate(s), and
 an increasing versionCode. It rejects the regular package, an unrelated signer,
@@ -86,54 +89,29 @@ unverified signatures and equal/lower versions. It never installs anything.
 A PASS establishes these update prerequisites; it does not replace the real
 backup, Android package-manager compatibility checks or device acceptance tests.
 
-## 3. Persistent QA signing and the current blocker
+## 3. Permanent signing and the current blocker
 
-Each ordinary PR Actions runner generates an ephemeral debug key. This artifact
-may therefore **not** update your current Test installation. Never work around
-`INSTALL_FAILED_UPDATE_INCOMPATIBLE` by removing or clearing either app. An APK's
-public certificate cannot recover its private key.
+Keep the working apps installed. Ordinary debug keys may differ from installed
+certificates; the read-only checker must pass for any in-place update. An APK's
+public certificate cannot recover its private key. Do not bypass
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE` by clearing/removing an app.
 
-First locate the original QA private keystore on the trusted original build
-machine or in its private backups. If its certificate matches the installed APK,
-retain it and use the existing `MINTV_DEBUG_KEYSTORE_FILE`,
-`MINTV_DEBUG_KEYSTORE_PASSWORD`, `MINTV_DEBUG_KEY_ALIAS`, `MINTV_DEBUG_KEY_PASSWORD`
-inputs to build **only** `:app:assembleQaDebug`, with `VERSION_CODE` higher than
-the installed version. Set credentials using a private protected configuration,
-not password command-line flags/history or repository files. Repeat the update
-checker against the signed result. No private key is available in this workspace.
+The owner has retained and encrypted-backed-up one permanent key, explicitly
+shared by QA/Stable. Both public pins are committed; package/data/update channels
+and protected signing environments remain separate. Sharing the key provides no
+cryptographic separation. Do not create another key or repeat completed setup.
 
-If that original ephemeral key is lost, there is no ordinary in-place update
-with a new key. Keep the working app installed. Do not begin a backup/reinstall/
-restore migration without a separately authorized decision and a verified real
-backup/restore path. This PR does not perform or recommend that migration now.
+The manual main-only signer builds unsigned release APKs WITHOUT secrets and
+signs natively in a separate approved environment job, outside Gradle. It checks
+actual key/manifest/APK certificate, exact package/code/name, ARM ABIs, v2/v3 and
+checksum before uploading only public outputs. The workflow is still only in
+PR #3, so actual signing is blocked until future approved main integration.
+No permanently signed artifact or Release has been produced.
 
-For future QA continuity, retain a dedicated QA key, separate from production.
-[The signing plan](min-tv-signing.md) explains offline creation, public fingerprint
-checks and two encrypted offline backups with a tested decrypt/certificate check.
-A practical future protected CI setup is:
-
-1. Create or recover that dedicated key on a trusted offline Mac; record its public
-   fingerprint, alias and certificate expiry. Test both encrypted offline backups.
-2. Create a GitHub **QA signing** environment with required reviewer approval and
-   deployment restrictions to a trusted signing branch. Store the keystore as an
-   encrypted environment secret and its passwords/alias as separate secrets.
-3. Use a separate **manually dispatched** workflow that requires an exact immutable
-   reviewed/tested app commit, checks out that commit and the pinned Core source,
-   and receives secrets only inside the protected environment job. Never use
-   `pull_request_target` or supply keys to PR/fork builds.
-4. Decode the key to a runner temporary private file (permissions 600), set the
-   existing signing inputs and an explicitly monotonic versionCode, build QA and
-   verify package/signature/certificate against the pinned public fingerprint.
-   Delete the key in an always-run cleanup. Do not cache/archive it or echo secrets.
-5. Upload only the APK, checksum, public certificate and matching-source SHA; retain
-   the offline backups independently of GitHub. Always compare with the installed
-   APK before a manual device update. Production uses its own separately protected
-   key/environment and retains `se.jonasschroder.mintv` unchanged.
-
-This is a documented preparation plan; no signing secrets, protected environment
-or signing workflow has been provisioned automatically. Ordinary PR checks remain
-secret-free. Stable signing must be established before future distribution is
-advertised as an update for a populated QA installation.
+The planned first clean adoption may lose old local data. Before recommending it,
+verify separate real encrypted backups and restoration of a copy, record settings
+outside `.own`, pass owner-key acceptance, then obtain physical execution approval.
+No automatic migration/uninstall/reset exists. [Current process and limitations](min-tv-cloud-updates.md).
 
 ## 4. Manual Mac/Downloader transfer, only after the gate passes
 

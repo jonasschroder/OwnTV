@@ -1,12 +1,14 @@
 package tv.own.owntv.features.update
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.*
@@ -46,9 +48,10 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
     }
     val close = { manager.dismiss(); onDismiss() }
     StagePopup(onDismiss = close, title = stringResource(R.string.mintv_update_about), width = 950.mpx,
+        // Redirect the actual focus entry into this dialog, rather than racing window attachment.
+        modifier = Modifier.focusProperties { onEnter = { focus.requestFocus() } }.focusGroup(),
         buttons = {
-            // Request from the dialog's own composition, after its window/layout attaches.
-            LaunchedEffect(state) { withFrameNanos { }; withFrameNanos { }; focus.requestFocus() }
+            LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; focus.requestFocus() }
             StageButton(stringResource(R.string.settings_close), onClick = close, modifier = Modifier.focusRequester(focus), height = 56.mpx, textSize = 18)
             when (state) {
                 is MinTvUpdater.State.Available -> StageButton(stringResource(R.string.update_now), onClick = { requestedInstall = true; scope.launch { if (manager.hasDownload()) manager.continueInstall() else manager.download() } }, height = 56.mpx, textSize = 18, tinted = true)

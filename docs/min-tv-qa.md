@@ -1,5 +1,14 @@
 # Min TV Test — side-by-side Chromecast QA
 
+**Current signing status:** ordinary PR builds no longer upload ephemeral-key
+installer APKs. Both protected signing environments and the retained shared key
+are reported configured; actual owner-key signing is blocked until separately
+approved main integration. Do not reinstall either existing app now. The owner
+accepts planning one clean adoption for BOTH apps, with separate execution approval.
+Use [the current Mac/TV guide](min-tv-permanent-updates-mac.md) and
+[acceptance report](min-tv-cloud-updates.md). The debug filenames/test setup below
+are historical development references, not currently downloadable permanent builds.
+
 For the latest full-screen TV redesign, broadcast-source feasibility, Twitch build
 configuration and device checklist, see [the redesign guide](min-tv-redesign.md).
 
@@ -12,14 +21,16 @@ not an update or migration of the working Min TV v0.1 installation.
 | Application ID | `se.jonasschroder.mintv` | `se.jonasschroder.mintv.qa` |
 | ARM debug task | `:app:assembleStandardDebug` | `:app:assembleQaDebug` |
 | External link scheme | `mintv://` | `mintv-qa://` |
-| APK in Actions ZIP | `MinTV-v0.2-arm-debug.apk` | **`MinTV-v0.2-QA.apk`** |
+| Historical debug filename (no longer uploaded) | `MinTV-v0.2-arm-debug.apk` | **`MinTV-v0.2-QA.apk`** |
 
 Both use the existing v0.2 IPTV Home and player, namespace `tv.own.owntv`, and
 Core commit `adca2bcd653f19e6e5d659c2722309e6aef4ec15`. QA adds a yellow **TEST**
 badge to the TV banner and displays **Min TV Test** in Home. All nine alternate
 icon activities inherit the QA application label/banner. The regular identity,
 link scheme, banner, build tasks and signing configuration keep their existing
-values. QA is an ARM debug-only flavor; no QA release variant is enabled.
+values. QA has both ARM debug and release variants; only the protected native
+signing workflow may produce a permanent release candidate. Neither PR nor Gradle
+build jobs receive its private key.
 
 **Leave Min TV v0.1 installed. Do not install the regular v0.2 APK for this test.
 Do not clear data, uninstall Min TV, or disable/change Google TV or system apps.**
@@ -30,14 +41,20 @@ The remote's physical Home button still opens Google TV.
 
 ## Install from a Mac using Downloader
 
-1. Sign into GitHub on your Mac. Open PR #3 → Checks → **Min TV prototype**, then
-   download the artifact named **MinTV-v0.2-QA.apk** from the run's Artifacts area.
-   GitHub downloads a ZIP even though the artifact name ends in `.apk`. Artifacts
-   expire after 14 days; use the final run linked in the PR.
-2. Double-click the ZIP in Finder. Inside are `MinTV-v0.2-QA.apk`, `SHA256SUMS`,
-   a public signing certificate and a read-before-install notice. Read the notice.
+Only follow this after actual permanent signing/acceptance and explicit approval
+for the first adoption, or a verified compatible later update. No ready permanent
+APK exists yet. Never remove an existing installation to bypass a signing error.
+
+1. Sign into GitHub on your Mac. After future approved main integration and
+   signing, open **Min TV approved signing**, select the approved QA run and
+   download its `MinTV-approved-QA-<code>` artifact. It expires after 14 days.
+   **Min TV prototype** runs provide validation reports, not installer APKs.
+2. Double-click the ZIP in Finder. Read its public certificate, `SHA256SUMS`,
+   `release-candidate.json` and authenticated manifest evidence. The exact QA APK
+   name is `MinTV-Test-v<version>-<code>-arm.apk`; verify the pinned public
+   fingerprint and checksum. Substitute this exact filename in steps 3 and 6.
 3. In your Mac's Downloads folder, create an empty folder named **MinTV-QA-share**.
-   Copy **only `MinTV-v0.2-QA.apk`** into it. Keep private backups and credentials
+   Copy **only the approved QA APK** into it. Keep private backups and credentials
    elsewhere. Do not rename a ZIP to `.apk`.
 4. Open Terminal (Applications → Utilities). If `python3 --version` does not work,
    install Python 3 from [python.org for macOS](https://www.python.org/downloads/macos/),
@@ -54,8 +71,8 @@ The remote's physical Home button still opens Google TV.
    Connect the Mac and Chromecast to the same trusted home network. A guest network
    or VPN may prevent local transfer; use the normal home connection.
 6. Install **Downloader by AFTVnews** from Google Play on Chromecast. In Downloader,
-   enter `http://YOUR_MAC_IP:8765/MinTV-v0.2-QA.apk`, replacing `YOUR_MAC_IP` with the
-   address from step 5. Download the APK. If it cannot connect, check the address,
+   enter `http://YOUR_MAC_IP:8765/EXACT_QA_APK_FILENAME`, replacing `YOUR_MAC_IP`
+   with the address from step 5 and the filename with the one from step 2. Download the APK. If it cannot connect, check the address,
    Wi-Fi and the macOS permission for Python rather than changing Google packages.
 7. When Android asks, allow **Downloader** to install unknown apps. The installer
    must say **Min TV Test**. If it says Min TV, cancel: that is the regular artifact.
@@ -65,14 +82,14 @@ The remote's physical Home button still opens Google TV.
    **Min TV** and **Min TV Test**; open the TEST banner for QA.
 
 Optional integrity check on the Mac: open Terminal in the unzipped artifact folder
-and run `shasum -a 256 -c SHA256SUMS`. It should report the APK as OK.
+and run `shasum -a 256 -c SHA256SUMS`. It should report the APK as OK. A checksum alone does not verify signing identity.
 
 The first QA install does **not** need the working Min TV signing key, because the
 packages differ. If a **previous QA** build is already installed, Android requires
 its original certificate for a QA update; ephemeral CI keys may differ. Stop on a
-signature error. It is never a reason to remove regular Min TV. Future QA builds
-can reuse a private QA debug key through the existing out-of-repository signing
-settings described in [the v0.2 guide](min-tv-v0.2.md#consistent-signing-for-future-versions).
+signature error. It is never a reason to remove regular Min TV. Permanent QA and Stable releases now use the same owner-retained key, with separate
+package/channel verification and approval environments; sharing that key does not
+provide cryptographic separation. Never regenerate it for routine updates.
 
 ## Configure IPTV or import a copy of a backup
 

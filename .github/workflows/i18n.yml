@@ -86,10 +86,9 @@ jobs:
         run: python3 tools/i18n/check_text_overflow.py
 
   pseudo:
-    # Builds the debug + release standard APKs and inspects their resource tables. Heavier than the
-    # other two jobs, so it is its own job rather than piggy-backed on android.yml — and skipped on
-    # push, where android.yml already assembles main.
-    if: ${{ github.event_name != 'push' && !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'bump/core-')) }}
+    # Release identities and native signer checks must also pass on the EXACT main commit before
+    # protected signing. Prototype CI builds debug APKs; it does not replace this release check.
+    if: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'bump/core-')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

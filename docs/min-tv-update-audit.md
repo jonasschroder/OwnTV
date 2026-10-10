@@ -59,6 +59,8 @@ One signing workflow generates `1_000_000 + github.run_number` (both channels
 have increasing per-package subsequences). Every rerun is rejected to prevent
 reissuing different bytes with the same code. A new workflow run is required
 after failure. The file/workflow identity and counter must be retained.
+An older queued dispatch also fails if a newer candidate for that channel was
+already signed; GitHub does not guarantee FIFO concurrency ordering.
 
 ## External prerequisites — NOT completed by code
 

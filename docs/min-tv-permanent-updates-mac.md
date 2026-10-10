@@ -195,6 +195,8 @@ Android-koden avgör installationsordning; versionsnamnet är bara presentation.
 **Re-run jobs** är förbjudet för signering. Starta en ny manuell körning efter fel.
 Byt inte namn/fil på workflow eller återställ sekvensen utan en separat granskad
 plan med kod över alla redan installerade/publicerade versioner.
+En äldre köad körning blockeras även om en nyare kandidat i samma kanal redan
+signerats, eftersom GitHub inte garanterar köordningen.
 
 Fas B ska ge två explicit åtskilda, manuellt godkända Release-kanaler och
 autentiserad metadata/checksumma. GitHub Releases är enklast utan egen server,

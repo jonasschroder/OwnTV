@@ -12,7 +12,7 @@ from signing_policy import anchor, read_config, version_code, version_name
 REPO = 'jonasschroder/OwnTV'
 REQUIRED = {
     'android.yml': {'check-and-build', 'home-device-regressions', 'signing-upgrade-regressions'},
-    'i18n.yml': {'baseline', 'validate'},
+    'i18n.yml': {'baseline', 'validate', 'pseudo'},
 }
 
 

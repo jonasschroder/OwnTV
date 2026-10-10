@@ -1,6 +1,4 @@
 """Security boundaries of protected signing; synthetic metadata, no credentials."""
-import copy
-import importlib.util
 import json
 from pathlib import Path
 import sys

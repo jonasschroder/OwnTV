@@ -59,13 +59,13 @@ def command(args, env=None):
     # Never echo tool stderr: malformed signing credentials can reveal aliases/paths/password inputs.
     result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
     if result.returncode:
-        raise ValueError(f'{Path(args[0]).name} failed; check credentials/tools privately (no secret diagnostics logged)')
+        raise ValueError(f'{Path(args[0]).name} {args[1]} failed; check credentials/tools privately (no secret diagnostics logged)')
     return result.stdout
 
 
 def badging(text):
     identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", text, re.M)
-    sdk = re.search(r"^sdkVersion:'(\d+)'", text, re.M)
+    sdk = re.search(r"^(?:minSdkVersion|sdkVersion):'(\d+)'", text, re.M)
     abi = re.search(r'^native-code:(.*)$', text, re.M)
     if not identity or not sdk or not abi:
         raise ValueError('APK identity/Android/ABI metadata missing')

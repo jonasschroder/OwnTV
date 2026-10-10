@@ -76,6 +76,7 @@ def main():
                     value = (env or environments[channel]).get(secret, '')
                     assert not value or value not in result.stdout + result.stderr
             count += 1
+            print('PASS native case: ' + label, flush=True)
             return out
 
         for channel in PACKAGES:

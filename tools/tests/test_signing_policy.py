@@ -97,6 +97,7 @@ class SigningPolicyTest(unittest.TestCase):
     def test_badging_is_mandatory_and_parsed_from_actual_tool_shape(self):
         sample = "package: name='se.jonasschroder.mintv.qa' versionCode='1000001' versionName='0.2.0-beta.1'\nsdkVersion:'26'\nnative-code: 'arm64-v8a' 'armeabi-v7a'\n"
         self.assertEqual(self.info(), badging(sample))
+        self.assertEqual(self.info(), badging(sample.replace('sdkVersion', 'minSdkVersion')))
         for partial in ('', sample.replace('sdkVersion', 'other'), sample.replace('native-code:', 'other:')):
             with self.assertRaises(ValueError): badging(partial)
 

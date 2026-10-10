@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tv.own.owntv.core.database.dao.ProfileDao
 import tv.own.owntv.core.database.entity.ProfileEntity
 import tv.own.owntv.core.profile.ProfileManager
@@ -22,6 +25,18 @@ class ProfilesViewModel(
     private val settings: SettingsRepository,
     private val manager: ProfileManager,
 ) : ViewModel() {
+    private val firstRunMutex = Mutex()
+
+    /** Fresh installs only. Existing or restored profiles are never silently selected/unlocked. */
+    fun createMinTvDefault(defaultName: String, onDone: () -> Unit) {
+        viewModelScope.launch { firstRunMutex.withLock {
+            if (profileDao.getAllOnce().isEmpty() && settings.activeProfileId.first() < 0) {
+                val id = manager.create(defaultName, 0, false, null, defaultName)
+                manager.switchTo(id)
+            }
+            onDone()
+        } }
+    }
 
     // Eagerly on purpose: MainActivity's splash gate blocks the first frame on this list, so the
     // query has to start when the ViewModel is built, not on first collection inside composition.
@@ -62,6 +77,14 @@ class ProfilesViewModel(
     fun create(name: String, avatarId: Int, isKids: Boolean, pin: String?, defaultName: String, onCreated: (Long) -> Unit = {}) {
         viewModelScope.launch {
             onCreated(manager.create(name, avatarId, isKids, pin, defaultName))
+        }
+    }
+
+    fun createAndActivate(name: String, avatarId: Int, isKids: Boolean, pin: String?, defaultName: String, onCreated: (Long) -> Unit) {
+        viewModelScope.launch {
+            val id = manager.create(name, avatarId, isKids, pin, defaultName)
+            manager.switchTo(id)
+            onCreated(id)
         }
     }
 

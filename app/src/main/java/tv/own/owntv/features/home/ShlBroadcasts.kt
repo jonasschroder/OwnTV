@@ -41,15 +41,30 @@ internal object BroadcastResolver {
     }
 
     /** Strip only known country/quality wrappers. Channel numbers and remaining tokens stay exact. */
-    fun channelKey(name: String): String = name.uppercase(Locale.ROOT).trim()
-        .replace(Regex("^(?:SE|SWE|SWEDEN)\\s*[:|]\\s*"), "")
-        .replace(Regex("\\s+(?:SD|HD|FHD|UHD|4K)$"), "")
-        .replace(Regex("\\s+"), " ").trim()
+    fun channelKey(name: String): String {
+        val tokens = name.uppercase(Locale.ROOT).split(Regex("[^A-Z0-9]+"))
+            .filter(String::isNotEmpty).toMutableList()
+        val wrappers = setOf("SE", "SWE", "SWEDEN", "SD", "HD", "FHD", "UHD", "4K", "8K")
+        while (tokens.firstOrNull() in wrappers) tokens.removeAt(0)
+        while (tokens.lastOrNull() in wrappers) tokens.removeAt(tokens.lastIndex)
+        return tokens.joinToString(" ")
+    }
+
+    /** These are not broadcaster identities. Only exact-fixture EPG evidence can recommend them. */
+    fun eventPlaceholder(name: String): Boolean {
+        val tokens = channelKey(name).split(' ')
+        return "PPV" in tokens || "EXCLUSIVE" in tokens ||
+            tokens.windowed(3).any { it == listOf("NO", "EVENT", "STREAMING") }
+    }
+
+    fun searchTokens(broadcast: BroadcastChannel): List<String> =
+        channelKey(broadcast.name).split(' ').filter { it.isNotEmpty() }.take(12)
 
     fun matches(broadcast: BroadcastChannel, libraryName: String): Boolean {
         // A streaming brand is never promoted to a linear service. A non-linear exact configured
         // entry may still be chosen manually, using the provider's existing URL and authorisation.
-        return broadcast.linear && !channelKey(broadcast.name).startsWith("TV4 PLAY") && channelKey(broadcast.name) == channelKey(libraryName)
+        return broadcast.linear && !eventPlaceholder(libraryName) &&
+            !channelKey(broadcast.name).startsWith("TV4 PLAY") && channelKey(broadcast.name) == channelKey(libraryName)
     }
 
     private fun teamId(name: String): String? = ShlTeams.identity(name)

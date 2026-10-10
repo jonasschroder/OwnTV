@@ -1010,13 +1010,45 @@ class LiveViewModel(
         val current = ctx.value
         if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext HomeChannelCandidates(emptyList(), false)
         var truncated = false
-        val rows = broadcasters.filter { it.linear }.map { it.name.substringBefore(' ') }.distinct().take(8).flatMap {
-            channelDao.searchList(it, current.sourceIds, 129).also { found -> if (found.size == 129) truncated = true }
+        val rows = broadcasters.filter { it.linear }.distinctBy { it.name }.take(8).flatMap { broadcaster ->
+            val tokens = tv.own.owntv.features.home.BroadcastResolver.searchTokens(broadcaster)
+            if (tokens.isEmpty()) emptyList() else {
+                // FTS requires every identity token, so PPV TV4 rows cannot consume this limit.
+                val exact = channelDao.searchListDetailedFts(tokens.joinToString(" AND ") { "\"$it\"" }, current.sourceIds, 129)
+                    .map { it.channel }
+                val fallback = channelDao.searchList(tokens.takeLast(2).joinToString(" "), current.sourceIds, 129)
+                if (exact.size == 129 || fallback.size == 129) truncated = true
+                exact + fallback
+            }
         }
         val matches = rows.distinctBy { it.id }.filter { channel -> broadcasters.any {
             tv.own.owntv.features.home.BroadcastResolver.matches(it, channel.name)
         } && isVisibleToActiveProfile(channel) }
         HomeChannelCandidates(matches.take(128), truncated || matches.size > 128)
+    }
+
+    data class HomeSportsCategory(val id: Long, val name: String, val sourceId: Long)
+
+    suspend fun homeSportsCategories(expectedProfileId: Long): List<HomeSportsCategory> = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext emptyList()
+        val hidden = customize.observe(current.profileId, MediaType.LIVE).first().hiddenCategories
+        categoryDao.observe(current.sourceIds, MediaType.LIVE).first().filter {
+            CustomizeKeys.category(it) !in hidden &&
+                tv.own.owntv.core.content.AdultCategoryClassifier.allows(current.profileId, it.id, profileDao, categoryDao)
+        }.sortedBy { it.name.lowercase(java.util.Locale.ROOT) }.take(256).map { HomeSportsCategory(it.id, it.name, it.sourceId) }
+    }
+
+    /** Paged local category browser: nothing is fetched from an IPTV provider on this path. */
+    suspend fun homeCategoryChannels(categoryId: Long, page: Int, expectedProfileId: Long): HomeChannelCandidates = withContext(Dispatchers.IO) {
+        if (ctx.value.profileId != expectedProfileId || homeSportsCategories(expectedProfileId).none { it.id == categoryId })
+            return@withContext HomeChannelCandidates(emptyList(), false)
+        val source = channelDao.pagingByCategory(categoryId)
+        try {
+            val result = source.load(PagingSource.LoadParams.Refresh(page.coerceIn(0, 1000) * 48, 49, false))
+            val rows = (result as? PagingSource.LoadResult.Page)?.data.orEmpty()
+            HomeChannelCandidates(rows.take(48).filter { isVisibleToActiveProfile(it) }, rows.size > 48)
+        } finally { source.invalidate() }
     }
 
     /** Query all relevant names broadly before normalizing; truncation must never imply uniqueness. */

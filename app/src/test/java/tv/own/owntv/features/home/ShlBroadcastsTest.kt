@@ -19,6 +19,21 @@ class ShlBroadcastsTest {
             assertTrue(it, BroadcastResolver.matches(channel, it))
         }
     }
+    @Test fun actualProviderSuffixesAndPunctuationMatchWithoutTyping() {
+        val channel = assignment.channels.first()
+        listOf("TV4 Sport Live 2 HD SE", "TV4 Sport Live 2 SE", "SE | TV4 SPORT LIVE 2 FHD SE",
+            "tv4-sport-live-2 4K SE", "[SE] TV4.Sport.Live.2 UHD").forEach { assertTrue(it, BroadcastResolver.matches(channel, it)) }
+        assertFalse(BroadcastResolver.matches(channel, "TV4 Sport Live 3 HD SE"))
+        assertFalse(BroadcastResolver.matches(channel, "TV4 Hockey HD SE"))
+    }
+    @Test fun actualPpvFloodCannotCountAsBroadcasterIdentity() {
+        val ppv = (1..200).map { "NO EVENT STREAMING - | 8K EXCLUSIVE | SE: TV4 PLAY PPV $it" }
+        assertTrue(ppv.all { BroadcastResolver.eventPlaceholder(it) })
+        assertTrue(ppv.none { BroadcastResolver.matches(assignment.channels.first(), it) })
+        val names = ppv + listOf("TV4 Sport Live 2 HD SE", "TV4 Sport Live 2 SE")
+        assertEquals(2, names.count { BroadcastResolver.matches(assignment.channels.first(), it) })
+        assertEquals(listOf("TV4", "SPORT", "LIVE", "2"), BroadcastResolver.searchTokens(assignment.channels.first()))
+    }
     @Test fun channelNumbersNeverCollapse() {
         val channel = assignment.channels.first()
         listOf("TV4 Sport Live 1", "TV4 Sport Live 3 HD", "SE: TV4 Sport Live 4 FHD", "TV4 Sport Live", "TV4 Sport Live 12").forEach {

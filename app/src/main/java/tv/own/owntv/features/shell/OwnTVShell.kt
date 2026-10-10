@@ -1,5 +1,7 @@
 package tv.own.owntv.features.shell
 
+import androidx.compose.runtime.saveable.rememberSaveable
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -228,6 +230,7 @@ fun OwnTVShell(
     // Where ▶ out of the Stage rail returns to: the content, exactly as it was left.
     val contentAreaFocus = remember { FocusRequester() }
     var homeEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    var homeSetupOpen by rememberSaveable(activeProfileId) { mutableStateOf(false) }
     // The guide's entry hook: the TV Guide, or Live TV in Guide view (null while Live TV shows its list).
     var guideEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var vodEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
@@ -1126,7 +1129,15 @@ fun OwnTVShell(
                                 .focusGroup(),
                         )
 
-                        selectedSection == MainSection.HOME -> homeStateHolder.SaveableStateProvider(MainSection.HOME) { MinTvContentHome(
+                        selectedSection == MainSection.HOME -> homeStateHolder.SaveableStateProvider(MainSection.HOME) {
+                            if (homeSetupOpen && activeProfileId != null) tv.own.owntv.features.setup.Onboarding(
+                                firstRun = false, minTvProfileId = activeProfileId,
+                                onDone = { id ->
+                                    homeSetupOpen = false
+                                    if (id == null) onSwitchProfile() // A restore never authenticates its profiles.
+                                },
+                                onCancel = { homeSetupOpen = false },
+                            ) else MinTvContentHome(
                             vm = homeVm,
                             liveVm = liveVm,
                             activeProfileId = activeProfileId,
@@ -1154,9 +1165,7 @@ fun OwnTVShell(
                             onLiveTv = { onSelectSection(MainSection.LIVE_TV) },
                             onGuide = { onSelectSection(MainSection.EPG) },
                             onSources = {
-                                settingsStart = tv.own.owntv.features.shell.components.SettingsStart(
-                                    tv.own.owntv.features.shell.components.SettingsGroup.SOURCES.ordinal, false)
-                                onSelectSection(MainSection.SETTINGS)
+                                homeSetupOpen = true
                             },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             restoreFocus = restoreFocus,

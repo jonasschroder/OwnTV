@@ -425,26 +425,23 @@ open class MainActivity : ComponentActivity() {
                         when {
                             profile == null || !profilesLoaded -> Unit // active id / Room list loading
                             // Adding a profile from the gate → onboard the new profile.
-                            addingProfile -> Onboarding(
-                                firstRun = false,
-                                onDone = { profileId -> gateSession.completeAddingProfile(profileId) },
-                                onCancel = { gateSession.cancelAddingProfile() },
-                                modifier = Modifier.fillMaxSize(),
+                            addingProfile -> tv.own.owntv.features.profiles.ProfileEditorDialog(
+                                initial = null,
+                                onConfirm = { name, avatar, kids, pin ->
+                                    profilesVm.createAndActivate(name, avatar, kids, pin, getString(R.string.setup_default_profile), gateSession::completeAddingProfile)
+                                },
+                                onDismiss = gateSession::cancelAddingProfile,
+                                takenNames = profiles.map { it.name.trim().lowercase() }.toSet(),
                             )
                             // First run (no profile yet) → full onboarding.
-                            profile < 0L -> Onboarding(
-                                firstRun = true,
-                                onDone = { profileId -> gateSession.authenticateProfile(profileId) },
-                                onCancel = {},
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                            tv.own.owntv.features.setup.minTvFirstRunRequired(profile, profilesLoaded, profiles.size) ->
+                                tv.own.owntv.features.setup.MinTvFirstRun(profilesVm, Modifier.fillMaxSize())
                             // A loaded list that does not contain the persisted active id is also
                             // recovery/onboarding, never permission to enter OwnTVShell. This covers
                             // both an empty restore window and a stale id left by an interrupted restore.
-                            !activeProfileKnown -> Onboarding(
-                                firstRun = false,
-                                onDone = { profileId -> gateSession.authenticateProfile(profileId) },
-                                onCancel = {},
+                            !activeProfileKnown || profile < 0 -> ProfileGate(
+                                onEnter = { id -> gateSession.authenticateProfile(id) },
+                                onAddProfile = gateSession::startAddingProfile,
                                 modifier = Modifier.fillMaxSize(),
                             )
                             // Run 2+ (or a single locked profile): "Who's watching?" — choose a profile or add one.

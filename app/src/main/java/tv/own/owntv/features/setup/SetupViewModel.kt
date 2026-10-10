@@ -44,6 +44,9 @@ class SetupViewModel(
     fun stopRemoteListener() = companion.stop()
     fun consumeRemotePayload() = companion.consumePayload()
 
+    /** The authenticated Min TV profile owns the short add-source flow. */
+    fun useExistingProfile(id: Long) { importer.reset(); importer.useProfile(id) }
+
     // ---- Remote restore: another device uploads a backup JSON to the TV over the LAN companion server. ----
     /** Uploaded backup files — the remote-restore screen collects this and hands each to [importBackup]. */
     val remoteBackups get() = companion.backups
@@ -53,6 +56,8 @@ class SetupViewModel(
 
     val state: StateFlow<SourceImporter.ImportState> = importer.state
     val progress = importer.progress
+    private val _importReady = MutableStateFlow(false)
+    val importReady: StateFlow<Boolean> = _importReady.asStateFlow()
 
     // Semi-auto EPG: after the first playlist imports, offer a one-tap guide sync (with a live count) if it
     // has a guide feed.
@@ -134,6 +139,7 @@ class SetupViewModel(
      */
     private fun runImport(block: suspend () -> Unit) {
         importJob?.cancel()
+        _importReady.value = false
         val job = viewModelScope.launch {
             block()
             val done = importer.state.value as? SourceImporter.ImportState.Success ?: return@launch
@@ -142,6 +148,7 @@ class SetupViewModel(
                 pendingEpgSource = source
                 _epgSync.value = tv.own.owntv.features.settings.EpgSyncUi.Ask(source.name)
             }
+            _importReady.value = true
         }
         importJob = job
         job.invokeOnCompletion { if (importJob == job) importJob = null }

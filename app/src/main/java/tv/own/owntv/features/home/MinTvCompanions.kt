@@ -58,6 +58,11 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     var selectedId by rememberSaveable(profileId) { mutableStateOf<String?>(null) }
     var picker by rememberSaveable(profileId) { mutableStateOf(false) }
     var searchOpen by rememberSaveable(profileId) { mutableStateOf(false) }
+    var browsing by rememberSaveable(profileId) { mutableStateOf(false) }
+    var categoryId by rememberSaveable(profileId) { mutableStateOf<Long?>(null) }
+    var categoryPage by rememberSaveable(profileId) { mutableIntStateOf(0) }
+    var categories by remember(profileId) { mutableStateOf<List<LiveViewModel.HomeSportsCategory>>(emptyList()) }
+    var categoryRows by remember(profileId) { mutableStateOf<LiveViewModel.HomeChannelCandidates?>(null) }
     var upcoming by rememberSaveable { mutableStateOf(false) }
     var page by rememberSaveable { mutableIntStateOf(0) }
     var data by remember { mutableStateOf<ShlSnapshot?>(null) }
@@ -190,7 +195,8 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                 } }
             }
             val matches = if (validBroadcast != null) discovered.channels.sortedBy { it !in epgSupport } else epgSupport
-            channels = suggestions.channels; confirmed = matches; matchedGame = game
+            channels = suggestions.channels.filter { !BroadcastResolver.eventPlaceholder(it.name) || it in epgSupport }
+            confirmed = matches; matchedGame = game
             matchedBroadcast = validBroadcast
             candidatesComplete = if (validBroadcast != null) !discovered.truncated else !pool.truncated
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -211,6 +217,11 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     fun close() { screen = false; selectedId = null; picker = false; searchOpen = false; query = ""; restoreTarget = entryFocus }
     fun back() {
         keyboard?.hide()
+        if (browsing) {
+            if (categoryId != null) { categoryId = null; categoryPage = 0 } else browsing = false
+            restoreTarget = pickerFocus
+            return
+        }
         val previous = MatchcenterNavigation(section, selectedId, picker, searchOpen).back()
         if (previous == null) close() else {
             val old = selectedId
@@ -218,7 +229,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
             restoreTarget = if (previous.channelPicker) pickerFocus else if (previous.gameId != null) detailFocus else gameFocus[old] ?: tabFocus
         }
     }
-    fun choose(game: ShlGame) { selectedId = game.id; picker = false; searchOpen = false; query = ""; restoreTarget = detailFocus }
+    fun choose(game: ShlGame) { selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
     fun open() { screen = true; restoreTarget = tabFocus }
     fun play(channel: ChannelEntity, list: List<ChannelEntity>) {
         // Shell saves this destination during fullscreen; Back returns to the match/picker.
@@ -242,7 +253,16 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
             }
         }
     }
-    val pickerRows = (listOfNotNull(manualChannel) + reliableChannels + channels).distinctBy { it.id }.take(48)
+    val pickerRows = (if (browsing && categoryId != null) categoryRows?.channels.orEmpty()
+        else listOfNotNull(manualChannel) + reliableChannels + channels.takeIf { reliableChannels.isEmpty() || searchOpen }.orEmpty())
+        .distinctBy { it.id }.take(48)
+    LaunchedEffect(available, picker, browsing, categoryId, categoryPage, profileId, libraryContext) {
+        categoryRows = null
+        if (available && picker && browsing && profileId != null) {
+            categories = liveVm.homeSportsCategories(profileId)
+            categoryId?.let { categoryRows = liveVm.homeCategoryChannels(it, categoryPage, profileId) }
+        }
+    }
     fun pick(channel: ChannelEntity) {
         val game = selected ?: return
         val profile = profileId ?: return
@@ -396,7 +416,13 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                         } else if (hasChannels == true) {
                         if (matching) item { TvText(stringResource(R.string.mintv_companion_loading)) }
                         if (matchFailed) item { TvText(stringResource(R.string.mintv_companion_unavailable)) }
-                        if (reliableChannels.isNotEmpty()) item { TvText(stringResource(R.string.mintv_confirmed_channels), color = MinTvTeal, bold = true) }
+                        if (browsing && categoryId == null) {
+                            items(categories, key = { it.id }) { category -> HomeButton(category.name, {
+                                categoryId = category.id; categoryPage = 0; restoreTarget = pickerFocus
+                            }, Modifier.fillMaxWidth().then(if (category == categories.firstOrNull()) Modifier.focusRequester(pickerFocus) else Modifier)) }
+                            if (categories.isEmpty()) item { TvText(stringResource(R.string.mintv_no_channel_matches)) }
+                        } else {
+                        if (reliableChannels.isNotEmpty() && !browsing) item { TvText(stringResource(R.string.mintv_confirmed_channels), color = MinTvTeal, bold = true) }
                         items(pickerRows, key = { it.id }) { channel ->
                             ChannelCard(channel.name, channel.displayLogoUrl,
                                 stringResource(if (channel in reliableChannels) R.string.mintv_confirmed_source else R.string.mintv_unconfirmed_source,
@@ -405,9 +431,18 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                                 selected = channel == manualChannel)
                         }
                         if (pickerRows.isEmpty() && !matching) item { TvText(stringResource(R.string.mintv_no_channel_matches), color = MinTvMuted) }
-                        item { HomeButton(stringResource(if (searchOpen) R.string.mintv_close_search else R.string.mintv_channel_search), {
-                            if (searchOpen) back() else { searchOpen = true; restoreTarget = searchFocus }
+                        if (browsing) item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
+                            if (categoryPage > 0) HomeButton(stringResource(R.string.mintv_shl_previous_page), { categoryPage--; restoreTarget = pickerFocus })
+                            if (categoryRows?.truncated == true) HomeButton(stringResource(R.string.mintv_shl_next_page), { categoryPage++; restoreTarget = pickerFocus })
+                            HomeButton(stringResource(R.string.mintv_browse_categories), { categoryId = null; categoryPage = 0; restoreTarget = pickerFocus })
+                        } }
+                        }
+                        if (!browsing) item { HomeButton(stringResource(R.string.mintv_browse_channels), {
+                            browsing = true; categoryId = null; categoryPage = 0; searchOpen = false; restoreTarget = pickerFocus
                         }, if (pickerRows.isEmpty() && !searchOpen) Modifier.focusRequester(pickerFocus) else Modifier) }
+                        item { HomeButton(stringResource(if (searchOpen) R.string.mintv_close_search else R.string.mintv_channel_search), {
+                            if (searchOpen) back() else { browsing = false; searchOpen = true; restoreTarget = searchFocus }
+                        }) }
                         if (searchOpen) item { CompanionInput(query, Modifier.focusRequester(searchFocus)) { query = it.take(80) } }
                         item { TvText(stringResource(R.string.mintv_shl_manual), size = 20, color = MinTvMuted) }
                         } else item { TvText(stringResource(R.string.mintv_companion_loading)) }

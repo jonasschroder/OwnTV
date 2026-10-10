@@ -127,15 +127,26 @@
 1	locale	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	EEE d MMM
 1	locale	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	HH:mm
 1	regex	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	^(?:IF|HC)\\s+|\\s+(?:BK|HC|IK|Redhawks|Lakers)$
-2	locale	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	sv-SE
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	mintv-companion
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-client-id
-3	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
+1	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	4K
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	8K
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	EVENT
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	EXCLUSIVE
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	FHD
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	HD
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	NO
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	PPV
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SD
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SE
 2	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SHL
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	STREAMING
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SWE
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SWEDEN
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV4 PLAY
-1	regex	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\\s+
-1	regex	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\\s+(?:SD|HD|FHD|UHD|4K)$
-1	regex	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	^(?:SE|SWE|SWEDEN)\\s*[:|]\\s*
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	UHD
+1	regex	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	[^A-Z0-9]+
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	bif
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	bjorkloven
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	brynas
@@ -442,8 +453,10 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	tnum
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	· $left
-6	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
+7	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
+1	sql	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	"$it"
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	#$it
+1	sql	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	AND
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	C More
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome

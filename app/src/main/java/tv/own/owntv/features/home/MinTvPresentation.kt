@@ -20,10 +20,8 @@ internal data class MatchcenterNavigation(val section: MatchcenterSection = Matc
 }
 
 internal fun shortTeam(name: String): String = name.replace(Regex("^(?:IF|HC)\\s+|\\s+(?:BK|HC|IK|Redhawks|Lakers)$"), "").trim()
-private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.forLanguageTag("sv-SE")).withZone(Stockholm)
-private val dateFormat = DateTimeFormatter.ofPattern("EEE d MMM", Locale.forLanguageTag("sv-SE")).withZone(Stockholm)
-internal fun stockholmTime(ms: Long): String = timeFormat.format(Instant.ofEpochMilli(ms))
-internal fun stockholmDate(ms: Long): String = dateFormat.format(Instant.ofEpochMilli(ms))
+internal fun stockholmTime(ms: Long): String = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()).withZone(Stockholm).format(Instant.ofEpochMilli(ms))
+internal fun stockholmDate(ms: Long): String = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()).withZone(Stockholm).format(Instant.ofEpochMilli(ms))
 internal fun stockholmDay(ms: Long): LocalDate = Instant.ofEpochMilli(ms).atZone(Stockholm).toLocalDate()
 
 internal fun updateLabel(ms: Long, now: Long): String = if (stockholmDay(ms) == stockholmDay(now)) stockholmTime(ms)

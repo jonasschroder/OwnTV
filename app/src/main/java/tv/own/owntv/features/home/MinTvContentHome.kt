@@ -132,8 +132,9 @@ fun MinTvContentHome(
     LaunchedEffect(selected?.id, activeProfileId, favoriteRowFocused) {
         controller.focus(selected.takeIf { favoriteRowFocused })
     }
-    LaunchedEffect(selected?.id, activeProfileId, lifecycle) {
+    LaunchedEffect(selected?.id, activeProfileId, lifecycle, matchcenterOpen) {
         guide = null // never label a new channel with the previous one's programme
+        if (matchcenterOpen) return@LaunchedEffect // hidden Home must not poll provider EPG
         val channel = selected ?: return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {

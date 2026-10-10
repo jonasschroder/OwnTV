@@ -172,7 +172,11 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     }
     fun choose(game: ShlGame) { selectedId = game.id; picker = false; query = ""; restoreTarget = detailFocus }
     fun open() { screen = true; restoreTarget = tabFocus }
-    fun play(channel: ChannelEntity, list: List<ChannelEntity>) { close(); onPlay(channel, list) }
+    fun play(channel: ChannelEntity, list: List<ChannelEntity>) {
+        // Shell saves this destination during fullscreen; Back returns to the match/picker.
+        // An unavailable/external-player handoff also keeps the user's selection intact.
+        onPlay(channel, list)
+    }
     val reliableChannels = confirmed.takeIf { matchedGame == gameToMatch && scheduleFresh && !matching }.orEmpty()
 
     Box(Modifier.fillMaxSize()) {

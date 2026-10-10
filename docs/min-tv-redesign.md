@@ -36,9 +36,10 @@ instructions rather than the connection action. New Min TV text was largely Engl
   a game. Multiple matches stay separate; one confirmed match can use **Se matchen**.
 - Home/list scroll state stays outside the conditional content. Selected game, tab,
   page and picker state are saved; Back returns picker → details → previous list →
-  Home. Focus requesters restore the selected scorecard/Home entry. Table/source rows
+  Home. Playback retains Matchcenter so player Back returns to the match/picker.
+  Focus requesters restore the selected scorecard/Home entry. Table/source rows
   are focusable so the remote can scroll disclosures rather than trap focus at tabs.
-- Opening Matchcenter stops the existing preview. Selecting a channel uses the
+- Opening Matchcenter stops the existing preview and pauses hidden Home EPG polling. Selecting a channel uses the
   existing playback/promotion callback. No preview on hockey/channel-picker focus,
   no autoplay, no second decoder or inferred stream URL.
 - Dates/times use `Europe/Stockholm` and Swedish formatting. Result labels say
@@ -224,12 +225,12 @@ Physical checklist for the new QA APK:
 | Core source | Exact pin `adca2bcd653f19e6e5d659c2722309e6aef4ec15` verified unchanged |
 
 Clean local QA APK: **89,392,836 bytes** versus preceding clean local companion APK
-89,324,668 bytes: **+68,168 bytes (+0.076%)**. Raw DEX +178,164 bytes; **all 26 native
+89,324,668 bytes: **+68,168 bytes (+0.076%)**. Raw DEX +175,344 bytes; **all 26 native
 libraries are byte-identical**. No new runtime dependencies. Warm incremental APK
 padding was excluded by reassembling only generated APK outputs. This is an APK
 comparison, not an Android RAM/decoder/frame-time measurement.
 
-Local QA SHA-256: `4436bb485bcfd6420c253dc5c441dd806dc1084a4ba4374bd5a71b0aa2710b6e`.
+Local QA SHA-256: `edc05b25d01ef968c47c20ef32b7db2332829b83a275b80fd97a076ce5ec10f8`.
 Local debug certificate SHA-256:
 `2b8407729a5bf707603756248a9873a295718f39f1cb52061cb84979081c86b1`.
 The fresh CI artifact has its own checksum/certificate files: do not substitute these

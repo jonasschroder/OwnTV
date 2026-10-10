@@ -77,7 +77,7 @@ val appModule = module {
     // up to 22 constructor parameters and this class now has 24. The failure is a "none of the
     // following candidates is applicable" at the call above, which says nothing about arity — hence
     // this note. Every argument is resolved by type, so the order here does not matter.
-    single { tv.own.owntv.features.home.HomeChannelDefaults(get(), get(), get(), get()) }
+    single { tv.own.owntv.features.home.HomeChannelDefaults(context = get(), db = get(), settings = get(), scheduler = get()) }
     viewModel {
         LiveViewModel(
             get(),

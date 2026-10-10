@@ -92,7 +92,7 @@ handoff, debounce/cancellation and fullscreen promotion behavior.
 through the production sports card and section-navigation modifier in a scrolling
 Compose LazyColumn, in both empty-team and multi-team states. This is a synthetic
 navigation harness, not proof of the complete Chromecast/player lifecycle.
-`HomeChannelDefaultsStorageTest` uses an isolated Settings DataStore, durable
+`HomeChannelDefaultsStorageTest` uses a synthetic active-profile flow (no process-global Settings DataStore), durable
 claims and a synthetic in-memory Room database with the production bundled SQLite
 driver. It checks existing favorites, one-time insertion, manual removal, store
 recreation/re-import, missing/hidden/foreign-source candidates and profile isolation.

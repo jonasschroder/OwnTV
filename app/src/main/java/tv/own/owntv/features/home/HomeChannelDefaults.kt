@@ -9,6 +9,7 @@ import tv.own.owntv.core.database.transaction
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.FavoriteEntity
 import tv.own.owntv.core.model.MediaType
+import tv.own.owntv.core.repository.ActiveProfileSources
 import tv.own.owntv.core.repository.activeProfileSources
 import tv.own.owntv.core.repository.activeSourceIds
 import tv.own.owntv.core.settings.SettingsRepository
@@ -35,12 +36,23 @@ internal fun initialHockeyChannel(channels: List<ChannelEntity>): ChannelEntity?
     }.thenBy { it.sourceId }.thenBy { it.sortOrder }.thenBy { it.id }).firstOrNull()
 
 /** Favorites stay in Core. This small durable claim records only whether the initial offer was consumed. */
-class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, private val settings: SettingsRepository,
-    private val scheduler: CatalogSyncScheduler) {
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+class HomeChannelDefaults private constructor(context: Context, private val db: OwnTVDatabase,
+    private val sources: Flow<ActiveProfileSources>, private val currentProfile: suspend () -> Long,
+    private val currentSources: suspend (Long) -> List<Long>, private val scheduler: CatalogSyncScheduler) {
+    constructor(context: Context, db: OwnTVDatabase, settings: SettingsRepository, scheduler: CatalogSyncScheduler) : this(
+        context, db, activeProfileSources(settings, db.sourceDao()), { settings.activeProfileId.first() },
+        { profile -> activeSourceIds(settings, db.sourceDao(), profile, MediaType.LIVE) }, scheduler)
+
+    // A synthetic profile flow avoids Core's process-wide preferencesDataStore delegate in tests.
+    // ContextWrapper alone cannot isolate that singleton once Application has initialized it.
+    internal constructor(context: Context, db: OwnTVDatabase, profile: StateFlow<Long>, scheduler: CatalogSyncScheduler) : this(
+        context, db, profile.flatMapLatest { id -> db.sourceDao().observeForProfile(id).map { ActiveProfileSources(id, it) } },
+        { profile.value }, { id -> db.sourceDao().observeForProfile(id).first().filter { it.syncLive }.map { it.id } }, scheduler)
     private val claims = context.getSharedPreferences("mintv-initial-live-favorite", Context.MODE_PRIVATE)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    internal fun observe(visibilityChanges: Flow<Unit>, visible: suspend (ChannelEntity) -> Boolean): Flow<HomeLibraryState> = activeProfileSources(settings, db.sourceDao())
+    internal fun observe(visibilityChanges: Flow<Unit>, visible: suspend (ChannelEntity) -> Boolean): Flow<HomeLibraryState> = sources
         .flatMapLatest { aps ->
             val ids = aps.liveSourceIds
             val sync = if (ids.isEmpty()) flowOf(false) else combine(ids.map(scheduler::observeSync)) { states -> states.any { it.isActive } }
@@ -48,7 +60,7 @@ class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, priva
             combine(db.channelDao().countAll(ids.ifEmpty { listOf(-1L) }), db.favoriteDao().observeFavoriteIds(aps.profileId, MediaType.LIVE), sync, visibilityChanges, initialGrace) { _, favorites, syncing, _, grace -> Triple(syncing, grace, favorites.isNotEmpty()) }
                 .mapLatest { (syncing, grace, existingFavorites) ->
                     val profileId = aps.profileId
-                    if (profileId < 0 || settings.activeProfileId.first() != profileId) return@mapLatest HomeLibraryState()
+                    if (profileId < 0 || currentProfile() != profileId) return@mapLatest HomeLibraryState()
                     // Initial imports publish lastSyncAt only after the complete channel import.
                     val incomplete = aps.sources.filter { it.syncLive }.any { it.lastSyncAt == null }
                     // Consume an existing list even while import is incomplete: removing it later is intent.
@@ -81,7 +93,7 @@ class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, priva
                         found
                     } finally { pages.invalidate() }
                     val favorites = db.channelDao().favoritesListAlpha(profileId).first().filter { it.sourceId in ids && visible(it) }.map { it.id }.toSet()
-                    if (settings.activeProfileId.first() != profileId || activeSourceIds(settings, db.sourceDao(), profileId, MediaType.LIVE) != ids) HomeLibraryState()
+                    if (currentProfile() != profileId || currentSources(profileId) != ids) HomeLibraryState()
                     else HomeLibraryState(profileId, homeLibraryStatus(ids.isNotEmpty(), false, hasChannels, favorites.isNotEmpty()), ids, favorites)
                 }.onStart { emit(HomeLibraryState(aps.profileId, sourceIds = ids)) }
         }.flowOn(Dispatchers.IO)
@@ -91,7 +103,7 @@ class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, priva
             val profile = db.profileDao().getById(profileId) ?: return@transaction
             val key = "profile:$profileId:${profile.createdAt}"
             if (claims.getBoolean(key, false)) return@transaction
-            if (settings.activeProfileId.first() != profileId || activeSourceIds(settings, db.sourceDao(), profileId, MediaType.LIVE) != sourceIds) return@transaction
+            if (currentProfile() != profileId || currentSources(profileId) != sourceIds) return@transaction
             val existing = db.favoriteDao().getAllOnce().any { it.profileId == profileId && it.mediaType == MediaType.LIVE }
             val removed = db.tombstoneDao().getAllOnce().any {
                 it.profileId == profileId && it.kind == "fav" && runCatching { org.json.JSONObject(it.identity).optString("t") == MediaType.LIVE.name }.getOrDefault(true)

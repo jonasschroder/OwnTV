@@ -16,8 +16,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.core.database.entity.*
 import tv.own.owntv.core.model.*
-import tv.own.owntv.core.sync.work.CatalogSyncScheduler
 import tv.own.owntv.features.home.HomeChannelDefaults
+import tv.own.owntv.features.home.HomeLibraryStatus
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.withTimeout
 import java.io.File
 
 /** Never reads/writes the installed user's database, settings or favorite claims. */
@@ -43,7 +46,14 @@ class HomeChannelDefaultsStorageTest {
             val other = hockey.copy(id = 2, sourceId = 102)
             db.channelDao().insertAll(listOf(hockey, other))
             activeProfile.value = 101L
-            fun store() = HomeChannelDefaults(isolated, db, activeProfile, CatalogSyncScheduler(isolated))
+            fun store() = HomeChannelDefaults(isolated, db, activeProfile)
+            val waiting = withTimeout(5_000) {
+                store().observe(flowOf(Unit)) { profile, sources ->
+                    assertEquals(101L, profile); assertEquals(listOf(101L), sources)
+                    null // Live context has not caught up; never treat this as missing channels.
+                }.drop(1).first()
+            }
+            assertEquals(HomeLibraryStatus.LOADING, waiting.status)
             suspend fun ids(id: Long) = db.favoriteDao().observeFavoriteIds(id, MediaType.LIVE).first()
             store().seed(101, listOf(101), other) { true }
             assertTrue(ids(101).isEmpty()) // foreign source refused
@@ -64,6 +74,16 @@ class HomeChannelDefaultsStorageTest {
             db.channelDao().insertAll(listOf(hockey.copy(id = 3)))
             store().seed(101, listOf(101), hockey.copy(id = 3)) { true }
             assertTrue(ids(101).isEmpty())
+            val emptyFavorites = withTimeout(5_000) {
+                store().observe(flowOf(Unit)) { profile, sources ->
+                    assertEquals(101L, profile)
+                    val visible: suspend (ChannelEntity) -> Boolean = { it.sourceId in sources }
+                    visible
+                }.drop(1).first { it.status != HomeLibraryStatus.LOADING }
+            }
+            assertEquals(HomeLibraryStatus.NO_FAVORITES, emptyFavorites.status)
+            assertEquals(listOf(101L), emptyFavorites.sourceIds)
+            assertTrue(emptyFavorites.visibleFavoriteIds!!.isEmpty())
             store().seed(102, listOf(102), other) { true }
             assertTrue(ids(102).isEmpty()) // switching context is required
             activeProfile.value = 102L

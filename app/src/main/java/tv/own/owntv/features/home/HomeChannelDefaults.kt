@@ -14,6 +14,7 @@ import tv.own.owntv.core.repository.activeProfileSources
 import tv.own.owntv.core.repository.activeSourceIds
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.sync.work.CatalogSyncScheduler
+import tv.own.owntv.core.sync.work.CatalogSyncState
 
 internal enum class HomeLibraryStatus { LOADING, NO_SOURCE, NO_CHANNELS, NO_FAVORITES, READY }
 internal data class HomeLibraryState(val profileId: Long = -1, val status: HomeLibraryStatus = HomeLibraryStatus.LOADING,
@@ -39,28 +40,29 @@ internal fun initialHockeyChannel(channels: List<ChannelEntity>): ChannelEntity?
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class HomeChannelDefaults private constructor(context: Context, private val db: OwnTVDatabase,
     private val sources: Flow<ActiveProfileSources>, private val currentProfile: suspend () -> Long,
-    private val currentSources: suspend (Long) -> List<Long>, private val scheduler: CatalogSyncScheduler) {
+    private val currentSources: suspend (Long) -> List<Long>, private val syncState: (Long) -> Flow<CatalogSyncState>) {
     constructor(context: Context, db: OwnTVDatabase, settings: SettingsRepository, scheduler: CatalogSyncScheduler) : this(
         context, db, activeProfileSources(settings, db.sourceDao()), { settings.activeProfileId.first() },
-        { profile -> activeSourceIds(settings, db.sourceDao(), profile, MediaType.LIVE) }, scheduler)
+        { profile -> activeSourceIds(settings, db.sourceDao(), profile, MediaType.LIVE) }, scheduler::observeSync)
 
     // A synthetic profile flow avoids Core's process-wide preferencesDataStore delegate in tests.
     // ContextWrapper alone cannot isolate that singleton once Application has initialized it.
-    internal constructor(context: Context, db: OwnTVDatabase, profile: StateFlow<Long>, scheduler: CatalogSyncScheduler) : this(
+    internal constructor(context: Context, db: OwnTVDatabase, profile: StateFlow<Long>) : this(
         context, db, profile.flatMapLatest { id -> db.sourceDao().observeForProfile(id).map { ActiveProfileSources(id, it) } },
-        { profile.value }, { id -> db.sourceDao().observeForProfile(id).first().filter { it.syncLive }.map { it.id } }, scheduler)
+        { profile.value }, { id -> db.sourceDao().observeForProfile(id).first().filter { it.syncLive }.map { it.id } }, { flowOf(CatalogSyncState.Idle) })
     private val claims = context.getSharedPreferences("mintv-initial-live-favorite", Context.MODE_PRIVATE)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    internal fun observe(visibilityChanges: Flow<Unit>, visible: suspend (ChannelEntity) -> Boolean): Flow<HomeLibraryState> = sources
+    internal fun observe(visibilityChanges: Flow<Unit>, visibleForProfile: (Long, List<Long>) -> (suspend (ChannelEntity) -> Boolean)?): Flow<HomeLibraryState> = sources
         .flatMapLatest { aps ->
             val ids = aps.liveSourceIds
-            val sync = if (ids.isEmpty()) flowOf(false) else combine(ids.map(scheduler::observeSync)) { states -> states.any { it is tv.own.owntv.core.sync.work.CatalogSyncState.Syncing && it.liveActive } }
+            val sync = if (ids.isEmpty()) flowOf(false) else combine(ids.map(syncState)) { states -> states.any { it is CatalogSyncState.Syncing && it.liveActive } }
             val initialGrace = flow { emit(true); kotlinx.coroutines.delay(30_000); emit(false) }
             combine(db.channelDao().countAll(ids.ifEmpty { listOf(-1L) }), db.favoriteDao().observeFavoriteIds(aps.profileId, MediaType.LIVE), sync, visibilityChanges, initialGrace) { _, favorites, syncing, _, grace -> Triple(syncing, grace, favorites.isNotEmpty()) }
                 .mapLatest { (syncing, grace, existingFavorites) ->
                     val profileId = aps.profileId
                     if (profileId < 0 || currentProfile() != profileId) return@mapLatest HomeLibraryState()
+                    val visible = visibleForProfile(profileId, ids) ?: return@mapLatest HomeLibraryState(profileId, sourceIds = ids)
                     // Initial imports publish lastSyncAt only after the complete channel import.
                     val incomplete = aps.sources.filter { it.syncLive }.any { it.lastSyncAt == null }
                     // Consume an existing list even while import is incomplete: removing it later is intent.

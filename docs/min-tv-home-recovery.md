@@ -31,7 +31,9 @@ The existing country/quality normalization accepts `TV4 Hockey SE`, `SE | TV4
 Hockey HD` and FHD variants. It retains broadcaster numbers and rejects Sport
 Live 1–4, TV4 Play, PPV, EXCLUSIVE and NO EVENT STREAMING. Only a nonempty
 provider-configured stream entry in the selected profile's active Live sources,
-allowed by kids/hidden-item/hidden-category policies, is eligible. No stream is
+allowed by kids/hidden-item/hidden-category policies, is eligible. Visibility
+checks capture the expected profile explicitly, including when sources are shared
+and the Live view-model context is still changing. No stream is
 opened to test availability or resolution. An explicitly named HD variant wins,
 then FHD, then other variants; ties use source/provider order and row ID.
 
@@ -92,10 +94,11 @@ handoff, debounce/cancellation and fullscreen promotion behavior.
 through the production sports card and section-navigation modifier in a scrolling
 Compose LazyColumn, in both empty-team and multi-team states. This is a synthetic
 navigation harness, not proof of the complete Chromecast/player lifecycle.
-`HomeChannelDefaultsStorageTest` uses a synthetic active-profile flow (no process-global Settings DataStore), durable
+`HomeChannelDefaultsStorageTest` uses synthetic profile/sync flows (no process-global Settings DataStore or WorkManager database), durable
 claims and a synthetic in-memory Room database with the production bundled SQLite
 driver. It checks existing favorites, one-time insertion, manual removal, store
-recreation/re-import, missing/hidden/foreign-source candidates and profile isolation.
+recreation/re-import, missing/hidden/foreign-source candidates, profile isolation, context-not-ready loading
+and available-channel/no-favorite observation after manual removal.
 The CI emulator job runs these tests using the existing x86_64 flavor; no device
 IPTV credentials or backups are supplied.
 

@@ -989,7 +989,14 @@ class LiveViewModel(
 
     enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
 
-    internal val homeLibraryState = homeDefaults.observe(ctx.flatMapLatest { c -> combine(customize.observe(c.profileId, MediaType.LIVE), profileDao.observeById(c.profileId)) { _, _ -> Unit } }, ::isVisibleToActiveProfile)
+    internal val homeLibraryState = homeDefaults.observe(ctx.flatMapLatest { c -> combine(customize.observe(c.profileId, MediaType.LIVE), profileDao.observeById(c.profileId)) { _, _ -> Unit } }) { profileId, sourceIds ->
+        val snapshot = ctx.value
+        if (snapshot.profileId != profileId || snapshot.sourceIds != sourceIds) null
+        else {
+            val visible: suspend (ChannelEntity) -> Boolean = { channel -> isVisibleInContext(channel, snapshot) }
+            visible
+        }
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.features.home.HomeLibraryState())
 
     /** Local library changes refresh the SHL empty state after adding/importing a source. */
@@ -1304,7 +1311,11 @@ class LiveViewModel(
 
     /** Final startup/deep-entry visibility check, including profile source and Customize policy. */
     suspend fun isVisibleToActiveProfile(channel: ChannelEntity): Boolean {
-        val current = ctx.first { it.profileId >= 0L }
+        return isVisibleInContext(channel, ctx.first { it.profileId >= 0L })
+    }
+
+    /** A fixed profile/source snapshot keeps shared-source hidden/kids policy from following a switch. */
+    private suspend fun isVisibleInContext(channel: ChannelEntity, current: Ctx): Boolean {
         if (channel.sourceId !in current.sourceIds) return false
         if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(current.profileId, channel.categoryId, profileDao, categoryDao)) return false
         val customizations = customize.observe(current.profileId, MediaType.LIVE).first()

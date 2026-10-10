@@ -32,7 +32,7 @@
     <string name="mintv_shl_next_unknown">Inga matcher att visa</string>
     <string name="mintv_shl_open">Visa alla matcher</string>
     <string name="mintv_shl_expand">Utöka på matchdagar</string>
-    <string name="mintv_shl_compact_only">Kompakt på Home</string>
+    <string name="mintv_shl_compact_only">Kompakt på startsidan</string>
     <string name="mintv_shl_source_notice">Experimentell läsare av Swehockeys publika sidor. Av som standard. Dokumenterat API och uttryckligt tillstånd till automatiserad återanvändning har inte verifierats. Aktivera endast för personliga tester med godtagbar åtkomst. Resultat är ögonblicksbilder; liveperiod och laguppställning är inte verifierade.</string>
     <string name="mintv_shl_enable">Aktivera experimentell SHL-data</string>
     <string name="mintv_shl_disable">Stäng av SHL-data</string>
@@ -69,7 +69,7 @@
     <string name="mintv_channel_search">Sök TV-kanal</string>
     <string name="mintv_confirmed_channels">Matchande kanaler</string>
     <string name="mintv_source_number">TV-källa %1$s</string>
-    <string name="mintv_result_snapshot">Resultatbild · %1$s</string>
+    <string name="mintv_result_snapshot">Sparat resultat · %1$s</string>
     <string name="mintv_schedule">Spelschema</string>
     <string name="mintv_snapshot_status">Ej liveuppdaterat</string>
     <string name="mintv_watch_match">Se matchen</string>

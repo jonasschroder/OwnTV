@@ -22,7 +22,7 @@ scheduled game, when known, and the Matchcenter shortcut. Matchdays use Stockhol
 dates and expand modestly below Favorites: FBK first, time/result snapshot,
 up to two other pairings and the shortcut. Match details offer **Se matchen** /
 **Välj TV-kanal**, while **Tabell** shows standings and highlights Färjestad.
-**Kompakt på Home** in Matchcenter settings persists compact-only presentation;
+**Kompakt på startsidan** in Matchcenter settings persists compact-only presentation;
 **Utöka på matchdagar** reenables automatic expansion. At midnight the layout becomes compact if the
 new day has no games. Full standings are displayed only in Matchcenter.
 

@@ -97,6 +97,7 @@ fun MinTvContentHome(
     val previewState by liveVm.previewEngine.state.collectAsStateWithLifecycle()
     val blocked by liveVm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val favoriteListState = rememberLazyListState()
     val hockeyVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-shl" } } }
     val twitchVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-twitch" } } }
     var favoriteRowFocused by remember { mutableStateOf(false) }
@@ -271,7 +272,7 @@ fun MinTvContentHome(
                         if (favorites.isEmpty()) {
                             Text(stringResource(if (state.isLoading || state.profileId != activeProfileId) R.string.mintv_favorites_loading else R.string.mintv_favorites_empty), style = stageText(19, 400), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         } else {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.onFocusChanged {
+                            LazyRow(state = favoriteListState, horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(8.mpx), modifier = Modifier.onFocusChanged {
                                 favoriteRowFocused = it.hasFocus
                                 if (!it.hasFocus) controller.focus(null)
                             }.focusRestorer().focusGroup()) {

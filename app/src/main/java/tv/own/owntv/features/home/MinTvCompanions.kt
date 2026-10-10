@@ -69,10 +69,14 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
+    val backFocus = remember { FocusRequester() }
     val currentEntryScreen by rememberUpdatedState(screen)
     val currentEntryFocus by rememberUpdatedState(if (picker) searchFocus else if (selectedId != null) detailFocus else tabFocus)
     DisposableEffect(tabFocus) {
-        onMatchcenterEntry { currentEntryScreen && runCatching { currentEntryFocus.requestFocus() }.isSuccess }
+        onMatchcenterEntry {
+            currentEntryScreen && (runCatching { currentEntryFocus.requestFocus() }.isSuccess ||
+                runCatching { backFocus.requestFocus() }.isSuccess)
+        }
         onDispose { onMatchcenterEntry(null) }
     }
 
@@ -148,8 +152,14 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     }
     LaunchedEffect(restoreTarget, screen, selectedId, picker) {
         val target = restoreTarget ?: return@LaunchedEffect
-        withFrameNanos { }; runCatching { target.requestFocus() }.onFailure { runCatching { tabFocus.requestFocus() } }
+        withFrameNanos { }; runCatching { target.requestFocus() }.onFailure { runCatching { backFocus.requestFocus() } }
         restoreTarget = null
+    }
+    LaunchedEffect(screen) {
+        // Saved match IDs can exist before cached fixtures load. Back is always attached.
+        if (screen && restoreTarget == null) {
+            withFrameNanos { }; runCatching { backFocus.requestFocus() }
+        }
     }
     fun close() { screen = false; selectedId = null; picker = false; query = ""; restoreTarget = entryFocus }
     fun back() {
@@ -202,7 +212,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                         data != null -> updateLabel(data!!.fetchedAt, now)
                         else -> stringResource(R.string.mintv_companion_unavailable)
                     }), size = 18, color = MinTvMuted, lines = 1)
-                    HomeButton(stringResource(R.string.mintv_back), ::back)
+                    HomeButton(stringResource(R.string.mintv_back), ::back, Modifier.focusRequester(backFocus))
                 }
                 if (selectedId == null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.focusRestorer().focusGroup()) {

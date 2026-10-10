@@ -42,7 +42,7 @@ instructions rather than the connection action. New Min TV text was largely Engl
   existing playback/promotion callback. No preview on hockey/channel-picker focus,
   no autoplay, no second decoder or inferred stream URL.
 - Dates/times use `Europe/Stockholm` and Swedish formatting. Result labels say
-  **Ej liveuppdaterat** / **Resultatbild** rather than implying a final/live score.
+  **Ej liveuppdaterat** / **Sparat resultat** rather than implying a final/live score.
   One update indicator includes the date when the snapshot is from another day.
   Detailed fetch/source times remain in **Datakälla och uppdatering**. Live periods
   and lineup retrieval stay disabled.
@@ -223,13 +223,13 @@ Physical checklist for the new QA APK:
 | Source CI checks | Literal ratchet, localized numbers and text overflow pass; 45-entry existing literal debt unchanged |
 | Core source | Exact pin `adca2bcd653f19e6e5d659c2722309e6aef4ec15` verified unchanged |
 
-Clean local QA APK: **89,392,788 bytes** versus preceding clean local companion APK
-89,324,668 bytes: **+68,120 bytes (+0.076%)**. Raw DEX +175,284 bytes; **all 26 native
+Clean local QA APK: **89,392,836 bytes** versus preceding clean local companion APK
+89,324,668 bytes: **+68,168 bytes (+0.076%)**. Raw DEX +178,164 bytes; **all 26 native
 libraries are byte-identical**. No new runtime dependencies. Warm incremental APK
 padding was excluded by reassembling only generated APK outputs. This is an APK
 comparison, not an Android RAM/decoder/frame-time measurement.
 
-Local QA SHA-256: `6276a4c31654b1a92cc0491970613052606d9b01f89b6c2c1ae497b772250480`.
+Local QA SHA-256: `4436bb485bcfd6420c253dc5c441dd806dc1084a4ba4374bd5a71b0aa2710b6e`.
 Local debug certificate SHA-256:
 `2b8407729a5bf707603756248a9873a295718f39f1cb52061cb84979081c86b1`.
 The fresh CI artifact has its own checksum/certificate files: do not substitute these
@@ -247,7 +247,6 @@ bash tools/prepare-core.sh
 ```
 
 JDK 21, the repository Gradle wrapper and Android SDK 37/Build Tools 37.0.0 are used.
-The prototype workflow performs these checks and publishes private-to-authorized-
-GitHub-viewers workflow artifacts, not a Release. The separate i18n workflow also
+The prototype workflow performs these checks and uploads workflow artifacts under the repository’s GitHub access rules, not a Release. The separate i18n workflow also
 assembles standard debug/release and verifies pseudolocale packaging. Current-head
 CI results and the QA artifact link are recorded in PR #3 after those runs finish.

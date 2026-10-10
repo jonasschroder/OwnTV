@@ -76,7 +76,7 @@ is committed in `config/mintv-signing.json`:
 `d20b2f58f4e12b956e1e1dc40e47873d9b9ee6a666a2de1af2a6b8ac3d40547c`.
 The owner explicitly reported that GitHub environment secrets are NOT configured
 yet. Next is `mintv-qa-signing` protection and its four secrets as described in
-[step 5 of the Mac guide](min-tv-permanent-updates-mac.md#5-skapa-skyddad-github-miljö-och-secrets).
+[step 5 of the Mac guide](min-tv-permanent-updates-mac.md#5-konfigurera-github-i-webbläsaren).
 Codex has not received the private key or independently verified the backups.
 Production still needs its own original key/installed identity investigation.
 Workflow is not registered on main until a user-reviewed merge; no merge is

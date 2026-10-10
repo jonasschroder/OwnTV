@@ -11,7 +11,7 @@
     <string name="mintv_preview_unsupported">Förhandsvisning saknas. Tryck OK för att se kanalen.</string>
     <string name="mintv_favorites_title">Mina kanaler</string>
     <string name="mintv_favorites_empty">Markera favoritkanaler i TV-kanaler så visas de här.</string>
-    <string name="mintv_favorites_loading">Hämtar dina kanaler…</string>
+    <string name="mintv_favorites_loading">Laddar dina kanaler…</string>
     <string name="mintv_channel_unavailable">Kanalen saknas i den aktiva profilen. Uppdatera dina favoriter.</string>
     <string name="mintv_epg_unavailable">Programinformation saknas</string>
     <string name="mintv_next">Nästa program · %1$s</string>

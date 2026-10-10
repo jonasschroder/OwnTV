@@ -79,7 +79,8 @@ fun MinTvContentHome(
     val library by liveVm.homeLibraryState.collectAsStateWithLifecycle()
     val settings = koinInject<SettingsRepository>()
     val previewsOn by liveVm.livePreviewEnabled.collectAsStateWithLifecycle()
-    val favorites = state.favoriteLive.takeIf { state.profileId == activeProfileId }.orEmpty()
+    val favorites = state.favoriteLive.takeIf { state.profileId == activeProfileId && library.profileId == activeProfileId }.orEmpty()
+        .filter { it.sourceId in library.sourceIds && (library.visibleFavoriteIds?.contains(it.id) != false) }
     var selectedId by rememberSaveable(activeProfileId) { mutableStateOf<Long?>(null) }
     val selected = favorites.firstOrNull { it.id == selectedId } ?: favorites.firstOrNull()
     val controller = liveVm.homePreview

@@ -151,6 +151,25 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeDpadTraversalTest,tv.own.owntv.home.HomeChannelDefaultsStorageTest --max-workers=4 --stacktrace
+      - name: Require all three regression tests to execute
+        run: |
+          python3 - <<'PYTEST'
+          from pathlib import Path
+          import xml.etree.ElementTree as E
+          required = {
+              ('tv.own.owntv.home.HomeDpadTraversalTest', 'noTeamsChooseTeamsAndBack'),
+              ('tv.own.owntv.home.HomeDpadTraversalTest', 'multipleTeamsMatchcenterAndBack'),
+              ('tv.own.owntv.home.HomeChannelDefaultsStorageTest', 'preservesFavoritesRemovalRestartSyncAndProfileIsolation'),
+          }
+          found = set()
+          for path in Path('app/build/outputs/androidTest-results').rglob('TEST-*.xml'):
+              root = E.parse(path).getroot()
+              for case in root.iter('testcase'):
+                  assert not any(case.find(tag) is not None for tag in ('failure', 'error', 'skipped')), E.tostring(case)
+                  found.add((case.get('classname'), case.get('name')))
+          assert required <= found, ('Missing executed tests', required - found)
+          print('All 3 Home focus/storage regressions executed and passed')
+          PYTEST
       - name: Upload device regression reports
         if: always()
         uses: actions/upload-artifact@v7

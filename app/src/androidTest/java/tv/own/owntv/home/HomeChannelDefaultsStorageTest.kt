@@ -11,6 +11,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.core.database.entity.*
 import tv.own.owntv.core.i18n.LocaleStore
@@ -21,6 +23,7 @@ import tv.own.owntv.features.home.HomeChannelDefaults
 import java.io.File
 
 /** Never reads/writes the installed user's database, settings or favorite claims. */
+@RunWith(AndroidJUnit4::class)
 class HomeChannelDefaultsStorageTest {
     @Test fun preservesFavoritesRemovalRestartSyncAndProfileIsolation() = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
@@ -83,6 +86,12 @@ class HomeChannelDefaultsStorageTest {
             settings.setActiveProfile(101)
             store().seed(101, listOf(101), hockey.copy(id = 3)) { true }
             assertEquals(listOf(3L), ids(101))
+            db.profileDao().insert(ProfileEntity(id = 103, name = "Synthetic removed before upgrade", avatarColor = 0, createdAt = 103))
+            db.sourceDao().link(ProfileSourceCrossRef(103, 101))
+            db.tombstoneDao().record(103, "fav", """{"t":"LIVE","src":101,"name":"TV4 Hockey SE"}""", 1)
+            settings.setActiveProfile(103)
+            store().seed(103, listOf(101), hockey) { true }
+            assertTrue(ids(103).isEmpty()) // retained manual deletion is intent, including before this feature
         } finally { db.close() }
         // Keep the isolated DataStore directory until process exit; it owns an asynchronous scope.
     }

@@ -107,8 +107,10 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	TV4 AND HOCKEY
 1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	TV4 HOCKEY
 1	regex	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	[^A-Z0-9]+
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	fav
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	mintv-initial-live-favorite
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	profile:$profileId:${profile.createdAt}
+1	json	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	t
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	episode:${episode.id}

@@ -15,7 +15,8 @@ import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.sync.work.CatalogSyncScheduler
 
 internal enum class HomeLibraryStatus { LOADING, NO_SOURCE, NO_CHANNELS, NO_FAVORITES, READY }
-internal data class HomeLibraryState(val profileId: Long = -1, val status: HomeLibraryStatus = HomeLibraryStatus.LOADING)
+internal data class HomeLibraryState(val profileId: Long = -1, val status: HomeLibraryStatus = HomeLibraryStatus.LOADING,
+    val sourceIds: List<Long> = emptyList(), val visibleFavoriteIds: Set<Long>? = null)
 
 internal fun homeLibraryStatus(hasSources: Boolean, loading: Boolean, hasChannels: Boolean, hasFavorites: Boolean): HomeLibraryStatus = when {
     loading -> HomeLibraryStatus.LOADING
@@ -44,14 +45,20 @@ class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, priva
             val ids = aps.liveSourceIds
             val sync = if (ids.isEmpty()) flowOf(false) else combine(ids.map(scheduler::observeSync)) { states -> states.any { it.isActive } }
             val initialGrace = flow { emit(true); kotlinx.coroutines.delay(30_000); emit(false) }
-            combine(db.channelDao().countAll(ids.ifEmpty { listOf(-1L) }), db.favoriteDao().observeFavoriteIds(aps.profileId, MediaType.LIVE), sync, visibilityChanges, initialGrace) { _, _, syncing, _, grace -> syncing to grace }
-                .mapLatest { (syncing, grace) ->
+            combine(db.channelDao().countAll(ids.ifEmpty { listOf(-1L) }), db.favoriteDao().observeFavoriteIds(aps.profileId, MediaType.LIVE), sync, visibilityChanges, initialGrace) { _, favorites, syncing, _, grace -> Triple(syncing, grace, favorites.isNotEmpty()) }
+                .mapLatest { (syncing, grace, existingFavorites) ->
                     val profileId = aps.profileId
                     if (profileId < 0 || settings.activeProfileId.first() != profileId) return@mapLatest HomeLibraryState()
                     // Initial imports publish lastSyncAt only after the complete channel import.
                     val incomplete = aps.sources.filter { it.syncLive }.any { it.lastSyncAt == null }
+                    // Consume an existing list even while import is incomplete: removing it later is intent.
+                    if (existingFavorites) {
+                        try { seed(profileId, ids, null, visible) }
+                        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                        catch (_: Exception) { /* Failed claims never mutate favorites. */ }
+                    }
                     val loading = syncing || (incomplete && grace)
-                    if (loading) return@mapLatest HomeLibraryState(profileId)
+                    if (loading) return@mapLatest HomeLibraryState(profileId, sourceIds = ids)
                     val candidates = db.channelDao().searchListDetailedFts("TV4 AND HOCKEY", ids.ifEmpty { listOf(-1L) }, 129).map { it.channel }
                     // If truncated, leave the choice to the browser instead of claiming a preferred variant.
                     if (!incomplete) {
@@ -73,10 +80,10 @@ class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, priva
                         }
                         found
                     } finally { pages.invalidate() }
-                    val favorites = db.channelDao().favoritesListAlpha(profileId).first().any { it.sourceId in ids && visible(it) }
+                    val favorites = db.channelDao().favoritesListAlpha(profileId).first().filter { it.sourceId in ids && visible(it) }.map { it.id }.toSet()
                     if (settings.activeProfileId.first() != profileId || activeSourceIds(settings, db.sourceDao(), profileId, MediaType.LIVE) != ids) HomeLibraryState()
-                    else HomeLibraryState(profileId, homeLibraryStatus(ids.isNotEmpty(), false, hasChannels, favorites))
-                }.onStart { emit(HomeLibraryState(aps.profileId)) }
+                    else HomeLibraryState(profileId, homeLibraryStatus(ids.isNotEmpty(), false, hasChannels, favorites.isNotEmpty()), ids, favorites)
+                }.onStart { emit(HomeLibraryState(aps.profileId, sourceIds = ids)) }
         }.flowOn(Dispatchers.IO)
 
     internal suspend fun seed(profileId: Long, sourceIds: List<Long>, candidate: ChannelEntity?, visible: suspend (ChannelEntity) -> Boolean) = withContext(Dispatchers.IO) {
@@ -85,13 +92,16 @@ class HomeChannelDefaults(context: Context, private val db: OwnTVDatabase, priva
             val key = "profile:$profileId:${profile.createdAt}"
             if (claims.getBoolean(key, false)) return@transaction
             if (settings.activeProfileId.first() != profileId || activeSourceIds(settings, db.sourceDao(), profileId, MediaType.LIVE) != sourceIds) return@transaction
-            val existing = db.favoriteDao().observeFavoriteIds(profileId, MediaType.LIVE).first().isNotEmpty()
+            val existing = db.favoriteDao().getAllOnce().any { it.profileId == profileId && it.mediaType == MediaType.LIVE }
+            val removed = db.tombstoneDao().getAllOnce().any {
+                it.profileId == profileId && it.kind == "fav" && runCatching { org.json.JSONObject(it.identity).optString("t") == MediaType.LIVE.name }.getOrDefault(true)
+            }
             val current = candidate?.let { db.channelDao().getById(it.id) }?.takeIf { it.sourceId in sourceIds && initialHockeyChannel(listOf(it)) != null && visible(it) }
-            if (!existing && current == null) return@transaction
+            if (!existing && !removed && current == null) return@transaction
             // Claim BEFORE insertion: a crash/rollback may skip the convenience, but can never re-add
             // a favorite the user removed. Failed durable writes perform no favorite mutation.
             check(claims.edit().putBoolean(key, true).commit())
-            if (!existing && current != null) db.favoriteDao().add(FavoriteEntity(profileId = profileId, mediaType = MediaType.LIVE, itemId = current.id))
+            if (!existing && !removed && current != null) db.favoriteDao().add(FavoriteEntity(profileId = profileId, mediaType = MediaType.LIVE, itemId = current.id))
         }
     }
 }

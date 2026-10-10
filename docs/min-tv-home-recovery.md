@@ -43,7 +43,10 @@ before insertion. Existing favorites and their order/timestamps are untouched.
 
 An app-private durable claim is keyed by profile ID **and creation timestamp**;
 it contains no channel list, credentials or stream URL. Existing favorites also
-consume the initial offer. The claim is committed before the insertion, under the
+consume the initial offer, including during import. Retained Core Live-favorite
+deletions also consume it, preserving an earlier manual choice. Source IDs and
+visible favorite IDs are observed so playlist/visibility changes invalidate the
+Home snapshot immediately. The claim is committed before the insertion, under the
 serialized database writer. A failed durable write inserts nothing. A crash or
 transaction rollback after the claim can skip this optional convenience, but
 cannot cause repeated additions. The database transaction and preference write

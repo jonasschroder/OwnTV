@@ -29,6 +29,8 @@ class ShlBroadcastsTest {
         val channel = assignment.channels.first()
         assertFalse(BroadcastResolver.matches(channel, "NO: TV4 Sport Live 2"))
         assertFalse(BroadcastResolver.matches(channel, "TV4 Sport Live 2 Extra"))
+        assertFalse(BroadcastResolver.matches(channel, "TV4 Live 2"))
+        assertFalse(BroadcastResolver.matches(channel, "TV4 Hockey"))
     }
     @Test fun streamingBrandNeverBecomesLinearByName() {
         assertFalse(BroadcastResolver.matches(assignment.channels[1], "TV4 Play Hockey"))

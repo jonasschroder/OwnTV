@@ -25,6 +25,10 @@ internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int)
                 try {
                     response.use {
                         if (it.request.url.host != request.url.host) throw IOException()
+                        if (it.code in listOf(401, 403, 429)) {
+                            if (continuation.isActive) continuation.resume(it.code to "")
+                            return
+                        }
                         val body = it.body
                         if (body.contentLength() > limit) throw IOException()
                         val bytes = body.byteStream().use { stream ->

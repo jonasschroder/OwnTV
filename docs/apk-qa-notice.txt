@@ -22,10 +22,12 @@ never remove regular Min TV to solve a QA signature error.
 If QA is already installed, export and verify its encrypted IPTV backup before
 any update attempt. Stop on a certificate mismatch; neither app is removed
 automatically. Read TV-REDESIGN-AND-SETUP.md for the new Swedish TV UI,
-optional Twitch Client ID, TVmatchen manual fallback and device checklist.
+optional Twitch Client ID, experimental TVmatchen reader and in-app channel selection and device checklist.
 Linked installation/signing guides are included in this ZIP.
 
 Read docs/min-tv-qa.md in jonasschroder/OwnTV at this workflow's exact commit.
 Real Chromecast video/promotion/performance and backup import must be tested
 on hardware; compilation is not proof of those behaviors. GPLv3 applies;
 corresponding source is this app commit plus the pinned OwnTV_Core revision.
+
+Read min-tv-broadcasts.md for current SHL opt-in, limits and physical test steps.

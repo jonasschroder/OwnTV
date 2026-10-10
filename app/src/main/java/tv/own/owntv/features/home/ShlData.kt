@@ -13,7 +13,8 @@ internal data class ShlGame(val id: String, val home: String, val away: String, 
     val fbk get() = teamTokens(home).any { it == "farjestad" || it == "fbk" } || teamTokens(away).any { it == "farjestad" || it == "fbk" }
     fun on(date: LocalDate) = Instant.ofEpochMilli(faceoff).atZone(Stockholm).toLocalDate() == date
 }
-internal data class ShlStanding(val rank: Int, val team: String, val points: Int)
+internal data class ShlStanding(val rank: Int, val team: String, val points: Int,
+    val played: Int? = null, val goalDifference: Int? = null)
 internal data class ShlSnapshot(val seasonId: String, val games: List<ShlGame>, val fetchedAt: Long, val sourceUpdatedAt: Long? = null)
 
 /** No DOM or script execution. Only the named table, desktop cells and known columns are accepted. */
@@ -89,7 +90,14 @@ internal object SwehockeyParser {
         }.map { (_, cells) ->
             val rank = cells.first().toInt()
             require(cells.size >= 8)
-            ShlStanding(rank, cells[1], cells[7].toInt())
+            val played = cells[2].toIntOrNull()?.takeIf { it in 0..100 }
+            val goals = Regex("(\\d{1,3}):(\\d{1,3})(?:\\s*\\(([+-]?\\d{1,3})\\))?").matchEntire(cells[6])
+            val difference = goals?.let {
+                val value = it.groupValues[1].toInt() - it.groupValues[2].toInt()
+                require(it.groupValues[3].isEmpty() || it.groupValues[3].toInt() == value)
+                value
+            }
+            ShlStanding(rank, cells[1], cells[7].toInt(), played, difference)
         }
         require(ranks.size == 14 && ranks.map { it.rank }.toSet() == (1..14).toSet())
         return ranks

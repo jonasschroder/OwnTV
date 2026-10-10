@@ -988,6 +988,54 @@ class LiveViewModel(
 
     enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
 
+    /** Local library changes refresh the SHL empty state after adding/importing a source. */
+    val homeLibraryContext = ctx.map { it.profileId to it.sourceIds }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, -1L to emptyList())
+    val homeChannelCount = ctx.flatMapLatest { c -> channelDao.countAll(c.sourceIds.ifEmpty { listOf(-1L) }).map { c.profileId to it } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, -1L to 0)
+
+    suspend fun homeHasChannels(expectedProfileId: Long): Boolean = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        current.profileId == expectedProfileId && current.sourceIds.any { channelDao.countForSourceOnce(it) > 0 }
+    }
+
+    suspend fun homeChannel(channelId: Long, expectedProfileId: Long): ChannelEntity? = withContext(Dispatchers.IO) {
+        if (ctx.value.profileId != expectedProfileId) return@withContext null
+        channelDao.getById(channelId)?.takeIf { isVisibleToActiveProfile(it) }
+    }
+
+    data class HomeChannelCandidates(val channels: List<ChannelEntity>, val truncated: Boolean)
+
+    internal suspend fun homeBroadcastCandidates(broadcasters: List<tv.own.owntv.features.home.BroadcastChannel>, expectedProfileId: Long): HomeChannelCandidates = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext HomeChannelCandidates(emptyList(), false)
+        var truncated = false
+        val rows = broadcasters.filter { it.linear }.map { it.name.substringBefore(' ') }.distinct().take(8).flatMap {
+            channelDao.searchList(it, current.sourceIds, 129).also { found -> if (found.size == 129) truncated = true }
+        }
+        val matches = rows.distinctBy { it.id }.filter { channel -> broadcasters.any {
+            tv.own.owntv.features.home.BroadcastResolver.matches(it, channel.name)
+        } && isVisibleToActiveProfile(channel) }
+        HomeChannelCandidates(matches.take(128), truncated || matches.size > 128)
+    }
+
+    /** Query all relevant names broadly before normalizing; truncation must never imply uniqueness. */
+    suspend fun homeMatchCandidates(query: String, favorites: List<ChannelEntity>, expectedProfileId: Long,
+        broadcasterNames: List<String>): HomeChannelCandidates = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext HomeChannelCandidates(emptyList(), false)
+        val terms = if (query.isNotBlank()) listOf(query.take(80)) else
+            (broadcasterNames.map { it.substringBefore(' ') } + listOf("TV4", "hockey", "sport", "SHL", "C More")).distinct()
+        var truncated = false
+        val found = (if (query.isBlank()) favorites else emptyList()) + terms.flatMap {
+            val rows = channelDao.searchList(it, current.sourceIds, 129)
+            if (rows.size == 129) truncated = true
+            rows
+        }
+        val visible = found.distinctBy { it.id }.filter { isVisibleToActiveProfile(it) }
+        HomeChannelCandidates(visible.take(128), truncated || visible.size > 128)
+    }
+
     /** Bounded, local-only hockey discovery; no provider request and no preview on focus. */
     suspend fun homeSportsChannels(query: String, favorites: List<ChannelEntity>, expectedProfileId: Long): List<ChannelEntity> = withContext(Dispatchers.IO) {
         val current = ctx.value

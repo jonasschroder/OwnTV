@@ -26,4 +26,32 @@ class MatchcenterNavigationTest {
         assertEquals("Malmö", shortTeam("IF Malmö Redhawks"))
         assertEquals("HV71", shortTeam("HV71"))
     }
+    @Test fun backFromExplicitSearchKeepsPickerAndFixtureBeforeReturningToDetails() {
+        val picker = MatchcenterNavigation(MatchcenterSection.FARJESTAD, "fixture-1", true, true).back()!!
+        assertFalse(picker.searchOpen); assertTrue(picker.channelPicker); assertEquals("fixture-1", picker.gameId)
+        assertEquals(MatchcenterNavigation(MatchcenterSection.FARJESTAD, "fixture-1"), picker.back())
+    }
+    @Test fun manualChoiceIsExactFixtureProfileChannelAndSourceOnly() {
+        val game = ShlGame("1", "Färjestad BK", "Malmö Redhawks", java.time.Instant.parse("2026-10-10T13:15:00Z").toEpochMilli(), null)
+        val fixture = BroadcastFixture.from(game)
+        val choice = FixtureChannelChoice(1, fixtureKey(fixture), 10, 20, "TV4 Sport Live 2", game.faceoff + 14400000)
+        assertTrue(choice.usable(1, fixture, game.faceoff, 10, 20, choice.name))
+        assertFalse(choice.usable(2, fixture, game.faceoff, 10, 20, choice.name))
+        assertFalse(choice.usable(1, fixture.copy(faceoff = fixture.faceoff.plusSeconds(86400)), game.faceoff, 10, 20, choice.name))
+        assertFalse(choice.usable(1, fixture, choice.expiresAt, 10, 20, choice.name))
+        assertFalse(choice.usable(1, fixture, game.faceoff, 10, 21, choice.name))
+        assertFalse(choice.usable(1, fixture, game.faceoff, 11, 20, choice.name))
+        assertFalse(choice.usable(1, fixture, game.faceoff, 10, 20, "TV4 Sport Live 3"))
+    }
+    @Test fun hiddenHomeTableAndSettingsDoNotTriggerFixtureDiscovery() {
+        assertFalse(broadcastContentVisible(false, false, MatchcenterSection.MATCHES, false, false))
+        assertFalse(broadcastContentVisible(true, true, MatchcenterSection.TABLE, false, false))
+        assertFalse(broadcastContentVisible(true, true, MatchcenterSection.SETTINGS, false, false))
+        assertFalse(broadcastContentVisible(true, true, MatchcenterSection.MATCHES, false, true))
+    }
+    @Test fun visibleHomeMatchdayOrSelectedFixtureAllowsDiscovery() {
+        assertTrue(broadcastContentVisible(true, false, MatchcenterSection.MATCHES, false, false))
+        assertTrue(broadcastContentVisible(false, true, MatchcenterSection.FARJESTAD, false, false))
+        assertTrue(broadcastContentVisible(false, true, MatchcenterSection.MATCHES, true, true))
+    }
 }

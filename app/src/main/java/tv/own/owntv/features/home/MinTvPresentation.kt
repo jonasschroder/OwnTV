@@ -6,9 +6,13 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 internal enum class MatchcenterSection { MATCHES, TABLE, FARJESTAD, SETTINGS }
+internal fun broadcastContentVisible(homeVisible: Boolean, screen: Boolean, section: MatchcenterSection,
+    selectedFixture: Boolean, upcoming: Boolean): Boolean = if (!screen) homeVisible else
+    selectedFixture || !upcoming && section in listOf(MatchcenterSection.MATCHES, MatchcenterSection.FARJESTAD)
 internal data class MatchcenterNavigation(val section: MatchcenterSection = MatchcenterSection.MATCHES,
-    val gameId: String? = null, val channelPicker: Boolean = false) {
+    val gameId: String? = null, val channelPicker: Boolean = false, val searchOpen: Boolean = false) {
     fun back(): MatchcenterNavigation? = when {
+        searchOpen -> copy(searchOpen = false)
         channelPicker -> copy(channelPicker = false)
         gameId != null -> copy(gameId = null)
         else -> null

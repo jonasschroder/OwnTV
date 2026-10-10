@@ -70,9 +70,9 @@ jobs:
           mkdir -p dist-qa
           cp docs/apk-qa-notice.txt dist-qa/READ-BEFORE-INSTALL.txt
           cp docs/min-tv-companions.md dist-qa/COMPANION-SETUP.md
-          cp docs/min-tv-redesign.md dist-qa/TV-REDESIGN-AND-SETUP.md
+          cp docs/min-tv-redesign.md docs/min-tv-broadcasts.md dist-qa/TV-REDESIGN-AND-SETUP.md
           # Include linked source guides so the downloaded Markdown works offline.
-          cp docs/min-tv-qa.md docs/min-tv-v0.2.md docs/min-tv-signing.md docs/min-tv-companions.md docs/min-tv-redesign.md dist-qa/
+          cp docs/min-tv-qa.md docs/min-tv-v0.2.md docs/min-tv-signing.md docs/min-tv-companions.md docs/min-tv-redesign.md docs/min-tv-broadcasts.md dist-qa/
           cp docs/min-tv-signing.md dist-qa/SIGNING-PLAN.md
           "$TOOLS/apksigner" verify --print-certs "$APK" | tee dist-qa/SIGNING-CERTIFICATE.txt
           cp "$APK" dist-qa/MinTV-v0.2-QA.apk

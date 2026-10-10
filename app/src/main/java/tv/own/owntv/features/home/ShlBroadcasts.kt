@@ -4,7 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.Locale
 
-/** Replace only this adapter after obtaining a documented licence. No HTML/private API adapter. */
+/** Replaceable metadata source, independent from schedule/standings and IPTV playback. */
 internal fun interface BroadcastMetadataSource {
     suspend fun assignment(fixture: BroadcastFixture): BroadcastAssignment?
 }
@@ -67,4 +67,5 @@ internal object ShlTeams {
         val words = teamTokens(name)
         return teams.filter { team -> team.any { it in words } }.singleOrNull()?.first()
     }
+    fun identities(words: List<String>): Set<String> = teams.filter { team -> team.any { it in words } }.map { it.first() }.toSet()
 }

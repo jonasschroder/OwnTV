@@ -183,7 +183,7 @@ fun MinTvContentHome(
         visible = hockeyVisible,
         active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
         liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,
-        contentStart = contentStart, onExternal = { openExternal(it) },
+        contentStart = contentStart, onSources = { pauseOrDispose(); controller.setActive(false); onSources() },
         onMatchcenterEntry = { matchcenterEntry = it },
     ) { shlCard, screen ->
         LaunchedEffect(screen) {

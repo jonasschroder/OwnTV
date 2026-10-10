@@ -67,6 +67,10 @@ class ShlDataTest {
         } + "<tr><td colspan=\"12\"><hr class=\"hrType1\" /></td></tr></table>"
         assertEquals(14, SwehockeyParser.standings(html).size)
         assertEquals(3, SwehockeyParser.standings(html).first().points)
+        assertEquals(1, SwehockeyParser.standings(html).first().played)
+        assertEquals(3, SwehockeyParser.standings(html).first().goalDifference)
+        assertThrows(IllegalArgumentException::class.java) { SwehockeyParser.standings(html.replace("3:0", "3:0 (-1)")) }
+        assertNull(SwehockeyParser.standings(html.replace("3:0", "unknown")).first().goalDifference)
         assertThrows(IllegalArgumentException::class.java) { SwehockeyParser.standings(html.replace("<td>14</td>", "<td>1</td>")) }
     }
     @Test fun twitchOfflineRequiresValidEmptyApiResponse() {

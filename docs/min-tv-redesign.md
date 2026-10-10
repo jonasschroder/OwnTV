@@ -54,74 +54,17 @@ instructions rather than the connection action. New Min TV text was largely Engl
   **Anslut Twitch**, validated Twitch public-client activation URL/code and failure feedback. Encrypted device-local
   token storage and visible/foreground-only polling are unchanged.
 
-## TVmatchen feasibility and permission report — 10 October 2026
+## SHL broadcast discovery — current follow-up
 
-**Outcome: no automatic TVmatchen retrieval is implemented.** An authorized API or
-licence has not been established. This is an access/permission uncertainty, not a
-claim that TVmatchen offers no API or prohibits all reuse.
+The preceding redesigned QA APK was physically tested on Chromecast with Google TV
+4K / Android 14. Schedule and standings worked; the external TVmatchen browser route
+and search-first empty picker caused the reported UX problems.
 
-User-supplied examples:
-
-- [Färjestad–Malmö match page](https://www.tvmatchen.nu/match/farjestad-bk-malmo-redhawks-1896181):
-  10 October 2026, 15:15 Stockholm; user reports TV4 Sport Live 2 and TV4 Play Hockey.
-- [3 October SHL matchday page](https://www.tvmatchen.nu/sport/ishockey/shl-idag-3-oktober-2026/).
-
-The cloud environment's HTTPS proxy rejected CONNECT to `www.tvmatchen.nu` with
-**403 Forbidden before reaching the origin** when attempting `robots.txt`. Thus
-site availability, robots directives, linked terms, documented API and licensing
-conditions could not be independently reviewed. Public HTML and the supplied
-examples establish neither an extraction licence nor current origin availability.
-Additive `tvmatchen.nu` / `www.tvmatchen.nu` entries were saved in the environment
-configuration draft; review/save/publish is still needed for a fresh research check.
-No alternate proxy, spoofed application, private/authenticated API, access bypass
-or HTML scraper is used. Network allowance alone will not authorize extraction.
-
-Before adding an adapter, contact TVmatchen through its official website and obtain
-written permission/licence covering fixture-to-broadcaster reuse in this Android
-app, authenticated API documentation, terms/attribution, retention, rate limits,
-change/withdrawal handling, and the allowed deployment scope. Review origin robots
-and terms again. Respect restrictions/403s; do not infer permission from robots
-allowance. Until then the adapter remains network-free.
-
-### Safe interface and matching
-
-`BroadcastMetadataSource` is separate from `ShlRepository` and playback. The shipped
-`NoBroadcastMetadata` returns no assignment and owns no HTTP client/timer/cache.
-Nothing requests TVmatchen on Home, match selection, or in the background.
-
-A future licensed assignment must include SHL, both canonical team identities,
-Stockholm fixture date, an exact `Instant` faceoff, source, check time, expiry and
-bounded broadcaster names. Unknown/ambiguous teams, swapped teams, different league,
-rescheduled games, future checks, expired or over-24-hour records fail closed.
-UTC source timestamps must be parsed as instants, never guessed local times; real
-Stockholm zone rules distinguish summer/winter offsets and the repeated autumn hour.
-
-Only conservative country/quality wrappers are removed for channel-name matching:
-`TV4 Sport Live 2`, `TV4 SPORT LIVE 2 HD`, `SE | TV4 Sport Live 2` and
-`SE: TV4 Sport Live 2 FHD` match. **1/2/3/4/12 are distinct**, and extra channel
-suffixes/unknown country wrappers are not fuzzy-matched. Multiple entity IDs/quality
-variants/sources remain choices rather than selecting the first stream.
-
-**TV4 Play Hockey is never promoted to a linear channel.** Users can manually choose
-an actual corresponding entry already provided by their configured service. This
-code does not certify the service's rights, generate URLs, use pay-TV credentials,
-or access a stream outside the configured IPTV library.
-
-A reliable assignment is shown in match details with its update time. One reliable
-library match permits **Se matchen**; multiple entries use the picker. A known
-assignment without a match says **Kanalen finns inte i din lista**. The shipped
-network-free source naturally falls back to stored EPG/manual **Välj TV-kanal**.
-The external **Öppna TVmatchen** action opens their home page in an installed browser,
-only on explicit OK. It does not guess a match slug from time/teams, embed a WebView,
-fetch arbitrary pages, or establish a broadcast assignment. Users can locate the
-fixture there, return and manually choose their channel. If Chromecast has no browser,
-consult the supplied link or TVmatchen on the Mac instead. Browser launch failure
-shows the existing app-unavailable message; playback remains independent.
-
-A future permitted adapter must use cancellable visible-content requests, bounded
-responses, conservative matchday caching and no application-wide background service.
-Its assignment is revalidated when schedule/time/identity changes and before matching.
-No broadcasting lookup blocks the player.
+The follow-up removes that browser route, adds an off-by-default personal HTML reader,
+fixture-specific local channel choices, a channel-first/empty-source picker and clearer
+standings. Current access/permission findings, actual live-source verification, limits
+and physical test instructions are in [min-tv-broadcasts.md](min-tv-broadcasts.md).
+TVmatchen is now reachable; that report supersedes the earlier proxy-denial finding.
 
 ## One-time public Twitch Client ID
 
@@ -185,8 +128,8 @@ for this redesign; PR workflows never receive a release key.
 
 ## Validation and remaining device checks
 
-Actual automated results and size/certificate evidence are recorded below and in
-PR #3 when the final build completes. Cloud compilation is not a Chromecast render,
+Baseline redesign evidence is recorded below. Current broadcast-follow-up results
+are in [min-tv-broadcasts.md](min-tv-broadcasts.md) and PR #3. Cloud compilation is not a Chromecast render,
 D-pad, decoder, memory or OAuth test. The user reports the preceding companion build
 successfully fetched actual fixtures/standings on Android 14; that device evidence
 applies to the preceding APK, not this redesigned one.
@@ -204,14 +147,14 @@ Physical checklist for the new QA APK:
 - Multiple IPTV sources/HD variants remain a picker; generic EPG remains manual.
 - Experimental reader off: zero SHL traffic; foreground/visible cancellation, stale
   snapshots, malformed HTML and denied access stop/label safely.
-- TVmatchen external browser (or Mac fallback) and manual channel choice; no automatic
-  broadcaster assignment is expected in this build.
+- In-app automatic broadcaster/EPG/manual channel choice, saved fixture overrides,
+  empty-source handling and keyboard Back; no SHL browser navigation remains.
 - Legitimate Twitch public-client login, failure feedback, cancellation, token refresh,
   verified offline/live state and no background polling; SmartTube/SVT shortcuts.
 - Measure actual RAM/frame drops/provider sessions against the previously installed
   QA build, then reopen original Min TV and verify its data is unchanged.
 
-### Actual local results — 10 October 2026
+### Baseline redesign results — before the broadcast follow-up
 
 | Check | Result |
 | --- | --- |

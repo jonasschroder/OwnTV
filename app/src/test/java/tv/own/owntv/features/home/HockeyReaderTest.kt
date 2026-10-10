@@ -142,6 +142,9 @@ class HockeyReaderTest {
         val bik = SportsCatalog.identity("BIK Karlskoga", Sport.ICE_HOCKEY)!!
         val degerfors = SportsCatalog.identity("Degerfors IF", Sport.FOOTBALL)!!
         val selection = SportPreferences(listOf(frolunda.id, bik.id, degerfors.id))
+        assertEquals(shl, homeSportsCompetition(SportsCatalog.required(selection), SportsCatalog.football))
+        assertEquals(ha, homeSportsCompetition(listOf(ha, SportsCatalog.football), SportsCatalog.football))
+        assertEquals(SportsCatalog.football, homeSportsCompetition(listOf(SportsCatalog.football), SportsCatalog.football))
         assertEquals(listOf(shl, ha), sportsRequestCompetitions(selection, true, true, false, true))
         assertEquals(listOf(shl), sportsRequestCompetitions(selection, true, false, true, true, shl))
         assertEquals(listOf(ha), sportsRequestCompetitions(selection, true, false, true, true, ha))

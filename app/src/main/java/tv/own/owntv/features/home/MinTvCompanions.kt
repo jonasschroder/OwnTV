@@ -139,6 +139,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val selected = selectedId?.let { id -> allGames.firstOrNull { it.id == id } }
     val fetchedAt = currentData[selectedCompetition.id]?.fetchedAt
     val selectedLoad = loadStates[selectedCompetition.id] ?: SportsLoadState(loading = true)
+    val homeCompetition = homeSportsCompetition(requiredCompetitions, selectedCompetition)
     val homeIssue = requiredCompetitions.firstNotNullOfOrNull { loadStates[it.id]?.issue }
     val homeLoading = requiredCompetitions.filter { it.scheduleAvailable }.any { loadStates[it.id]?.loading != false }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -367,9 +368,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     }
                 } else if (next != null) {
                     TvText(stringResource(R.string.mintv_shl_home_next, pairLabel(next), fixtureWhen(next, now)), size = 24)
-                } else TvText(sportsStatusText(selectedCompetition, enabled, SportsLoadState(loading = homeLoading, issue = homeIssue)), color = MinTvMuted, size = 22)
+                } else TvText(sportsStatusText(homeCompetition, enabled, SportsLoadState(loading = homeLoading, issue = homeIssue)), color = MinTvMuted, size = 22)
                 if ((myToday.isNotEmpty() || next != null) && homeIssue != null)
-                    TvText(sportsStatusText(selectedCompetition, enabled, SportsLoadState(issue = homeIssue)), color = MinTvMuted, size = 20)
+                    TvText(sportsStatusText(homeCompetition, enabled, SportsLoadState(issue = homeIssue)), color = MinTvMuted, size = 20)
                 val homeAt = currentData.values.minOfOrNull { it.fetchedAt }
                 if (enabled && homeAt != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(homeAt, now)), size = 18, color = MinTvMuted, lines = 1)
             }

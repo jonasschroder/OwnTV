@@ -31,7 +31,8 @@ profile; Matchcenter requests only its selected supported competition. Settings,
 team selection, background, fullscreen, disabled experiments and unsupported
 football do not initiate schedule/table requests. Leaving visible content cancels
 its coroutine and the existing OkHttp call. No player, service, WebView, decoder or
-runtime dependency is added. A failed HA fetch cannot invalidate a good SHL
+runtime dependency is added. Home error messages describe required hockey data even if football was the last
+selected Matchcenter tab. A failed HA fetch cannot invalidate a good SHL
 fixture's broadcaster/EPG matching, or vice versa.
 
 The old silent failure path waited two hours after the first schedule error and
@@ -140,6 +141,16 @@ It verified **IF Björklöven–Frölunda HC, 10 October 2026 at 18:00 Europe/St
 (16:00 UTC)**, viewed at 17:06 Stockholm. The full reader used six requests, sharing
 robots/discovery across leagues. This establishes current cloud-source/parser
 compatibility, not access or behavior on the Chromecast's own network.
+
+An additional TVmatchen production-reader probe later on the same day returned
+no verified assignment for Färjestad–Malmö. It dispatched robots, terms and the
+SHL listing, but no match-page request; the access-block flag remained false. The
+probe did not retain enough response detail to distinguish an absent eligible
+listing from a listing/transport failure, so current automatic broadcaster
+availability is **not confirmed**. No channel/result is guessed, no access gate
+is loosened, and the saved-page matching regressions plus existing EPG/manual
+channel fallback remain. Confirm real fixture/channel discovery on the device;
+this sports-source fix does not promise a broadcaster assignment.
 
 The required Android CI suite now has six executed cases: two D-pad navigation
 cases, the existing favorite/storage test, production Android AtomicFile/preferences

@@ -11,6 +11,8 @@ import tv.own.owntv.ui.theme.mpx
 internal data class SportsLoadState(val loading: Boolean = false, val issue: HockeyIssue? = null, val cached: Boolean = false)
 internal fun sportsIssue(error: Exception, now: Long) = (error as? HockeyDataException)?.issue
     ?: HockeyIssue(HockeyFailureKind.CACHE, HockeyStage.CACHE, now)
+internal fun homeSportsCompetition(required: List<Competition>, selected: Competition) =
+    required.firstOrNull { it.scheduleAvailable } ?: selected
 internal fun sportsActive(resumed: Boolean, homeDestination: Boolean) = resumed && homeDestination
 internal fun sportsSnapshotFresh(snapshot: SportSnapshot?, state: SportsLoadState?, now: Long) =
     snapshot != null && state?.issue == null && now - snapshot.fetchedAt in 0 until 6 * 60 * 60_000L

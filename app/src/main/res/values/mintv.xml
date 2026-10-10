@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Min TV</string>
+    <string name="mintv_update_setup_pending">Secure Min TV updates are being prepared. This build has no enabled update source. Your installed app and data are kept.</string>
     <string name="mintv_home_live">TV channels</string>
     <string name="mintv_home_settings">Android TV settings</string>
     <string name="mintv_guide">TV guide</string>

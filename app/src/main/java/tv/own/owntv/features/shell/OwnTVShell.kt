@@ -1912,7 +1912,7 @@ fun OwnTVShell(
         val settingsRepo = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
         val updateCheckOnStart by settingsRepo.updateCheckOnStart.collectAsStateWithLifecycle(initialValue = false)
         LaunchedEffect(updateCheckOnStart) {
-            if (updateCheckOnStart && !showStartupToast) {
+            if (tv.own.owntv.features.update.MinTvUpdateGate.legacyUpdaterAllowed && updateCheckOnStart && !showStartupToast) {
                 kotlinx.coroutines.delay(5_000)
                 showStartupToast = true
                 updateManager.check()

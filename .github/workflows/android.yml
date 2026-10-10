@@ -83,33 +83,8 @@ jobs:
           cd dist-qa
           sha256sum MinTV-v0.2-QA.apk | tee SHA256SUMS
           stat -c 'QA APK bytes: %s' MinTV-v0.2-QA.apk
-      - name: Upload installable prototype
-        uses: actions/upload-artifact@v7
-        with:
-          name: MinTV-v0.2-arm-debug
-          path: |
-            dist/MinTV-v0.2-arm-debug.apk
-            dist/SHA256SUMS
-            dist/READ-BEFORE-INSTALL.txt
-            dist/SIGNING-CERTIFICATE.txt
-          if-no-files-found: error
-          retention-days: 14
-      - name: Upload side-by-side QA prototype
-        uses: actions/upload-artifact@v7
-        with:
-          name: MinTV-v0.2-QA.apk
-          path: |
-            dist-qa/MinTV-v0.2-QA.apk
-            dist-qa/SHA256SUMS
-            dist-qa/READ-BEFORE-INSTALL.txt
-            dist-qa/SIGNING-CERTIFICATE.txt
-            dist-qa/COMPANION-SETUP.md
-            dist-qa/TV-REDESIGN-AND-SETUP.md
-            dist-qa/min-tv-*.md
-            dist-qa/SIGNING-PLAN.md
-            dist-qa/check-apk-update.py
-          if-no-files-found: error
-          retention-days: 14
+      # Compile and verify ordinary debug APKs, but stop uploading ephemeral-key installers.
+      # Only mintv-sign.yml may produce an approved permanently signed candidate artifact.
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -184,3 +159,37 @@ jobs:
             app/build/outputs/androidTest-results/**
           if-no-files-found: warn
           retention-days: 14
+
+  signing-upgrade-regressions:
+    # NO protected environment, production secrets, private artifact or cache upload.
+    # The two ephemeral keys are deliberately disposable TEST fixtures, never distribution keys.
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: bash tools/prepare-core.sh
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platform-tools'
+      - name: Enable disposable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android 14 same-signer upgrades and persistent synthetic data
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.35.0
+        with:
+          api-level: 34
+          profile: tv_1080p
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 tools/signing/test_upgrade.py --tools "$ANDROID_HOME/build-tools/37.0.0"
+      # No APK uploads from this job, so nobody accidentally installs a fixture-signed build.

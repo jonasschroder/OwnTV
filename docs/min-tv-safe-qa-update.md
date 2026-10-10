@@ -1,5 +1,11 @@
 # Safe update of the populated Min TV Test installation
 
+**New owner decision:** a one-time clean QA installation may be planned once a
+retained QA key and its backups are verified, accepting existing QA configuration
+loss. See [permanent update setup](min-tv-permanent-updates-mac.md). This is not
+an instruction to reinstall now. Regular v0.1 remains untouched; the backup/read-only
+checks below remain useful. Future same-signer QA updates preserve all private stores.
+
 **Keep both existing apps and their data. Do not reinstall yet.** The final PR #3
 artifact is a validation build until its certificate and versionCode match your
 installed QA app. A new persistent key cannot update an unrelated old certificate.

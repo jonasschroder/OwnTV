@@ -49,7 +49,7 @@ android {
         targetSdk = 36
         // Independent version sequence for Min TV. CI supplies a monotonically increasing code.
         versionCode = (System.getenv("VERSION_CODE") ?: "2").toInt()
-        versionName = "0.2"
+        versionName = System.getenv("MINTV_VERSION_NAME") ?: "0.2"
         manifestPlaceholders["minTvLinkScheme"] = "mintv"
         manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
         buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")
@@ -121,7 +121,11 @@ android {
             manifestPlaceholders["minTvLinkScheme"] = "mintv-qa"
             manifestPlaceholders["minTvBanner"] = "@drawable/mintv_qa_banner"
             buildConfigField("String", "APP_LINK_SCHEME", "\"mintv-qa\"")
-            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+            // Only disposable upgrade-test emulators use this override. Distribution verification
+            // requires both ARM ABIs and rejects emulator-only APKs. No extra shipped variant.
+            val upgradeTestAbi = providers.gradleProperty("mintv.upgradeTestAbi").orNull
+            require(upgradeTestAbi == null || upgradeTestAbi == "x86_64")
+            ndk { abiFilters += if (upgradeTestAbi == null) listOf("arm64-v8a", "armeabi-v7a") else listOf(upgradeTestAbi) }
         }
     }
 
@@ -192,10 +196,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            if (releaseKeystore != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
         }
+    }
+
+    // Legacy local production signing belongs ONLY to the regular identity. Never let a
+    // developer's KEYSTORE_FILE accidentally sign QA release with the production key.
+    // Debug's build-type signer still takes precedence, preserving existing debug behavior.
+    if (releaseKeystore != null) {
+        productFlavors.getByName("standard").signingConfig = signingConfigs.getByName("release")
+        productFlavors.getByName("x86_64").signingConfig = signingConfigs.getByName("release")
     }
 
     buildFeatures {
@@ -261,10 +270,8 @@ android {
 // the AGP 9.2.1 variant API (ApplicationAndroidComponentsExtension.onVariants +
 // ApplicationAndroidResources.localeFilters: SetProperty<String>); re-verify before deviating.
 androidComponents {
-    // QA is a debug-only prototype, never a release/signing target.
-    beforeVariants(selector().withFlavor("abi" to "qa")) { variant ->
-        variant.enable = variant.buildType == "debug"
-    }
+    // QA release is built unsigned in an isolated job, then signed outside Gradle in its own
+    // protected environment. Ordinary PR builds retain their existing QA debug behavior.
     onVariants(selector().withBuildType("debug")) { variant ->
         variant.androidResources.localeFilters.addAll("en-rXA", "ar-rXB")
     }

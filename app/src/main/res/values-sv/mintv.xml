@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="mintv_update_setup_pending">Säkra Min TV-uppdateringar förbereds. Den här versionen har ingen aktiverad uppdateringskälla. Din installerade app och dina data behålls.</string>
     <string name="mintv_home_live">TV-kanaler</string>
     <string name="mintv_home_settings">Android TV-inställningar</string>
     <string name="mintv_guide">TV-guide</string>

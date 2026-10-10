@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "qa": {
+    "application_id": "se.jonasschroder.mintv.qa",
+    "certificate_sha256": null
+  },
+  "stable": {
+    "application_id": "se.jonasschroder.mintv",
+    "certificate_sha256": null,
+    "installed_v01_certificate_sha256": null,
+    "installed_v01_version_code": null
+  }
+}

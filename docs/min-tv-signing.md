@@ -1,5 +1,11 @@
 # Permanent Min TV signing — manual preparation only
 
+**Current Phase A instructions:** use [the beginner Mac guide](min-tv-permanent-updates-mac.md)
+and [update audit](min-tv-update-audit.md). The manual protected signing workflow
+is now prepared, but public pins/secrets are not configured and no permanently
+signed build or Release has been issued. Older preparation guidance below is
+historical; use the new guide for environment names and the unsigned-build/native-signer separation.
+
 Regular application ID remains `se.jonasschroder.mintv`; QA remains
 `se.jonasschroder.mintv.qa`. This PR does not replace the installed regular v0.1.
 The physical installed certificate and original private-key availability have

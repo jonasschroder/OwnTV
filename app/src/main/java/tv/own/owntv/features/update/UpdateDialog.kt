@@ -46,6 +46,22 @@ import androidx.compose.ui.draw.clip
  */
 @Composable
 fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
+    if (!MinTvUpdateGate.legacyUpdaterAllowed) {
+        val closeFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { runCatching { closeFocus.requestFocus() } }
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = onDismiss,
+            title = stringResource(R.string.update_title),
+            width = 900.mpx,
+            buttons = {
+                StageButton(stringResource(R.string.settings_close), onClick = onDismiss,
+                    modifier = Modifier.focusRequester(closeFocus), height = 56.mpx, textSize = 19, tinted = true)
+            },
+        ) {
+            Text(stringResource(R.string.mintv_update_setup_pending), style = stageText(18, 400), color = StageColors.Muted)
+        }
+        return
+    }
     val manager: UpdateManager = koinInject()
     val state by manager.state.collectAsStateWithLifecycle()
     val focus = remember { FocusRequester() }

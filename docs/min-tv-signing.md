@@ -1,15 +1,31 @@
-# Permanent Min TV signing — manual preparation only
+# Permanent Min TV signing
 
-**Current Phase A instructions:** use [the beginner Mac guide](min-tv-permanent-updates-mac.md)
-and [update audit](min-tv-update-audit.md). The manual protected signing workflow
-is now prepared, but public pins/secrets are not configured and no permanently
-signed build or Release has been issued. Older preparation guidance below is
-historical; use the new guide for environment names and the unsigned-build/native-signer separation.
+Current instructions: [Mac and TV guide](min-tv-permanent-updates-mac.md) and
+[implementation/acceptance report](min-tv-cloud-updates.md).
+The owner reports both protected signing environments configured and the retained
+key/backups complete. Both channels pin the same owner-selected public certificate:
 
-Regular application ID remains `se.jonasschroder.mintv`; QA remains
-`se.jonasschroder.mintv.qa`. This PR does not replace the installed regular v0.1.
-The physical installed certificate and original private-key availability have
-not been established in the cloud. A public certificate/APK cannot recover a key.
+```text
+D2:0B:2F:58:F4:E1:2B:95:6E:1E:1D:C4:0E:47:87:3D:9B:9E:E6:A6:66:A2:DE:1A:F2:A6:B8:AC:3D:40:54:7C
+```
+
+QA `se.jonasschroder.mintv.qa` and Stable `se.jonasschroder.mintv` retain distinct
+sandboxes and authenticated update channels. Sharing the key does not provide
+cryptographic separation. No shared UID/private-data permission is introduced.
+The explicit owner choice supersedes the earlier separate-key preparation advice.
+
+The protected manual workflow builds unsigned release APKs without secrets and
+signs outside Gradle in a separate approved job. Actual owner-key verification
+is still blocked: the workflow is not yet on main and PR #3 remains unmerged.
+No Release or owner-signed artifact has been produced. Never replace this with
+an ordinary ephemeral debug artifact or weaken protected-branch rules.
+
+Both apps may need one clean adoption because their installed certificates are
+not verified to match this key. The owner accepts that plan; physical execution
+still requires approval. Export and verify encrypted backups first. No automatic
+uninstall, clear-data, signing mismatch bypass or Android setting change exists.
+Subsequent compatible same-key/package updates must preserve private data.
+Do not create a new replacement key; retain the existing key and encrypted backups.
 
 ## Verify before choosing a key
 
@@ -36,71 +52,17 @@ increasing versionCode are required for an ordinary in-place update. Never use
 uninstall/clear-data/downgrade to bypass the check. The repository's
 `tools/check-apk-update.py` verifies package, signer and versionCode without installing.
 
-## Create a future key offline, if needed
+## Before an eventual clean adoption
 
-A new key **will not** automatically update an unrelated v0.1 certificate.
-Prefer retaining a usable existing key for continuity. If deliberately starting
-a new signing identity, disconnect a trusted computer from networks, use JDK 21
-and create a private directory outside every repository/cloud-sync share:
+Leave both installed apps working until actual permanent-key signing and upgrade
+acceptance succeed. Export separate encrypted `.own` backups via each app's
+Backup & Restore, inspect their contents/counts and verify restoring a copy into
+a suitable separate test sandbox before recommending a reinstall. Follow the
+[backup guide](min-tv-safe-qa-update.md). Cloud tests use synthetic data and do not
+verify the owner's physical backups. Sports preferences, Twitch authentication
+and some local settings are outside the IPTV backup; record/reconfigure those
+separately. Neither app is removed or cleared by the workflows or updater.
 
-```bash
-mkdir -p "$HOME/MinTV-private-signing"
-chmod 700 "$HOME/MinTV-private-signing"
-keytool -genkeypair -keystore "$HOME/MinTV-private-signing/mintv-release.p12" -storetype PKCS12 -alias mintv-release -keyalg RSA -keysize 3072 -validity 10000
-chmod 600 "$HOME/MinTV-private-signing/mintv-release.p12"
-keytool -list -v -keystore "$HOME/MinTV-private-signing/mintv-release.p12" -alias mintv-release
-```
-
-Enter a strong unique password interactively; store it in a password manager.
-Do not pass passwords in command-line flags/history or screenshots. Record the
-public certificate fingerprint, alias and creation date. Make two encrypted
-offline backups on separate media and keep one elsewhere. For example, if GnuPG
-is already installed on that offline computer:
-
-```bash
-gpg --symmetric --cipher-algo AES256 --output /OFFLINE_MEDIA/mintv-release.p12.gpg "$HOME/MinTV-private-signing/mintv-release.p12"
-```
-
-Use a separate strong backup passphrase. Test decrypting a copy in a private
-temporary folder and listing its certificate; verify the fingerprint matches,
-then securely retire the temporary copy according to your storage policy.
-Keep the encrypted backup/passphrases accessible to you years later. Do not
-commit/upload the original key, backup or passwords to GitHub artifacts/caches.
-
-Local release signing already accepts `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`,
-`KEY_ALIAS`, `KEY_PASSWORD`, or the private user-wide Gradle properties
-`owntv.keystoreFile`, `owntv.keystorePassword`, `owntv.keyAlias`,
-`owntv.keyPassword`. Set those through a private protected configuration/secret
-manager, not command-line password flags, and build `:app:assembleStandardRelease`.
-Restrict the properties file to your account. Increase VERSION_CODE for every
-distribution. Verify the APK certificate and run the update checker before any
-manual install. Use a separate retained QA key via the existing MINTV_DEBUG_*
-inputs; do not share a production key with debug testing.
-
-A future signing workflow must require protected-environment manual approval
-and trusted commits. PR/fork jobs must never receive signing keys or credentials.
-Keep private keys away from build caches/logs; upload only APKs, checksums and
-public certificates. This PR intentionally leaves Actions as unsigned-release /
-ephemeral-debug validation, with no signing secrets or release publication.
-
-## If the installed v0.1 key is lost
-
-Keep v0.1 installed and working. Export the desired profiles, Sources, Favorites
-and Settings through its existing **More/Settings → Backup & Restore**, using a
-passphrase so credentials are preserved. Save the encrypted `.own` on the Mac,
-outside the APK file-server folder. Verify backup inspection/preview and counts,
-and test restoring a **copy** into the separate QA sandbox. Refresh imported
-sources and confirm favorites and playback before considering a regular migration.
-The [QA guide](min-tv-qa.md#configure-iptv-or-import-a-copy-of-a-backup) explains the
-manual remote/local transfer and the shared backup-port/provider limits.
-
-A different certificate requires a separately authorized, deliberate backup /
-reinstall / restore migration with local-data loss understood. That decision is
-outside this PR. Neither app is removed or cleared automatically; no installer
-or workflow here performs migration. Twitch credentials and the experimental
-SHL setting are intentionally outside the IPTV backup and require new setup.
-
-For the already populated **Min TV Test** installation, use [the safe QA update
-gate](min-tv-safe-qa-update.md), including the explicitly selected QA checker.
-New sports preferences are local settings outside the IPTV backup and must be
-reselected after an authorized restore.
+A public APK/certificate cannot recover a private key. If the legacy key is
+available, the read-only checker above can assess in-place compatibility instead.
+An unrelated certificate cannot perform an ordinary Android in-place update.

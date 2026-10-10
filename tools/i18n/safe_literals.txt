@@ -1332,6 +1332,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	.UPDATE_STATUS
 1	protocol	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	.qa
 1	protocol	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	.so
+1	technical	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	DEPRECATION
 1	protocol	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	MinTV-update.apk
 1	assertion	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	No signer
 2	protocol	app/src/main/java/tv/own/owntv/features/update/MinTvUpdater.kt	SHA-256

@@ -50,7 +50,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         if (key == "result") {
             val result = prefs.getInt("result", Int.MIN_VALUE)
             if (result == PackageInstaller.STATUS_FAILURE_ABORTED) mutableState.value = State.Cancelled
-            else if (result != Int.MIN_VALUE && result != PackageInstaller.STATUS_SUCCESS) mutableState.value = State.Failed(Problem.INSTALL)
+            else if (result != Int.MIN_VALUE && result != PackageInstaller.STATUS_SUCCESS) mutableState.value = State.Failed(installProblem(result))
         }
     }
     init { prefs.registerOnSharedPreferenceChangeListener(receiverChanges) }
@@ -63,18 +63,22 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
     val channel get() = if (context.packageName.endsWith(".qa")) "qa" else "stable"
     val channelLabel get() = context.getString(if (channel == "qa") tv.own.owntv.R.string.mintv_update_channel_test else tv.own.owntv.R.string.mintv_update_channel_stable)
     private val pin get() = BuildConfig.UPDATE_CERTIFICATE_SHA256
-    private val installedCode get() = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    @Suppress("DEPRECATION")
+    private val installedCode get() = context.packageManager.getPackageInfo(context.packageName, 0).let {
+        if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong()
+    }
 
     fun setForeground(value: Boolean) { foreground = value; transport.setForeground(value) }
     private fun signer(path: String? = null): String {
-        require(Build.VERSION.SDK_INT >= 28)
+        if (Build.VERSION.SDK_INT < 28) throw UpdateError(Problem.UNSUPPORTED)
         val info = if (path == null) context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
             else context.packageManager.getPackageArchiveInfo(path, PackageManager.GET_SIGNING_CERTIFICATES) ?: error("Unreadable APK")
         val signers = info.signingInfo?.apkContentsSigners ?: error("No signer")
         require(signers.size == 1)
         return UpdatePolicy.sha(signers[0].toByteArray())
     }
-    private fun ready() = Build.VERSION.SDK_INT >= 28 && pin.matches(Regex("[0-9a-f]{64}")) && runCatching { signer() == pin }.getOrDefault(false)
+    private fun ready() = !BuildConfig.DEBUG && Build.VERSION.SDK_INT >= 28 && context.packageName == UpdatePolicy.packageFor(channel) && pin.matches(Regex("[0-9a-f]{64}")) && runCatching { signer() == pin }.getOrDefault(false)
+    private fun installProblem(status: Int) = if (status == PackageInstaller.STATUS_FAILURE_STORAGE) Problem.STORAGE else Problem.INSTALL
 
     internal suspend fun check(force: Boolean = false) = lock.withLock {
         if (!foreground || mutableState.value is State.Downloading || mutableState.value is State.Installing || mutableState.value is State.Confirmation) return@withLock
@@ -164,7 +168,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         file.inputStream().use { input -> val buffer = ByteArray(64 * 1024); while (true) { val size = input.read(buffer); if (size < 0) break; digest.update(buffer, 0, size) } }
         require(UpdatePolicy.hex(digest.digest()) == info.hash)
         val archive = context.packageManager.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: error("Unreadable APK")
-        require(archive.packageName == context.packageName && archive.longVersionCode == info.code && archive.versionName == info.version)
+        require(Build.VERSION.SDK_INT >= 28 && archive.packageName == context.packageName && archive.longVersionCode == info.code && archive.versionName == info.version)
         require(archive.applicationInfo?.minSdkVersion == info.minSdk && signer(file.path) == pin)
         require((archive.applicationInfo!!.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0)
         require(UpdatePolicy.compatible(info, installedCode, prefs.getLong("highest", 0), Build.VERSION.SDK_INT, Build.SUPPORTED_ABIS.toList()))
@@ -210,7 +214,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         mutableState.value = when {
             prefs.contains("confirmation") -> State.Confirmation
             result == PackageInstaller.STATUS_FAILURE_ABORTED -> State.Cancelled
-            result != Int.MIN_VALUE && result != PackageInstaller.STATUS_SUCCESS -> State.Failed(Problem.INSTALL)
+            result != Int.MIN_VALUE && result != PackageInstaller.STATUS_SUCCESS -> State.Failed(installProblem(result))
             prefs.contains("session") && context.packageManager.packageInstaller.getSessionInfo(prefs.getInt("session", -1)) != null -> State.Installing
             apk.exists() && candidate != null -> if (context.packageManager.canRequestPackageInstalls()) State.Available(candidate!!) else State.Permission
             candidate != null && candidate!!.code > installedCode -> State.Available(candidate!!)
@@ -220,6 +224,10 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
     }
     internal fun permissionIntent() = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
     internal fun confirmationIntent(): Intent? = runCatching { Intent.parseUri(prefs.getString("confirmation", null), Intent.URI_INTENT_SCHEME) }.getOrNull()
+    internal fun openInstallerScreen(intent: Intent?) {
+        if (intent == null || runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isFailure)
+            mutableState.value = State.Failed(Problem.INSTALL)
+    }
     internal suspend fun continueInstall() = lock.withLock {
         val info = candidate ?: return@withLock
         try { withContext(Dispatchers.IO) { install(info) } }

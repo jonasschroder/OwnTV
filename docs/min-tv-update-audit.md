@@ -4,7 +4,7 @@ Source baseline: PR #3, `da65a3bbb246e8c5107c944c1c6606b1525a7662`.
 Pinned Core is unchanged at `adca2bcd653f19e6e5d659c2722309e6aef4ec15`.
 
 Current continuation: [cloud-update implementation and acceptance](min-tv-cloud-updates.md).
-The owner now reports all QA environment secrets configured, and the required
+The owner now reports all QA and production environment secrets configured, and the required
 reviewer/main-only/no-admin-bypass protections were verified via read-only API.
 Historical Phase A audit below is retained; Phase B/C source implementation now
 exists in this PR, with actual permanent signing/publication still blocked.
@@ -42,7 +42,7 @@ network call and explain that state in Settings. No placeholder update is offere
 `mintv-sign.yml` is manual-only and main-only. It checks a lowercase exact source
 SHA on main, exact-commit successful main CI and all required jobs, required
 environment reviewers/main-only branch policy, committed channel-specific public
-certificates, and production v0.1 identity/version evidence. Source builds happen
+certificates, and production identity/version evidence OR the explicit owner clean-adoption decision. Source builds happen
 in a separate job with no signing environment/secrets. The signing jobs check out
 trusted workflow tooling, receive only this run's unsigned APK, and never run
 Gradle. Separate QA/production environments inject secrets only into the native
@@ -57,10 +57,11 @@ The unsigned candidate must be a non-debuggable ARM release of the chosen exact
 package/version. The signer validates the actual keystore cert BEFORE signing,
 then the actual signed APK, exact one signer, v2 AND v3 verified schemes, manifest
 identity, ABIs, minSdk and lack of keystore entries; a failure removes output.
-Production is deliberately blocked without matching installed-v0.1 evidence.
-Missing production anchors are intentional fail-closed configuration. The QA
-anchor is the public certificate fingerprint supplied by the owner; no private
-key is manufactured or obtained by Codex.
+The latest owner decision explicitly permits a shared permanent certificate and
+planned clean adoption for BOTH apps. Both public pins are committed, with the
+shared-certificate opt-in and Stable clean-adoption marker. No automatic migration
+exists. Previous installed-v0.1 evidence remains required when clean adoption is
+not explicitly selected. No private key is manufactured or obtained by Codex.
 
 One signing workflow generates `1_000_000 + github.run_number` (both channels
 have increasing per-package subsequences). Every rerun is rejected to prevent
@@ -72,15 +73,15 @@ already signed; GitHub does not guarantee FIFO concurrency ordering.
 ## External prerequisites — NOT completed by code
 
 At the initial audit, no protected environments were present. The owner has since
-reported the QA key and encrypted backups complete and all four environment
+reported the shared permanent key and encrypted backups complete and all four environment
 secrets configured. API verification confirms reviewer jonasschroder, main-only
 branch and disabled administrator bypass. Secret-name listing returns HTTP403;
-Codex cannot independently confirm their contents. The supplied public QA pin is
+Codex cannot independently confirm their contents. The supplied public QA/Stable pin is
 committed in config/mintv-signing.json. Private keys/backups have not been received.
 GitHub returns404 for the signing workflow because it only exists in this PR.
 Main-only signing therefore remains blocked until future user-approved reviewed
-integration; no merge or branch-policy bypass is performed. Production remains
-blocked pending its original key/installed identity investigation.
+integration; no merge or branch-policy bypass is performed. Both actual permanent signing jobs remain blocked by the unregistered main workflow.
+Legacy installed identity is unknown; no in-place adoption is promised.
 
 The Android 14 disposable emulator test can prove the system's same-signer/data
 semantics with test fixtures. It cannot claim owner's permanent keys are configured
@@ -98,8 +99,8 @@ precise limits and remaining tests. Candidate JSON is still build evidence only;
 the separate signature envelope authenticates metadata. No GitHub token is in the
 app. Public Releases make APKs public; no Release has been published/approved here.
 
-The owner has authorized PLANNING a one-time clean QA installation after a
-verified retained QA key is ready, accepting QA configuration loss. This is not
+The owner has authorized PLANNING a one-time clean installation of both apps after a
+verified retained shared key is ready, accepting initial local-data loss. This is not
 authorization to execute uninstall or bypass signing mismatch. No app is
 installed/uninstalled outside the disposable CI emulator. Production v0.1 is
 untouched. Normal same-signer updates must preserve all app-private stores and

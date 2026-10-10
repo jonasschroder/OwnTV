@@ -45,7 +45,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mintv-disposable-upgrade-', dir=os.environ['RUNNER_TEMP']) as directory:
         private = Path(directory)
         stores, fingerprints = {}, {}
-        for channel in PACKAGES:
+        for channel in ('shared', 'wrong'):
             env = {**os.environ, 'MINTV_KEYSTORE_PASSWORD': secrets.token_urlsafe(32)}
             env['MINTV_KEY_PASSWORD'] = env['MINTV_KEYSTORE_PASSWORD']
             key = private / (channel + '-FIXTURE-ONLY.p12')
@@ -57,7 +57,10 @@ def main():
             der = base64.b64decode(''.join(line for line in pem.splitlines() if not line.startswith('---')))
             fingerprints[channel] = hashlib.sha256(der).hexdigest()
             stores[channel] = (key, env)
-        assert fingerprints['qa'] != fingerprints['stable']
+        assert fingerprints['shared'] != fingerprints['wrong']
+        for channel in PACKAGES:
+            fingerprints[channel], stores[channel] = fingerprints['shared'], stores['shared']
+        assert fingerprints['qa'] == fingerprints['stable']
 
         def sign(input_apk, channel, output):
             key, env = stores[channel]
@@ -106,7 +109,7 @@ def main():
             install(test_apks[channel])
             run_instrumentation(adb, package, 'seed', 1000101)
         wrong_key = private / 'wrong-qa-signer-FIXTURE-ONLY.apk'
-        sign(apks['qa', 1000102], 'stable', wrong_key)
+        sign(apks['qa', 1000102], 'wrong', wrong_key)
         install(wrong_key, 'INSTALL_FAILED_UPDATE_INCOMPATIBLE')
         run_instrumentation(adb, PACKAGES['qa'], 'verify', 1000101)
         # Use the existing read-only checker on REAL APKs before actual updates, for each package.
@@ -129,7 +132,7 @@ def main():
             print(result.stdout[-12000:])
             raise ValueError('Required installer callback/About D-pad tests failed or did not execute')
         print('5 actual Android callback/confirmation/cancellation/About D-pad/OK/Back cases PASS')
-        print('PASS: two separate fixture certificates, two builds each, same-signer upgrades accepted; data preserved; wrong signer/downgrades rejected; QA leaves regular data/version untouched.')
+        print('PASS: owner-selected shared fixture certificate, separate packages, two builds each; upgrades accepted; data preserved; wrong signer/downgrades rejected; QA leaves regular data/version untouched.')
         print('8 actual persistent-data instrumentation executions passed. NOT acceptance of owner permanent keys, PackageInstaller UI or physical Chromecast.')
 
 

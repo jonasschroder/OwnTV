@@ -27,7 +27,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mintv-native-signing-fixtures-') as directory:
         private = Path(directory)
         environments, pins = {}, {}
-        for channel in PACKAGES:
+        for channel in ('shared', 'wrong'):
             key = private / (channel + '-TEST-ONLY.p12')
             password = secrets.token_urlsafe(32)
             env = {**os.environ, 'MINTV_KEYSTORE_PASSWORD': password, 'MINTV_KEY_PASSWORD': password,
@@ -41,11 +41,14 @@ def main():
             der = base64.b64decode(''.join(line for line in pem.splitlines() if not line.startswith('---')))
             pins[channel] = hashlib.sha256(der).hexdigest()
             environments[channel] = env
-        assert pins['qa'] != pins['stable']
-        config = {'schema': 1,
+        assert pins['shared'] != pins['wrong']
+        for channel in PACKAGES:
+            pins[channel], environments[channel] = pins['shared'], environments['shared']
+        config = {'schema': 1, 'allow_shared_qa_production_certificate': True,
                   'qa': {'application_id': PACKAGES['qa'], 'certificate_sha256': pins['qa']},
                   'stable': {'application_id': PACKAGES['stable'], 'certificate_sha256': pins['stable'],
-                             'installed_v01_certificate_sha256': pins['stable'], 'installed_v01_version_code': 1}}
+                             'installed_v01_certificate_sha256': None, 'installed_v01_version_code': None,
+                             'initial_adoption': 'owner-approved-clean-install'}}
         config_file = private / 'SYNTHETIC-NOT-INSTALLED-IDENTITY.json'
         config_file.write_text(json.dumps(config))
         notes = private / 'notes.md'; notes.write_text('Disposable native test only; never distribute.\n')
@@ -86,12 +89,20 @@ def main():
         for channel in PACKAGES:
             first = run(channel, channel + '-first', good=True)
             second = run(channel, channel + '-second', good=True)
-            # Independent signing invocations retain exactly the same channel-specific cert.
+            # Owner-selected shared certificate: repeatable signing, separate packages/manifests.
             assert json.loads((first / 'release-candidate.json').read_text())['certificate_sha256'] == json.loads((second / 'release-candidate.json').read_text())['certificate_sha256']
             signed = next(first.glob('*.apk'))
             run(channel, channel + '-already-signed', apk=signed)
             run(channel, channel + '-other-package', apk=inputs['stable' if channel == 'qa' else 'qa'])
-            run(channel, channel + '-other-key', env=environments['stable' if channel == 'qa' else 'qa'])
+            run(channel, channel + '-other-key', env=environments['wrong'])
+            try:
+                verify_metadata(first / ('MinTV-' + channel + '-update.json'), config,
+                                'stable' if channel == 'qa' else 'qa')
+            except ValueError:
+                count += 1
+                print('PASS native case: ' + channel + '-cross-channel-manifest-rejected', flush=True)
+            else:
+                raise ValueError('Shared certificate must not permit cross-channel metadata')
             run(channel, channel + '-wrong-password', env={**environments[channel], 'MINTV_KEYSTORE_PASSWORD': secrets.token_urlsafe(32)})
             run(channel, channel + '-wrong-key-password', env={**environments[channel], 'MINTV_KEY_PASSWORD': secrets.token_urlsafe(32)})
             run(channel, channel + '-wrong-alias', env={**environments[channel], 'MINTV_KEY_ALIAS': 'missing-fixture-alias'})
@@ -103,7 +114,7 @@ def main():
         missing = private / 'missing-pin.json'
         config['qa']['certificate_sha256'] = None; missing.write_text(json.dumps(config))
         run('qa', 'missing-public-pin', pin_config=missing)
-        print(f'PASS: {count} actual native signing/verification cases; stable separate fixture certs, unsigned inputs, checksum/public outputs; invalid credentials, missing secrets, wrong package/key, signed and damaged input rejected. No permanent key or fixture artifact retained.')
+        print(f'PASS: {count} actual native signing/verification cases; shared fixture cert, separate package/channel manifests, unsigned inputs, checksum/public outputs; invalid credentials, missing secrets, wrong package/key/channel, signed and damaged input rejected. No permanent key or fixture artifact retained.')
 
 
 if __name__ == '__main__': main()

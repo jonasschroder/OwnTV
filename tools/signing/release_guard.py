@@ -7,7 +7,7 @@ import re
 import subprocess
 import urllib.error
 import urllib.request
-from signing_policy import anchor, read_config, version_code, version_name
+from signing_policy import anchor, read_config, version_code, version_name, production_floor
 
 REPO = 'jonasschroder/OwnTV'
 REQUIRED = {
@@ -72,7 +72,7 @@ def main():
     certificate = anchor(config, channel)
     code = version_code(int(os.environ['GITHUB_RUN_NUMBER']), int(os.environ['GITHUB_RUN_ATTEMPT']))
     name = version_name(channel, os.environ['VERSION_NAME'])
-    if channel == 'stable' and code <= config['stable']['installed_v01_version_code']:
+    if channel == 'stable' and code <= production_floor(config):
         raise ValueError('Generated versionCode is not newer than installed production v0.1')
     # Workflow/tooling checkout is github.sha on main; source must be a reviewed main ancestor.
     result = subprocess.run(['git', 'merge-base', '--is-ancestor', source, 'origin/main'], capture_output=True)

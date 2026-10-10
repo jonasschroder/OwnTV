@@ -7,7 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/signing'))
 from signing_policy import (PACKAGES, anchor, badging, check_certificates, check_identity,
-                            fingerprint, version_code, version_name)
+                            fingerprint, production_floor, version_code, version_name)
 from sign_apk import REQUIRED, required_secrets
 from release_guard import protected_environment, required_jobs, monotonic_history
 
@@ -25,11 +25,11 @@ class SigningPolicyTest(unittest.TestCase):
     def test_missing_pins_fail_closed_in_checked_in_configuration(self):
         current = json.loads((ROOT / 'config/mintv-signing.json').read_text())
         for channel in PACKAGES:
-            # Before owner setup neither channel is allowed. After setup, validate actual pins instead.
+            # Missing owner setup fails closed; configured channels must pass the whole policy.
             if current[channel]['certificate_sha256'] is None:
                 with self.assertRaises(ValueError): anchor(current, channel)
             else:
-                fingerprint(current[channel]['certificate_sha256'])
+                anchor(current, channel)
 
     def test_separate_qa_and_production_pins(self):
         cfg = self.config()
@@ -43,6 +43,32 @@ class SigningPolicyTest(unittest.TestCase):
                            ('installed_v01_version_code', None), ('installed_v01_version_code', True)]:
             cfg = self.config(); cfg['stable'][key] = value
             with self.assertRaises(ValueError): anchor(cfg, 'stable')
+
+    def test_owner_shared_certificate_keeps_exact_package_contract(self):
+        cfg = self.config()
+        cfg['stable'].update(certificate_sha256=cfg['qa']['certificate_sha256'],
+                             installed_v01_certificate_sha256=None, installed_v01_version_code=None,
+                             initial_adoption='owner-approved-clean-install')
+        cfg['allow_shared_qa_production_certificate'] = True
+        self.assertEqual(anchor(cfg, 'qa'), anchor(cfg, 'stable'))
+        self.assertNotEqual(cfg['qa']['application_id'], cfg['stable']['application_id'])
+        self.assertEqual(0, production_floor(cfg))
+        for flag in (False, 'true', 1, None):
+            cfg['allow_shared_qa_production_certificate'] = flag
+            with self.assertRaises(ValueError): anchor(cfg, 'qa')
+        cfg['allow_shared_qa_production_certificate'] = True
+        cfg['stable']['application_id'] = PACKAGES['qa']
+        with self.assertRaises(ValueError): anchor(cfg, 'stable')
+
+    def test_clean_adoption_requires_explicit_owner_decision_and_keeps_known_floor(self):
+        cfg = self.config()
+        cfg['stable']['installed_v01_certificate_sha256'] = None
+        for decision in (None, True, 'clean-install', 'owner-approved-clean-install '):
+            cfg['stable']['initial_adoption'] = decision
+            with self.assertRaises(ValueError): anchor(cfg, 'stable')
+        cfg['stable']['initial_adoption'] = 'owner-approved-clean-install'
+        self.assertEqual('cd' * 32, anchor(cfg, 'stable'))
+        self.assertEqual(1, production_floor(cfg))
 
     def test_channel_ids_are_not_interchangeable(self):
         cfg = self.config(); cfg['qa']['application_id'] = PACKAGES['stable']

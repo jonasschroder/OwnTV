@@ -9,7 +9,7 @@ import shutil
 import tempfile
 from update_metadata import payload, sign as sign_metadata, verify as verify_metadata
 from signing_policy import (PACKAGES, anchor, badging, check_certificates, check_identity,
-                            command, no_key_material, read_config, sha256, version_name)
+                            command, no_key_material, read_config, sha256, version_name, production_floor)
 
 REQUIRED = ('MINTV_KEYSTORE_BASE64', 'MINTV_KEYSTORE_PASSWORD', 'MINTV_KEY_ALIAS', 'MINTV_KEY_PASSWORD')
 
@@ -45,7 +45,7 @@ def main():
     config = read_config(args.config)
     expected = anchor(config, args.channel)
     version_name(args.channel, args.name)
-    if args.channel == 'stable' and args.code <= config['stable']['installed_v01_version_code']:
+    if args.channel == 'stable' and args.code <= production_floor(config):
         raise ValueError('Candidate must be newer than the verified installed production build')
     import re
     if not re.fullmatch('[0-9a-f]{40}', args.source) or not 1_000_000 < args.code <= 2_100_000_000:

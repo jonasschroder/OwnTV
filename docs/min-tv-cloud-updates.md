@@ -5,12 +5,13 @@ been produced, and no physical app/system setting has been changed.
 
 ## Owner setup and the remaining signing blocker
 
-The owner reports the QA key and encrypted backups complete and all four
-`mintv-qa-signing` environment secrets configured. Read-only API verification
-confirms required reviewer `jonasschroder`, exactly `main` as a branch (no tags),
+The owner reports the permanent key and encrypted backups complete and all four
+secrets configured in BOTH `mintv-qa-signing` and `mintv-production-signing`. Read-only API verification
+of both environments confirms required reviewer `jonasschroder`, exactly `main` as a branch (no tags),
 and `can_admins_bypass=false`. The integration returns HTTP 403 for secret-name
 listing; their contents are neither accessible nor verified by Codex.
-The committed public QA certificate pin is:
+The owner explicitly chose the SAME permanent certificate for QA and Stable.
+This supersedes the earlier separate-key plan. Both committed public pins are:
 
 ```text
 D2:0B:2F:58:F4:E1:2B:95:6E:1E:1D:C4:0E:47:87:3D:9B:9E:E6:A6:66:A2:DE:1A:F2:A6:B8:AC:3D:40:54:7C
@@ -21,8 +22,18 @@ unmerged PR. The environment and workflow deliberately permit only reviewed
 main commits. There is no signing run to approve yet. Do not weaken the branch
 policy or push PR code to main as a workaround. A future owner-approved review
 and integration is required before actual permanent-key verification can run.
-The production certificate, installed v0.1 versionCode and original private key
-remain unknown; production signing/updates fail closed.
+Both channel policies now permit signing with that shared public pin, with
+explicit reviewed `allow_shared_qa_production_certificate=true` and Stable
+`initial_adoption=owner-approved-clean-install`. The owner accepts planning a
+one-time clean installation of BOTH apps after acceptance, not its execution now.
+Installed legacy certificates remain unknown: no in-place v0.1 compatibility is
+claimed. Subsequent updates require the permanent certificate and a higher code.
+
+Package IDs (`se.jonasschroder.mintv.qa` / `se.jonasschroder.mintv`), private
+stores, metadata/channel checks, tags and environment approvals remain distinct.
+A shared private key does NOT provide cryptographic separation; compromise of
+either signing environment can affect both signing identities. The apps request
+no shared UID or signature-based permission that grants each other private data.
 
 ## Authenticated distribution
 
@@ -110,16 +121,17 @@ After future approved main integration, run signing twice with new dispatches
 and verify the public pin, increasing codes, authentic manifest and APK integrity.
 Then perform A→B on a fresh disposable emulator using those owner-signed builds
 and check sample persistent data. API34 fixture upgrade tests separately verify
-two sandbox identities, wrong-key/downgrade rejection and real persistent stores.
+two sandbox identities with the owner-selected shared fixture certificate,
+wrong-key/downgrade rejection and real persistent stores.
 
 Physical Chromecast checks: real remote focus/Back, installer permission screen,
 confirmation/decline/return, process death during confirmation, insufficient
 storage/network interruption, actual app-signer/archive behavior, no fullscreen
 interruption and real IPTV/profile/favorites/EPG/sports/Twitch preservation.
 The current scripts do not claim to test live Twitch authentication data.
-**Do not reinstall now.** The owner accepts planning one clean QA adoption after
-permanent signing verification, but execution still needs explicit approval.
-Keep regular v0.1 untouched. The built-in .own backup covers its supported IPTV
+**Do not reinstall now.** The owner accepts planning one clean adoption of BOTH
+apps after permanent signing verification; execution still needs explicit approval.
+Keep both installed apps untouched until then. The built-in .own backup covers its supported IPTV
 sections; it is not proof that sports/Twitch/local preferences are included.
 
 ## Simple future usage on Mac and TV
@@ -128,18 +140,18 @@ sections; it is not proof that sports/Twitch/local preferences are included.
    for secure recovery; never regenerate a replacement key for normal updates.
 2. After approved main integration and green exact-commit checks, open Actions →
    **Min TV approved signing**, choose `qa`, the reviewed 40-character commit and
-   `0.2.0-beta.N`; approve the signing environment when GitHub asks.
+   `0.2.0-beta.N` (or `stable` with `0.2.0` in a separate run); approve the signing environment when GitHub asks.
 3. Inspect the successful artifact's certificate/checksum/manifest evidence.
    A failed signing run is retried with a **new dispatch**, never rerun.
 4. After signing acceptance, approve distribution separately via **Min TV approved
-   distribution**, supplying that signing run ID, `qa`, and `PUBLISH-QA`.
+   distribution**, supplying that signing run ID, its matching channel and `PUBLISH-QA` or `PUBLISH-STABLE`.
    Approve its environment only if public distribution is intended.
-5. The first permanent QA adoption is a separately approved manual migration.
+5. The first permanent adoption of each app is a separately approved manual migration.
    There is no ready APK or reinstall recommendation in this PR yet.
 6. For subsequent compatible updates, open Min TV Test on the TV. Use the small
    Uppdatera prompt or Inställningar → Om Min TV → Sök efter uppdateringar.
    Read notes, choose Uppdatera, and approve Android's installation prompt.
    Senare/Back/decline leave the installed app's data intact.
 7. Future updates reuse the same key and package, with a higher code. No manual
-   transfer is needed after the first verified permanent QA adoption. Stable
-   follows the same process only after its original signing identity is recovered.
+   transfer is needed after the first verified permanent adoption of each app. QA and Stable
+   follow separate update channels and never install each other's APK.

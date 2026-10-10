@@ -1,31 +1,32 @@
-# Så förbereder du permanenta Min TV-uppdateringar på din Mac
+# Permanenta Min TV-uppdateringar på Mac och TV
 
-**Fas A är förberedd. Ägaren har den 10 oktober 2026 bekräftat att QA-nyckeln
-har skapats på Mac med JDK 21 och att de krypterade säkerhetskopiorna är klara.
-Ägaren har därefter bekräftat att GitHub-miljöns fyra hemligheter är konfigurerade. Ingen Release har
-publicerats. Installera inte om någon app nu.**
+Ägaren har skapat och säkerhetskopierat den permanenta nyckeln och bekräftar
+att båda miljöerna `mintv-qa-signing` och `mintv-production-signing` har sina
+fyra secrets. Skyddsreglerna är verifierade via skrivskyddat GitHub-API.
+**Skapa ingen ny nyckel. Inga installerade appar ska ändras nu.**
 
-QA-certifikatets publika SHA256 är incheckat i `config/mintv-signing.json`:
+Efter ägarens uttryckliga beslut används **samma nyckel** för båda apparna.
+Det publika SHA256-fingeravtrycket är pinnat för båda i `config/mintv-signing.json`:
 
 ```text
 D2:0B:2F:58:F4:E1:2B:95:6E:1E:1D:C4:0E:47:87:3D:9B:9E:E6:A6:66:A2:DE:1A:F2:A6:B8:AC:3D:40:54:7C
 ```
 
-Steg 1–3 nedan beskriver den redan genomförda nyckelförberedelsen; skapa inte
-en ny ersättningsnyckel. Steg 5 har nu genomförts enligt ägarens bekräftelse.
-Nyckelfilen har inte lämnats till Codex. Faktisk signering och verifiering av
-nyckeln i GitHub återstår. Produktionsnyckeln behandlas separat i steg 4.
-Fas B/C har nu en implementation i PR #3; verklig signering, publicering och
-acceptanstest är fortfarande spärrade i väntan på separata godkännanden.
+Paket, appdata, kanalmetadata och miljögodkännanden förblir separata. Nyckeln
+är däremot gemensam: den ger ingen kryptografisk separation mellan kanalerna.
+Båda skyddade miljöerna måste därför skydda samma nyckel lika noggrant.
 
-Vanliga CI-tester bygger fortfarande båda debug-apparna, men nya APK:er med
-tillfälliga CI-certifikat laddas inte längre upp som installationsfiler.
-Tidigare artefakter är inte permanenta uppdateringar. Behåll fungerande Min TV v0.1.
+PR #3 innehåller signering och molnuppdateraren men är inte mergad.
+Workflowen finns ännu inte på `main`, så faktisk permanent signering är blockerad.
+Secrets och nyckeln har inte lästs av Codex; deras riktighet bevisas först av
+ett framtida godkänt signeringsjobb. Ingen Release eller permanent APK finns ännu.
+[Implementations- och acceptansrapport](min-tv-cloud-updates.md).
 
-Aktuell fortsättning: [molnuppdateringar och verifieringsgränser](min-tv-cloud-updates.md).
-Ägaren har nu bekräftat att QA-miljöns fyra secrets är konfigurerade. Skyddsreglerna
-är verifierade via API. Faktisk permanent signering väntar på en granskad workflow
-på main; PR #3 mergas inte automatiskt. Steg 1–5 är bevarade som återställningsguide.
+Steg 1–3 beskriver den **redan genomförda** förberedelsen och återställning;
+upprepa inte nyckelgenereringen. Steg 5 är redan genomfört enligt ägaren.
+Vanlig PR-CI delar rapporter men inga nya tillfälligt signerade installer-APK:er.
+Ägaren accepterar att planera en första ren installation av **båda** apparna
+när allt är verifierat. Utförandet kräver fortfarande separat godkännande.
 
 ## 1. Installera bara verktyget för nycklar
 
@@ -101,22 +102,25 @@ Säkerhetskopiera också publika fingeravtryck, alias och vilken app varje nycke
 tillhör. Förlita dig inte på GitHub Secrets som enda säkerhetskopia: GitHub låter
 dig inte läsa tillbaka den lagrade hemligheten.
 
-## 4. Håll produktionen helt separat
+## 4. Samma nyckel, separata appar
 
-**Skapa inte en ny produktionsnyckel som ersättning för v0.1 ännu.** Först
-behöver vi läsa v0.1:s publika certifikat och versionCode samt hitta motsvarande
-privata nyckel från den ursprungliga byggdatorn eller en säkerhetskopia.
-[Den äldre signeringsguiden](min-tv-signing.md#verify-before-choosing-a-key)
-visar de skrivskyddade APK-kontrollerna. En redan sparad exakt v0.1-APK går också
-att undersöka. Om ADB inte redan är auktoriserat: lämna TV:n oförändrad tills
-du separat väljer att sätta upp anslutningen.
+| App | Paket | Uppdateringskanal | Skyddad signeringsmiljö |
+|---|---|---|---|
+| Min TV Test | `se.jonasschroder.mintv.qa` | Test / `qa` | `mintv-qa-signing` |
+| Min TV | `se.jonasschroder.mintv` | Stabil / `stable` | `mintv-production-signing` |
 
-Om nyckeln finns och certifikatet stämmer: spara den med separata krypterade
-kopior, helt skild från QA. Pinna publika certifikatet och installerat versionCode
-i `stable`-delen av `config/mintv-signing.json`. Workflow blockerar Stable tills
-alla dessa värden finns och certifikaten stämmer överens. Om v0.1-nyckeln är
-borta kan ett nytt certifikat **inte** uppdatera v0.1 på plats. Ingen avinstallation,
-rensning eller produktionsmigrering ingår i detta arbete.
+Använd den redan skapade `mintv-qa.p12` och dess befintliga alias/lösenord
+även i produktionsmiljön, enligt ägarens senaste beslut. Byt inte filnamn,
+alias eller lösenord bara för att appen heter Min TV i stället för Min TV Test.
+Apparna delar inte databas, IPTV-uppgifter, favoriter eller inställningar.
+En signerad QA-manifest/QA-APK accepteras aldrig av Stable och tvärtom.
+
+Det nya certifikatet är inte bevisat kompatibelt med de befintliga
+installationernas certifikat. En ny nyckel kan inte uppdatera en annan signerare
+på plats. Den godkända planen är en första ren adoption för båda apparna;
+inget i appen eller workflowen avinstallerar, rensar eller migrerar automatiskt.
+Om du senare vill undersöka kompatibilitet utan dataförlust finns
+[skrivskyddade APK-kontroller](min-tv-signing.md#verify-before-choosing-a-key).
 
 ## 5. Konfigurera GitHub i webbläsaren
 
@@ -124,7 +128,7 @@ rensning eller produktionsmigrering ingår i detta arbete.
 Öppna [repository Settings → Environments](https://github.com/jonasschroder/OwnTV/settings/environments).
 Du behöver ägar-/administratörsbehörighet.
 
-Skapa **mintv-qa-signing**. Under skyddsregler:
+Kontrollera **båda** befintliga miljöerna. Under skyddsregler:
 
 1. Aktivera **Required reviewers** och välj ditt GitHub-konto som godkännare.
    Om en annan betrodd person kan godkänna rekommenderas även Prevent self-review.
@@ -136,7 +140,7 @@ Skapa **mintv-qa-signing**. Under skyddsregler:
 
 | Secret | Värde för QA |
 |---|---|
-| `MINTV_KEYSTORE_BASE64` | Kopia av QA-filens Base64, enligt kommandot nedan |
+| `MINTV_KEYSTORE_BASE64` | Kopia av den gemensamma nyckelfilens Base64, enligt kommandot nedan |
 | `MINTV_KEYSTORE_PASSWORD` | QA-nyckelfilens lösenord från lösenordshanteraren |
 | `MINTV_KEY_ALIAS` | `mintv-qa` |
 | `MINTV_KEY_PASSWORD` | QA-nyckelns lösenord, samma som filen för denna PKCS12 |
@@ -155,17 +159,12 @@ annanstans. Töm urklipp direkt efter att hemligheten har sparats:
 printf '' | pbcopy
 ```
 
-Skapa separat **mintv-production-signing** med samma skyddsregler. Lägg dess
-fyra secrets först när den riktiga produktionsnyckeln har identifierats och
-säkerhetskopierats. Namnen är samma, men **värdena måste komma från den andra
-nyckeln**. QA-jobbet kommer endast åt QA-miljön; Stable endast produktionen.
+Båda miljöerna använder samma fyra secret-namn och samma nyckelvärden enligt
+ägarens beslut. QA-jobbet får endast QA-miljön; Stable endast produktionen.
 Miljöhemligheter injiceras aldrig i vanliga PR-, fork-, debug- eller Gradle-jobb.
+Ägaren har redan bekräftat konfigurationen; inga värden ska skickas i chatt.
 
-Stoppa här och meddela Codex: **QA-säkerhetskopior verifierade**, **QA-miljö
-konfigurerad**, och det **publika SHA256-fingeravtrycket**. Produktionsstatus
-kan vara **ännu okänd**. Inga hemliga värden behövs i svaret.
-
-## 6. Det första godkända QA-bygget — efter nästa verifieringsfas
+## 6. Första godkända kandidaterna — efter granskad main-integration
 
 Workflow är förberedd i PR #3 och blir körbar först när **du** har granskat och
 valt att lägga de färdiga ändringarna på `main`. Codex slår inte ihop PR:n.
@@ -174,38 +173,41 @@ Det behövs inte någon merge nu för att göra steg 1–5.
 När pins, skyddsregler, implementation och tester är klara:
 
 1. Öppna **Actions → Min TV approved signing → Run workflow** på **main**.
-2. Välj `qa`, klistra in exakt **40 tecken långt commit-ID** från det granskade
-   `main`-bygget, ett namn såsom `0.2.0-beta.1` och korta ändringsanteckningar.
+2. Välj först `qa` (senare en ny körning för `stable`), klistra in exakt **40 tecken långt commit-ID** från det granskade
+   `main`-bygget, ett namn såsom `0.2.0-beta.1` för QA eller `0.2.0` för Stable och korta ändringsanteckningar.
 3. Preflight kräver gröna, exakta main-CI-körningar (fulla enhetstester/lint,
    Home-regressioner, uppgraderingstest och i18n). Därefter byggs en **osignerad
    release-APK**, separat från nyckelmiljön.
 4. Workflow stannar vid **Review deployments**. Kontrollera SHA, kanal och
-   version, välj endast QA-miljön och godkänn manuellt.
+   version och godkänn endast den valda kanalens miljö manuellt.
 5. Signering sker utanför Gradle. Fel nyckel, signerad debug-input, fel paket,
    fel ABI, saknad pin eller saknade secrets ger **ingen** signerad kandidat.
 6. Hämta den godkända kandidatens ZIP från workflowens **Artifacts**.
    `release-candidate.json`, `SIGNING-CERTIFICATE.txt` och `SHA256SUMS` visar
    paket, fingerprint, kod, commit och checksumma. **Inget är publicerat.**
 
-Det signerade ARM-bygget är för `se.jonasschroder.mintv.qa`. Appnamnet är
-Min TV Test. Stable kan aldrig väljas av QA-jobbet. Permanenta kandidater är
-release-byggen med debuggable avstängt. Separat QA-/produktionsnyckel behövs
-fortfarande för att verifiera två verkliga permanent signerade versioner.
+QA-bygget är för `se.jonasschroder.mintv.qa`, Min TV Test. Stable-bygget är
+för `se.jonasschroder.mintv`, Min TV. Varje jobb kontrollerar sitt exakta paket;
+kanalerna kan inte bytas. Permanenta kandidater är ARM-release-byggen med
+debuggable avstängt, pinnat certifikat, verifierade v2/v3-signaturer och en
+kryptografiskt signerad uppdateringsmanifest.
 
-**Installera inte om ännu.** Du har godkänt att vi planerar en enda ren QA-installation
-om gamla signeringsnyckeln är förlorad, men inte att Codex utför den. Innan det
-stegvis installationsförfarande lämnas för utförande ska kandidatens signerare
-vara verifierad och de permanent signerade uppgraderingstesterna vara klara.
-Gamla QA-data kan då förloras enligt ditt val. En valfri krypterad IPTV-backup
-enligt [QA-backupguiden](min-tv-safe-qa-update.md) kan bevara källor/favoriter;
-lagval, Twitch och vissa lokala inställningar ingår inte i `.own`-backupen.
-Vanlig Min TV v0.1 ska lämnas installerad och orörd.
+**Installera inte om ännu.** Innan den första rena installationen av båda
+apparna rekommenderas behövs verklig permanent signering och A→B-acceptanstest.
+Gamla lokala data kan förloras vid ren adoption. Exportera därför en krypterad
+`.own`-backup för varje app via Backup & Restore, spara dem på Mac med tydliga
+appnamn och kontrollera en återställning av en kopia enligt
+[backupguiden](min-tv-safe-qa-update.md). En sparad fil ensam är inte bevis på
+fungerande återställning. Lagval, Twitch och vissa lokala inställningar ingår
+inte i `.own`; dokumentera dessa separat för manuell återkonfiguration.
+Inget av dessa steg har utförts på dina appar i molnet.
 
 ## 7. Följande versioner och uppdatering direkt i TV:n
 
-Detta är **nästa fas**, inte fungerande funktion i fas A. Tills säker
-kanalvalidering är implementerad är Core-uppdateraren blockerad i appen;
-Inställningar visar att uppdateringar förbereds och gör inga uppdateringsanrop.
+Molnuppdateraren är nu implementerad och testas i PR #3. Verklig
+signerings-/publicerings-/Chromecast-acceptans återstår. Den gamla Core-
+uppdateraren är blockerad; debug-appar och appar vars installerade certifikat
+inte motsvarar pinnen gör inga uppdateringsanrop.
 
 En enda workflow äger signeringssekvensen: `versionCode = 1 000 000 + run_number`.
 Nya körningar ökar koden för båda paketen, även när QA och Stable turas om.
@@ -216,20 +218,22 @@ plan med kod över alla redan installerade/publicerade versioner.
 En äldre köad körning blockeras även om en nyare kandidat i samma kanal redan
 signerats, eftersom GitHub inte garanterar köordningen.
 
-Fas B ska ge två explicit åtskilda, manuellt godkända Release-kanaler och
-autentiserad metadata/checksumma. GitHub Releases är enklast utan egen server,
-men i detta publika repository är **alla publicerade APK:er publikt nedladdningsbara**.
-Actions-artefakter går ut och behöver ofta inloggning; appen ska inte använda
-dem som permanent uppdateringskälla. Ingen GitHub-token får bäddas in i APK:n.
-Release-kandidatsfilen från fas A är byggbevis, **inte** betrodd uppdateringsmetadata.
+Den separata workflowen **Min TV approved distribution** kräver ett godkänt
+signeringsjobb, exakt kanal och `PUBLISH-QA` eller `PUBLISH-STABLE`.
+Dess miljöer `mintv-qa-distribution`/`mintv-production-distribution` behöver
+samma reviewer/main-only/admin-bypass-skydd men inga signeringssecrets.
+De är framtida förutsättningar, inte verifierat konfigurerade här.
+Publicering kräver separat godkännande: i detta publika repository blir
+**alla Release-APK:er publikt nedladdningsbara**. Actions-artefakter är
+begränsade i tid och är inte appens molnuppdateringskälla. Ingen token finns i appen.
 
-Fas C ska återanvända TV-dialogerna och granskade PackageInstaller-mönster,
-men ersätta det osäkra kanalvalet och lägga till signatur/checksumma/version/
-ABI/Android-/lagringskontroller före installationssessionen. Det behövs stöd
-för installationsbehörighet, avbrytande och processåterskapning samt tester av
-Uppdatera/Senare, framsteg, About och fjärrkontroll. Ingen bakgrundstjänst eller
-WebView behövs. Fullskärmsuppspelning får inte avbrytas. Först efter denna fas
-kan TV:n hämta godkända uppdateringar och visa Androids installationsbekräftelse.
+Efter den första verifierade och separat godkända adoptionen använder du på TV:n
+**Inställningar → Om Min TV → Sök efter uppdateringar**, eller den lilla
+**Uppdatera/Senare**-rutan på Home. Läs anteckningarna och välj Uppdatera.
+Om Android frågar om installationsbehörighet väljer du själv om den ska ges
+för just appen och återvänder sedan. Godkänn installationen i Androids dialog.
+Back/Senare/avböj lämnar appdata kvar. Inget installeras tyst. Fullskärms-
+uppspelning avbryts inte av ett automatiskt uppdateringsfönster.
 
 ## 8. Om Macen försvinner
 
@@ -244,14 +248,15 @@ inte uppdatera befintlig app på plats. Stanna och planera separat migrering.
 
 ## Kontroller och återstående acceptans
 
-Molnet kan verifiera byggen, signeringspolicy och en verklig Android 14-
-uppgradering med **två separata engångsnycklar för tom emulator**, två byggen
-per paket, syntetiska profiler/källor/favoriter/datastore/lagval och appprivata
-filer. Testet försöker även fel signerare och nedgradering; QA ska lämna
-vanliga appens data och version oförändrade. Test-APK:er och testnycklar delas inte.
+Molnet testar båda apparna med ett gemensamt **engångscertifikat för tom
+emulator**, två byggen per paket och syntetiska profiler/källor/favoriter/EPG/
+datastore/lagval/appprivata filer. Ett annat engångscertifikat används endast
+för att bevisa att Android avvisar fel signerare. Nedgradering ska också
+avvisas. QA-uppdateringen ska lämna vanliga appens data/version oförändrade.
+Testnycklar och test-APK:er delas inte. Utfall redovisas i acceptansrapporten.
 
-Detta ersätter **inte** ett test med dina permanenta QA-/produktionsnycklar.
-Det är blockerat tills du konfigurerat dem. Inga riktiga IPTV-uppgifter,
-v0.1-certifikat, offlinekopior eller Chromecast-installationer är åtkomliga i molnet.
-Installationsdialog, behörighet, avbrytande, fysisk dataöverlevnad och beteende
-under riktig IPTV-uppspelning återstår efter fas C på Chromecast.
+Det ersätter **inte** tester med din permanenta nyckel och riktig Chromecast.
+Båda signeringsmiljöerna är rapporterat konfigurerade, men faktisk signering
+är blockerad av den ännu omergade main-workflowen. Installation, behörighet,
+avbrytande, processåterskapning, fysisk dataöverlevnad och beteende under
+riktig IPTV-uppspelning återstår. Ingen ny installation rekommenderas ännu.

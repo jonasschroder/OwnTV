@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import re
 from release_guard import api, protected_environment, required_jobs
-from signing_policy import anchor, badging, check_certificates, check_identity, command, no_key_material, read_config
+from signing_policy import anchor, badging, check_certificates, check_identity, command, no_key_material, read_config, production_floor
 from update_metadata import verify
 
 
@@ -34,7 +34,7 @@ def main():
         check_identity(badging(command([str(Path(args.tools) / 'aapt2'), 'dump', 'badging', str(apk)])), channel, data['version_code'], data['version_name'])
         check_certificates(command([str(Path(args.tools) / 'apksigner'), 'verify', '--verbose', '--print-certs', '--Werr', str(apk)]), expected)
         no_key_material(apk)
-        if channel == 'stable' and data['version_code'] <= config['stable']['installed_v01_version_code']:
+        if channel == 'stable' and data['version_code'] <= production_floor(config):
             raise ValueError('Production candidate is not newer than installed v0.1')
         # The signed payload binds source/notes/hash as well as package and code.
         command(['git', 'merge-base', '--is-ancestor', data['source_commit'], 'origin/main'])

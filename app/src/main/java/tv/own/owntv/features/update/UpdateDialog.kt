@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
@@ -34,27 +33,27 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
     val automatic by settings.updateCheckOnStart.collectAsStateWithLifecycle(initialValue = false)
     val checked by settings.lastUpdateCheckAt.collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val focus = remember { FocusRequester() }
     var requestedInstall by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { manager.resume(); if (checkOnOpen) manager.check(force = true) }
     LaunchedEffect(state) {
-        runCatching { focus.requestFocus() }
         // Only a live, explicit Update action can open the system prompt automatically.
         // After process recreation the durable Continue button requires another user action.
         if (state == MinTvUpdater.State.Confirmation && requestedInstall) {
             requestedInstall = false
-            runCatching { manager.confirmationIntent()?.let { context.startActivity(it) } }
+            manager.openInstallerScreen(manager.confirmationIntent())
         }
     }
     val close = { manager.dismiss(); onDismiss() }
     StagePopup(onDismiss = close, title = stringResource(R.string.mintv_update_about), width = 950.mpx,
         buttons = {
+            // Request from the dialog's own composition, after its window/layout attaches.
+            LaunchedEffect(state) { withFrameNanos { }; withFrameNanos { }; focus.requestFocus() }
             StageButton(stringResource(R.string.settings_close), onClick = close, modifier = Modifier.focusRequester(focus), height = 56.mpx, textSize = 18)
             when (state) {
                 is MinTvUpdater.State.Available -> StageButton(stringResource(R.string.update_now), onClick = { requestedInstall = true; scope.launch { if (manager.hasDownload()) manager.continueInstall() else manager.download() } }, height = 56.mpx, textSize = 18, tinted = true)
-                MinTvUpdater.State.Permission -> StageButton(stringResource(R.string.mintv_update_permission_action), onClick = { runCatching { context.startActivity(manager.permissionIntent()) } }, height = 56.mpx, textSize = 18, tinted = true)
-                MinTvUpdater.State.Confirmation -> StageButton(stringResource(R.string.mintv_update_confirm), onClick = { runCatching { manager.confirmationIntent()?.let { context.startActivity(it) } } }, height = 56.mpx, textSize = 18, tinted = true)
+                MinTvUpdater.State.Permission -> StageButton(stringResource(R.string.mintv_update_permission_action), onClick = { manager.openInstallerScreen(manager.permissionIntent()) }, height = 56.mpx, textSize = 18, tinted = true)
+                MinTvUpdater.State.Confirmation -> StageButton(stringResource(R.string.mintv_update_confirm), onClick = { manager.openInstallerScreen(manager.confirmationIntent()) }, height = 56.mpx, textSize = 18, tinted = true)
                 MinTvUpdater.State.Checking, is MinTvUpdater.State.Downloading, MinTvUpdater.State.Installing -> Unit
                 else -> StageButton(stringResource(R.string.settings_check_updates), onClick = { scope.launch { manager.check(force = true) } }, height = 56.mpx, textSize = 18, tinted = true)
             }

@@ -45,14 +45,22 @@ def anchor(config, channel):
         raise ValueError('Wrong channel/application ID')
     expected = fingerprint(item.get('certificate_sha256'))
     other = config['stable' if channel == 'qa' else 'qa'].get('certificate_sha256')
-    if other == expected:
-        raise ValueError('QA and production MUST use different keys')
+    if other == expected and config.get('allow_shared_qa_production_certificate') is not True:
+        raise ValueError('Shared QA/production certificate requires an explicit reviewed owner opt-in')
     if channel == 'stable':
+        if item.get('initial_adoption') == 'owner-approved-clean-install':
+            # Explicit owner decision only; this never uninstalls/resets an existing device.
+            return expected
         if fingerprint(item.get('installed_v01_certificate_sha256')) != expected:
             raise ValueError('Production key does not match installed v0.1; keep that installation untouched')
         if type(item.get('installed_v01_version_code')) is not int or not 0 < item['installed_v01_version_code'] < MAX_CODE:
             raise ValueError('Installed production versionCode must be verified first')
     return expected
+
+
+def production_floor(config):
+    value = config['stable'].get('installed_v01_version_code')
+    return value if type(value) is int and value > 0 else 0
 
 
 def command(args, env=None):

@@ -55,7 +55,7 @@ class HomeChannelDefaults private constructor(context: Context, private val db: 
     internal fun observe(visibilityChanges: Flow<Unit>, visible: suspend (ChannelEntity) -> Boolean): Flow<HomeLibraryState> = sources
         .flatMapLatest { aps ->
             val ids = aps.liveSourceIds
-            val sync = if (ids.isEmpty()) flowOf(false) else combine(ids.map(scheduler::observeSync)) { states -> states.any { it.isActive } }
+            val sync = if (ids.isEmpty()) flowOf(false) else combine(ids.map(scheduler::observeSync)) { states -> states.any { it is tv.own.owntv.core.sync.work.CatalogSyncState.Syncing && it.liveActive } }
             val initialGrace = flow { emit(true); kotlinx.coroutines.delay(30_000); emit(false) }
             combine(db.channelDao().countAll(ids.ifEmpty { listOf(-1L) }), db.favoriteDao().observeFavoriteIds(aps.profileId, MediaType.LIVE), sync, visibilityChanges, initialGrace) { _, favorites, syncing, _, grace -> Triple(syncing, grace, favorites.isNotEmpty()) }
                 .mapLatest { (syncing, grace, existingFavorites) ->

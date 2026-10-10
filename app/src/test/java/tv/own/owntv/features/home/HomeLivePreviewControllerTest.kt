@@ -25,6 +25,20 @@ class HomeLivePreviewControllerTest {
         assertEquals(emptyList<Long>(), h.played)
     }
 
+    @Test fun importingAnInitialFavoriteRequiresFreshNavigationAfterLoadingFocus() = runTest {
+        val h = Harness(this)
+        h.controller.setActive(true)
+        h.controller.onRemoteNavigation() // previous key press while the loading card had focus
+        h.controller.setActive(false)
+        h.controller.setActive(true)
+        h.controller.focus(4)
+        advanceTimeBy(2_000); runCurrent()
+        assertEquals(emptyList<Long>(), h.played)
+        h.controller.onRemoteNavigation()
+        advanceTimeBy(800); runCurrent()
+        assertEquals(listOf(4L), h.played)
+    }
+
     @Test fun rapidNavigationTunesOnlyTheFinalChannelAfter800ms() = runTest {
         val h = Harness(this)
         h.controller.setActive(true)

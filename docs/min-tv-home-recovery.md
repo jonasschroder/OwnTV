@@ -61,13 +61,13 @@ favorite list can therefore receive an initial default again; record the user's
 intent during migration. No migration or restore is run automatically.
 
 Room's existing favorite invalidation refreshes Home. The same selected channel
-feeds logo/now-next EPG and the existing single muted preview. Initial or restored
-focus updates metadata only; preview requires deliberate remote navigation, and
+feeds logo/now-next EPG and the existing single muted preview. Initial, imported or restored
+focus updates metadata only (earlier loading-card navigation is disarmed); preview requires deliberate remote navigation, and
 fullscreen promotion uses the existing engine.
 
 ## Empty states
 
-- Initial profile/database/source observation or active synchronization: loading,
+- Initial profile/database/source observation or active Live-channel synchronization: loading,
   never an Add Source prompt. An incomplete first import gets a 30-second grace;
   afterward its available local channels are shown, or source management is offered.
   The default is deferred until `lastSyncAt` confirms a completed import.

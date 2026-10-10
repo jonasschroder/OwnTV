@@ -106,17 +106,23 @@ fun MinTvContentHome(
     }
     val emptyFocus = firstRowFocusRequester
     var restoreFavoriteAfterLoad by remember(activeProfileId) { mutableStateOf(false) }
-    LaunchedEffect(favorites.isNotEmpty()) {
-        if (favorites.isNotEmpty() && restoreFavoriteAfterLoad) {
-            if (navigation.selected == 1) { withFrameNanos { }; navigation.focus[1].requestFocus() }
-            restoreFavoriteAfterLoad = false
-        }
-    }
     val favoriteListState = rememberLazyListState()
     val hockeyVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-shl" } } }
     val twitchVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "mintv-twitch" } } }
     var favoriteRowFocused by remember { mutableStateOf(false) }
     var remoteNavigationSeen by remember(activeProfileId) { mutableStateOf(false) }
+    LaunchedEffect(favorites.isNotEmpty()) {
+        if (favorites.isNotEmpty() && restoreFavoriteAfterLoad) {
+            if (navigation.selected == 1 && previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
+                // Earlier navigation on the loading card must not arm a newly inserted default.
+                remoteNavigationSeen = false
+                controller.setActive(false)
+                controller.setActive(active)
+                withFrameNanos { }; navigation.focus[1].requestFocus()
+            }
+            restoreFavoriteAfterLoad = false
+        }
+    }
     val pauseOrDispose by rememberUpdatedState(onPauseOrDispose)
 
     // There is no movie/trending hero decoder on this destination.

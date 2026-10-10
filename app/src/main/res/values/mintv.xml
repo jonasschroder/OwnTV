@@ -33,7 +33,7 @@
     <string name="mintv_shl_open">View all matches</string>
     <string name="mintv_shl_expand">Expand on matchdays</string>
     <string name="mintv_shl_compact_only">Compact on Home</string>
-    <string name="mintv_shl_source_notice">Experimental reader of Swehockey public pages. Off by default. No documented API or explicit permission for automated reuse has been verified. Enable only for personal testing with acceptable access. Results are snapshots; live periods and lineups are unverified.</string>
+    <string name="mintv_shl_source_notice">Experimental SHL and HockeyAllsvenskan reader of Swehockey public pages. Off by default. No documented API or explicit permission for automated reuse has been verified. Enable only for personal testing with acceptable access. Results are snapshots; live periods and lineups are unverified.</string>
     <string name="mintv_shl_enable">Enable experimental hockey data</string>
     <string name="mintv_shl_disable">Disable hockey data</string>
     <string name="mintv_shl_access_blocked">An access restriction was detected. Automatic requests have stopped. Keep the reader off until permitted access has been verified.</string>
@@ -103,4 +103,26 @@
     <string name="mintv_browse_channels">Browse channel categories</string>
     <string name="mintv_browse_categories">Channel categories</string>
     <string name="mintv_welcome">Welcome to Min TV</string>
+    <string name="mintv_my_teams">My teams</string>
+    <string name="mintv_my_teams_help">Choose favorite teams for this profile. No account or typing required.</string>
+    <string name="mintv_sports_save_failed">Team settings could not be saved. Try again.</string>
+    <string name="mintv_ice_hockey">Ice hockey</string>
+    <string name="mintv_football">Football</string>
+    <string name="mintv_sports_hide_home">Hide sport on Home</string>
+    <string name="mintv_sports_show_home">Show sport on Home</string>
+    <string name="mintv_sports_show_scores">Show results</string>
+    <string name="mintv_sports_hide_scores">Hide results</string>
+    <string name="mintv_sports_no_teams">Choose teams to personalize Home. Nothing is fetched until you enable experimental data.</string>
+    <string name="mintv_team_unavailable">Team unavailable</string>
+    <string name="mintv_primary_team">Make primary</string>
+    <string name="mintv_move_up">Move up</string>
+    <string name="mintv_move_down">Move down</string>
+    <string name="mintv_remove_team">Remove</string>
+    <string name="mintv_swedish_football">Swedish football</string>
+    <string name="mintv_schedule_unavailable">You can follow these clubs. Fixtures and standings are unavailable until a reliable, permitted source is verified.</string>
+    <string name="mintv_team_following">Following ✓</string>
+    <string name="mintv_follow_team">Follow</string>
+    <string name="mintv_choose_teams">Choose teams</string>
+    <string name="mintv_my_sport">My sport</string>
+    <string name="mintv_my_matches_today">My matches today</string>
 </resources>

@@ -179,7 +179,7 @@ fun MinTvContentHome(
         }
     }
 
-    ShlCompanion(
+    MinSportCompanion(
         visible = hockeyVisible,
         active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
         liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,

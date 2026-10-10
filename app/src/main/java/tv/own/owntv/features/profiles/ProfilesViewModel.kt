@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -20,10 +21,11 @@ import tv.own.owntv.core.settings.SettingsRepository
  * Phase 6.5 — profile creation/switching and the launch gate's data. Shared by the "Who's watching?"
  * gate and the Settings → Profiles management screen.
  */
-class ProfilesViewModel(
+class ProfilesViewModel internal constructor(
     private val profileDao: ProfileDao,
     private val settings: SettingsRepository,
     private val manager: ProfileManager,
+    private val sports: tv.own.owntv.features.home.SportsPreferences,
 ) : ViewModel() {
     private val firstRunMutex = Mutex()
 
@@ -32,6 +34,7 @@ class ProfilesViewModel(
         viewModelScope.launch { firstRunMutex.withLock {
             if (profileDao.getAllOnce().isEmpty() && settings.activeProfileId.first() < 0) {
                 val id = manager.create(defaultName, 0, false, null, defaultName)
+                sports.save(id, tv.own.owntv.features.home.SportPreferences())
                 manager.switchTo(id)
             }
             onDone()
@@ -46,7 +49,13 @@ class ProfilesViewModel(
     // fresh install or a restore/recovery window; treating both as the same value let MainActivity
     // enter the shell while Room was still deciding whether the active profile was PIN-locked.
     val profileState: StateFlow<ProfileLoadState> = profileDao.observeAll()
-        .map<List<ProfileEntity>, ProfileLoadState> { ProfileLoadState.Loaded(it) }
+        .map<List<ProfileEntity>, ProfileLoadState> {
+            // Optional local sport preferences must never prevent Room's PIN gate from loading.
+            try { sports.migrateLegacy(it) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Storage failure leaves the legacy migration retryable. */ }
+            ProfileLoadState.Loaded(it)
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ProfileLoadState.Loading)
 
     /** The persisted profile currently shown by the app. Settings screens use this to distinguish
@@ -76,13 +85,16 @@ class ProfilesViewModel(
      */
     fun create(name: String, avatarId: Int, isKids: Boolean, pin: String?, defaultName: String, onCreated: (Long) -> Unit = {}) {
         viewModelScope.launch {
-            onCreated(manager.create(name, avatarId, isKids, pin, defaultName))
+            val id = manager.create(name, avatarId, isKids, pin, defaultName)
+            sports.save(id, tv.own.owntv.features.home.SportPreferences())
+            onCreated(id)
         }
     }
 
     fun createAndActivate(name: String, avatarId: Int, isKids: Boolean, pin: String?, defaultName: String, onCreated: (Long) -> Unit) {
         viewModelScope.launch {
             val id = manager.create(name, avatarId, isKids, pin, defaultName)
+            sports.save(id, tv.own.owntv.features.home.SportPreferences())
             manager.switchTo(id)
             onCreated(id)
         }
@@ -106,7 +118,7 @@ class ProfilesViewModel(
     }
 
     fun delete(profile: ProfileEntity) {
-        viewModelScope.launch { manager.delete(profile) }
+        viewModelScope.launch { manager.delete(profile); if (profileDao.getById(profile.id) == null) sports.remove(profile.id) }
     }
 }
 

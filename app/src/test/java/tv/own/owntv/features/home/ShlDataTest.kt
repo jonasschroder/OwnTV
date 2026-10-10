@@ -38,6 +38,14 @@ class ShlDataTest {
         assertThrows(IllegalArgumentException::class.java) { SwehockeyParser.discover("<html>maintenance</html>") }
         assertThrows(IllegalArgumentException::class.java) { SwehockeyParser.discover("<a href=\"/ScheduleAndResults/Live/987\">SHL</a><a href=\"/ScheduleAndResults/Live/988\">SHL</a>") }
     }
+    @Test fun allsvenskanDiscoveryKeepsLeagueIdsSeparate() {
+        val index = "<a href=\"/ScheduleAndResults/Live/20961\">SHL</a>" +
+            "<a href=\"/ScheduleAndResults/Live/20962\">HockeyAllsvenskan</a>"
+        assertEquals("20961", SwehockeyParser.discover(index, "SHL"))
+        assertEquals("20962", SwehockeyParser.discover(index, "HockeyAllsvenskan"))
+        assertThrows(IllegalArgumentException::class.java) { SwehockeyParser.discover(index, "Allsvenskan") }
+        assertThrows(IllegalArgumentException::class.java) { SwehockeyParser.discover(index.replace("HockeyAllsvenskan", "Changed markup"), "HockeyAllsvenskan") }
+    }
     @Test fun respectsRobotsRestrictionsAndFailsClosedOnUnexpectedMarkup() {
         assertTrue(SwehockeyParser.robotsPermit("User-agent: *\nDisallow:\n"))
         assertFalse(SwehockeyParser.robotsPermit("User-agent: *\nDisallow: /\n"))

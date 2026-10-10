@@ -53,10 +53,18 @@ internal fun ProfileSettingsRows() {
     var editing by remember { mutableStateOf<ProfileEntity?>(null) }
     var creating by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<ProfileEntity?>(null) }
+    var teamsOpen by remember(activeProfileId) { mutableStateOf(false) }
     // A closing editor or confirmation hands focus back to the row it came from (Add a profile, or the
     // profile — its neighbour when it was deleted).
     val rowFocus = remember { HashMap<Long, FocusRequester>() }
     val addFocus = remember { FocusRequester() }
+    val teamsFocus = remember { FocusRequester() }
+    var returnToTeams by remember { mutableStateOf(false) }
+    LaunchedEffect(teamsOpen) {
+        if (!teamsOpen && returnToTeams) {
+            withFrameNanos { }; runCatching { teamsFocus.requestFocus() }; returnToTeams = false
+        }
+    }
     var returnTo by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(editing, creating, confirmDelete, profiles) {
         if (editing != null || creating || confirmDelete != null) return@LaunchedEffect
@@ -114,6 +122,17 @@ internal fun ProfileSettingsRows() {
         help = help,
         modifier = Modifier.focusRequester(addFocus),
     )
+
+    if (profiles.any { it.id == activeProfileId }) StageSettingRow(
+        icon = OwnTVIcon.SPARKLE,
+        title = stringResource(R.string.mintv_my_teams),
+        desc = stringResource(R.string.mintv_my_teams_help),
+        value = null,
+        onClick = { returnToTeams = true; teamsOpen = true },
+        help = help,
+        modifier = Modifier.focusRequester(teamsFocus),
+    )
+    if (teamsOpen) tv.own.owntv.features.home.SportsTeamPicker(activeProfileId) { teamsOpen = false }
 
     if (creating) {
         ProfileEditorDialog(

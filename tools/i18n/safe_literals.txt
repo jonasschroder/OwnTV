@@ -115,9 +115,8 @@
 1	locale	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	EN
 1	performance	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	home-data
 3	technical	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	w1280
-8	empty	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	\0
+9	empty	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	\0
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	broadcast-enabled
-2	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	farjestad
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-access-blocked
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-enabled
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-expand
@@ -204,10 +203,12 @@
 1	locale	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Europe/Stockholm
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	GP
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Game
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	HockeyAllsvenskan
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	L
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Last update:[\\s\\u00a0]*(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2})
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	RK
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Result
+2	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	SHL
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Schedule and Results
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Standings
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	T
@@ -223,7 +224,11 @@
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	\\p{M}+
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	\\s+
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	\\s+-\\s+
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	aik
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	ais
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	almtuna
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	bif
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	bik
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	bjorkloven
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	brynas
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	colspan="12"
@@ -235,9 +240,13 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	fhc
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	frolunda
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	highlights
-1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	href="/ScheduleAndResults/(?:Live|Overview)/(\\d+)"[^>]*>\\s*SHL\\s*<
+1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	href="/ScheduleAndResults/(?:Live|Overview)/(\\d+)"[^>]*>\\s*${Regex.escape(league)}\\s*<
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	hv
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	hv71
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	iko
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	kalmar
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	karlskoga
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	khc
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	lakers
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	leksand
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	lhc
@@ -247,26 +256,44 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	loven
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	lulea
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	malmo
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	mik
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	modo
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	mora
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	nybro
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	ohk
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	oik
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	orebro
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	oskarshamn
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	ostersund
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	rbk
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	redhawks
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	replay
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	repris
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	rogle
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	roma
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	saik
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	sammandrag
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	skelleftea
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	sodertalje
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	ssk
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	studio
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	tik
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	timra
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	title="(\\d+)"
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	vasteras
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	vaxjo
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	vhc
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	vik
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	vikings
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	vimmerby
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	visby
 2	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	yyyy-MM-dd HH:mm
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	/
 1	url	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	/ScheduleAndResults/Schedule/$season
 1	url	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	/ScheduleAndResults/Standings/$season
 1	url	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	/robots.txt
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	:
+2	regex	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	<h2>\\s*${Regex.escape(competition.name)}\\s*</h2>
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	MinTV-ExperimentalSHL/0.2
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	User-Agent
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	\\d{1,9}
@@ -275,16 +302,102 @@
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	away
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	faceoff
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	games
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	hockey-window-at
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	hockey-window-count
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	home
 1	url	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	https://stats.swehockey.se$path
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	id
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	mintv-companion
+1	file-path	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	mintv-ha.json
 1	file-path	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	mintv-shl.json
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	result
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	season
-4	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-access-blocked
-2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-enabled
+5	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-access-blocked
+5	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-enabled
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	sourceAt
+1	empty	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	-
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	:
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	AIK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Almtuna IS
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	BIK Karlskoga
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	BK Häcken
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Brynäs IF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Degerfors IF
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Djurgårdens IF
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Frölunda HC
+3	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Färjestad BK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	GAIS
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	HV 71
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Halmstads BK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Hammarby IF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	HockeyAllsvenskan
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IF Björklöven
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IF Brommapojkarna
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IF Elfsborg
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IF Malmö Redhawks
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IFK Göteborg
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IFK Norrköping
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IK Oskarshamn
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	IK Sirius
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Kalmar FF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Kalmar HC
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Leksands IF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Linköping HC
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Luleå HF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Malmö FF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Mjällby AIF
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	MoDo Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Mora IK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Nybro Vikings IF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Rögle BK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	SHL
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Skellefteå AIK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Södertälje SK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Timrå IK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Vimmerby HC
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Visby/Roma HK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Västerås IK
+2	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Växjö Lakers HC
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	bik
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	bjorkloven
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	farjestad
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	fbk
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	fhc
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	football:
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	frolunda
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	hockey:
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	hv
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	hv71
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	karlskoga
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	lakers
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	leksand
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	leksands
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	lif
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	loven
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	malmo
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	modo
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	redhawks
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	saik
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	se.football.unverified
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	se.hockeyallsvenskan
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	se.shl
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	skelleftea
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	vaxjo
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Örebro HK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Östers IF
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	Östersunds IK
+1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	–
+1	regex	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	(?:hockey|football):[a-z0-9-]{1,100}
+2	json	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	hideScores
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	legacy-migrated
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	mintv-sport-profiles
+2	json	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	owner
+3	preference-key	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	profile:$profileId
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	profile:${profile.id}
+2	json	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	prominent
+2	json	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	selection
+2	json	app/src/main/java/tv/own/owntv/features/home/SportsPreferences.kt	teams
 1	regex	app/src/main/java/tv/own/owntv/features/home/TvmatchenBroadcastSource.kt	/match/[a-z0-9-]{1,140}-[0-9]{1,10}
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TvmatchenBroadcastSource.kt	MinTV-ExperimentalBroadcast/0.2 (personal non-commercial test)
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TvmatchenBroadcastSource.kt	SHL

@@ -48,9 +48,10 @@ internal object SwehockeyParser {
         }.toList()
     }
 
-    fun discover(html: String): String {
+    fun discover(html: String, league: String = "SHL"): String {
         require(html.length <= 600_000)
-        val ids = Regex("href=\"/ScheduleAndResults/(?:Live|Overview)/(\\d+)\"[^>]*>\\s*SHL\\s*<")
+        require(league in listOf("SHL", "HockeyAllsvenskan"))
+        val ids = Regex("href=\"/ScheduleAndResults/(?:Live|Overview)/(\\d+)\"[^>]*>\\s*${Regex.escape(league)}\\s*<")
             .findAll(html).map { it.groupValues[1] }.distinct().toList()
         require(ids.size == 1)
         return ids.single()
@@ -122,6 +123,10 @@ internal object ShlEpgMatcher {
         listOf("vaxjo", "lakers"), listOf("timra", "tik"), listOf("orebro", "ohk"),
         listOf("linkoping", "lhc"), listOf("rogle", "rbk"), listOf("leksand", "lif"),
         listOf("djurgarden", "dif"), listOf("bjorkloven", "loven"), listOf("hv", "hv71"),
+        listOf("karlskoga", "bik"), listOf("modo"), listOf("aik"), listOf("sodertalje", "ssk"),
+        listOf("oskarshamn", "iko"), listOf("vasteras", "vik"), listOf("almtuna", "ais"),
+        listOf("ostersund", "oik"), listOf("vimmerby", "vhc"), listOf("nybro", "vikings"),
+        listOf("mora", "mik"), listOf("visby", "roma"), listOf("kalmar", "khc"),
     )
     private fun teamAliases(name: String): List<String> {
         val tokens = teamTokens(name)

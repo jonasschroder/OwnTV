@@ -39,12 +39,27 @@ import tv.own.owntv.ui.theme.mpx
 
 /** Kept outside the Home lazy list: navigation and scroll survive entering match details. */
 @Composable
-internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewModel, profileId: Long?,
+internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewModel, profileId: Long?,
     favorites: List<ChannelEntity>, onPlay: (ChannelEntity, List<ChannelEntity>) -> Unit, contentStart: Dp,
     onSources: () -> Unit,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
+    val sports = koinInject<SportsRepository>()
+    val teamStore = koinInject<SportsPreferences>()
+    val teamRevision by teamStore.changes.collectAsStateWithLifecycle()
+    var selection by remember(profileId) { mutableStateOf<SportPreferences?>(null) }
+    var teamsOpen by rememberSaveable(profileId) { mutableStateOf(false) }
+    LaunchedEffect(profileId, teamRevision) {
+        try { selection = profileId?.let { teamStore.read(it) } }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { selection = SportPreferences() }
+    }
+    val selectedTeams = selection ?: SportPreferences()
+    val requiredCompetitions = SportsCatalog.required(selectedTeams)
+    var competitionId by rememberSaveable(profileId) { mutableStateOf(SportsCatalog.shl.id) }
+    val selectedCompetition = requiredCompetitions.firstOrNull { it.id == competitionId } ?: requiredCompetitions.firstOrNull() ?: SportsCatalog.shl
+    val personalTeam = SportsCatalog.team(selectedTeams.primaryTeamId.orEmpty())
     val broadcasts = koinInject<TvmatchenBroadcastSource>()
     val overrides = koinInject<ShlChannelOverrides>()
     val libraryContext by liveVm.homeLibraryContext.collectAsStateWithLifecycle()
@@ -65,7 +80,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     var categoryRows by remember(profileId) { mutableStateOf<LiveViewModel.HomeChannelCandidates?>(null) }
     var upcoming by rememberSaveable { mutableStateOf(false) }
     var page by rememberSaveable { mutableIntStateOf(0) }
-    var data by remember { mutableStateOf<ShlSnapshot?>(null) }
+    var data by remember(profileId) { mutableStateOf<Map<String, SportSnapshot>>(emptyMap()) }
     var failed by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var standings by remember { mutableStateOf<List<ShlStanding>>(emptyList()) }
@@ -74,7 +89,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     var query by rememberSaveable(profileId) { mutableStateOf("") }
     var channels by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var confirmed by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
-    var matchedGame by remember(profileId) { mutableStateOf<ShlGame?>(null) }
+    var matchedGame by remember(profileId) { mutableStateOf<SportFixture?>(null) }
     var matching by remember { mutableStateOf(false) }
     var matchFailed by remember { mutableStateOf(false) }
     var broadcast by remember { mutableStateOf<BroadcastAssignment?>(null) }
@@ -108,11 +123,15 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     val matchList = rememberLazyListState()
     val tableList = rememberLazyListState()
     val today = stockholmDay(now)
-    val todaysGames = data?.games.orEmpty().filter { it.on(today) }.sortedBy { !it.fbk }
-    val next = data?.games?.firstOrNull { it.fbk && it.faceoff >= now }
-    val expanded = enabled && expansion && todaysGames.isNotEmpty()
-    val available = active && (visible || screen)
-    val selected = selectedId?.let { id -> data?.games?.firstOrNull { it.id == id } }
+    val allGames = remember(data) { data.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
+    val mine = personalFixtures(allGames, selectedTeams, now)
+    val todaysGames = allGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it.faceoff })
+    val myToday = mine.filter { it.on(today) }
+    val next = mine.firstOrNull { it.faceoff >= now }
+    val expanded = enabled && expansion && myToday.isNotEmpty()
+    val available = active && (visible && selectedTeams.prominent || screen) && selection != null && selectedTeams.teamIds.isNotEmpty()
+    val selected = selectedId?.let { id -> allGames.firstOrNull { it.id == id } }
+    val fetchedAt = data.values.minOfOrNull { it.fetchedAt }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardWasVisible by remember { mutableStateOf(false) }
     LaunchedEffect(searchOpen, imeVisible) {
@@ -122,38 +141,47 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     LaunchedEffect(profileId, libraryContext, libraryCount, favorites) { resolvedCards.clear(); directCards.clear() }
 
     LaunchedEffect(available, enabled) {
-        if (available && enabled) while (true) { now = System.currentTimeMillis(); delay(30_000) }
+        if (available && enabled && requiredCompetitions.any { it.scheduleAvailable }) while (true) { now = System.currentTimeMillis(); delay(30_000) }
     }
-    LaunchedEffect(available, enabled) {
+    LaunchedEffect(available, enabled, profileId, requiredCompetitions) {
+        data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         if (!available || !enabled) return@LaunchedEffect
-        data = repository.cached()
-        var retry = 60_000L
+        val competitions = sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled)
+        if (competitions.isEmpty()) return@LaunchedEffect
+        data = competitions.mapNotNull { c -> sports.cached(c)?.let { c.id to it } }.toMap()
+        var retry = 60 * 60_000L
         while (true) {
-            loading = data == null
-            try { data = repository.refresh(System.currentTimeMillis()); failed = false; retry = 60_000 }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { failed = true; retry = (retry * 2).coerceAtMost(15 * 60_000) }
-            finally { loading = false }
+            loading = data.isEmpty()
+            var failures = false
+            for (competition in competitions) {
+                try { sports.refresh(competition, System.currentTimeMillis())?.let { data = data + (competition.id to it) } }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { failures = true }
+            }
+            failed = failures
+            loading = false
+            retry = if (failures) (retry * 2).coerceAtMost(6 * 60 * 60_000L) else 60 * 60_000L
             delay(retry)
         }
     }
-    LaunchedEffect(available, enabled, expanded, screen, section, data?.seasonId, today) {
-        if (!available || !enabled || !(expanded || screen && section in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD))) return@LaunchedEffect
-        val season = data?.seasonId ?: return@LaunchedEffect
+    LaunchedEffect(available, enabled, screen, section, selectedCompetition, data[selectedCompetition.id]?.seasonId) {
+        standings = emptyList(); standingsAt = 0
+        if (!available || !enabled || !screen || section !in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)) return@LaunchedEffect
+        val season = data[selectedCompetition.id]?.seasonId ?: return@LaunchedEffect
         while (true) {
-            try { standings = repository.standings(season, System.currentTimeMillis()); standingsAt = repository.standingsFetchedAt }
+            try { standings = sports.standings(selectedCompetition, season, System.currentTimeMillis()); standingsAt = repository.standingsFetchedAt }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { standings = emptyList(); standingsAt = 0 }
             delay(6 * 60 * 60_000L)
         }
     }
-    val scheduleFresh = !failed && data?.let { now - it.fetchedAt in 0 until 10 * 60_000L } == true
+    val scheduleFresh = !failed && data.isNotEmpty() && data.values.all { now - it.fetchedAt in 0 until 6 * 60 * 60_000L }
     val gameToMatch = if (!broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
-        else if (selectedId != null) selected else todaysGames.firstOrNull { it.fbk }.takeIf { expanded }
+        else if (selectedId != null) selected else myToday.firstOrNull().takeIf { expanded }
     LaunchedEffect(available, enabled, broadcastEnabled, gameToMatch, scheduleFresh) {
         broadcast = null
         if (available && enabled && broadcastEnabled && scheduleFresh && gameToMatch != null) {
-            val fixture = BroadcastFixture.from(gameToMatch)
+            val fixture = gameToMatch.broadcastFixture()
             while (true) {
                 broadcast = BroadcastResolver.usable(fixture, broadcasts.assignment(fixture), Instant.ofEpochMilli(System.currentTimeMillis()))
                 broadcast?.let { value ->
@@ -165,7 +193,32 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
             }
         }
     }
-    val validBroadcast = if (broadcastEnabled && enabled) gameToMatch?.let { BroadcastResolver.usable(BroadcastFixture.from(it), broadcast, Instant.ofEpochMilli(now)) } else null
+    val validBroadcast = if (broadcastEnabled && enabled) gameToMatch?.let { BroadcastResolver.usable(it.broadcastFixture(), broadcast, Instant.ofEpochMilli(now)) } else null
+    // Resolve at most the three visible favorite cards. Extra cards share the existing HTTP budget
+    // and local bounded queries; no decoder, provider import or background worker is involved.
+    val extraHomeGames = myToday.take(3).drop(1)
+    LaunchedEffect(available, visible, screen, enabled, expanded, profileId, extraHomeGames,
+        scheduleFresh, broadcastEnabled, libraryContext, libraryCount, favorites, choiceVersion) {
+        if (!available || !visible || screen || !enabled || !expanded || profileId == null) return@LaunchedEffect
+        while (true) {
+            for (game in extraHomeGames) {
+                val key = fixtureKey(game.broadcastFixture())
+                try {
+                    val at = System.currentTimeMillis()
+                    val assignment = if (broadcastEnabled && scheduleFresh) BroadcastResolver.usable(game.broadcastFixture(),
+                        broadcasts.assignment(game.broadcastFixture()), Instant.ofEpochMilli(at)) else null
+                    assignment?.let { knownBroadcasts[key] = it }
+                    val resolution = resolveSportsCard(game, allGames, at, scheduleFresh, assignment,
+                        profileId, liveVm, overrides, favorites)
+                    resolvedCards[key] = resolution.expiresAt to resolution.channels
+                    if (resolution.direct == null) directCards.remove(key) else directCards[key] = resolution.direct
+                    if (broadcasts.blocked) { knownBroadcasts.clear(); resolvedCards.clear(); directCards.clear() }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { resolvedCards.remove(key); directCards.remove(key) }
+            }
+            delay(2 * 60_000L)
+        }
+    }
     LaunchedEffect(available, profileId, libraryContext, libraryCount) {
         if (available && profileId != null) hasChannels = liveVm.homeHasChannels(profileId)
     }
@@ -178,9 +231,9 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
         try {
             delay(300)
             hasChannels = liveVm.homeHasChannels(profileId)
-            val manual = overrides.read(profileId, BroadcastFixture.from(game), now)
+            val manual = overrides.read(profileId, game.broadcastFixture(), now)
             chosenChannel = manual?.let { value -> liveVm.homeChannel(value.channelId, profileId)?.takeIf {
-                value.usable(profileId, BroadcastFixture.from(game), now, it.id, it.sourceId, it.name)
+                value.usable(profileId, game.broadcastFixture(), now, it.id, it.sourceId, it.name)
             } }
             manualChoice = manual.takeIf { chosenChannel != null }
             val pool = liveVm.homeMatchCandidates("", favorites, profileId, validBroadcast?.channels.orEmpty().map { it.name })
@@ -190,8 +243,8 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
             val epgSupport = withContext(Dispatchers.IO) {
                 found.filter { channel -> scheduleFresh &&
                     liveVm.homeStoredProgrammes(channel, game.faceoff - 60 * 60_000, game.faceoff + 3 * 60 * 60_000).any { epg ->
-                    ShlEpgMatcher.confirmed(game, epg.title, epg.description, epg.startMs, epg.stopMs,
-                        data?.games.orEmpty().filter { kotlin.math.abs(it.faceoff - game.faceoff) < 3 * 60 * 60_000 })
+                    ShlEpgMatcher.confirmed(game.hockeyGame(), epg.title, epg.description, epg.startMs, epg.stopMs,
+                        allGames.filter { it.competition == game.competition && kotlin.math.abs(it.faceoff - game.faceoff) < 3 * 60 * 60_000 }.map { it.hockeyGame() })
                 } }
             }
             val matches = if (validBroadcast != null) discovered.channels.sortedBy { it !in epgSupport } else epgSupport
@@ -229,7 +282,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
             restoreTarget = if (previous.channelPicker) pickerFocus else if (previous.gameId != null) detailFocus else gameFocus[old] ?: tabFocus
         }
     }
-    fun choose(game: ShlGame) { selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
+    fun choose(game: SportFixture) { selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
     fun open() { screen = true; restoreTarget = tabFocus }
     fun play(channel: ChannelEntity, list: List<ChannelEntity>) {
         // Shell saves this destination during fullscreen; Back returns to the match/picker.
@@ -242,7 +295,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     LaunchedEffect(matchedGame, matching, directChannel, reliableChannels, validBroadcast, manualChoice) {
         val game = matchedGame ?: return@LaunchedEffect
         if (!matching && game == gameToMatch) {
-            val key = fixtureKey(BroadcastFixture.from(game))
+            val key = fixtureKey(game.broadcastFixture())
             val expiry = if (directChannel == manualChannel && manualChannel != null) manualChoice?.expiresAt ?: 0L
                 else validBroadcast?.expiresAt?.toEpochMilli() ?: Long.MAX_VALUE
             resolvedCards[key] = minOf(System.currentTimeMillis() + 2 * 60_000L, expiry) to reliableChannels
@@ -266,7 +319,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
     fun pick(channel: ChannelEntity) {
         val game = selected ?: return
         val profile = profileId ?: return
-        overrides.save(FixtureChannelChoice(profile, fixtureKey(BroadcastFixture.from(game)), channel.id,
+        overrides.save(FixtureChannelChoice(profile, fixtureKey(game.broadcastFixture()), channel.id,
             channel.sourceId, channel.name, game.faceoff + 4 * 60 * 60_000L), System.currentTimeMillis())
         choiceVersion++; play(channel, pickerRows)
     }
@@ -278,47 +331,63 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
 
     Box(Modifier.fillMaxSize()) {
         homeContent({
-            Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {
-            TvCard(::open, Modifier.fillMaxWidth().focusRequester(entryFocus)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    TvText(stringResource(R.string.mintv_fbk_title), size = 26, color = MinTvTeal, bold = true)
-                    TvText(stringResource(if (expanded) R.string.mintv_shl_open else R.string.mintv_matchcenter), size = 20)
+            if (selectedTeams.prominent) Column(verticalArrangement = Arrangement.spacedBy(10.mpx)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TvText(stringResource(R.string.mintv_my_sport), size = 26, color = MinTvTeal, bold = true)
+                    if (selectedTeams.teamIds.isNotEmpty()) HomeButton(stringResource(R.string.mintv_matchcenter), ::open, Modifier.focusRequester(entryFocus))
+                    else HomeButton(stringResource(R.string.mintv_choose_teams), { teamsOpen = true }, Modifier.focusRequester(entryFocus))
                 }
-                if (!enabled) TvText(stringResource(R.string.mintv_shl_disabled), color = MinTvMuted)
-                else if (data == null) TvText(stringResource(if (loading) R.string.mintv_companion_loading else R.string.mintv_companion_unavailable), color = MinTvMuted)
-                else if (expanded) {
-                    todaysGames.take(3).forEach { game ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
-                            TvText(pairLabel(game), Modifier.weight(1f), color = if (game.fbk) MinTvTeal else Color.White, bold = game.fbk)
-                            TvText(game.result ?: stockholmTime(game.faceoff), lines = 1, bold = true)
+                if (expanded) {
+                    TvText(stringResource(R.string.mintv_my_matches_today), size = 22, bold = true)
+                    myToday.take(3).forEach { game ->
+                        val key = fixtureKey(game.broadcastFixture())
+                        val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
+                        val channel = if (game == gameToMatch) directChannel else directCards[key].takeIf { resolvedCards[key]?.let { now < it.first } == true }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
+                            TvCard({ screen = true; choose(game) }, Modifier.weight(1f)) {
+                                TvText(pairLabel(game), size = 26, bold = true)
+                                TvText(fixtureWhen(game, now), color = MinTvMuted, size = 22)
+                                assignment?.channels?.filter { it.linear }?.joinToString { it.name }?.let { TvText(it, color = MinTvTeal, size = 22) }
+                            }
+                            HomeButton(stringResource(if (channel != null) R.string.mintv_watch_match else R.string.mintv_shl_choose), {
+                                if (channel != null) play(channel, listOf(channel))
+                                else { screen = true; choose(game); picker = true; restoreTarget = pickerFocus }
+                            })
                         }
                     }
-                } else if (next != null) TvText(stringResource(R.string.mintv_shl_home_next, pairLabel(next), fixtureWhen(next, now)))
-                else TvText(stringResource(R.string.mintv_shl_next_unknown), color = MinTvMuted)
-                if (enabled && data != null) TvText(stringResource(if (failed) R.string.mintv_cached_updated else R.string.mintv_updated,
-                    updateLabel(data!!.fetchedAt, now)), size = 18, color = MinTvMuted, lines = 1)
-                if (expanded && validBroadcast != null) TvText(validBroadcast.channels.filter { it.linear }.joinToString { it.name }, size = 23, color = MinTvTeal)
-            }
-            if (expanded && directChannel != null) HomeButton(stringResource(R.string.mintv_watch_match), { play(directChannel, reliableChannels.ifEmpty { listOf(directChannel) }) })
+                } else if (next != null) TvCard({ screen = true; choose(next) }, Modifier.fillMaxWidth()) {
+                    TvText(stringResource(R.string.mintv_shl_home_next, pairLabel(next), fixtureWhen(next, now)), size = 24)
+                } else if (selectedTeams.teamIds.isNotEmpty()) TvText(stringResource(if (!enabled) R.string.mintv_shl_disabled
+                    else if (requiredCompetitions.none { it.scheduleAvailable }) R.string.mintv_schedule_unavailable
+                    else if (loading) R.string.mintv_companion_loading else R.string.mintv_shl_next_unknown), color = MinTvMuted, size = 20)
+                if (enabled && fetchedAt != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(fetchedAt, now)), size = 18, color = MinTvMuted, lines = 1)
             }
         }, screen)
+        if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
             BackHandler(onBack = ::back)
             Column(Modifier.fillMaxSize().background(MinTvNavy).padding(start = contentStart, end = 48.mpx, top = 100.mpx, bottom = 32.mpx)
                 .focusGroup(), verticalArrangement = Arrangement.spacedBy(24.mpx)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        TvText(stringResource(R.string.mintv_shl_header), size = 42, bold = true, lines = 1)
-                        TvText(stringResource(R.string.mintv_fbk_title), color = MinTvTeal, size = 22, lines = 1)
+                        TvText(stringResource(R.string.mintv_my_sport), size = 42, bold = true, lines = 1)
+                        TvText(personalTeam?.name ?: stringResource(R.string.mintv_my_teams), color = MinTvTeal, size = 22, lines = 1)
                     }
                     TvText(stringResource(R.string.mintv_updated, when {
                         section == MatchcenterSection.TABLE && standingsAt > 0 -> updateLabel(standingsAt, now)
-                        data != null -> updateLabel(data!!.fetchedAt, now)
+                        fetchedAt != null -> updateLabel(fetchedAt, now)
                         else -> stringResource(R.string.mintv_companion_unavailable)
                     }), size = 18, color = MinTvMuted, lines = 1)
                     HomeButton(stringResource(R.string.mintv_back), ::back, Modifier.focusRequester(backFocus))
                 }
                 if (selectedId == null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                        requiredCompetitions.forEach { competition ->
+                            HomeButton(if (competition == SportsCatalog.football) stringResource(R.string.mintv_swedish_football) else competition.name,
+                                { competitionId = competition.id; page = 0 })
+                        }
+                        HomeButton(stringResource(R.string.mintv_choose_teams), { teamsOpen = true })
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.focusRestorer().focusGroup()) {
                         MatchcenterSection.entries.forEachIndexed { index, tab ->
                             TvCard({ section = tab; page = 0 }, Modifier.width(if (tab == MatchcenterSection.SETTINGS) 230.mpx else 200.mpx)
@@ -326,7 +395,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                                 TvText(stringResource(when (tab) {
                                     MatchcenterSection.MATCHES -> R.string.mintv_matches
                                     MatchcenterSection.TABLE -> R.string.mintv_shl_table
-                                    MatchcenterSection.FARJESTAD -> R.string.mintv_fbk_title
+                                    MatchcenterSection.FARJESTAD -> R.string.mintv_my_teams
                                     MatchcenterSection.SETTINGS -> R.string.mintv_companion_settings
                                 }), size = 23, lines = 1, bold = true)
                             }
@@ -339,13 +408,13 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                             item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                                 HomeButton(stringResource(if (enabled) R.string.mintv_shl_disable else R.string.mintv_shl_enable), {
                                     enabled = !enabled; repository.preferences.edit { putBoolean("shl-enabled", enabled) }
-                                    if (!enabled) { data = null; standings = emptyList(); selectedId = null; broadcast = null }
+                                    if (!enabled) { data = emptyMap(); standings = emptyList(); selectedId = null; broadcast = null }
                                 })
                                 HomeButton(stringResource(if (expansion) R.string.mintv_shl_compact_only else R.string.mintv_shl_expand), {
                                     expansion = !expansion; repository.preferences.edit { putBoolean("shl-expand", expansion) }
                                 })
                             } }
-                            item { data?.let { TvText(stringResource(R.string.mintv_shl_snapshot, stockholmDate(it.fetchedAt) + " " + stockholmTime(it.fetchedAt),
+                            item { data[selectedCompetition.id]?.let { TvText(stringResource(R.string.mintv_shl_snapshot, stockholmDate(it.fetchedAt) + " " + stockholmTime(it.fetchedAt),
                                 it.sourceUpdatedAt?.let { at -> stockholmDate(at) + " " + stockholmTime(at) } ?: stringResource(R.string.mintv_companion_unavailable)), color = MinTvMuted, lines = 4) } }
                             if (repository.preferences.getBoolean("shl-access-blocked", false)) item { TvText(stringResource(R.string.mintv_shl_access_blocked), color = MinTvMuted, lines = 4) }
                             item { FocusPanel { TvText(stringResource(R.string.mintv_broadcast_source_notice), color = MinTvMuted, lines = 4) } }
@@ -364,7 +433,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                                 if (showDifference) stringResource(R.string.mintv_goal_difference) else null, stringResource(R.string.mintv_table_points)) }
                             if (standings.isEmpty()) item { TvText(stringResource(R.string.mintv_companion_unavailable)) }
                             items(standings, key = { it.rank }) { standing ->
-                                FocusPanel(highlighted = ShlTeams.identity(standing.team) == "farjestad") {
+                                FocusPanel(highlighted = SportsCatalog.identity(standing.team, selectedCompetition.sport)?.id in selectedTeams.teamIds) {
                                 StandingRow(NumberFormat.getIntegerInstance().format(standing.rank), shortTeam(standing.team),
                                     standing.played?.takeIf { showPlayed }?.let { NumberFormat.getIntegerInstance().format(it) },
                                     standing.goalDifference?.takeIf { showDifference }?.let { NumberFormat.getIntegerInstance().format(it) },
@@ -373,15 +442,15 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                             }
                         }
                         else -> {
-                            val future = data?.games.orEmpty().filter { it.faceoff >= now }.filter { section != MatchcenterSection.FARJESTAD || it.fbk }
-                            val todayList = todaysGames.filter { section != MatchcenterSection.FARJESTAD || it.fbk }
+                            val future = allGames.filter { it.competition == selectedCompetition }.filter { it.faceoff >= now }.filter { section != MatchcenterSection.FARJESTAD || it.follows(selectedTeams) }
+                            val todayList = todaysGames.filter { it.competition == selectedCompetition }.filter { section != MatchcenterSection.FARJESTAD || it.follows(selectedTeams) }
                             val useFuture = upcoming || todayList.isEmpty()
                             val lastPage = (future.size - 1).coerceAtLeast(0) / 14
                             val currentPage = page.coerceIn(0, lastPage)
                             val games = if (useFuture) future.drop(currentPage * 14).take(14) else todayList
                             LazyColumn(state = matchList, verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                                 if (section == MatchcenterSection.FARJESTAD) item {
-                                    standings.singleOrNull { ShlTeams.identity(it.team) == "farjestad" }?.let {
+                                    standings.singleOrNull { SportsCatalog.identity(it.team, selectedCompetition.sport)?.id == selectedTeams.primaryTeamId }?.let {
                                         TvText(stringResource(R.string.mintv_fbk_position, NumberFormat.getIntegerInstance().format(it.rank),
                                             NumberFormat.getIntegerInstance().format(it.points)), size = 27, color = MinTvTeal, bold = true)
                                     }
@@ -393,14 +462,14 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                                     if (useFuture && currentPage < lastPage) HomeButton(stringResource(R.string.mintv_shl_next_page), { page = currentPage + 1 })
                                     if (failed) TvText(stringResource(R.string.mintv_cached), size = 18, color = MinTvMuted)
                                 } }
-                                if (games.isEmpty()) item { TvText(stringResource(if (!enabled) R.string.mintv_shl_disabled else if (loading) R.string.mintv_companion_loading else R.string.mintv_shl_next_unknown)) }
+                                if (games.isEmpty()) item { TvText(stringResource(if (!selectedCompetition.scheduleAvailable) R.string.mintv_schedule_unavailable else if (!enabled) R.string.mintv_shl_disabled else if (loading) R.string.mintv_companion_loading else R.string.mintv_shl_next_unknown)) }
                                 items(games, key = { it.id }) { game ->
                                     val focus = remember(game.id) { gameFocus.getOrPut(game.id) { FocusRequester() } }
-                                    val key = fixtureKey(BroadcastFixture.from(game))
-                                    val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(BroadcastFixture.from(game), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
+                                    val key = fixtureKey(game.broadcastFixture())
+                                    val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
                                     val cached = resolvedCards[key]?.takeIf { now < it.first && scheduleFresh }
                                     val direct = if (game == gameToMatch) directChannel else directCards[key].takeIf { cached != null }
-                                    MatchScorecard(game, now, assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },
+                                    MatchScorecard(game, now, selectedTeams.hideScores, assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },
                                         direct?.let { channel -> { play(channel, cached?.second.orEmpty().ifEmpty { listOf(channel) }) } }, Modifier.fillMaxWidth().focusRequester(focus))
                                 }
                             }
@@ -450,7 +519,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(22.mpx)) {
                         item { TvText(pairLabel(selected), size = 38, bold = true); TvText(fixtureWhen(selected, now), size = 26, color = MinTvMuted) }
-                        selected.result?.let { result -> item { TvText(stringResource(R.string.mintv_result_snapshot, result), size = 27, color = MinTvMuted) } }
+                        selected.result?.takeUnless { selectedTeams.hideScores }?.let { result -> item { TvText(stringResource(R.string.mintv_result_snapshot, result), size = 27, color = MinTvMuted) } }
                         validBroadcast?.let { assignment -> item { TvText(assignment.channels.filter { it.linear }.joinToString { it.name }, size = 30, color = MinTvTeal, bold = true)
                             TvText(stringResource(R.string.mintv_updated, updateLabel(assignment.checkedAt.toEpochMilli(), now)), size = 18, color = MinTvMuted) } }
                         if (manualChannel != null) item { TvText(stringResource(R.string.mintv_saved_channel, manualChannel.name), size = 25) }
@@ -466,7 +535,7 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
                         if (validBroadcast == null && manualChannel == null && !matching && reliableChannels.isEmpty() && hasChannels == true) item { TvText(stringResource(R.string.mintv_broadcast_unavailable), color = MinTvMuted) }
                         if (directChannel != null) item { HomeButton(stringResource(R.string.mintv_change_channel), { picker = true; searchOpen = false; restoreTarget = pickerFocus }) }
                         if (manualChannel != null) item { HomeButton(stringResource(R.string.mintv_forget_channel), {
-                            profileId?.let { overrides.clear(it, BroadcastFixture.from(selected)) }; choiceVersion++
+                            profileId?.let { overrides.clear(it, selected.broadcastFixture()) }; choiceVersion++
                         }) }
                     }
                 }
@@ -476,17 +545,17 @@ internal fun ShlCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewMod
 }
 
 @Composable
-private fun MatchScorecard(game: ShlGame, now: Long, broadcaster: String?, onClick: () -> Unit, onWatch: (() -> Unit)?, modifier: Modifier) {
+private fun MatchScorecard(game: SportFixture, now: Long, hideScores: Boolean, broadcaster: String?, onClick: () -> Unit, onWatch: (() -> Unit)?, modifier: Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
-    TvCard(onClick, Modifier.weight(1f), selected = game.fbk) {
+    TvCard(onClick, Modifier.weight(1f)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
                 TvText(pairLabel(game), size = 34, bold = true)
                 TvText(fixtureWhen(game, now), size = 25, color = MinTvMuted, lines = 1)
                 broadcaster?.takeIf { it.isNotBlank() }?.let { TvText(it, size = 26, color = MinTvTeal, lines = 1) }
             }
-            TvText(game.result ?: stockholmTime(game.faceoff), size = 32, bold = true, lines = 1)
-            if (game.result != null) TvText(stringResource(R.string.mintv_saved_result), size = 20, color = MinTvMuted, lines = 1)
+            TvText(game.result?.takeUnless { hideScores } ?: stockholmTime(game.faceoff), size = 32, bold = true, lines = 1)
+            if (game.result != null && !hideScores) TvText(stringResource(R.string.mintv_saved_result), size = 20, color = MinTvMuted, lines = 1)
         }
     }
     onWatch?.let { HomeButton(stringResource(R.string.mintv_watch_match), it) }
@@ -513,10 +582,10 @@ internal fun CompanionInput(value: String, modifier: Modifier = Modifier, onChan
 }
 
 @Composable
-private fun pairLabel(game: ShlGame): String = stringResource(R.string.mintv_shl_pair, shortTeam(game.home), shortTeam(game.away))
+private fun pairLabel(game: SportFixture): String = stringResource(R.string.mintv_shl_pair, shortTeam(game.home), shortTeam(game.away))
 
 @Composable
-private fun fixtureWhen(game: ShlGame, now: Long): String {
+private fun fixtureWhen(game: SportFixture, now: Long): String {
     val day = stockholmDay(game.faceoff)
     val date = when (day) {
         stockholmDay(now) -> stringResource(R.string.mintv_today)
@@ -524,4 +593,29 @@ private fun fixtureWhen(game: ShlGame, now: Long): String {
         else -> stockholmDate(game.faceoff)
     }
     return stringResource(R.string.mintv_fixture_time, date, stockholmTime(game.faceoff))
+}
+
+private data class SportsCardResolution(val channels: List<ChannelEntity>, val direct: ChannelEntity?, val expiresAt: Long)
+
+/** Uses only the current profile's local channels/EPG and an already checked metadata assignment. */
+private suspend fun resolveSportsCard(game: SportFixture, allGames: List<SportFixture>, now: Long,
+    fresh: Boolean, assignment: BroadcastAssignment?, profileId: Long, liveVm: LiveViewModel,
+    overrides: ShlChannelOverrides, favorites: List<ChannelEntity>): SportsCardResolution {
+    val fixture = game.broadcastFixture()
+    val manual = overrides.read(profileId, fixture, now)
+    val chosen = manual?.let { choice -> liveVm.homeChannel(choice.channelId, profileId)?.takeIf {
+        choice.usable(profileId, fixture, now, it.id, it.sourceId, it.name)
+    } }
+    val pool = if (assignment != null) liveVm.homeBroadcastCandidates(assignment.channels, profileId)
+        else liveVm.homeMatchCandidates("", favorites, profileId, emptyList())
+    val confirmed = if (assignment != null) pool.channels else if (!fresh) emptyList() else withContext(Dispatchers.IO) {
+        pool.channels.filter { channel -> liveVm.homeStoredProgrammes(channel, game.faceoff - 60 * 60_000,
+            game.faceoff + 3 * 60 * 60_000).any { epg ->
+            ShlEpgMatcher.confirmed(game.hockeyGame(), epg.title, epg.description, epg.startMs, epg.stopMs,
+                allGames.filter { it.competition == game.competition && kotlin.math.abs(it.faceoff - game.faceoff) < 3 * 60 * 60_000 }.map { it.hockeyGame() })
+        } }
+    }
+    val direct = chosen ?: confirmed.singleOrNull().takeIf { !pool.truncated }
+    val expiry = if (chosen != null) manual.expiresAt else assignment?.expiresAt?.toEpochMilli() ?: Long.MAX_VALUE
+    return SportsCardResolution(confirmed, direct, minOf(now + 2 * 60_000L, expiry))
 }

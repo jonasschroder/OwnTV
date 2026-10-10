@@ -17,6 +17,8 @@ import tv.own.owntv.core.live.GuideReader
 import tv.own.owntv.core.live.LiveEpgReader
 import tv.own.owntv.features.home.HomeViewModel
 import tv.own.owntv.features.home.ShlRepository
+import tv.own.owntv.features.home.SportsPreferences
+import tv.own.owntv.features.home.SportsRepository
 import tv.own.owntv.features.home.ShlChannelOverrides
 import tv.own.owntv.features.home.TvmatchenBroadcastSource
 import tv.own.owntv.features.home.TwitchStatus
@@ -61,6 +63,8 @@ val appModule = module {
     singleOf(::SearchReader)
     singleOf(::HomeFeedReader)
     singleOf(::ShlRepository)
+    singleOf(::SportsPreferences)
+    singleOf(::SportsRepository)
     singleOf(::TvmatchenBroadcastSource)
     singleOf(::ShlChannelOverrides)
     singleOf(::TwitchStatus)

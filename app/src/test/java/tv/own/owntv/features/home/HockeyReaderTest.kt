@@ -168,4 +168,14 @@ class HockeyReaderTest {
         assertEquals(14, previous.rows.size)
     }
 
+    @Test fun invalidSourceDateIsAFormatErrorAndNeverPresentedAsCacheIoFailure() = runBlocking {
+        val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+        val before = reader.refresh(shl, now)
+        source.response = CompanionResponse(200, html("shl-schedule").replace(Regex("2026-[0-9]{2}-[0-9]{2}"), "2026-13-40"))
+        val issue = failure { reader.refresh(shl, now + 60 * 60_000) }
+        assertEquals(HockeyFailureKind.FORMAT, issue.kind)
+        assertEquals(HockeyStage.SCHEDULE, issue.stage)
+        assertEquals(before, reader.cached(shl, now + 60 * 60_000))
+    }
+
 }

@@ -112,8 +112,11 @@ instructions and the read-only update checker. Ordinary PR builds use ephemeral
 debug keys and receive no signing secrets. See the PR's current-head check results
 and artifact link for the exact distributed APK, version and signer.
 
-Local verification: **290 app unit tests per variant, 939 Core, 271 player and
-6 Python checks** pass with no failures/skips. The new saved-page and repository
+Local verification: **291 app unit tests per variant, 939 Core, 271 player and
+6 Python checks** pass with no failures/skips. Both ARM debug variants and their
+instrumentation APKs build; lint has **0 errors, 117 warnings and 22 hints** per
+variant. Package/authority/permission/link isolation, absence of HOME and debug
+pseudolocale packaging pass. The new saved-page and repository
 regressions exercise the real captured October 2026 source markup, including the
 full validation guard, Frölunda's next fixture, HA/BIK identities, cache recreation,
 wrong-season/league rejection, cancellation, access denial, 429, persistent hard

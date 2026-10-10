@@ -113,7 +113,8 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
         storage.journal(mapOf("hockey-robots-at" to now))
     }
     private inline fun <T> parsed(stage: HockeyStage, now: Long, block: () -> T): T = try { block() }
-        catch (e: IllegalArgumentException) { throw HockeyDataException(HockeyIssue(HockeyFailureKind.FORMAT, stage, now)) }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { throw HockeyDataException(HockeyIssue(HockeyFailureKind.FORMAT, stage, now)) }
 
     private fun validateGames(c: Competition, games: List<ShlGame>, now: Long) {
         val today = Instant.ofEpochMilli(now).atZone(Stockholm).toLocalDate()

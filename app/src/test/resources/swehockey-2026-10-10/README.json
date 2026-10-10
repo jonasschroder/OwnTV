@@ -1,0 +1,31 @@
+{
+  "captured": "2026-10-10",
+  "robots_status": 404,
+  "notes": "Exact public-page main heading/season/selected route and named table excerpts. No credentials, cookies, scripts or invented fixture rows. Test resources are not packaged into the app. No automated reuse licence is asserted.",
+  "sources": {
+    "shl-schedule": {
+      "url": "https://stats.swehockey.se/ScheduleAndResults/Schedule/20961",
+      "http": 200,
+      "full_response_sha256": "4d8b8801d2849ac5b7b4f1100014f28ac061fd81c812c2738af5bfce350559e0",
+      "excerpt_bytes": 257346
+    },
+    "shl-table": {
+      "url": "https://stats.swehockey.se/ScheduleAndResults/Standings/20961",
+      "http": 200,
+      "full_response_sha256": "4063416adfebaf7ec24cfbbbaba5ab25559eb726eae199a73510db1bc86316fa",
+      "excerpt_bytes": 9462
+    },
+    "ha-schedule": {
+      "url": "https://stats.swehockey.se/ScheduleAndResults/Schedule/20962",
+      "http": 200,
+      "full_response_sha256": "8e73fccb7796bac5aec53ebf32df66803b6e5a214d2673afddc929b5d118d58b",
+      "excerpt_bytes": 260811
+    },
+    "ha-table": {
+      "url": "https://stats.swehockey.se/ScheduleAndResults/Standings/20962",
+      "http": 200,
+      "full_response_sha256": "31960ad65ca8b28f3866714dd2cd486108b618606fcd56f66a2f705a292806c5",
+      "excerpt_bytes": 9504
+    }
+  }
+}

@@ -129,4 +129,16 @@
     <string name="mintv_choose_channels_help">Du har redan TV-kanaler. Markera de du vill ha på startsidan.</string>
     <string name="mintv_choose_channels">Välj kanaler</string>
     <string name="mintv_manage_source">Hantera TV-källa</string>
+    <string name="mintv_sports_access">Åtkomst till sportkällan är stoppad. Se Inställningar.</string>
+    <string name="mintv_sports_network">Kunde inte hämta sportdata. Kontrollera anslutningen.</string>
+    <string name="mintv_sports_format">Källans format kunde inte verifieras. Inga resultat har gissats.</string>
+    <string name="mintv_sports_limited">Gränsen för förfrågningar till sportkällan har nåtts.</string>
+    <string name="mintv_sports_storage">Sportuppgifterna kunde inte sparas eller läsas.</string>
+    <string name="mintv_sports_no_scheduled">Inga schemalagda matcher för detta val.</string>
+    <string name="mintv_sports_retry">Försök igen</string>
+    <string name="mintv_sports_retry_at">Försök igen efter %1$s</string>
+    <string name="mintv_sports_diagnostics">Diagnostik för sportdata</string>
+    <string name="mintv_sports_no_error">Inget registrerat hämtfel.</string>
+    <string name="mintv_sports_diagnostic">%1$s · %2$s · HTTP %3$s · %4$s</string>
+    <string name="mintv_sports_budget">Swehockey-förfrågningar: %1$d / 12 i det gemensamma tvåtimmarsfönstret.</string>
 </resources>

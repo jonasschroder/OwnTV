@@ -99,7 +99,9 @@ claims and a synthetic in-memory Room database with the production bundled SQLit
 driver. It checks existing favorites, one-time insertion, manual removal, store
 recreation/re-import, missing/hidden/foreign-source candidates, profile isolation, context-not-ready loading
 and available-channel/no-favorite observation after manual removal.
-The CI emulator job runs these tests using the existing x86_64 flavor; no device
+The CI emulator job also runs the sports reader, profile persistence and EPG
+viewport regressions described in [the sports recovery report](min-tv-sports-recovery.md),
+using the existing x86_64 flavor and a 1080p hardware profile; no device
 IPTV credentials or backups are supplied.
 
 Physical Chromecast checks still needed: all rows reachable without focus traps;

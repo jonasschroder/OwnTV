@@ -67,8 +67,10 @@ internal class SportsRepository(private val hockey: ShlRepository) {
         else hockey.cached(competition).let { it?.sportSnapshot(competition) }
     suspend fun refresh(competition: Competition, now: Long): SportSnapshot? = if (!competition.scheduleAvailable) null
         else hockey.refresh(now, competition).sportSnapshot(competition)
-    suspend fun standings(competition: Competition, season: String, now: Long): List<ShlStanding> =
-        if (competition.scheduleAvailable) hockey.standings(season, now, competition) else emptyList()
+    suspend fun standings(competition: Competition, season: String, now: Long): HockeyTable? =
+        if (competition.scheduleAvailable) hockey.standings(season, now, competition) else null
+    suspend fun cachedStandings(competition: Competition, season: String): HockeyTable? =
+        if (competition.scheduleAvailable) hockey.cachedStandings(competition, season) else null
     private fun ShlSnapshot.sportSnapshot(competition: Competition) = SportSnapshot(competition, seasonId,
         games.map { SportsCatalog.fixture(competition, it) }, fetchedAt, sourceUpdatedAt)
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.Dispatchers
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
@@ -23,7 +25,7 @@ class SportsProfileStorageTest {
         val isolated = object : ContextWrapper(app) {
             override fun getSharedPreferences(name: String, mode: Int): SharedPreferences = app.getSharedPreferences(file, Context.MODE_PRIVATE)
         }
-        val db = Room.inMemoryDatabaseBuilder(app, OwnTVDatabase::class.java).build()
+        val db = Room.inMemoryDatabaseBuilder(app, OwnTVDatabase::class.java).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()
         try {
             val dao = db.profileDao()
             dao.insert(ProfileEntity(id = 101, name = "Synthetic A", avatarColor = 0, createdAt = 100))

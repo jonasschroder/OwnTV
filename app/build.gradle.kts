@@ -171,6 +171,7 @@ android {
         // etc.); return defaults (no-op log, 0 clock) instead of "not mocked" crashes.
         unitTests.isReturnDefaultValues = true
     }
+    sourceSets.getByName("androidTest").assets.srcDir("src/test/resources/swehockey-2026-10-10")
 
     buildTypes {
         debug {

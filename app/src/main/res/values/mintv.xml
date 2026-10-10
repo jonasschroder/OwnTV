@@ -133,4 +133,16 @@
     <string name="mintv_choose_channels_help">You already have TV channels. Mark the ones you want on Home.</string>
     <string name="mintv_choose_channels">Choose channels</string>
     <string name="mintv_manage_source">Manage TV source</string>
+    <string name="mintv_sports_access">Sports source access is blocked. See Settings.</string>
+    <string name="mintv_sports_network">Could not fetch sports data. Check your connection.</string>
+    <string name="mintv_sports_format">The source format could not be verified. No results were guessed.</string>
+    <string name="mintv_sports_limited">The source request limit has been reached.</string>
+    <string name="mintv_sports_storage">Sports data could not be saved or read.</string>
+    <string name="mintv_sports_no_scheduled">No scheduled matches for this selection.</string>
+    <string name="mintv_sports_retry">Try again</string>
+    <string name="mintv_sports_retry_at">Try again after %1$s</string>
+    <string name="mintv_sports_diagnostics">Sports data diagnostics</string>
+    <string name="mintv_sports_no_error">No recorded fetch failure.</string>
+    <string name="mintv_sports_diagnostic">%1$s · %2$s · HTTP %3$s · %4$s</string>
+    <string name="mintv_sports_budget">Swehockey requests: %1$d / 12 in the shared two-hour window.</string>
 </resources>

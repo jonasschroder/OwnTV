@@ -19,6 +19,21 @@ internal data class ShlSnapshot(val seasonId: String, val games: List<ShlGame>, 
 
 /** No DOM or script execution. Only the named table, desktop cells and known columns are accepted. */
 internal object SwehockeyParser {
+    /** Validate the actual page heading, season label and selected route, not a menu link. */
+    fun competitionPage(html: String, competition: Competition, season: String, now: Long, table: Boolean) {
+        require(competition in listOf(SportsCatalog.shl, SportsCatalog.allsvenskan))
+        require(html.length <= 600_000 && season.matches(Regex("\\d{1,9}")))
+        val today = Instant.ofEpochMilli(now).atZone(Stockholm).toLocalDate()
+        val year = if (today.monthValue >= 8) today.year else today.year - 1
+        require(Regex("<h1\\b[^>]*>\\s*${Regex.escape(competition.name)}\\s*</h1>").containsMatchIn(html))
+        require(Regex("<label>\\s*${Regex.escape(competition.name)} - $year-${(year + 1) % 100}\\s*</label>").containsMatchIn(html))
+        val route = "/ScheduleAndResults/${if (table) "Standings" else "Schedule"}/$season"
+        val selected = Regex("<option\\b([^>]*)>").findAll(html).filter {
+            Regex("\\bselected=\"selected\"").containsMatchIn(it.groupValues[1])
+        }.mapNotNull { Regex("\\bvalue=\"([^\"]+)\"").find(it.groupValues[1])?.groupValues?.get(1) }
+            .filter { it.matches(Regex("/ScheduleAndResults/(?:Schedule|Standings)/\\d{1,9}")) }.distinct().toList()
+        require(selected == listOf(route))
+    }
     private val row = Regex("<tr\\b[^>]*>(.*?)</tr>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
     private val cell = Regex("<t[dh]\\b([^>]*?)(?:/\\s*>|>(.*?)</t[dh]>)", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
     private val tags = Regex("<[^>]+>")

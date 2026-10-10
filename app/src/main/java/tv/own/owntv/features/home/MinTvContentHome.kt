@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -73,6 +74,7 @@ fun MinTvContentHome(
     firstRowFocusRequester: FocusRequester,
     onEntryHook: ((() -> Boolean)?) -> Unit,
     contentStart: Dp,
+    reservedTop: Dp = 144.mpx,
     modifier: Modifier = Modifier,
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -202,9 +204,10 @@ fun MinTvContentHome(
 
     MinSportCompanion(
         visible = hockeyVisible,
-        active = previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
+        active = sportsActive(lifecycleState.isAtLeast(Lifecycle.State.RESUMED), previewEnabled),
         liveVm = liveVm, profileId = activeProfileId, favorites = favorites, onPlay = onPlayChannel,
         contentStart = contentStart, onSources = { pauseOrDispose(); controller.setActive(false); onSources() },
+        reservedTop = reservedTop,
         onMatchcenterEntry = { matchcenterEntry = it },
         homeCardModifier = navigation.section(2),
     ) { shlCard, screen ->
@@ -215,9 +218,9 @@ fun MinTvContentHome(
         if (!screen) {
             LazyColumn(
                 state = listState,
-                contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 112.mpx, bottom = 48.mpx),
+                contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 16.mpx, bottom = 48.mpx),
                 verticalArrangement = Arrangement.spacedBy(26.mpx),
-                modifier = modifier.background(HomeNavy).onPreviewKeyEvent { event ->
+                modifier = modifier.homeContentViewport(reservedTop).background(HomeNavy).onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && event.key in listOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)) {
                         // Re-enable after a failed external launch, but never on automatic focus restoration.
                         remoteNavigationSeen = true
@@ -291,7 +294,7 @@ fun MinTvContentHome(
                                     modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(HomeNavy.copy(alpha = 0.9f)).padding(20.mpx))
                             }
                         }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
+                        Column(Modifier.weight(1f).fillMaxWidth().clipToBounds(), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                             Text(selected?.name ?: stringResource(R.string.mintv_favorites_title), style = stageText(28, 700), color = HomeTeal, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val now = guide?.now?.takeIf { clock in it.startMs until it.stopMs }
                             Text(now?.title ?: stringResource(R.string.mintv_epg_unavailable), style = stageText(36, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -301,7 +304,7 @@ fun MinTvContentHome(
                                     Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(HomeTeal, RoundedCornerShape(3.mpx)))
                                 }
                                 it.description?.takeIf(String::isNotBlank)?.let { description ->
-                                    Text(description, style = stageText(18, 400), color = Color.LightGray, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                    HomeProgrammeDescription(description)
                                 }
                             }
                             Text(stringResource(R.string.mintv_next, guide?.next?.title ?: stringResource(R.string.mintv_epg_unavailable)), style = stageText(19, 500), color = Color.LightGray, maxLines = 2, overflow = TextOverflow.Ellipsis)

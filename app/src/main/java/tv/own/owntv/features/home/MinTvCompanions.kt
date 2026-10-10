@@ -42,6 +42,7 @@ import tv.own.owntv.ui.theme.mpx
 internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveViewModel, profileId: Long?,
     favorites: List<ChannelEntity>, onPlay: (ChannelEntity, List<ChannelEntity>) -> Unit, contentStart: Dp,
     onSources: () -> Unit,
+    reservedTop: Dp = 144.mpx,
     homeCardModifier: Modifier = Modifier,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
@@ -82,10 +83,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var upcoming by rememberSaveable { mutableStateOf(false) }
     var page by rememberSaveable { mutableIntStateOf(0) }
     var data by remember(profileId) { mutableStateOf<Map<String, SportSnapshot>>(emptyMap()) }
-    var failed by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
-    var standings by remember { mutableStateOf<List<ShlStanding>>(emptyList()) }
-    var standingsAt by remember { mutableLongStateOf(0) }
+    val loadStates = remember(profileId) { mutableStateMapOf<String, SportsLoadState>() }
+    var retryRevision by remember(profileId) { mutableIntStateOf(0) }
+    var table by remember(profileId, selectedCompetition.id) { mutableStateOf<HockeyTable?>(null) }
+    val standings = table?.takeIf { it.seasonId == data[selectedCompetition.id]?.seasonId }?.rows.orEmpty()
+    val standingsAt = table?.takeIf { it.seasonId == data[selectedCompetition.id]?.seasonId }?.fetchedAt ?: 0L
+    var tableState by remember(profileId, selectedCompetition.id) { mutableStateOf(SportsLoadState(loading = true)) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var query by rememberSaveable(profileId) { mutableStateOf("") }
     var channels by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
@@ -124,7 +127,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val matchList = rememberLazyListState()
     val tableList = rememberLazyListState()
     val today = stockholmDay(now)
-    val allGames = remember(data) { data.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
+    val currentData = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
+    val allGames = remember(currentData) { currentData.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
     val mine = personalFixtures(allGames, selectedTeams, now)
     val todaysGames = allGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it.faceoff })
     val myToday = mine.filter { it.on(today) }
@@ -133,7 +137,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val available = active && (visible && selectedTeams.prominent || screen) && selection != null && selectedTeams.teamIds.isNotEmpty()
     val scheduleAvailable = available && sportsScheduleVisible(visible, screen, section, selectedId != null, teamsOpen)
     val selected = selectedId?.let { id -> allGames.firstOrNull { it.id == id } }
-    val fetchedAt = data.values.minOfOrNull { it.fetchedAt }
+    val fetchedAt = currentData[selectedCompetition.id]?.fetchedAt
+    val selectedLoad = loadStates[selectedCompetition.id] ?: SportsLoadState(loading = true)
+    val homeIssue = requiredCompetitions.firstNotNullOfOrNull { loadStates[it.id]?.issue }
+    val homeLoading = requiredCompetitions.filter { it.scheduleAvailable }.any { loadStates[it.id]?.loading != false }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardWasVisible by remember { mutableStateOf(false) }
     LaunchedEffect(searchOpen, imeVisible) {
@@ -146,41 +153,54 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     LaunchedEffect(clockActive) {
         if (clockActive) while (true) { now = System.currentTimeMillis(); delay(30_000) }
     }
-    LaunchedEffect(scheduleAvailable, enabled, profileId, requiredCompetitions) {
+    LaunchedEffect(scheduleAvailable, enabled, profileId, requiredCompetitions, screen, selectedCompetition, retryRevision) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         if (!scheduleAvailable || !enabled) return@LaunchedEffect
-        val competitions = sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled)
+        val competitions = sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled, selectedCompetition)
         if (competitions.isEmpty()) return@LaunchedEffect
-        data = competitions.mapNotNull { c -> sports.cached(c)?.let { c.id to it } }.toMap()
-        var retry = 60 * 60_000L
+        for (c in competitions) sports.cached(c)?.let { data = data + (c.id to it) }
         while (true) {
-            loading = data.isEmpty()
-            var failures = false
+            var wakeAt = System.currentTimeMillis() + 60 * 60_000L
             for (competition in competitions) {
-                try { sports.refresh(competition, System.currentTimeMillis())?.let { data = data + (competition.id to it) } }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { failures = true }
+                val started = System.currentTimeMillis()
+                loadStates[competition.id] = SportsLoadState(loading = true, cached = data[competition.id] != null)
+                try { sports.refresh(competition, started)?.let {
+                    data = data + (competition.id to it)
+                    loadStates[competition.id] = SportsLoadState(cached = it.fetchedAt < started)
+                } }
+                catch (cancelled: CancellationException) {
+                    loadStates[competition.id]?.let { loadStates[competition.id] = it.copy(loading = false) }
+                    throw cancelled
+                }
+                catch (error: Exception) {
+                    val issue = sportsIssue(error, started)
+                    loadStates[competition.id] = SportsLoadState(issue = issue, cached = data[competition.id] != null)
+                    issue.retryAt?.let { wakeAt = minOf(wakeAt, it) }
+                }
             }
-            failed = failures
-            loading = false
-            retry = if (failures) (retry * 2).coerceAtMost(6 * 60 * 60_000L) else 60 * 60_000L
-            delay(retry)
+            delay((wakeAt - System.currentTimeMillis()).coerceAtLeast(60_000))
         }
     }
-    LaunchedEffect(available, enabled, screen, section, selectedId, teamsOpen, selectedCompetition, data[selectedCompetition.id]?.seasonId) {
-        standings = emptyList(); standingsAt = 0
+    LaunchedEffect(available, enabled, screen, section, selectedId, teamsOpen, selectedCompetition, data[selectedCompetition.id]?.seasonId, retryRevision) {
         if (!available || !enabled || !screen || teamsOpen || selectedId != null || section !in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)) return@LaunchedEffect
         val season = data[selectedCompetition.id]?.seasonId ?: return@LaunchedEffect
+        sports.cachedStandings(selectedCompetition, season)?.let { table = it }
         while (true) {
-            try { standings = sports.standings(selectedCompetition, season, System.currentTimeMillis()); standingsAt = repository.standingsFetchedAt }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { standings = emptyList(); standingsAt = 0 }
-            delay(6 * 60 * 60_000L)
+            val started = System.currentTimeMillis()
+            tableState = SportsLoadState(loading = true, cached = standings.isNotEmpty())
+            try { sports.standings(selectedCompetition, season, started)?.let {
+                table = it
+                tableState = SportsLoadState(cached = it.fetchedAt < started)
+            } }
+            catch (cancelled: CancellationException) { tableState = tableState.copy(loading = false); throw cancelled }
+            catch (error: Exception) { tableState = SportsLoadState(issue = sportsIssue(error, started), cached = standings.isNotEmpty()) }
+            delay(tableState.issue?.retryAt?.let { (it - System.currentTimeMillis()).coerceAtLeast(60_000) } ?: (6 * 60 * 60_000L))
         }
     }
-    val scheduleFresh = !failed && data.isNotEmpty() && data.values.all { now - it.fetchedAt in 0 until 6 * 60 * 60_000L }
+    val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
     val gameToMatch = if (teamsOpen || !broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
         else if (selectedId != null) selected else myToday.firstOrNull().takeIf { expanded }
+    val scheduleFresh = gameToMatch?.competition?.id in freshCompetitions
     LaunchedEffect(available, enabled, broadcastEnabled, gameToMatch, scheduleFresh) {
         broadcast = null
         if (available && enabled && broadcastEnabled && scheduleFresh && gameToMatch != null) {
@@ -201,17 +221,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     // and local bounded queries; no decoder, provider import or background worker is involved.
     val extraHomeGames = myToday.take(3).drop(1)
     LaunchedEffect(available, visible, screen, teamsOpen, enabled, expanded, profileId, extraHomeGames,
-        scheduleFresh, broadcastEnabled, libraryContext, libraryCount, favorites, choiceVersion) {
+        freshCompetitions, broadcastEnabled, libraryContext, libraryCount, favorites, choiceVersion) {
         if (!available || !visible || screen || teamsOpen || !enabled || !expanded || profileId == null) return@LaunchedEffect
         while (true) {
             for (game in extraHomeGames) {
                 val key = fixtureKey(game.broadcastFixture())
                 try {
                     val at = System.currentTimeMillis()
-                    val assignment = if (broadcastEnabled && scheduleFresh) BroadcastResolver.usable(game.broadcastFixture(),
+                    val gameFresh = game.competition.id in freshCompetitions
+                    val assignment = if (broadcastEnabled && gameFresh) BroadcastResolver.usable(game.broadcastFixture(),
                         broadcasts.assignment(game.broadcastFixture()), Instant.ofEpochMilli(at)) else null
                     assignment?.let { knownBroadcasts[key] = it }
-                    val resolution = resolveSportsCard(game, allGames, at, scheduleFresh, assignment,
+                    val resolution = resolveSportsCard(game, allGames, at, gameFresh, assignment,
                         profileId, liveVm, overrides, favorites)
                     resolvedCards[key] = resolution.expiresAt to resolution.channels
                     if (resolution.direct == null) directCards.remove(key) else directCards[key] = resolution.direct
@@ -346,27 +367,28 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     }
                 } else if (next != null) {
                     TvText(stringResource(R.string.mintv_shl_home_next, pairLabel(next), fixtureWhen(next, now)), size = 24)
-                } else TvText(stringResource(if (!enabled) R.string.mintv_shl_disabled
-                    else if (requiredCompetitions.none { it.scheduleAvailable }) R.string.mintv_schedule_unavailable
-                    else if (loading) R.string.mintv_companion_loading else R.string.mintv_shl_next_unknown), color = MinTvMuted, size = 20)
-                if (enabled && fetchedAt != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(fetchedAt, now)), size = 18, color = MinTvMuted, lines = 1)
+                } else TvText(sportsStatusText(selectedCompetition, enabled, SportsLoadState(loading = homeLoading, issue = homeIssue)), color = MinTvMuted, size = 22)
+                if ((myToday.isNotEmpty() || next != null) && homeIssue != null)
+                    TvText(sportsStatusText(selectedCompetition, enabled, SportsLoadState(issue = homeIssue)), color = MinTvMuted, size = 20)
+                val homeAt = currentData.values.minOfOrNull { it.fetchedAt }
+                if (enabled && homeAt != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(homeAt, now)), size = 18, color = MinTvMuted, lines = 1)
             }
         }, screen)
         if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
             BackHandler(onBack = ::back)
-            Column(Modifier.fillMaxSize().background(MinTvNavy).padding(start = contentStart, end = 48.mpx, top = 100.mpx, bottom = 32.mpx)
+            Column(Modifier.fillMaxSize().background(MinTvNavy).padding(start = contentStart, end = 48.mpx, top = reservedTop, bottom = 32.mpx)
                 .focusGroup(), verticalArrangement = Arrangement.spacedBy(24.mpx)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
                         TvText(stringResource(R.string.mintv_my_sport), size = 42, bold = true, lines = 1)
                         TvText(personalTeam?.name ?: stringResource(R.string.mintv_my_teams), color = MinTvTeal, size = 22, lines = 1)
                     }
-                    TvText(stringResource(R.string.mintv_updated, when {
-                        section == MatchcenterSection.TABLE && standingsAt > 0 -> updateLabel(standingsAt, now)
-                        fetchedAt != null -> updateLabel(fetchedAt, now)
-                        else -> stringResource(R.string.mintv_companion_unavailable)
-                    }), size = 18, color = MinTvMuted, lines = 1)
+                    val timestamp = if (section == MatchcenterSection.TABLE) standingsAt.takeIf { it > 0 } else fetchedAt
+                    val showingCache = if (section == MatchcenterSection.TABLE) tableState.cached || tableState.issue != null else selectedLoad.cached || selectedLoad.issue != null
+                    TvText(if (timestamp != null) stringResource(if (showingCache) R.string.mintv_cached_updated else R.string.mintv_updated, updateLabel(timestamp, now))
+                        else sportsStatusText(selectedCompetition, enabled, if (section == MatchcenterSection.TABLE && tableState.issue != null) tableState else selectedLoad),
+                        modifier = Modifier.widthIn(max = 440.mpx), size = 18, color = MinTvMuted, lines = 2)
                     HomeButton(stringResource(R.string.mintv_back), ::back, Modifier.focusRequester(backFocus))
                 }
                 if (selectedId == null) {
@@ -397,7 +419,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                                 HomeButton(stringResource(if (enabled) R.string.mintv_shl_disable else R.string.mintv_shl_enable), {
                                     enabled = !enabled; repository.preferences.edit { putBoolean("shl-enabled", enabled) }
-                                    if (!enabled) { data = emptyMap(); standings = emptyList(); selectedId = null; broadcast = null }
+                                if (!enabled) { data = emptyMap(); table = null; selectedId = null; broadcast = null; loadStates.clear() }
                                 })
                                 HomeButton(stringResource(if (expansion) R.string.mintv_shl_compact_only else R.string.mintv_shl_expand), {
                                     expansion = !expansion; repository.preferences.edit { putBoolean("shl-expand", expansion) }
@@ -413,14 +435,38 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                 if (!broadcastEnabled) { broadcast = null; knownBroadcasts.clear(); resolvedCards.clear(); directCards.clear() }
                             }) }
                             if (broadcasts.blocked) item { FocusPanel { TvText(stringResource(R.string.mintv_broadcast_blocked), color = MinTvMuted, lines = 4) } }
+                            item { TvText(stringResource(R.string.mintv_sports_diagnostics), size = 28, bold = true) }
+                            item { TvText(stringResource(R.string.mintv_sports_budget, repository.preferences.getInt("hockey-window-count", 0)), color = MinTvMuted, lines = 3) }
+                            requiredCompetitions.filter { it.scheduleAvailable }.forEach { competition ->
+                                item {
+                                    TvText(competition.name, bold = true)
+                                    repository.lastResponse(competition)?.let { response ->
+                                        TvText(stringResource(R.string.mintv_sports_diagnostic, competition.name, response.stage.name,
+                                            NumberFormat.getIntegerInstance().format(response.httpCode), stockholmDate(response.at) + " " + stockholmTime(response.at)), color = MinTvMuted, lines = 3)
+                                    }
+                                    for (isTable in listOf(false, true)) {
+                                        val issue = repository.diagnostic(competition, isTable)
+                                        TvText(if (issue == null) stringResource(R.string.mintv_sports_no_error)
+                                            else stringResource(R.string.mintv_sports_diagnostic, competition.name, issue.stage.name,
+                                                issue.httpCode?.let { NumberFormat.getIntegerInstance().format(it) } ?: stringResource(R.string.mintv_companion_unavailable),
+                                                stockholmDate(issue.at) + " " + stockholmTime(issue.at)), color = MinTvMuted, lines = 3)
+                                        if (issue != null) TvText(sportsStatusText(competition, enabled, SportsLoadState(issue = issue)), color = MinTvMuted, lines = 3)
+                                    }
+                                }
+                            }
                         }
-                        MatchcenterSection.TABLE -> LazyColumn(state = tableList, verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+                        MatchcenterSection.TABLE -> if (standings.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            SportsStatusPanel(selectedCompetition, enabled, if (tableState.issue != null) tableState else if (data[selectedCompetition.id] != null) tableState.copy(loading = true) else selectedLoad,
+                                now, null, { retryRevision++ })
+                        } else LazyColumn(state = tableList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+                            if (tableState.loading || tableState.issue != null) item {
+                                SportsStatusPanel(selectedCompetition, enabled, tableState, now, standingsAt, { retryRevision++ }, Modifier.fillMaxWidth())
+                            }
                             val showPlayed = standings.isNotEmpty() && standings.all { it.played != null }
                             val showDifference = standings.isNotEmpty() && standings.all { it.goalDifference != null }
                             item { StandingRow(stringResource(R.string.mintv_position), stringResource(R.string.mintv_team),
                                 if (showPlayed) stringResource(R.string.mintv_games_played) else null,
                                 if (showDifference) stringResource(R.string.mintv_goal_difference) else null, stringResource(R.string.mintv_table_points)) }
-                            if (standings.isEmpty()) item { TvText(stringResource(R.string.mintv_companion_unavailable)) }
                             items(standings, key = { it.rank }) { standing ->
                                 FocusPanel(highlighted = SportsCatalog.identity(standing.team, selectedCompetition.sport)?.id in selectedTeams.teamIds) {
                                 StandingRow(NumberFormat.getIntegerInstance().format(standing.rank), shortTeam(standing.team),
@@ -437,7 +483,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             val lastPage = (future.size - 1).coerceAtLeast(0) / 14
                             val currentPage = page.coerceIn(0, lastPage)
                             val games = if (useFuture) future.drop(currentPage * 14).take(14) else todayList
-                            LazyColumn(state = matchList, verticalArrangement = Arrangement.spacedBy(16.mpx)) {
+                            if (games.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                SportsStatusPanel(selectedCompetition, enabled, selectedLoad, now, fetchedAt, { retryRevision++ })
+                            } else LazyColumn(state = matchList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
+                                if (selectedLoad.loading || selectedLoad.issue != null) item {
+                                    SportsStatusPanel(selectedCompetition, enabled, selectedLoad, now, fetchedAt, { retryRevision++ }, Modifier.fillMaxWidth())
+                                }
                                 if (section == MatchcenterSection.FARJESTAD) item {
                                     standings.singleOrNull { SportsCatalog.identity(it.team, selectedCompetition.sport)?.id == selectedTeams.primaryTeamId }?.let {
                                         TvText(stringResource(R.string.mintv_fbk_position, NumberFormat.getIntegerInstance().format(it.rank),
@@ -449,14 +500,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                     else TvText(stringResource(R.string.mintv_shl_upcoming), size = 22, color = MinTvMuted)
                                     if (useFuture && currentPage > 0) HomeButton(stringResource(R.string.mintv_shl_previous_page), { page = currentPage - 1 })
                                     if (useFuture && currentPage < lastPage) HomeButton(stringResource(R.string.mintv_shl_next_page), { page = currentPage + 1 })
-                                    if (failed) TvText(stringResource(R.string.mintv_cached), size = 18, color = MinTvMuted)
                                 } }
-                                if (games.isEmpty()) item { TvText(stringResource(if (!selectedCompetition.scheduleAvailable) R.string.mintv_schedule_unavailable else if (!enabled) R.string.mintv_shl_disabled else if (loading) R.string.mintv_companion_loading else R.string.mintv_shl_next_unknown)) }
                                 items(games, key = { it.id }) { game ->
                                     val focus = remember(game.id) { gameFocus.getOrPut(game.id) { FocusRequester() } }
                                     val key = fixtureKey(game.broadcastFixture())
                                     val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
-                                    val cached = resolvedCards[key]?.takeIf { now < it.first && scheduleFresh }
+                                    val cached = resolvedCards[key]?.takeIf { now < it.first && game.competition.id in freshCompetitions }
                                     val direct = if (game == gameToMatch) directChannel else directCards[key].takeIf { cached != null }
                                     MatchScorecard(game, now, selectedTeams.hideScores, assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },
                                         direct?.let { channel -> { play(channel, cached?.second.orEmpty().ifEmpty { listOf(channel) }) } }, Modifier.fillMaxWidth().focusRequester(focus))

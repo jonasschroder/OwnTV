@@ -45,6 +45,8 @@ import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -200,6 +202,8 @@ fun OwnTVShell(
     val settingsRepo = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
     val remoteShortcutsEnabled by settingsRepo.chNavEnabled.collectAsStateWithLifecycle(initialValue = true)
     val clockColors by settingsRepo.clockColors.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.ClockColors())
+    val statusDensity = LocalDensity.current
+    var homeStatusHeight by remember { mutableStateOf(120.mpx) }
     val remoteShortcutBindings by settingsRepo.remoteShortcutBindings.collectAsStateWithLifecycle(
         initialValue = RemoteShortcutBindings.defaults,
     )
@@ -1177,6 +1181,7 @@ fun OwnTVShell(
                             firstRowFocusRequester = homeFirstRowFocus,
                             onEntryHook = { homeEntry = it },
                             contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED) 64.mpx else 150.mpx,
+                            reservedTop = homeStatusHeight + 24.mpx,
                             modifier = Modifier.fillMaxSize(),
                         ) }
 
@@ -1356,7 +1361,8 @@ fun OwnTVShell(
                 clockColors = clockColors,
                 playlistDownFocusRequester = homeFirstRowFocus.takeIf { selectedSection == MainSection.HOME },
                 onPlaylistPillBounds = { playlistPillBounds = it },
-                modifier = Modifier.align(Alignment.TopEnd).onFocusChanged { clusterFocused = it.hasFocus }.focusGroup(),
+                modifier = Modifier.align(Alignment.TopEnd).onSizeChanged { homeStatusHeight = with(statusDensity) { it.height.toDp() } }
+                    .onFocusChanged { clusterFocused = it.hasFocus }.focusGroup(),
             )
             tv.own.owntv.features.shell.components.StageRail(
                 state = railState,

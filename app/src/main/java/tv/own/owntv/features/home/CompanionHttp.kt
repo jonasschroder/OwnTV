@@ -12,7 +12,12 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /** Uses Core's ordinary client. Bounded reads run on OkHttp's worker; cancellation closes the call. */
+internal data class CompanionResponse(val status: Int, val body: String, val retryAfter: String? = null)
+
 internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int): Pair<Int, String> =
+    companionResponse(request, limit).let { it.status to it.body }
+
+internal suspend fun OkHttpClient.companionResponse(request: Request, limit: Int): CompanionResponse =
     suspendCancellableCoroutine { continuation ->
         val call = newCall(request)
         call.timeout().timeout(8, TimeUnit.SECONDS)
@@ -26,7 +31,7 @@ internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int)
                     response.use {
                         if (it.request.url.host != request.url.host) throw IOException()
                         if (it.code in listOf(401, 403, 429)) {
-                            if (continuation.isActive) continuation.resume(it.code to "")
+                            if (continuation.isActive) continuation.resume(CompanionResponse(it.code, "", it.header("Retry-After")))
                             return
                         }
                         val body = it.body
@@ -42,7 +47,7 @@ internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int)
                             }
                             output.toByteArray()
                         }
-                        if (continuation.isActive) continuation.resume(it.code to bytes.toString(Charsets.UTF_8))
+                        if (continuation.isActive) continuation.resume(CompanionResponse(it.code, bytes.toString(Charsets.UTF_8), it.header("Retry-After")))
                     }
                 } catch (e: Exception) {
                     if (continuation.isActive) continuation.resumeWithException(e)

@@ -95,6 +95,7 @@ internal fun personalFixtures(fixtures: List<SportFixture>, selection: SportPref
 
 /** Visibility and explicit opt-in precede even reading the network-backed repository. */
 internal fun sportsRequestCompetitions(selection: SportPreferences, active: Boolean, visible: Boolean,
-    matchcenterOpen: Boolean, enabled: Boolean): List<Competition> =
+    matchcenterOpen: Boolean, enabled: Boolean, selectedCompetition: Competition? = null): List<Competition> =
     if (active && enabled && (visible && selection.prominent || matchcenterOpen))
-        SportsCatalog.required(selection).filter { it.scheduleAvailable } else emptyList()
+        SportsCatalog.required(selection).filter { it.scheduleAvailable &&
+            (!matchcenterOpen || selectedCompetition == null || it == selectedCompetition) } else emptyList()

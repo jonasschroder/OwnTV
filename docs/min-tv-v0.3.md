@@ -86,7 +86,7 @@ Phase 1 local validation, 11 October 2026:
 | --- | --- |
 | `:app:testQaDebugUnitTest` | 318 passed; zero failures/errors/skips |
 | `:app:testStandardDebugUnitTest` | 318 passed; zero failures/errors/skips |
-| `:app:compileX86_64DebugAndroidTestKotlin` | Passed; instrumentation execution awaits CI |
+| `:app:compileX86_64DebugAndroidTestKotlin` | Compiled; all eight Phase 1 cases subsequently passed CI |
 | `:app:lintQaDebug :app:lintStandardDebug` | Passed; no errors/fatal issues, 133 warnings per variant |
 | `python3 -m unittest discover -s tools/tests -v` | 42 policy/update/distribution tests passed |
 | Android workflow actionlint; i18n merge-base ratchet; `git diff --check` | Passed |
@@ -171,6 +171,36 @@ truncation. The production UI tests confirm first-click use and advanced overrid
 precedence. Real Twitch account completion/API access still needs a physical test.
 These local/ordinary CI unsigned release outputs are verification artifacts, not
 installers for the owner's permanently signed apps.
+
+## Final local validation — 11 October 2026
+
+| Check | Actual result |
+| --- | --- |
+| Final app unit suites | QA 318 and Production 318 passed; no failures/errors/skips |
+| Final debug lint | Both passed; 0 errors/fatal, 133 existing warnings each |
+| Updated Android TV tests | Compiled; current PR CI requires all 12 cases |
+| Python policy/update/distribution/APK verifier | 45 passed |
+| Both optimized ARM releases | Built successfully with R8; unsigned, nondebug, ARM32 + ARM64 |
+| Public Twitch ID in final APK DEX | Both passed using default and explicit `MINTV_TWITCH_CLIENT_ID` |
+| Release identity and isolation | Packages/providers/permissions/links distinct; no Android HOME |
+| Release locale packaging | Both passed; no debug pseudolocales |
+| Actionlint, i18n literal/number/overflow, diff checks | Passed |
+
+QA is 63,666,984 bytes and Production 63,665,972 bytes. The existing approved
+owner-signed QA baseline is 63,693,443 bytes; there is no significant APK growth
+and no new library/player dependency. Those local unsigned outputs are not
+approved installers or candidates for the populated Chromecast.
+
+An initial new presentation test failed because its simulated pointer click did
+not activate the production TV retry button (callback count 0). It now explicitly
+requires focus and sends actual remote DPAD_CENTER down/up events, keeping the
+original compactness, diagnostic-absence and callback-count assertions. The same
+remote interaction is used by the two Twitch onboarding tests. CI publishes
+bounded per-test failure annotations through GitHub and rejects any failed,
+errored, skipped or missing required case. Final emulator results are tracked by
+[PR #5 checks](https://github.com/jonasschroder/OwnTV/pull/5/checks); a passing local
+compilation does not substitute for their execution. No physical Chromecast crash
+stack trace or real-account Twitch test was obtained in this workspace.
 
 ## Release and device safety
 

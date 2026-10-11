@@ -80,19 +80,21 @@ There is no Client Secret in that flow. **No ID is invented or borrowed.**
    `http://localhost` (the device grant does not use a redirect listener).
 2. Copy its **Client ID**. Do not create/copy a Client Secret, access or refresh token
    into GitHub, source, build properties or this chat.
-3. To include the public ID in future QA APKs: in your OwnTV GitHub repository open
+3. To override the public ID in future QA and Production APKs: in your OwnTV GitHub repository open
    **Settings → Secrets and variables → Actions → Variables**, create the repository
    variable **MINTV_TWITCH_CLIENT_ID** with that legitimate public ID. The prototype
-   workflow reads that public variable. An empty variable remains supported.
+   and protected signing workflows read that public variable. In v0.3, an empty variable uses the owner's registered project default.
 4. Local builds may set `MINTV_TWITCH_CLIENT_ID` or the user Gradle property
    `mintv.twitchClientId`; Gradle accepts only alphanumeric 8–128-character IDs.
 5. On the TV select ohnePixel → **Anslut Twitch**. Open the displayed Twitch activation URL on the
    Mac (including `public=true` and its device code), enter the displayed code if requested and approve your own app. Back/Stäng cancels.
-   There is no TV keyboard step when a registered build ID exists. Otherwise enter
-   the legitimate ID once on the TV; the public ID is saved locally for later login.
+   In v0.3 this first action starts authorization immediately; no Client ID keyboard
+   step or second Connect press is needed. **Advanced: edit Client ID** keeps the
+   optional manual override available in account settings.
 
-The current cloud build has no supplied registered ID. Build-time support is ready;
-real registration/login/refresh still needs your account and device test. The ID is
+The owner's registered public ID is now supplied as the v0.3 project default for
+both apps and was verified in both optimized release APKs. Real account
+login/refresh still needs a device test. See [v0.3 release checks](min-tv-v0.3.md). The ID is
 public (visible in the APK); private credentials remain encrypted on the TV. The
 existing tokens are not migrated between package identities.
 

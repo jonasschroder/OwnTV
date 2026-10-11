@@ -21,6 +21,11 @@ import tv.own.owntv.features.shell.components.VodGroupDetails
 import tv.own.owntv.features.shell.components.VodGroupLibrary
 import tv.own.owntv.features.shell.components.VodGroupOrganise
 import tv.own.owntv.features.shell.components.VodGroupWatch
+import tv.own.owntv.features.shell.components.vodBrowseHeroHeight
+import tv.own.owntv.features.shell.components.vodBrowseColumns
+import tv.own.owntv.features.home.requestSafely
+import tv.own.owntv.features.home.HomeViewModel
+import tv.own.owntv.features.home.HomeContinuationRow
 import tv.own.owntv.features.shell.components.VodHeader
 import tv.own.owntv.features.shell.components.VodHero
 import tv.own.owntv.features.shell.components.VodListRow
@@ -119,6 +124,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import tv.own.owntv.features.live.LiveRailItem
 import tv.own.owntv.features.live.displayLabel
+import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import androidx.tv.material3.Text
 import tv.own.owntv.R
@@ -209,6 +215,7 @@ fun SeriesScreen(
         if (restoreFocus) onRestored()
         SeriesGrid(
             vm = vm,
+            onFullscreen = onFullscreen,
             onChildFocused = onChildFocused,
             restoreSelected = returnFromShow,
             onRestoredSelected = { returnFromShow = false },
@@ -221,6 +228,7 @@ fun SeriesScreen(
 
 @Composable
 private fun SeriesGrid(
+    onFullscreen: () -> Unit,
     vm: SeriesViewModel,
     onChildFocused: () -> Unit,
     restoreSelected: Boolean = false,
@@ -235,6 +243,11 @@ private fun SeriesGrid(
     val researchingTmdbMessage = stringResource(R.string.content_researching_tmdb)
     val railItems by vm.railItems.collectAsStateWithLifecycle()
     val selectedKey by vm.selectedKey.collectAsStateWithLifecycle()
+    val resumeVm: HomeViewModel = koinViewModel()
+    val resumeState by resumeVm.uiState.collectAsStateWithLifecycle()
+    val resumeProfileSettings: SettingsRepository = koinInject()
+    val resumeProfileId by resumeProfileSettings.activeProfileId.collectAsStateWithLifecycle(initialValue = -1L)
+    val resumeItems = resumeState.continueSeries.takeIf { resumeState.profileId == resumeProfileId }.orEmpty().take(8)
     val count by vm.count.collectAsStateWithLifecycle()
     val favoriteIds by vm.favoriteIds.collectAsStateWithLifecycle()
     val searchQuery by vm.searchQuery.collectAsStateWithLifecycle()
@@ -281,6 +294,7 @@ private fun SeriesGrid(
     val selectedLabel = selectedItem?.displayLabel(R.string.content_category_all_series) ?: stringResource(R.string.content_category_all_series)
     val gridSelFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val firstItemFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val resumeFocus = remember { FocusRequester() }
     // Right from the rail on an empty list: the list's search box, so a search with no results can be cleared.
     val listSearchFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
@@ -595,20 +609,21 @@ private fun SeriesGrid(
         val screenW = maxWidth
         fun fx(px: Int) = screenW * (px / 1920f)
         if (cinematic) {
-            val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx
-            val toolTop = 122.mpx + heroH
+            val requestedHero = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 240.mpx
+            val heroH = vodBrowseHeroHeight(maxHeight / 1.mpx - if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) 280f else 0f, requestedHero / 1.mpx).mpx
+            val toolTop = 100.mpx + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
                 VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd))
                 VodHeader(
                     section = stringResource(R.string.common_nav_series), category = headerLabel, count = vodCount(true, count),
-                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx).width(fx(900)),
+                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 28.mpx).width(fx(900)),
                 )
-                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = 122.mpx).width(fx(1000)).height(heroH)) }
+                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = 100.mpx).width(fx(1000)).height(heroH)) }
                 Column(Modifier.padding(top = toolTop).fillMaxSize().then(paneModifier)) {
                     Row(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()
                             // ▼ from the toolbar returns to the title the hero shows, not the poster below the tool.
-                            .onPreviewKeyEvent { e -> e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && focusCurrentTitle() }
+                            .onPreviewKeyEvent { e -> e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && (if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) resumeFocus.requestSafely() else focusCurrentTitle()) }
                             .focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                         verticalAlignment = Alignment.CenterVertically,
@@ -623,6 +638,11 @@ private fun SeriesGrid(
                         Spacer(Modifier.weight(1f))
                         StageKeyHints(listOf(playHint, optionsHint, "◀" to stringResource(R.string.content_category_browser_title)))
                     }
+                    if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) {
+                        Box(Modifier.padding(start = fx(84), end = fx(64), top = 12.mpx, bottom = 12.mpx)) {
+                            HomeContinuationRow(resumeItems, Modifier.focusRequester(resumeFocus)) { item -> scope.launch { if (vm.playFromHomeAsync(0L, item.targetItemId, item.positionMs) && !vm.externalPlayerOn.value) onFullscreen() } }
+                        }
+                    }
                     if (series.itemCount == 0) {
                         Text(emptyText, style = stageText(20, 500), color = StageColors.Muted, modifier = Modifier.padding(start = fx(84), top = 60.mpx))
                     } else {
@@ -630,7 +650,7 @@ private fun SeriesGrid(
                         // (owner, 2026-10-01: the mockup's single row became a grid). Glow room on every side.
                         val glowRoom = 24.mpx
                         val rowW = screenW - fx(84) - fx(64)
-                        val columns = ((rowW + 26.mpx) / 222.mpx).toInt().coerceAtLeast(1)
+                        val columns = vodBrowseColumns(rowW / 1.mpx)
                         // A fixed gap under the toolbar that scrolling posters never enter; the grid's own
                         // top padding is only the room the focused poster's lift and ring need.
                         Spacer(Modifier.height(14.mpx))
@@ -648,6 +668,7 @@ private fun SeriesGrid(
                                     StagePoster(
                                         title = show.name,
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                    line = listOfNotNull(show.year?.toString(), show.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(" · ").takeIf(String::isNotBlank),
                                         width = 196.mpx, height = 294.mpx,
                                         onClick = { vm.openSeries(show) },
                                         onLongClick = { openMenu(show, index) },
@@ -692,7 +713,7 @@ private fun SeriesGrid(
             if (!locked) {
                 VodHeader(
                     section = stringResource(R.string.common_nav_series), category = headerLabel, count = vodCount(true, count),
-                    showChevron = false, modifier = Modifier.padding(start = fx(84), top = 52.mpx).width(fx(860)),
+                    showChevron = false, modifier = Modifier.padding(start = fx(84), top = 28.mpx).width(fx(860)),
                 )
                 LiveCategories(
                     searchQuery = vm.categoryQuery.collectAsStateWithLifecycle().value,
@@ -810,6 +831,7 @@ private fun SeriesGrid(
                                 StagePoster(
                                     title = show.name,
                                     rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                    line = listOfNotNull(show.year?.toString(), show.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(" · ").takeIf(String::isNotBlank),
                                     width = posterW, height = posterW * 1.5f,
                                     compact = true,
                                     onClick = { vm.openSeries(show) },
@@ -1875,6 +1897,7 @@ internal fun seriesTitleInfo(
         tags = cinematicQualityBadges(series.qualityRank, series.advertisedCapabilities),
         plot = if (tmdbWins) meta?.overview ?: providerPlot else providerPlot ?: meta?.overview,
         cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
+        ratingFromTmdb = meta?.rating?.takeIf { it > 0 } != null && (tmdbWins || series.rating?.takeIf { it > 0 } == null),
     )
 }
 

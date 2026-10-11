@@ -97,7 +97,7 @@ class VodPresentationTest {
                 val list = rememberLazyListState()
                 SideEffect { insert = { history = true } }
                 LaunchedEffect(Unit) { withFrameNanos { }; navigation.focus[5].requestSafely() }
-                LazyColumn(homeDpadModifier(navigation, list,
+                LazyColumn(state = list, modifier = homeDpadModifier(navigation, list,
                     listOf(0, 1, 2, if (history) 3 else -1, if (history) 4 else 3, if (history) 5 else 4))) {
                     item(key = "hero") { HomeButton("Hero", {}, navigation.section(0)) }
                     item(key = "favorites") { HomeButton("Favorites", {}, navigation.section(1)) }

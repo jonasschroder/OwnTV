@@ -376,7 +376,7 @@
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-access-blocked
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-blocked-code
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-enabled
-2	empty	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	\0
+3	empty	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	\0
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${BuildConfig.APPLICATION_ID}; Android API ${Build.VERSION.SDK_INT}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${System.currentTimeMillis()} ${event.name}${stage?.let { " ${it.name}" }.orEmpty()}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${it.name}
@@ -390,6 +390,7 @@
 1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?
 1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	^(?:Caused by: |Suppressed: )?([a-zA-Z_$][a-zA-Z0-9_.$]*(?:Exception|Error))(?:[: ].*)?$
 1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	at [a-zA-Z0-9_.$<>]+\\([a-zA-Z0-9_.$]+(?::[0-9]+)?\\)
+1	file-path	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	diagnostics/sports-context.txt
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	exit: timestamp=${it.timestamp} reason=${it.reason} status=${it.status}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	memory: pssKb=${it.pss} rssKb=${it.rss}
 2	file-path	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	mintv-sports-crash-report.txt
@@ -854,7 +855,7 @@
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	zh
 2	technical	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	•
 5	empty	app/src/main/java/tv/own/owntv/features/settings/NetworkSettingsScreen.kt	\0
-8	empty	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	\0
+2	empty	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	\0
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	${locale.language}-${locale.country}
 1	regex	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	^(\\d{1,2}):(\\d{2}):(\\d{2})$
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	ar
@@ -897,7 +898,7 @@
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	vi
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	zh-cn
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	zh-tw
-3	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	OpenSubtitles
+2	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	OpenSubtitles
 1	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	user-info refresh failed: ${it.message}
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_post_roll
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_pre_roll
@@ -1211,7 +1212,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	$l — $d
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	—
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	◀ ▶
-2	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
+1	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
 20	empty	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#%06X
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#F5B400

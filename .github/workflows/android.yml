@@ -125,13 +125,13 @@ jobs:
       - name: Android D-pad and database regressions (synthetic emulator data)
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           profile: tv_1080p
           arch: x86_64
           target: default
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite --max-workers=4 --stacktrace
+          script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite --max-workers=4 --stacktrace && adb pull /sdcard/Android/data/se.jonasschroder.mintv/files/v04-screenshots v04-device-screenshots
       - name: Require all Home regression tests to execute
         if: always()
         run: |
@@ -149,6 +149,9 @@ jobs:
               ('tv.own.owntv.home.SportsLoadingNavigationTest', 'slowRequestEndsInErrorAndLeavesTabsFocusable'),
               ('tv.own.owntv.home.SportsArrivalNavigationTest', 'verifiedArrivalDoesNotStealTabFocusAndRemoteCanOpenFixture'),
               ('tv.own.owntv.home.SportsArrivalNavigationTest', 'homeCardCanChangeFromLoadingToVerifiedWhileOtherActionKeepsFocus'),
+              ('tv.own.owntv.home.VodPresentationTest', 'providerOnlyDetailsOfferPlayAndBackWithoutMetadataOrAutoplay'),
+              ('tv.own.owntv.home.VodPresentationTest', 'continuationUsesCorrectIdentityPositionAndDoesNotAutoplayOnFocus'),
+              ('tv.own.owntv.home.VodPresentationTest', 'insertedResumeKeepsFocusedAppsAndDpadCanReachNewSection'),
               ('tv.own.owntv.home.HomePresentationTest', 'heroPreservesClockViewportAndOkUsesExistingWatchActionWithoutAutoplay'),
               ('tv.own.owntv.home.HomePresentationTest', 'failedSportsPanelIsCompactAndContainsNoHttpOrParserDetails'),
               ('tv.own.owntv.home.TwitchOnboardingTest', 'configuredPublicIdStartsAuthorizationOnFirstClickAndCloseCancels'),
@@ -183,6 +186,15 @@ jobs:
             app/build/reports/androidTests/**
             app/build/outputs/androidTest-results/**
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload synthetic presentation screenshots
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mintv-v04-presentation-test-fixtures
+          path: v04-device-screenshots/*.png
+          if-no-files-found: error
           retention-days: 14
 
   signing-upgrade-regressions:

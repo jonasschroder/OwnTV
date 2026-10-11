@@ -103,6 +103,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                 tv.own.owntv.features.home.SportsDiagnostics.snapshot()
         }
         tv.own.owntv.core.util.CrashRecorder.install(this)
+        tv.own.owntv.features.home.SportsDiagnostics.initialize(this, appScope)
         // Core learns a panel's session limit while syncing; the engine is what acts on it. Registered
         // before Koin so the very first source flow already reaches the player (see LiveSessionLimit).
         tv.own.owntv.core.player.LiveSessionLimit.report = tv.own.owntv.player.LiveStreamQuirks::rememberSessionLimit

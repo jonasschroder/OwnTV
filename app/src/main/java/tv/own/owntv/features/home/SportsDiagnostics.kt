@@ -6,6 +6,12 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.AtomicFile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import tv.own.owntv.BuildConfig
 import tv.own.owntv.core.util.CrashRecorder
 
@@ -13,9 +19,35 @@ import tv.own.owntv.core.util.CrashRecorder
 internal object SportsDiagnostics {
     enum class Event { HOME, MATCHCENTER, PROFILE_CHANGED, LOADING, DATA, FAILURE, CANCELLED, DETACHED_FOCUS }
     private val events = ArrayDeque<String>()
+    private val updates = Channel<String>(Channel.CONFLATED)
+    @Volatile private var previousContext = ""
+    /** Existing application scope, a conflated local writer, no worker/service or network polling. */
+    fun initialize(context: Context, scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            val file = AtomicFile(java.io.File(context.filesDir, "diagnostics/sports-context.txt"))
+            if (file.baseFile.exists()) try {
+                file.openRead().bufferedReader().use { reader ->
+                    val buffer = CharArray(8192)
+                    val count = reader.read(buffer)
+                    if (count > 0) previousContext = buffer.concatToString(0, count)
+                }
+            } catch (_: java.io.IOException) { /* Optional evidence must not break startup. */ }
+            for (update in updates) {
+                delay(250) // Coalesce a focus/request burst into one small local write.
+                val text = updates.tryReceive().getOrNull() ?: update
+                var output: java.io.FileOutputStream? = null
+                try {
+                    output = file.startWrite()
+                    output.write(text.toByteArray(Charsets.UTF_8))
+                    file.finishWrite(output)
+                } catch (_: java.io.IOException) { file.failWrite(output) }
+            }
+        }
+    }
     @Synchronized fun record(event: Event, stage: HockeyStage? = null) {
         events.addLast("${System.currentTimeMillis()} ${event.name}${stage?.let { " ${it.name}" }.orEmpty()}")
         while (events.size > 48) events.removeFirst()
+        updates.trySend(snapshot())
     }
     @Synchronized fun snapshot(): String = events.joinToString("\n")
     @Synchronized fun failure(error: Exception, stage: HockeyStage) {
@@ -24,6 +56,7 @@ internal object SportsDiagnostics {
             events.addLast("SPORTS_FRAME $it")
         }
         while (events.size > 48) events.removeFirst()
+        updates.trySend(snapshot())
     }
 
     /** Keep exception types and exact source frames, never arbitrary exception text. Fail closed. */
@@ -54,9 +87,9 @@ internal object SportsDiagnostics {
             appendLine(snapshot())
             // Preserve only our enum-only ring from the previous process' crash diagnostics.
             appendLine("Previous sports context:")
+            previousContext.lineSequence().filter(::safeContextLine).take(48).forEach { appendLine(it) }
             CrashRecorder.read(context)?.lineSequence()?.filter {
-                it.matches(Regex("[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?")) ||
-                    (it.startsWith("SPORTS_FRAME ") && sanitizedStack(it.removePrefix("SPORTS_FRAME ")) == it.removePrefix("SPORTS_FRAME "))
+                safeContextLine(it)
             }?.takeLastBounded(48)?.forEach { appendLine(it) }
         }
         if (Build.VERSION.SDK_INT < 29) {
@@ -79,6 +112,10 @@ internal object SportsDiagnostics {
             "Download/mintv-sports-crash-report.txt"
         } catch (error: Exception) { resolver.delete(uri, null, null); throw error }
     } catch (_: Exception) { null } }
+
+    private fun safeContextLine(line: String): Boolean =
+        line.matches(Regex("[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?")) ||
+            (line.startsWith("SPORTS_FRAME ") && sanitizedStack(line.removePrefix("SPORTS_FRAME ")) == line.removePrefix("SPORTS_FRAME "))
 }
 
 private fun Sequence<String>.takeLastBounded(count: Int): List<String> {

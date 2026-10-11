@@ -76,9 +76,11 @@ data class MediaDetailsUi(
  * selectable** — the page owns focus and turns Up/Down into a scroll, so the D-pad cannot leak behind.
  */
 @Composable
-fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Modifier = Modifier) {
+fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Modifier = Modifier,
+    onPlay: (() -> Unit)? = null, playLabel: String? = null) {
     val scroll = rememberScrollState()
     val focus = remember { FocusRequester() }
+    val playFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     val step = 260f
     val onKey: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = onKey@{ e ->
@@ -97,7 +99,7 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
     }
     val page = Color(0xFF070B0E)
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onExit, stageLayout = true, stageScaled = false) {
-        LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { focus.requestFocus() } }
+        LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { (if (onPlay != null) playFocus else focus).requestFocus() } }
         Box(modifier.fillMaxSize().background(page).trapAllFocusExit()) {
             if (!details.backdropUrl.isNullOrBlank()) {
                 AsyncImage(
@@ -111,7 +113,7 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).gradientWash(vertical = false, 0f to page.copy(alpha = 0.85f), 0.6f to Color.Transparent))
             Column(
                 Modifier.fillMaxSize().focusRequester(focus).onKeyEvent(onKey).focusable().verticalScroll(scroll)
-                    .padding(start = 120.mpx, end = 120.mpx, top = 300.mpx, bottom = 80.mpx),
+                    .padding(start = 120.mpx, end = 120.mpx, top = if (details.backdropUrl.isNullOrBlank()) 64.mpx else 200.mpx, bottom = 80.mpx),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(36.mpx), verticalAlignment = Alignment.Bottom) {
                     if (!details.posterUrl.isNullOrBlank()) {
@@ -125,6 +127,13 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
                             Text(details.subtitle, style = stageText(18, 800, 0.08.em), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Text(details.title, style = stageText(64, 800, (-1.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
+                        onPlay?.let { play ->
+                            Row(Modifier.padding(top = 18.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
+                                tv.own.owntv.ui.stage.StageTool(playLabel ?: stringResource(R.string.content_play),
+                                    boxed = true, modifier = Modifier.focusRequester(playFocus), onClick = play)
+                                tv.own.owntv.ui.stage.StageTool(stringResource(R.string.mintv_back), boxed = true, onClick = onExit)
+                            }
+                        }
                         if (details.metaLine.isNotBlank()) {
                             Text(details.metaLine, style = stageText(22, 600), color = StageColors.ItemText, modifier = Modifier.padding(top = 12.mpx))
                         }

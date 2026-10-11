@@ -407,9 +407,8 @@ class HomeViewModel(
             isLoading = false,
         )
         tv.own.owntv.core.util.Perf.stamp("home-data")
-        _uiState.value.trendingItems.getOrNull(_uiState.value.activeTrendingIndex)?.let(::resolveTrendingExtras)
-        // Keep watching shows every card as a still, so each needs its artwork up front, not on focus.
-        _uiState.value.heroItems.indices.forEach { resolveHeroMetadata(it) }
+        // Content Home uses provider continuation stills. Hidden legacy hero/trending rows
+        // must not trigger metadata HTTP on every refresh. Explicit navigation resolves on demand.
     }
 
     private fun resolveHeroMetadata(index: Int) {

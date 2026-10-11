@@ -19,10 +19,10 @@ import coil3.compose.AsyncImage
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageText
 
-internal val MinTvNavy = Color(0xFF0B1018)
-internal val MinTvTeal = Color(0xFF85E2CC)
-internal val MinTvMuted = Color(0xFFA6AFBC)
-internal val MinTvPanel = Color(0xFF151E2A)
+internal val MinTvNavy = tv.own.owntv.ui.theme.StageSurfaces.Background
+internal val MinTvTeal = tv.own.owntv.ui.theme.StageSurfaces.Cyan
+internal val MinTvMuted = tv.own.owntv.ui.theme.StageColors.Muted
+internal val MinTvPanel = tv.own.owntv.ui.theme.StageSurfaces.Panel
 
 @Composable
 internal fun TvText(value: String, modifier: Modifier = Modifier, size: Int = 22, color: Color = Color.White,

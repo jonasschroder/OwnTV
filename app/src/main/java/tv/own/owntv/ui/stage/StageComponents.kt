@@ -771,6 +771,8 @@ fun StagePoster(
     onLongClick: (() -> Unit)? = null,
     /** The Separate grid's smaller posters: 15.5 px title, the 66×28 chip. */
     compact: Boolean = false,
+    progress: Float? = null,
+    watched: Boolean = false,
     /** More › Favourites: a muted line under the title ("Movie"); the title is then 18/700 white. */
     line: String? = null,
     artwork: @Composable BoxScope.() -> Unit,
@@ -801,6 +803,11 @@ fun StagePoster(
         ) {
             artwork()
             if (rating != null) StageRatingChip(rating, Modifier.padding(8.mpx), small = compact)
+            progress?.takeIf { it > 0f }?.let {
+                StageProgress(it.coerceIn(0f, 1f), Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(5.mpx))
+            }
+            if (watched) Text("✓", style = stageText(24, 800), color = StageColors.Ok,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(10.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(12.mpx))
         Text(

@@ -112,6 +112,7 @@ internal data class VodTitleInfo(
     val tags: List<String>,
     val plot: String?,
     val cast: List<CastMember>,
+    val ratingFromTmdb: Boolean = false,
 )
 
 /** A rating as the mockup writes it: one decimal, in the user's number format ("8.4", "8,4"). */
@@ -148,7 +149,7 @@ fun cinematicQualityBadges(qualityRank: Int, advertisedCapabilities: String?): L
 @Composable
 internal fun VodHeader(section: String, category: String, count: String, showChevron: Boolean, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.Bottom) {
-        Text(section, style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(section, style = stageText(36, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(
             Modifier.padding(bottom = 3.mpx),
             horizontalArrangement = Arrangement.spacedBy(12.mpx),
@@ -227,7 +228,7 @@ internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modif
 internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
     Column(modifier.clipToBounds()) {
         var logoFailed by remember(info.logoUrl) { mutableStateOf(false) }
-        Box(Modifier.fillMaxWidth().height(170.mpx), contentAlignment = Alignment.BottomStart) {
+        Box(Modifier.fillMaxWidth().height(76.mpx), contentAlignment = Alignment.BottomStart) {
             if (!info.logoUrl.isNullOrBlank() && !logoFailed) {
                 AsyncImage(
                     model = info.logoUrl,
@@ -240,7 +241,7 @@ internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
             } else {
                 Text(
                     info.title,
-                    style = stageText(92, 800, (-2.5).mpxSp).copy(lineHeight = (92 * 1.02f).mpxSp),
+                    style = stageText(46, 800).copy(lineHeight = 50.mpxSp),
                     color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -248,15 +249,17 @@ internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
         VodMeta(
             parts = listOfNotNull(info.year?.toString(), info.genres.takeIf { it.isNotEmpty() }?.joinToString(", "), info.runtimeSecs?.let { vodRuntime(it) }),
             rating = info.rating, tags = info.tags, size = 20,
-            modifier = Modifier.padding(top = 18.mpx, bottom = 12.mpx),
+            modifier = Modifier.padding(top = 12.mpx, bottom = 10.mpx),
         )
+        info.rating?.let { Text(stringResource(if (info.ratingFromTmdb) R.string.mintv_tmdb_rating else R.string.mintv_provider_rating),
+            style = stageText(16, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         info.plot?.takeIf { it.isNotBlank() }?.let {
             Text(
                 it, style = stageText(19.5f, 400).copy(lineHeight = (19.5f * 1.55f).mpxSp), color = Color(0xFFC9D3CF),
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 860.mpx),
             )
         }
-        if (info.cast.isNotEmpty()) VodCast(info.cast, 6, Modifier.padding(top = 20.mpx))
+        // Full cast remains in the existing details view; browsing reserves room for posters.
     }
 }
 

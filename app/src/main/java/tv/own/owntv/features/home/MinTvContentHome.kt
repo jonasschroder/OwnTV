@@ -64,6 +64,8 @@ fun MinTvContentHome(
     onPauseOrDispose: () -> Unit,
     onLiveTv: () -> Unit,
     onGuide: () -> Unit,
+    onPlayMovie: (Long, Long) -> Unit,
+    onPlayEpisode: (Long, Long, Long) -> Unit,
     onSources: () -> Unit,
     onManageSources: () -> Unit,
     onChildFocused: () -> Unit,
@@ -100,7 +102,17 @@ fun MinTvContentHome(
     val previewState by liveVm.previewEngine.state.collectAsStateWithLifecycle()
     val blocked by liveVm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    val navigation = rememberHomeDpadNavigation(firstRowFocusRequester)
+    val navigation = rememberHomeDpadNavigation(firstRowFocusRequester, sectionCount = 6, profileKey = activeProfileId)
+    val continuations = remember(state.continueMovies, state.continueSeries, state.profileId, activeProfileId) {
+        homeContinuations(state, activeProfileId)
+    }
+    val hasResume = continuations.isNotEmpty()
+    LaunchedEffect(hasResume) {
+        if (!hasResume && navigation.selected == 3) {
+            navigation.selected = 2
+            withFrameNanos { }; navigation.focus[2].requestSafely()
+        }
+    }
     LaunchedEffect(library) {
         if (library.profileId == activeProfileId && library.status != HomeLibraryStatus.LOADING) vm.refresh(activeProfileId)
     }
@@ -248,7 +260,7 @@ fun MinTvContentHome(
                         if (favoriteRowFocused || heroFocused) controller.onRemoteNavigation()
                     }
                     false
-                }.then(homeDpadModifier(navigation, listState, listOf(0, 1, 2, 3, 4))).onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
+                }.then(homeDpadModifier(navigation, listState, listOf(0, 1, 2, if (hasResume) 3 else -1, if (hasResume) 4 else 3, if (hasResume) 5 else 4))).onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
             ) {
                 item(key = "mintv-live-hero") {
                     val hasVideo = active && selected != null && previewState != LivePreviewEngine.State.IDLE && previewState != LivePreviewEngine.State.ERROR
@@ -333,11 +345,21 @@ fun MinTvContentHome(
                     }
                 }
                 item(key = "mintv-shl") { shlCard() }
+                if (hasResume) item(key = "mintv-resume") {
+                    HomeContinuationRow(continuations, navigation.section(3)) { item ->
+                        pauseOrDispose(); controller.setActive(false); vm.stopPreview()
+                        when (item.kind) {
+                            tv.own.owntv.core.launcher.LauncherContinuationKind.MOVIE -> onPlayMovie(item.sourceItemId, item.positionMs)
+                            tv.own.owntv.core.launcher.LauncherContinuationKind.EPISODE -> onPlayEpisode(0L, item.targetItemId, item.positionMs)
+                            else -> Unit
+                        }
+                    }
+                }
                 item(key = "mintv-twitch") {
-                    TwitchCompanion(visible = twitchVisible, modifier = navigation.section(3), active = previewEnabled && !preferencesOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+                    TwitchCompanion(visible = twitchVisible, modifier = navigation.section(4), active = previewEnabled && !preferencesOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
                         && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
                 }
-                item {
+                item(key = "mintv-apps") {
                     Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Text(stringResource(R.string.mintv_apps_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
@@ -347,7 +369,7 @@ fun MinTvContentHome(
                                     controller.setActive(false)
                                     val intent = MinTvExternalApps.launch(context, shortcut.packages)
                                     if (intent != null) openExternal(intent) else missingApp = shortcut
-                                }, Modifier.weight(1f).height(82.mpx).then(if (index == 0) navigation.section(4) else Modifier))
+                                }, Modifier.weight(1f).height(82.mpx).then(if (index == 0) navigation.section(5) else Modifier))
                             }
                         }
                     }

@@ -4,4 +4,6 @@
     <string name="content_search_movies">Search movies…</string>
     <string name="content_search_series">Search series…</string>
     <string name="mintv_export_crash">Export crash report</string>
+    <string name="mintv_provider_rating">Provider rating</string>
+    <string name="mintv_tmdb_rating">TMDB rating</string>
 </resources>

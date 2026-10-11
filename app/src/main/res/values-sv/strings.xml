@@ -4,4 +4,6 @@
     <string name="content_search_movies">Sök filmer…</string>
     <string name="content_search_series">Sök serier…</string>
     <string name="mintv_export_crash">Exportera kraschrapport</string>
+    <string name="mintv_provider_rating">Leverantörsbetyg</string>
+    <string name="mintv_tmdb_rating">Betyg från TMDB</string>
 </resources>

@@ -2,6 +2,8 @@
 
 package tv.own.owntv.features.movies
 
+import tv.own.owntv.features.metadata.resolveSafeMovie
+import tv.own.owntv.features.metadata.cachedSafeMoviePosters
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -298,7 +300,7 @@ class MovieViewModel(
             if (m == null) { emit(null); return@transformLatest }
             resolvedMeta[m.id]?.let { emit(MovieMeta(m.id, it)); return@transformLatest }
             delay(tv.own.owntv.core.metadata.MetadataRepository.FOCUS_DEBOUNCE_MS)
-            val cache = runCatching { metadata.resolveMovie(m) }.getOrNull()
+            val cache = runCatching { metadata.resolveSafeMovie(m) }.getOrNull()
             if (cache != null) {
                 if (resolvedMeta.size > 500) resolvedMeta.clear()
                 resolvedMeta[m.id] = cache
@@ -373,7 +375,7 @@ class MovieViewModel(
                 .collectLatest { probe ->
                     val wanted = probe.filterNot { it.id in _cachedPosters.value }
                     if (wanted.isEmpty()) return@collectLatest
-                    val found = runCatching { metadata.cachedMoviePosters(wanted) }.getOrDefault(emptyMap())
+                    val found = runCatching { metadata.cachedSafeMoviePosters(wanted) }.getOrDefault(emptyMap())
                     if (found.isEmpty()) return@collectLatest
                     // Bounded: a session spent browsing a 170k catalog would otherwise grow this forever.
                     val base = if (_cachedPosters.value.size > 500) emptyMap() else _cachedPosters.value
@@ -731,7 +733,7 @@ class MovieViewModel(
             // Enable the player's OpenSubtitles search for this movie (subtitle plan §4). tmdbId is
             // resolved from the metadata cache when available (review R7) for a stronger match.
             if (pid != null) {
-                val tmdbId = runCatching { metadata.resolveMovie(movie)?.tmdbId?.toLong() }.getOrNull()
+                val tmdbId = runCatching { metadata.resolveSafeMovie(movie)?.tmdbId?.toLong() }.getOrNull()
                 subtitleController.setMovie(pid, movie, tmdbId)
             }
             if (pid != null) {

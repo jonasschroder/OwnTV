@@ -114,7 +114,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@OwnTVApp)
-            modules(coreModule, appModule, databaseModule, dataModule, playerModule)
+            modules(coreModule, appModule, databaseModule, dataModule, playerModule, tv.own.owntv.di.minTvMetadataModule)
         }
         Perf.stamp("koin-started")
         // A chosen icon colour ("Later", the first-run pick, a restore) reaches the launcher when the app

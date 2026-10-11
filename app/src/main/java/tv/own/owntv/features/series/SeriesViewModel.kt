@@ -2,6 +2,11 @@
 
 package tv.own.owntv.features.series
 
+import tv.own.owntv.features.metadata.resolveSafeSeries
+import tv.own.owntv.features.metadata.cachedSafeSeriesPosters
+import tv.own.owntv.features.metadata.resolveSafeEpisode
+import tv.own.owntv.features.metadata.cachedSafeSeasonEpisodes
+import tv.own.owntv.features.metadata.resolveSafeSeasonEpisodes
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -297,7 +302,7 @@ class SeriesViewModel(
             if (s == null) { emit(null); return@transformLatest }
             resolvedMeta[s.id]?.let { emit(SeriesMeta(s.id, it)); return@transformLatest }
             delay(tv.own.owntv.core.metadata.MetadataRepository.FOCUS_DEBOUNCE_MS)
-            val cache = runCatching { metadata.resolveSeries(s) }.getOrNull()
+            val cache = runCatching { metadata.resolveSafeSeries(s) }.getOrNull()
             if (cache != null) {
                 if (resolvedMeta.size > 500) resolvedMeta.clear()
                 resolvedMeta[s.id] = cache
@@ -386,7 +391,7 @@ class SeriesViewModel(
                 .collectLatest { probe ->
                     val wanted = probe.filterNot { it.id in _cachedPosters.value }
                     if (wanted.isEmpty()) return@collectLatest
-                    val found = runCatching { metadata.cachedSeriesPosters(wanted) }.getOrDefault(emptyMap())
+                    val found = runCatching { metadata.cachedSafeSeriesPosters(wanted) }.getOrDefault(emptyMap())
                     if (found.isEmpty()) return@collectLatest
                     // Bounded: a long browse of a huge catalog would otherwise grow this forever.
                     val base = if (_cachedPosters.value.size > 500) emptyMap() else _cachedPosters.value
@@ -793,7 +798,7 @@ class SeriesViewModel(
         .mapLatest { (ep, _) ->
             val show = _openedSeries.value
             if (ep == null || show == null) null
-            else EpisodeMeta(ep.id, runCatching { metadata.resolveEpisode(show, ep) }.getOrNull())
+            else EpisodeMeta(ep.id, runCatching { metadata.resolveSafeEpisode(show, ep) }.getOrNull())
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -842,7 +847,7 @@ class SeriesViewModel(
                     // 1. Whatever is already cached, immediately. Coming back to a season you have
                     //    already opened must not blank the tiles while a timer runs — that reads as
                     //    the pictures reloading, which is what the dwell used to cause on EVERY switch.
-                    val cached = runCatching { metadata.cachedSeasonEpisodes(pair.first, pair.second) }
+                    val cached = runCatching { metadata.cachedSafeSeasonEpisodes(pair.first, pair.second) }
                         .getOrDefault(emptyMap())
                     emit(cached)
                     // 2. Nothing more to do when the season is already complete — no timer, no request.
@@ -851,7 +856,7 @@ class SeriesViewModel(
                     //    a show opened by accident still costs nothing.
                     kotlinx.coroutines.delay(GRID_DWELL_MS)
                     emit(
-                        runCatching { metadata.resolveSeasonEpisodes(pair.first, pair.second) }
+                        runCatching { metadata.resolveSafeSeasonEpisodes(pair.first, pair.second) }
                             .getOrDefault(cached),
                     )
                 }
@@ -1051,7 +1056,7 @@ class SeriesViewModel(
             // Enable the player's OpenSubtitles search for this episode (subtitle plan §4). The parent
             // series' TMDB id gives the strongest episode match (review R7) when metadata is available.
             if (pid != null) {
-                val parentTmdbId = runCatching { metadata.resolveSeries(show)?.tmdbId?.toLong() }.getOrNull()
+                val parentTmdbId = runCatching { metadata.resolveSafeSeries(show)?.tmdbId?.toLong() }.getOrNull()
                 subtitleController.setEpisode(pid, show, episode, parentTmdbId)
                 // Remember the queue so player-driven advances re-point the context (Phase 5, init).
                 playingQueue = PlayingQueue(show, queue, pid, parentTmdbId)

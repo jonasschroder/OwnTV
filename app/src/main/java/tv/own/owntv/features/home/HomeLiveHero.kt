@@ -27,7 +27,8 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
         .background(Brush.horizontalGradient(listOf(Color(0xFF1C2B35), MinTvPanel))).padding(24.mpx),
         verticalArrangement = Arrangement.spacedBy(18.mpx)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(30.mpx), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).aspectRatio(16f / 9f).clip(RoundedCornerShape(16.mpx)).background(Color.Black),
+            Box(Modifier.weight(1f).aspectRatio(16f / 9f).clip(RoundedCornerShape(16.mpx))
+                .background(Brush.verticalGradient(listOf(MinTvPanel, MinTvNavy))),
                 contentAlignment = Alignment.Center) {
                 video()
                 status?.let { TvText(it, Modifier.align(Alignment.BottomCenter).fillMaxWidth()

@@ -71,8 +71,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var broadcastEnabled by remember { mutableStateOf(repository.preferences.getBoolean("broadcast-enabled", false)) }
     var enabled by remember { mutableStateOf(repository.preferences.getBoolean("shl-enabled", false)) }
     var expansion by remember { mutableStateOf(repository.preferences.getBoolean("shl-expand", true)) }
-    var screen by rememberSaveable { mutableStateOf(false) }
-    var section by rememberSaveable { mutableStateOf(MatchcenterSection.MATCHES) }
+    var screen by rememberSaveable(profileId) { mutableStateOf(false) }
+    var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.MATCHES) }
     var selectedId by rememberSaveable(profileId) { mutableStateOf<String?>(null) }
     var picker by rememberSaveable(profileId) { mutableStateOf(false) }
     var searchOpen by rememberSaveable(profileId) { mutableStateOf(false) }
@@ -81,8 +81,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var categoryPage by rememberSaveable(profileId) { mutableIntStateOf(0) }
     var categories by remember(profileId) { mutableStateOf<List<LiveViewModel.HomeSportsCategory>>(emptyList()) }
     var categoryRows by remember(profileId) { mutableStateOf<LiveViewModel.HomeChannelCandidates?>(null) }
-    var upcoming by rememberSaveable { mutableStateOf(false) }
-    var page by rememberSaveable { mutableIntStateOf(0) }
+    var upcoming by rememberSaveable(profileId) { mutableStateOf(false) }
+    var page by rememberSaveable(profileId) { mutableIntStateOf(0) }
     var data by remember(profileId) { mutableStateOf<Map<String, SportSnapshot>>(emptyMap()) }
     val loadStates = remember(profileId) { mutableStateMapOf<String, SportsLoadState>() }
     var retryRevision by remember(profileId) { mutableIntStateOf(0) }
@@ -95,18 +95,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var channels by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var confirmed by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var matchedGame by remember(profileId) { mutableStateOf<SportFixture?>(null) }
-    var matching by remember { mutableStateOf(false) }
-    var matchFailed by remember { mutableStateOf(false) }
-    var broadcast by remember { mutableStateOf<BroadcastAssignment?>(null) }
+    var matching by remember(profileId) { mutableStateOf(false) }
+    var matchFailed by remember(profileId) { mutableStateOf(false) }
+    var broadcast by remember(profileId) { mutableStateOf<BroadcastAssignment?>(null) }
     val knownBroadcasts = remember { mutableStateMapOf<String, BroadcastAssignment>() }
     val resolvedCards = remember(profileId) { mutableStateMapOf<String, Pair<Long, List<ChannelEntity>>>() }
     val directCards = remember(profileId) { mutableStateMapOf<String, ChannelEntity>() }
     var hasChannels by remember(profileId) { mutableStateOf<Boolean?>(null) }
     var chosenChannel by remember(profileId) { mutableStateOf<ChannelEntity?>(null) }
     var manualChoice by remember(profileId) { mutableStateOf<FixtureChannelChoice?>(null) }
-    var matchedBroadcast by remember { mutableStateOf<BroadcastAssignment?>(null) }
-    var choiceVersion by remember { mutableIntStateOf(0) }
-    var candidatesComplete by remember { mutableStateOf(false) }
+    var matchedBroadcast by remember(profileId) { mutableStateOf<BroadcastAssignment?>(null) }
+    var choiceVersion by remember(profileId) { mutableIntStateOf(0) }
+    var candidatesComplete by remember(profileId) { mutableStateOf(false) }
     val entryFocus = remember { FocusRequester() }
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
@@ -122,13 +122,19 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         onDispose { onMatchcenterEntry(null) }
     }
 
-    val gameFocus = remember { mutableMapOf<String, FocusRequester>() }
-    var restoreTarget by remember { mutableStateOf<FocusRequester?>(null) }
+    val gameFocus = remember(profileId) { mutableMapOf<String, FocusRequester>() }
+    var restoreTarget by remember(profileId) { mutableStateOf<FocusRequester?>(null) }
     val matchList = rememberLazyListState()
     val tableList = rememberLazyListState()
     val today = stockholmDay(now)
     val currentData = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
     val allGames = remember(currentData) { currentData.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
+    LaunchedEffect(profileId) { SportsDiagnostics.record(SportsDiagnostics.Event.PROFILE_CHANGED) }
+    LaunchedEffect(screen) { SportsDiagnostics.record(if (screen) SportsDiagnostics.Event.MATCHCENTER else SportsDiagnostics.Event.HOME) }
+    DisposableEffect(profileId, allGames) {
+        gameFocus.keys.retainAll(allGames.mapTo(HashSet()) { it.id })
+        onDispose { }
+    }
     val mine = personalFixtures(allGames, selectedTeams, now)
     val todaysGames = allGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it.faceoff })
     val myToday = mine.filter { it.on(today) }
@@ -347,11 +353,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             channel.sourceId, channel.name, game.faceoff + 4 * 60 * 60_000L), System.currentTimeMillis())
         choiceVersion++; play(channel, pickerRows)
     }
-    LaunchedEffect(picker, matching, hasChannels, searchOpen, pickerRows.firstOrNull()?.id) {
-        if (screen && picker && !searchOpen && !matching && hasChannels != null) {
-            withFrameNanos { }; runCatching { pickerFocus.requestFocus() }
-        }
-    }
 
     Box(Modifier.fillMaxSize()) {
         homeContent({
@@ -479,7 +480,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             item { StandingRow(stringResource(R.string.mintv_position), stringResource(R.string.mintv_team),
                                 if (showPlayed) stringResource(R.string.mintv_games_played) else null,
                                 if (showDifference) stringResource(R.string.mintv_goal_difference) else null, stringResource(R.string.mintv_table_points)) }
-                            items(standings, key = { it.rank }) { standing ->
+                            items(standings, key = { selectedCompetition.id + ":" + it.team }) { standing ->
                                 FocusPanel(highlighted = SportsCatalog.identity(standing.team, selectedCompetition.sport)?.id in selectedTeams.teamIds) {
                                 StandingRow(NumberFormat.getIntegerInstance().format(standing.rank), shortTeam(standing.team),
                                     standing.played?.takeIf { showPlayed }?.let { NumberFormat.getIntegerInstance().format(it) },
@@ -508,7 +509,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                     if (useFuture && currentPage < lastPage) HomeButton(stringResource(R.string.mintv_shl_next_page), { page = currentPage + 1 })
                                 } }
                                 items(games, key = { it.id }) { game ->
-                                    val focus = remember(game.id) { gameFocus.getOrPut(game.id) { FocusRequester() } }
+                                    val focus = remember(profileId, game.id) { gameFocus.getOrPut(game.id) { FocusRequester() } }
                                     val key = fixtureKey(game.broadcastFixture())
                                     val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
                                     val cached = resolvedCards[key]?.takeIf { now < it.first && game.competition.id in freshCompetitions }
@@ -589,7 +590,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
 }
 
 @Composable
-private fun MatchScorecard(game: SportFixture, now: Long, hideScores: Boolean, favorite: Boolean, broadcaster: String?, onClick: () -> Unit, onWatch: (() -> Unit)?, modifier: Modifier) {
+internal fun MatchScorecard(game: SportFixture, now: Long, hideScores: Boolean, favorite: Boolean, broadcaster: String?, onClick: () -> Unit, onWatch: (() -> Unit)?, modifier: Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
     TvCard(onClick, Modifier.weight(1f), selected = favorite) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

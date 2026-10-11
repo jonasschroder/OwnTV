@@ -1,19 +1,25 @@
-# Min TV v0.2
+# Min TV v0.4
+
+v0.4 improves sports data-arrival diagnostics, compact Movies/Series browsing and
+real profile continuation. See [the reuse audit](docs/min-tv-v04-audit.md) and
+[build, validation and physical-test notes](docs/min-tv-v0.4.md).
+
+Existing permanently signed installations must use the approved update channel.
+CI debug and unsigned release APKs are verification outputs; **do not install them
+on a populated Min TV Test installation or clear its data**. Signing and distribution
+remain manual, protected and separate from this PR.
 
 This fork builds **Min TV** (`se.jonasschroder.mintv`) as a normal Android TV app
 with an IPTV-first Home: real favorites, muted live preview, current/next EPG and
 fullscreen playback through the existing OwnTV player. Google's launcher and
 system packages must stay unchanged.
 
-For side-by-side Chromecast testing, install **Min TV Test**
-(`se.jonasschroder.mintv.qa`) from the **MinTV-v0.2-QA.apk** Actions artifact linked
-in PR #3. Follow [the Mac installation and QA backup-import guide](docs/min-tv-qa.md).
-It preserves the existing Min TV installation and uses separate private data.
-
-See [the regular v0.2 build, safe update/install and Chromecast test guide](docs/min-tv-v0.2.md).
-The regular APK remains a separate artifact. **Fresh CI debug signing keys generally cannot update an installed v0.1:** read
-the artifact's installation notice and verify/backup existing data first. No public
-Release is published. The upstream description below is reference only; its APK,
+QA (`se.jonasschroder.mintv.qa`) and Production (`se.jonasschroder.mintv`) retain
+separate application data and update channels. For current installs and updates,
+use [the permanent signing/update guide](docs/min-tv-permanent-updates-mac.md).
+The [v0.2 QA guide](docs/min-tv-qa.md) and [v0.2 build guide](docs/min-tv-v0.2.md)
+describe historical prototype artifacts, not an upgrade path for permanently
+signed installations. The upstream description below is reference only; its APK,
 Downloader code and branding are not Min TV downloads.
 
 <p align="center">

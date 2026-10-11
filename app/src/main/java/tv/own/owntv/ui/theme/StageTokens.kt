@@ -28,9 +28,15 @@ val Number.mpx: Dp get() = (toFloat() * DP_PER_MPX).dp
 val Number.mpxSp: TextUnit get() = (toFloat() * DP_PER_MPX).sp
 
 /** Stage's fixed neutrals. Accent, on-accent and focus stay the user's own, from [OwnTVTheme.colors]. */
+object StageSurfaces {
+    val Background = Color(0xFF090F1C)
+    val Panel = Color(0xFF142237)
+    val Cyan = Color(0xFF80DCF1)
+}
+
 object StageColors {
     val Text = Color(0xFFF1F5F3)
-    val Muted = Color(0xFFA7B3AE)
+    val Muted = Color(0xFFA6B5CA)
     val Dim = Color(0xFF6D7A75)
     /** Idle text of menu items, sheet items and category rows (`#dbe4e0` / `#d5dfdb` in the mockup). */
     val ItemText = Color(0xFFD5DFDB)
@@ -38,8 +44,8 @@ object StageColors {
     val TagText = Color(0xFFC8D3CE)
     /** The one white used for "idle control fill" everywhere: tools, search fields, segmented. */
     val ControlFill = Color.White.copy(alpha = 0.06f)
-    val GlassTint = Color(0xFF121A1E)
-    val GlassOff = Color(0xFF121A1C)
+    val GlassTint = StageSurfaces.Panel
+    val GlassOff = StageSurfaces.Background
     val RatingStar = Color(0xFFFFCC4D)
     /** `.ok`: "✓ Ready to watch". */
     val Ok = Color(0xFF7BE3A4)

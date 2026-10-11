@@ -20,9 +20,18 @@ internal class HomeDpadNavigation(val focus: List<FocusRequester>) {
 }
 
 @Composable
-internal fun rememberHomeDpadNavigation(firstFavorite: FocusRequester): HomeDpadNavigation {
-    val focus = remember(firstFavorite) { List(5) { if (it == 1) firstFavorite else FocusRequester() } }
-    return rememberSaveable(saver = Saver(save = { it.selected }, restore = { HomeDpadNavigation(focus).apply { selected = it } })) { HomeDpadNavigation(focus) }
+internal fun rememberHomeDpadNavigation(firstFavorite: FocusRequester, sectionCount: Int = 5, profileKey: Long? = null): HomeDpadNavigation {
+    val focus = remember(firstFavorite, sectionCount) { List(sectionCount) { if (it == 1) firstFavorite else FocusRequester() } }
+    return rememberSaveable(firstFavorite, sectionCount, profileKey,
+        saver = Saver(save = { it.selected }, restore = { HomeDpadNavigation(focus).apply { selected = it.coerceIn(focus.indices) } })) { HomeDpadNavigation(focus) }
+}
+
+/** -1 marks a genuinely absent conditional section, e.g. no real resume history yet. */
+internal fun nextHomeSection(selected: Int, delta: Int, itemIndices: List<Int>): Int? {
+    if (delta !in listOf(-1, 1)) return null
+    var target = selected + delta
+    while (target in itemIndices.indices && itemIndices[target] < 0) target += delta
+    return target.takeIf { it in itemIndices.indices }
 }
 
 @Composable
@@ -31,8 +40,8 @@ internal fun homeDpadModifier(navigation: HomeDpadNavigation, list: LazyListStat
     var movement by remember(navigation, list) { mutableStateOf<Job?>(null) }
     return Modifier.onPreviewKeyEvent { event ->
         val delta = when (event.key) { Key.DirectionDown -> 1; Key.DirectionUp -> -1; else -> 0 }
-        val target = navigation.selected + delta
-        if (delta == 0 || target !in itemIndices.indices) false
+        val target = nextHomeSection(navigation.selected, delta, itemIndices)
+        if (target == null) false
         else {
             if (event.type == KeyEventType.KeyDown) {
                 movement?.cancel()

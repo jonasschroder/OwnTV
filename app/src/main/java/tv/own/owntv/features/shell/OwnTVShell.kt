@@ -1169,6 +1169,8 @@ fun OwnTVShell(
                             },
                             onLiveTv = { onSelectSection(MainSection.LIVE_TV) },
                             onGuide = { onSelectSection(MainSection.EPG) },
+                            onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
+                            onPlayEpisode = { seriesId, epId, pos -> scope.launch { if (seriesVm.playFromHomeAsync(seriesId, epId, pos) && !seriesVm.externalPlayerOn.value) openFullscreen(MainSection.SERIES) } },
                             onSources = {
                                 homeSetupOpen = true
                             },
@@ -1178,7 +1180,12 @@ fun OwnTVShell(
                             onRestored = { restoreFocus = false },
                             firstRowFocusRequester = homeFirstRowFocus,
                             onEntryHook = { homeEntry = it },
-                            contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED) 64.mpx else 150.mpx,
+                            contentStart = when {
+                                widenDocked -> 64.mpx + tv.own.owntv.features.shell.components.railDockedReserve(railSize) - tv.own.owntv.features.shell.components.railDockedReserve(navSize)
+                                navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED -> 64.mpx
+                                railFocused -> tv.own.owntv.features.shell.components.railDockedReserve(railSize) + 24.mpx
+                                else -> 150.mpx
+                            },
                             reservedTop = homeStatusHeight + 24.mpx,
                             modifier = Modifier.fillMaxSize(),
                         ) }

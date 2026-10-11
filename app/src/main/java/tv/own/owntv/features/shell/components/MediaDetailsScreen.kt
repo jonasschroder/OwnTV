@@ -70,15 +70,17 @@ data class MediaDetailsUi(
 )
 
 /**
- * TMDB details (plan §11.1) as a Stage page in its own full-screen window: the backdrop edge to edge,
+ * Merged provider/TMDB details as a Stage page in its own full-screen window: the backdrop edge to edge,
  * fading into the page, then the eyebrow (episode line), the title 64/800, the meta line, genres as
- * tags, the overview and the cast. Purely for reading: **Up/Down scroll, Back exits, nothing is
- * selectable** — the page owns focus and turns Up/Down into a scroll, so the D-pad cannot leak behind.
+ * tags, overview and cast. Up/Down scroll, Back exits; optional Play/Back controls stay visible
+ * while scrolling. Read-only callers retain the original page focus and navigation.
  */
 @Composable
-fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Modifier = Modifier) {
+fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Modifier = Modifier,
+    onPlay: (() -> Unit)? = null, playLabel: String? = null) {
     val scroll = rememberScrollState()
     val focus = remember { FocusRequester() }
+    val playFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     val step = 260f
     val onKey: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = onKey@{ e ->
@@ -95,9 +97,9 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
             else -> false
         }
     }
-    val page = Color(0xFF070B0E)
+    val page = tv.own.owntv.ui.theme.StageSurfaces.Background
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onExit, stageLayout = true, stageScaled = false) {
-        LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { focus.requestFocus() } }
+        LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { (if (onPlay != null) playFocus else focus).requestFocus() } }
         Box(modifier.fillMaxSize().background(page).trapAllFocusExit()) {
             if (!details.backdropUrl.isNullOrBlank()) {
                 AsyncImage(
@@ -111,7 +113,7 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).gradientWash(vertical = false, 0f to page.copy(alpha = 0.85f), 0.6f to Color.Transparent))
             Column(
                 Modifier.fillMaxSize().focusRequester(focus).onKeyEvent(onKey).focusable().verticalScroll(scroll)
-                    .padding(start = 120.mpx, end = 120.mpx, top = 300.mpx, bottom = 80.mpx),
+                    .padding(start = 120.mpx, end = 120.mpx, top = if (details.backdropUrl.isNullOrBlank()) 64.mpx else 200.mpx, bottom = if (onPlay != null) 160.mpx else 80.mpx),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(36.mpx), verticalAlignment = Alignment.Bottom) {
                     if (!details.posterUrl.isNullOrBlank()) {
@@ -144,6 +146,15 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
                     CastGrid(details.cast)
                 }
                 Text(stringResource(R.string.content_media_press_back), style = stageText(16, 600), color = StageColors.Dim, modifier = Modifier.padding(top = 40.mpx))
+            }
+            onPlay?.let { play ->
+                Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().background(page)
+                    .padding(start = 120.mpx, end = 120.mpx, top = 18.mpx, bottom = 28.mpx)
+                    .onKeyEvent(onKey), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
+                    tv.own.owntv.ui.stage.StageTool(playLabel ?: stringResource(R.string.content_play),
+                        boxed = true, modifier = Modifier.focusRequester(playFocus), onClick = play)
+                    tv.own.owntv.ui.stage.StageTool(stringResource(R.string.mintv_back), boxed = true, onClick = onExit)
+                }
             }
         }
     }

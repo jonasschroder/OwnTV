@@ -98,8 +98,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.core.CoreBuildInfo.tvHome = false
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.
-        tv.own.owntv.core.util.CrashRecorder.diagnostics = { tv.own.owntv.player.LiveDiagnosticsLog.snapshot() }
+        tv.own.owntv.core.util.CrashRecorder.diagnostics = {
+            tv.own.owntv.player.LiveDiagnosticsLog.snapshot() + "\n--- sports context ---\n" +
+                tv.own.owntv.features.home.SportsDiagnostics.snapshot()
+        }
         tv.own.owntv.core.util.CrashRecorder.install(this)
+        tv.own.owntv.features.home.SportsDiagnostics.initialize(this, appScope)
         // Core learns a panel's session limit while syncing; the engine is what acts on it. Registered
         // before Koin so the very first source flow already reaches the player (see LiveSessionLimit).
         tv.own.owntv.core.player.LiveSessionLimit.report = tv.own.owntv.player.LiveStreamQuirks::rememberSessionLimit
@@ -111,7 +115,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@OwnTVApp)
-            modules(coreModule, appModule, databaseModule, dataModule, playerModule)
+            modules(coreModule, appModule, databaseModule, dataModule, playerModule, tv.own.owntv.di.minTvMetadataModule)
         }
         Perf.stamp("koin-started")
         // A chosen icon colour ("Later", the first-run pick, a restore) reaches the launcher when the app

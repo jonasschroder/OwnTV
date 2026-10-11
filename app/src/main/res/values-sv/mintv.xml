@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="mintv_sports_loading">Hämtar matcher…</string>
+    <string name="mintv_sports_fetch_failed">Det gick inte att hämta matcherna.</string>
+    <string name="mintv_sports_diagnostic_reason">Fel: %1$s · Validering: %2$s</string>
     <string name="mintv_update_setup_pending">Den här versionen saknar en verifierad permanent uppdateringsidentitet, eller har en Android-version som inte stöds. Inga uppdateringsanrop eller installationer görs.</string>
     <string name="mintv_home_live">TV-kanaler</string>
     <string name="mintv_home_settings">Android TV-inställningar</string>

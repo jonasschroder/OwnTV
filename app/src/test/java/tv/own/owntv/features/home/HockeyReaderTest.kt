@@ -3,6 +3,7 @@ package tv.own.owntv.features.home
 import java.io.IOException
 import java.time.Instant
 import kotlinx.coroutines.*
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -179,6 +180,66 @@ class HockeyReaderTest {
         assertEquals(HockeyFailureKind.FORMAT, issue.kind)
         assertEquals(HockeyStage.SCHEDULE, issue.stage)
         assertEquals(before, reader.cached(shl, now + 60 * 60_000))
+    }
+
+    @Test fun slowTransportTimesOutCancelsAndPersistsBackoffAcrossRecreation() = runTest {
+        val store = Store(); var calls = 0; var cancelled = false
+        val source = HockeyPages { _, _ ->
+            calls++
+            try { awaitCancellation() } finally { cancelled = true }
+        }
+        val issue = failure { HockeyReader(store, source).refresh(shl, now) }
+        assertEquals(HockeyFailureKind.TIMEOUT, issue.kind)
+        assertEquals(HockeyStage.ROBOTS, issue.stage)
+        assertEquals(now + 120_000, issue.retryAt)
+        assertTrue(cancelled)
+        assertEquals(issue, failure { HockeyReader(store, source).refresh(shl, now + 1000) })
+        assertEquals(1, calls)
+        assertNull(HockeyReader(store, source).cached(shl, now))
+    }
+
+    @Test fun unexpectedHttp200ReportsValidationReasonAndPreservesVerifiedCache() = runBlocking {
+        for ((body, reason) in listOf("<html><h1>Maintenance</h1></html>" to HockeyFormatReason.COMPETITION,
+            html("ha-schedule") to HockeyFormatReason.COMPETITION,
+            html("shl-schedule").replace("Schedule and Results", "Changed heading") to HockeyFormatReason.PAGE)) {
+            val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+            val before = reader.refresh(shl, now)
+            source.response = CompanionResponse(200, body)
+            val issue = failure { reader.refresh(shl, now + 60 * 60_000) }
+            assertEquals(HockeyFailureKind.FORMAT, issue.kind)
+            assertEquals(HockeyStage.SCHEDULE, issue.stage)
+            assertEquals(200, issue.httpCode)
+            assertEquals(reason, issue.detail)
+            assertEquals(issue, HockeyReader(store, source).diagnostic(shl))
+            assertEquals(before, reader.cached(shl, now + 60 * 60_000))
+        }
+    }
+
+    @Test fun verifiedHeadersCanRepresentEmptySeasonButMissingHeadersNeverDo() = runBlocking {
+        fun emptyTable(html: String, heading: String): String {
+            val start = Regex("<h2>\\s*${Regex.escape(heading)}\\s*</h2>").find(html)!!.range.first
+            val end = html.indexOf("</table>", start)
+            val table = html.substring(start, end)
+            val rows = Regex("<tr\\b[^>]*>.*?</tr>", RegexOption.DOT_MATCHES_ALL).findAll(table).toList()
+            return html.replaceRange(start, end, table.replaceRange(rows[1].range.first, table.length, ""))
+        }
+        val schedule = emptyTable(html("shl-schedule"), "Schedule and Results")
+        val standings = emptyTable(html("shl-table"), "Standings")
+        val store = Store(); val source = Source()
+        val pages = HockeyPages { path, limit -> when (path) {
+            "/ScheduleAndResults/Schedule/20961" -> CompanionResponse(200, schedule)
+            "/ScheduleAndResults/Standings/20961" -> CompanionResponse(200, standings)
+            else -> source.read(path, limit)
+        } }
+        val reader = HockeyReader(store, pages)
+        val result = reader.refresh(shl, now)
+        assertTrue(result.games.isEmpty())
+        assertTrue(reader.standings(shl, result.seasonId, now).rows.isEmpty())
+        assertTrue(HockeyReader(store, pages).cached(shl, now)!!.games.isEmpty())
+        assertTrue(HockeyReader(store, pages).cachedTable(shl, result.seasonId)!!.rows.isEmpty())
+        assertNull(reader.diagnostic(shl))
+        try { SwehockeyParser.schedule(schedule.replace(">Date<", ">Changed<")); fail("Unexpected headers accepted") }
+        catch (error: HockeyFormatException) { assertEquals(HockeyFormatReason.HEADERS, error.reason) }
     }
 
 }

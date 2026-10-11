@@ -10,6 +10,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 
 /** Explicit vertical sections: scroll the target into composition BEFORE requesting focus. */
 internal class HomeDpadNavigation(val focus: List<FocusRequester>) {
@@ -26,15 +28,22 @@ internal fun rememberHomeDpadNavigation(firstFavorite: FocusRequester): HomeDpad
 @Composable
 internal fun homeDpadModifier(navigation: HomeDpadNavigation, list: LazyListState, itemIndices: List<Int>): Modifier {
     val scope = rememberCoroutineScope()
+    var movement by remember(navigation, list) { mutableStateOf<Job?>(null) }
     return Modifier.onPreviewKeyEvent { event ->
         val delta = when (event.key) { Key.DirectionDown -> 1; Key.DirectionUp -> -1; else -> 0 }
         val target = navigation.selected + delta
         if (delta == 0 || target !in itemIndices.indices) false
         else {
-            if (event.type == KeyEventType.KeyDown) scope.launch {
-                list.animateScrollToItem(itemIndices[target])
-                withFrameNanos { }
-                navigation.focus[target].requestFocus()
+            if (event.type == KeyEventType.KeyDown) {
+                movement?.cancel()
+                movement = scope.launch {
+                    try {
+                        list.animateScrollToItem(itemIndices[target])
+                        withFrameNanos { }; withFrameNanos { }
+                        navigation.focus[target].requestSafely()
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: IllegalStateException) { /* The list was removed during navigation. */ }
+                }
             }
             true // consume key-up too; a single remote press moves exactly one section
         }

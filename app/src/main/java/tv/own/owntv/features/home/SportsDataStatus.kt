@@ -22,13 +22,13 @@ internal fun retryReady(issue: HockeyIssue?, now: Long) = issue?.retryable == tr
 internal fun sportsStatusText(competition: Competition, enabled: Boolean, state: SportsLoadState): String = stringResource(when {
     !competition.scheduleAvailable -> R.string.mintv_schedule_unavailable
     !enabled || state.issue?.kind == HockeyFailureKind.DISABLED -> R.string.mintv_shl_disabled
-    state.loading -> R.string.mintv_companion_loading
+    state.loading -> R.string.mintv_sports_loading
     state.issue != null -> when (state.issue.kind) {
         HockeyFailureKind.ACCESS -> R.string.mintv_sports_access
-        HockeyFailureKind.NETWORK, HockeyFailureKind.HTTP -> R.string.mintv_sports_network
-        HockeyFailureKind.FORMAT -> R.string.mintv_sports_format
+        HockeyFailureKind.NETWORK, HockeyFailureKind.HTTP, HockeyFailureKind.TIMEOUT -> R.string.mintv_sports_fetch_failed
+        HockeyFailureKind.FORMAT -> R.string.mintv_sports_fetch_failed
         HockeyFailureKind.RATE_LIMITED -> R.string.mintv_sports_limited
-        HockeyFailureKind.CACHE -> R.string.mintv_sports_storage
+        HockeyFailureKind.CACHE -> R.string.mintv_sports_fetch_failed
         HockeyFailureKind.DISABLED -> R.string.mintv_shl_disabled
     }
     else -> R.string.mintv_sports_no_scheduled

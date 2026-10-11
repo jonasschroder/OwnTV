@@ -127,7 +127,8 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite --max-workers=4 --stacktrace
-      - name: Require all six regression tests to execute
+      - name: Require all eight regression tests to execute
+        if: always()
         run: |
           python3 - <<'PYTEST'
           from pathlib import Path
@@ -139,6 +140,8 @@ jobs:
               ('tv.own.owntv.home.SportsReaderIntegrationTest', 'officialPagesSurviveRecreationFailuresAndAccessBlocks'),
               ('tv.own.owntv.home.SportsProfileStorageTest', 'migrationIsolationPersistenceAndDatabaseIdReuse'),
               ('tv.own.owntv.home.HomeContentViewportTest', 'programmeDescriptionIsBoundedAndCannotScrollAcrossClockArea'),
+              ('tv.own.owntv.home.SportsLoadingNavigationTest', 'tabsAndBackRemainUsableWhileFetchingAndReopeningCancelsOldWork'),
+              ('tv.own.owntv.home.SportsLoadingNavigationTest', 'slowRequestEndsInErrorAndLeavesTabsFocusable'),
           }
           found = set()
           for path in Path('app/build/outputs/androidTest-results').rglob('TEST-*.xml'):
@@ -147,7 +150,7 @@ jobs:
                   assert not any(case.find(tag) is not None for tag in ('failure', 'error', 'skipped')), E.tostring(case)
                   found.add((case.get('classname'), case.get('name')))
           assert required <= found, ('Missing executed tests', required - found)
-          print('All 6 Home/sports/layout/profile regressions executed and passed')
+          print('All 8 Home/sports/layout/profile regressions executed and passed')
           PYTEST
       - name: Upload device regression reports
         if: always()

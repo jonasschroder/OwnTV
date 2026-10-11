@@ -115,12 +115,12 @@ fun MinTvContentHome(
     var remoteNavigationSeen by remember(activeProfileId) { mutableStateOf(false) }
     LaunchedEffect(favorites.isNotEmpty()) {
         if (favorites.isNotEmpty() && restoreFavoriteAfterLoad) {
-            if (navigation.selected == 1 && previewEnabled && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
+            if (navigation.selected == 1 && previewEnabled && !matchcenterOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
                 // Earlier navigation on the loading card must not arm a newly inserted default.
                 remoteNavigationSeen = false
                 controller.setActive(false)
                 controller.setActive(active)
-                withFrameNanos { }; navigation.focus[1].requestFocus()
+                withFrameNanos { }; withFrameNanos { }; navigation.focus[1].requestSafely()
             }
             restoreFavoriteAfterLoad = false
         }
@@ -176,14 +176,16 @@ fun MinTvContentHome(
     DisposableEffect(firstRowFocusRequester, favorites.isEmpty()) {
         onEntryHook {
             if (matchcenterOpen) matchcenterEntry?.invoke() == true
-            else runCatching { if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestFocus() else navigation.focus[navigation.selected].requestFocus() }.isSuccess
+            else if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestSafely() else navigation.focus[navigation.selected].requestSafely()
         }
         onDispose { onEntryHook(null) }
     }
     LaunchedEffect(restoreFocus, previewEnabled, favorites) {
         if (restoreFocus && previewEnabled) {
-            withFrameNanos { }
-            runCatching { if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestFocus() else navigation.focus[navigation.selected].requestFocus() }
+            withFrameNanos { }; withFrameNanos { }
+            if (matchcenterOpen) matchcenterEntry?.invoke()
+            else if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestSafely()
+            else navigation.focus[navigation.selected].requestSafely()
             onRestored()
         }
     }

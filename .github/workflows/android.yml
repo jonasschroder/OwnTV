@@ -131,7 +131,12 @@ jobs:
           target: default
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite --max-workers=4 --stacktrace && adb pull /sdcard/Android/data/se.jonasschroder.mintv/files/v04-screenshots v04-device-screenshots
+          # AGP normally uninstalls the disposable test app and removes its scoped files after
+          # instrumentation. Keep it only until this runner shuts down, so screenshots survive.
+          script: |
+            ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true --max-workers=4 --stacktrace
+            adb shell test -d /sdcard/Android/data/se.jonasschroder.mintv/files/v04-screenshots || { echo '::error::Synthetic screenshots missing after tests; check test output and emulator app cleanup.'; exit 1; }
+            adb pull /sdcard/Android/data/se.jonasschroder.mintv/files/v04-screenshots v04-device-screenshots
       - name: Require all Home regression tests to execute
         if: always()
         run: |

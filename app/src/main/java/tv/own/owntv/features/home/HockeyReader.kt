@@ -8,15 +8,17 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal enum class HockeyFailureKind { DISABLED, ACCESS, NETWORK, FORMAT, HTTP, RATE_LIMITED, CACHE }
+internal enum class HockeyFailureKind { DISABLED, ACCESS, NETWORK, FORMAT, HTTP, RATE_LIMITED, CACHE, TIMEOUT }
 internal enum class HockeyStage { POLICY, ROBOTS, DISCOVERY, SCHEDULE, TABLE, CACHE }
 internal data class HockeyIssue(val kind: HockeyFailureKind, val stage: HockeyStage, val at: Long,
-    val httpCode: Int? = null, val retryAt: Long? = null) {
+    val httpCode: Int? = null, val retryAt: Long? = null, val detail: HockeyFormatReason? = null) {
     val retryable get() = kind !in listOf(HockeyFailureKind.DISABLED, HockeyFailureKind.ACCESS)
 }
 internal class HockeyDataException(val issue: HockeyIssue) : Exception(issue.kind.name)
@@ -54,11 +56,13 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
     fun diagnostic(c: Competition, table: Boolean = false): HockeyIssue? = runCatching {
         val o = JSONObject(storage.text("hockey-diagnostic:" + key(c, table)) ?: return null)
         HockeyIssue(HockeyFailureKind.valueOf(o.getString("kind")), HockeyStage.valueOf(o.getString("stage")), o.getLong("at"),
-            o.optInt("http").takeIf { it > 0 }, o.optLong("retryAt").takeIf { it > 0 })
+            o.optInt("http").takeIf { it > 0 }, o.optLong("retryAt").takeIf { it > 0 },
+            HockeyFormatReason.entries.firstOrNull { it.name == o.optString("detail") })
     }.getOrNull()
     private fun record(c: Competition, table: Boolean, issue: HockeyIssue) {
         storage.text("hockey-diagnostic:" + key(c, table), JSONObject().put("kind", issue.kind.name).put("stage", issue.stage.name)
-            .put("at", issue.at).put("http", issue.httpCode ?: 0).put("retryAt", issue.retryAt ?: 0).toString())
+            .put("at", issue.at).put("http", issue.httpCode ?: 0).put("retryAt", issue.retryAt ?: 0)
+            .put("detail", issue.detail?.name.orEmpty()).toString())
     }
     private fun gate(now: Long, c: Competition, table: Boolean) {
         if (!storage.enabled()) throw HockeyDataException(HockeyIssue(HockeyFailureKind.DISABLED, HockeyStage.POLICY, now))
@@ -80,7 +84,11 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
     }
     private suspend fun page(path: String, stage: HockeyStage, now: Long, c: Competition, table: Boolean, limit: Int = 600_000): CompanionResponse {
         currentCoroutineContext().ensureActive(); gate(now, c, table); reserve(now)
-        val response = try { pages.read(path, limit) } catch (e: IOException) {
+        val response = try { withTimeout(8_000) { pages.read(path, limit) } }
+        catch (e: TimeoutCancellationException) {
+            currentCoroutineContext().ensureActive()
+            throw HockeyDataException(HockeyIssue(HockeyFailureKind.TIMEOUT, stage, now))
+        } catch (e: IOException) {
             throw HockeyDataException(HockeyIssue(HockeyFailureKind.NETWORK, stage, now))
         }
         currentCoroutineContext().ensureActive()
@@ -114,29 +122,34 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
     }
     private inline fun <T> parsed(stage: HockeyStage, now: Long, block: () -> T): T = try { block() }
         catch (e: CancellationException) { throw e }
-        catch (e: Exception) { throw HockeyDataException(HockeyIssue(HockeyFailureKind.FORMAT, stage, now)) }
+        catch (e: Exception) { throw HockeyDataException(HockeyIssue(HockeyFailureKind.FORMAT, stage, now,
+            httpCode = 200, detail = (e as? HockeyFormatException)?.reason ?: HockeyFormatReason.ROWS)) }
 
     private fun validateGames(c: Competition, games: List<ShlGame>, now: Long) {
         val today = Instant.ofEpochMilli(now).atZone(Stockholm).toLocalDate()
         val year = if (today.monthValue >= 8) today.year else today.year - 1
         val clubs = SportsCatalog.inCompetition(c).map { it.id }.toSet()
-        require(games.size in 1..400 && games.map { it.id }.distinct().size == games.size)
-        require(games.all { g ->
+        if (games.size !in 0..400 || games.map { it.id }.distinct().size != games.size)
+            throw HockeyFormatException(HockeyFormatReason.ROWS)
+        if (!games.all { g ->
             val date = Instant.ofEpochMilli(g.faceoff).atZone(Stockholm).toLocalDate()
-            date >= LocalDate.of(year, 8, 1) && date < LocalDate.of(year + 1, 8, 1) &&
-                SportsCatalog.identity(g.home, c.sport)?.id in clubs && SportsCatalog.identity(g.away, c.sport)?.id in clubs
-        })
+            date >= LocalDate.of(year, 8, 1) && date < LocalDate.of(year + 1, 8, 1)
+        }) throw HockeyFormatException(HockeyFormatReason.SEASON)
+        if (!games.all { SportsCatalog.identity(it.home, c.sport)?.id in clubs && SportsCatalog.identity(it.away, c.sport)?.id in clubs })
+            throw HockeyFormatException(HockeyFormatReason.TEAMS)
     }
     private fun validateTable(c: Competition, rows: List<ShlStanding>) {
+        if (rows.isEmpty()) return // Only a verified page with the expected table headers reaches here.
         require(rows.size == 14 && rows.map { it.rank }.toSet() == (1..14).toSet() && rows.all { it.points in 0..999 })
-        require(rows.map { SportsCatalog.identity(it.team, c.sport)?.id }.toSet() == SportsCatalog.inCompetition(c).map { it.id }.toSet())
+        if (rows.map { SportsCatalog.identity(it.team, c.sport)?.id }.toSet() != SportsCatalog.inCompetition(c).map { it.id }.toSet())
+            throw HockeyFormatException(HockeyFormatReason.TEAMS)
     }
     fun cached(c: Competition, now: Long): ShlSnapshot? {
         requireCompetition(c)
         return (snapshots[c.id] ?: runCatching {
             val root = JSONObject(storage.cache(cacheKey(c, false)) ?: return null)
             require(root.optString("competition", c.id) == c.id)
-            val rows = root.getJSONArray("games"); require(rows.length() in 1..400)
+            val rows = root.getJSONArray("games"); require(rows.length() in 0..400)
             ShlSnapshot(root.getString("season"), (0 until rows.length()).map { i -> val g = rows.getJSONObject(i)
                 ShlGame(g.getString("id"), g.getString("home"), g.getString("away"), g.getLong("faceoff"), g.optString("result").takeIf { it.isNotEmpty() })
             }, root.getLong("at"), root.optLong("sourceAt").takeIf { it > 0 })
@@ -148,7 +161,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
         return (tables[c.id] ?: runCatching {
             val root = JSONObject(storage.cache(cacheKey(c, true)) ?: return null)
             require(root.getString("competition") == c.id)
-            val rows = root.getJSONArray("rows"); require(rows.length() == 14)
+            val rows = root.getJSONArray("rows"); require(rows.length() == 0 || rows.length() == 14)
             HockeyTable(root.getString("season"), (0 until rows.length()).map { i -> val r = rows.getJSONObject(i)
                 ShlStanding(r.getInt("rank"), r.getString("team"), r.getInt("points"), r.optInt("played", -1).takeIf { it >= 0 }, r.optInt("difference", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE })
             }, root.getLong("at"))

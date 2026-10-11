@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import java.text.NumberFormat
@@ -24,9 +25,21 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifi
     val repository = koinInject<TwitchStatus>()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mintv-companion", 0) }
+    TwitchCompanionUi(visible, active, prefs, BuildConfig.TWITCH_CLIENT_ID,
+        repository::connected, repository::status, repository::login, repository::disconnect, modifier)
+}
+
+/** Presentation adapter; token storage and Twitch protocol remain in TwitchStatus. */
+@Composable
+internal fun TwitchCompanionUi(
+    visible: Boolean, active: Boolean, prefs: android.content.SharedPreferences, configuredClientId: String,
+    readConnection: suspend () -> Boolean, readStatus: suspend (Long) -> TwitchState,
+    authorize: suspend (String, (TwitchActivation) -> Unit) -> Unit, disconnectAccount: suspend () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var state by remember { mutableStateOf<TwitchState>(TwitchState.Unavailable) }
     var setup by remember { mutableStateOf(false) }
-    var clientId by remember { mutableStateOf(prefs.getString("twitch-client-id", null)?.takeIf { it.isNotBlank() } ?: BuildConfig.TWITCH_CLIENT_ID) }
+    var clientId by remember { mutableStateOf(prefs.getString("twitch-client-id", null)?.takeIf { it.isNotBlank() } ?: configuredClientId) }
     var editClientId by remember { mutableStateOf(clientId.isBlank()) }
     var connected by remember { mutableStateOf(false) }
     var connecting by remember { mutableStateOf(false) }
@@ -39,12 +52,12 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifi
     val entryFocus = remember { FocusRequester() }
     val connectFocus = remember { FocusRequester() }
     var restore by remember { mutableStateOf(false) }
-    LaunchedEffect(generation) { connected = repository.connected() }
+    LaunchedEffect(generation) { connected = readConnection() }
     LaunchedEffect(active, visible, setup, generation) {
         if (!active || !visible || setup) return@LaunchedEffect
         while (true) {
             now = System.currentTimeMillis()
-            state = try { repository.status(now) } catch (cancelled: CancellationException) { throw cancelled }
+            state = try { readStatus(now) } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { TwitchState.Unavailable }
             checkedAt = System.currentTimeMillis()
             delay(60_000)
@@ -55,21 +68,24 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifi
         if (!connecting || !setup) return@LaunchedEffect
         try {
             prefs.edit().putString("twitch-client-id", clientId).apply() // public identifier only
-            repository.login(clientId) { code = it }; setup = false; restore = true; generation++
+            authorize(clientId) { code = it }; setup = false; restore = true; generation++
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { failure = true }
         finally { connecting = false; code = null }
     }
     LaunchedEffect(disconnect) {
-        if (disconnect) { repository.disconnect(); state = TwitchState.Unavailable; generation++; disconnect = false }
+        if (disconnect) { disconnectAccount(); state = TwitchState.Unavailable; generation++; disconnect = false }
     }
-    LaunchedEffect(setup, restore) {
+    LaunchedEffect(setup, restore, connecting) {
         withFrameNanos { }
-        if (setup) runCatching { connectFocus.requestFocus() }
-        else if (restore) { runCatching { entryFocus.requestFocus() }; restore = false }
+        if (setup) connectFocus.requestSafely()
+        else if (restore) { entryFocus.requestSafely(); restore = false }
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
-    TvCard({ setup = true; failure = false }, Modifier.fillMaxWidth().then(modifier).focusRequester(entryFocus)) {
+    TvCard({
+        setup = true; failure = false; editClientId = clientId.isBlank()
+        connecting = !connected && clientId.isNotBlank()
+    }, Modifier.fillMaxWidth().then(modifier).focusRequester(entryFocus)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
             TvText(stringResource(R.string.mintv_ohnepixel), size = 24, bold = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -87,15 +103,17 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifi
             TvText(stringResource(R.string.mintv_twitch_connect), size = 30, bold = true)
             if (editClientId && !connecting) {
                 TvText(stringResource(R.string.mintv_twitch_public_id_hint), size = 22, color = MinTvMuted, lines = 3)
-                CompanionInput(clientId) { clientId = it.take(128) }
+                CompanionInput(clientId, Modifier.testTag("twitch-public-client-id")) { clientId = it.take(128) }
             }
             if (!connecting) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     HomeButton(stringResource(R.string.mintv_twitch_connect), { failure = false; connecting = true }, Modifier.focusRequester(connectFocus))
-                    if (!editClientId) HomeButton(stringResource(R.string.mintv_twitch_edit_id), { editClientId = true })
                     if (connected) HomeButton(stringResource(R.string.mintv_twitch_disconnect), { disconnect = true })
                 }
             }
+            if (!editClientId) HomeButton(stringResource(R.string.mintv_twitch_edit_id), {
+                connecting = false; code = null; failure = false; editClientId = true
+            })
             code?.let {
                 TvText(it.verificationUri, size = 22, color = MinTvTeal, lines = 3)
                 TvText(it.code, size = 44, bold = true, lines = 1)
@@ -104,9 +122,8 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifi
             if (connecting && code == null) TvText(stringResource(R.string.mintv_companion_loading))
             if (failure) {
                 TvText(stringResource(R.string.mintv_twitch_connection_failed), color = MinTvMuted)
-                CompanionInput(clientId) { clientId = it.take(128) }
             }
-            HomeButton(stringResource(R.string.mintv_close), { setup = false; connecting = false; code = null; restore = true })
+            HomeButton(stringResource(R.string.mintv_close), { setup = false; connecting = false; code = null; restore = true }, if (connecting) Modifier.focusRequester(connectFocus) else Modifier)
         }
     }
 }

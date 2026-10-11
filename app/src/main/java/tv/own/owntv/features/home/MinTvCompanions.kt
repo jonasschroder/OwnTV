@@ -4,9 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
@@ -16,8 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import java.text.NumberFormat
@@ -61,7 +63,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val requiredCompetitions = SportsCatalog.required(selectedTeams)
     var competitionId by rememberSaveable(profileId) { mutableStateOf(SportsCatalog.shl.id) }
     val selectedCompetition = requiredCompetitions.firstOrNull { it.id == competitionId } ?: requiredCompetitions.firstOrNull() ?: SportsCatalog.shl
-    val personalTeam = SportsCatalog.team(selectedTeams.primaryTeamId.orEmpty())
     val broadcasts = koinInject<TvmatchenBroadcastSource>()
     val overrides = koinInject<ShlChannelOverrides>()
     val libraryContext by liveVm.homeLibraryContext.collectAsStateWithLifecycle()
@@ -88,7 +89,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var table by remember(profileId, selectedCompetition.id) { mutableStateOf<HockeyTable?>(null) }
     val standings = table?.takeIf { it.seasonId == data[selectedCompetition.id]?.seasonId }?.rows.orEmpty()
     val standingsAt = table?.takeIf { it.seasonId == data[selectedCompetition.id]?.seasonId }?.fetchedAt ?: 0L
-    var tableState by remember(profileId, selectedCompetition.id) { mutableStateOf(SportsLoadState(loading = true)) }
+    var tableState by remember(profileId, selectedCompetition.id) { mutableStateOf(SportsLoadState()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var query by rememberSaveable(profileId) { mutableStateOf("") }
     var channels by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
@@ -116,8 +117,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val currentEntryFocus by rememberUpdatedState(if (picker) { if (searchOpen) searchFocus else pickerFocus } else if (selectedId != null) detailFocus else tabFocus)
     DisposableEffect(tabFocus) {
         onMatchcenterEntry {
-            currentEntryScreen && (runCatching { currentEntryFocus.requestFocus() }.isSuccess ||
-                runCatching { backFocus.requestFocus() }.isSuccess)
+            currentEntryScreen && (currentEntryFocus.requestSafely() || backFocus.requestSafely())
         }
         onDispose { onMatchcenterEntry(null) }
     }
@@ -138,10 +138,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val scheduleAvailable = available && sportsScheduleVisible(visible, screen, section, selectedId != null, teamsOpen)
     val selected = selectedId?.let { id -> allGames.firstOrNull { it.id == id } }
     val fetchedAt = currentData[selectedCompetition.id]?.fetchedAt
-    val selectedLoad = loadStates[selectedCompetition.id] ?: SportsLoadState(loading = true)
+    val selectedLoad = loadStates[selectedCompetition.id] ?: SportsLoadState()
     val homeCompetition = homeSportsCompetition(requiredCompetitions, selectedCompetition)
     val homeIssue = requiredCompetitions.firstNotNullOfOrNull { loadStates[it.id]?.issue }
-    val homeLoading = requiredCompetitions.filter { it.scheduleAvailable }.any { loadStates[it.id]?.loading != false }
+    val homeLoading = requiredCompetitions.any { loadStates[it.id]?.loading == true }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardWasVisible by remember { mutableStateOf(false) }
     LaunchedEffect(searchOpen, imeVisible) {
@@ -154,47 +154,45 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     LaunchedEffect(clockActive) {
         if (clockActive) while (true) { now = System.currentTimeMillis(); delay(30_000) }
     }
-    LaunchedEffect(scheduleAvailable, enabled, profileId, requiredCompetitions, screen, selectedCompetition, retryRevision) {
+    val requestedCompetitions = if (scheduleAvailable && enabled)
+        sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled, selectedCompetition) else emptyList()
+    LaunchedEffect(profileId, requestedCompetitions, retryRevision) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
-        if (!scheduleAvailable || !enabled) return@LaunchedEffect
-        val competitions = sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled, selectedCompetition)
+        val competitions = requestedCompetitions
         if (competitions.isEmpty()) return@LaunchedEffect
-        for (c in competitions) sports.cached(c)?.let { data = data + (c.id to it) }
         while (true) {
             var wakeAt = System.currentTimeMillis() + 60 * 60_000L
             for (competition in competitions) {
                 val started = System.currentTimeMillis()
-                loadStates[competition.id] = SportsLoadState(loading = true, cached = data[competition.id] != null)
-                try { sports.refresh(competition, started)?.let {
-                    data = data + (competition.id to it)
-                    loadStates[competition.id] = SportsLoadState(cached = it.fetchedAt < started)
-                } }
-                catch (cancelled: CancellationException) {
-                    loadStates[competition.id]?.let { loadStates[competition.id] = it.copy(loading = false) }
-                    throw cancelled
+                val previous = loadStates[competition.id]?.issue
+                if (previous?.retryAt != null && previous.retryAt > started) {
+                    wakeAt = minOf(wakeAt, previous.retryAt)
+                    continue
                 }
-                catch (error: Exception) {
-                    val issue = sportsIssue(error, started)
-                    loadStates[competition.id] = SportsLoadState(issue = issue, cached = data[competition.id] != null)
-                    issue.retryAt?.let { wakeAt = minOf(wakeAt, it) }
-                }
+                val result = fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
+                    sports.cached(competition)?.let { data = data + (competition.id to it) }
+                    sports.refresh(competition, started)
+                }, { value -> data = data + (competition.id to value); value.fetchedAt < started },
+                    { loadStates[competition.id] = it })
+                result.issue?.retryAt?.let { wakeAt = minOf(wakeAt, it) }
             }
             delay((wakeAt - System.currentTimeMillis()).coerceAtLeast(60_000))
         }
     }
-    LaunchedEffect(available, enabled, screen, section, selectedId, teamsOpen, selectedCompetition, data[selectedCompetition.id]?.seasonId, retryRevision) {
-        if (!available || !enabled || !screen || teamsOpen || selectedId != null || section !in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)) return@LaunchedEffect
-        val season = data[selectedCompetition.id]?.seasonId ?: return@LaunchedEffect
-        sports.cachedStandings(selectedCompetition, season)?.let { table = it }
+    val tableRequest = data[selectedCompetition.id]?.seasonId?.takeIf {
+        available && enabled && screen && !teamsOpen && selectedId == null &&
+            section in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)
+    }?.let { selectedCompetition to it }
+    LaunchedEffect(profileId, tableRequest, retryRevision) {
+        val (competition, season) = tableRequest ?: return@LaunchedEffect
         while (true) {
             val started = System.currentTimeMillis()
-            tableState = SportsLoadState(loading = true, cached = standings.isNotEmpty())
-            try { sports.standings(selectedCompetition, season, started)?.let {
-                table = it
-                tableState = SportsLoadState(cached = it.fetchedAt < started)
-            } }
-            catch (cancelled: CancellationException) { tableState = tableState.copy(loading = false); throw cancelled }
-            catch (error: Exception) { tableState = SportsLoadState(issue = sportsIssue(error, started), cached = standings.isNotEmpty()) }
+            val retryAt = tableState.issue?.retryAt
+            if (retryAt != null && retryAt > started) { delay(retryAt - started); continue }
+            fetchSports(started, HockeyStage.TABLE, { table != null }, {
+                sports.cachedStandings(competition, season)?.let { table = it }
+                sports.standings(competition, season, started)
+            }, { value -> table = value; value.fetchedAt < started }, { tableState = it })
             delay(tableState.issue?.retryAt?.let { (it - System.currentTimeMillis()).coerceAtLeast(60_000) } ?: (6 * 60 * 60_000L))
         }
     }
@@ -283,13 +281,14 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     LaunchedEffect(restoreTarget, screen, selectedId, picker) {
         val target = restoreTarget ?: return@LaunchedEffect
-        withFrameNanos { }; withFrameNanos { }; runCatching { target.requestFocus() }.onFailure { runCatching { backFocus.requestFocus() } }
+        withFrameNanos { }; withFrameNanos { }
+        if (!target.requestSafely()) backFocus.requestSafely()
         restoreTarget = null
     }
     LaunchedEffect(screen) {
         // Saved match IDs can exist before cached fixtures load. Back is always attached.
         if (screen && restoreTarget == null) {
-            withFrameNanos { }; runCatching { backFocus.requestFocus() }
+            withFrameNanos { }; backFocus.requestSafely()
         }
     }
     fun close() { screen = false; selectedId = null; picker = false; searchOpen = false; query = ""; restoreTarget = entryFocus }
@@ -361,14 +360,17 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }, Modifier.fillMaxWidth().then(homeCardModifier).focusRequester(entryFocus)) {
                 if (!selectedTeams.prominent) { /* Keep the entry reachable; hide prominent fixture information. */ }
                 else if (expanded) {
-                    TvText(stringResource(R.string.mintv_my_matches_today), size = 22, bold = true)
+                    TvText(stringResource(R.string.mintv_my_matches_today), size = 19, color = MinTvMuted)
                     myToday.take(3).forEach { game ->
-                        TvText(pairLabel(game), size = 24, bold = true)
-                        TvText(fixtureWhen(game, now), color = MinTvMuted, size = 22)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
+                            TvText(pairLabel(game), Modifier.weight(1f), size = 23, bold = true, lines = 1)
+                            TvText(fixtureWhen(game, now), color = MinTvMuted, size = 20, lines = 1)
+                        }
                     }
                 } else if (next != null) {
                     TvText(stringResource(R.string.mintv_shl_home_next, pairLabel(next), fixtureWhen(next, now)), size = 24)
-                } else TvText(sportsStatusText(homeCompetition, enabled, SportsLoadState(loading = homeLoading, issue = homeIssue)), color = MinTvMuted, size = 22)
+                } else TvText(sportsStatusText(homeCompetition, enabled, SportsLoadState(loading = homeLoading, issue = homeIssue),
+                    requiredCompetitions.filter { it.scheduleAvailable }.all { it.id in currentData }), color = MinTvMuted, size = 22)
                 if ((myToday.isNotEmpty() || next != null) && homeIssue != null)
                     TvText(sportsStatusText(homeCompetition, enabled, SportsLoadState(issue = homeIssue)), color = MinTvMuted, size = 20)
                 val homeAt = currentData.values.minOfOrNull { it.fetchedAt }
@@ -378,12 +380,14 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
             BackHandler(onBack = ::back)
-            Column(Modifier.fillMaxSize().background(MinTvNavy).padding(start = contentStart, end = 48.mpx, top = reservedTop, bottom = 32.mpx)
-                .focusGroup(), verticalArrangement = Arrangement.spacedBy(24.mpx)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF14202C), MinTvNavy)))
+                .padding(start = contentStart, end = 48.mpx, top = reservedTop, bottom = 32.mpx)
+                .focusGroup(), verticalArrangement = Arrangement.spacedBy(18.mpx)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        TvText(stringResource(R.string.mintv_my_sport), size = 42, bold = true, lines = 1)
-                        TvText(personalTeam?.name ?: stringResource(R.string.mintv_my_teams), color = MinTvTeal, size = 22, lines = 1)
+                        TvText(stringResource(if (section == MatchcenterSection.SETTINGS) R.string.mintv_companion_settings else R.string.mintv_matchcenter), size = 36, bold = true, lines = 1)
+                        TvText(selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator))
+                            .ifBlank { stringResource(R.string.mintv_my_teams) }, color = MinTvMuted, size = 20, lines = 1)
                     }
                     val timestamp = if (section == MatchcenterSection.TABLE) standingsAt.takeIf { it > 0 } else fetchedAt
                     val showingCache = if (section == MatchcenterSection.TABLE) tableState.cached || tableState.issue != null else selectedLoad.cached || selectedLoad.issue != null
@@ -400,16 +404,22 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         }
                         HomeButton(stringResource(R.string.mintv_choose_teams), { teamsOpen = true })
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.focusRestorer().focusGroup()) {
-                        MatchcenterSection.entries.forEachIndexed { index, tab ->
-                            TvCard({ section = tab; page = 0 }, Modifier.width(if (tab == MatchcenterSection.SETTINGS) 230.mpx else 200.mpx)
-                                .then(if (index == 0) Modifier.focusRequester(tabFocus) else Modifier), selected = tab == section) {
-                                TvText(stringResource(when (tab) {
-                                    MatchcenterSection.MATCHES -> R.string.mintv_matches
-                                    MatchcenterSection.TABLE -> R.string.mintv_shl_table
-                                    MatchcenterSection.FARJESTAD -> R.string.mintv_my_teams
-                                    MatchcenterSection.SETTINGS -> R.string.mintv_companion_settings
-                                }), size = 23, lines = 1, bold = true)
+                    MatchcenterTabs(section, tabFocus) { section = it; page = 0 }
+                    if (section == MatchcenterSection.FARJESTAD) {
+                        val membership = SportsCatalog.inCompetition(selectedCompetition).map { it.id }.toSet()
+                        val followed = selectedTeams.teamIds.filter { it in membership }.mapNotNull { SportsCatalog.team(it) }
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
+                            items(followed, key = { it.id }) { team ->
+                                Box(Modifier.width(340.mpx)) {
+                                    FocusPanel(highlighted = true) {
+                                        SportsTeamLabel(team.name)
+                                        standings.singleOrNull { SportsCatalog.identity(it.team, selectedCompetition.sport)?.id == team.id }?.let { rank ->
+                                            TvText(stringResource(R.string.mintv_fbk_position, NumberFormat.getIntegerInstance().format(rank.rank),
+                                                NumberFormat.getIntegerInstance().format(rank.points)), size = 20, color = MinTvTeal)
+                                            if (standingsAt > 0) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(standingsAt, now)), size = 16, color = MinTvMuted)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -451,14 +461,15 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                             else stringResource(R.string.mintv_sports_diagnostic, competition.name, issue.stage.name,
                                                 issue.httpCode?.let { NumberFormat.getIntegerInstance().format(it) } ?: stringResource(R.string.mintv_companion_unavailable),
                                                 stockholmDate(issue.at) + " " + stockholmTime(issue.at)), color = MinTvMuted, lines = 3)
-                                        if (issue != null) TvText(sportsStatusText(competition, enabled, SportsLoadState(issue = issue)), color = MinTvMuted, lines = 3)
+                                        if (issue != null) TvText(stringResource(R.string.mintv_sports_diagnostic_reason,
+                                            issue.kind.name, issue.detail?.name ?: issue.stage.name), color = MinTvMuted, lines = 3)
                                     }
                                 }
                             }
                         }
-                        MatchcenterSection.TABLE -> if (standings.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            SportsStatusPanel(selectedCompetition, enabled, if (tableState.issue != null) tableState else if (data[selectedCompetition.id] != null) tableState.copy(loading = true) else selectedLoad,
-                                now, null, { retryRevision++ })
+                        MatchcenterSection.TABLE -> if (standings.isEmpty()) Box(Modifier.fillMaxWidth()) {
+                            SportsStatusPanel(selectedCompetition, enabled, if (data[selectedCompetition.id] != null) tableState else selectedLoad,
+                                now, standingsAt.takeIf { it > 0 }, { retryRevision++ })
                         } else LazyColumn(state = tableList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
                             if (tableState.loading || tableState.issue != null) item {
                                 SportsStatusPanel(selectedCompetition, enabled, tableState, now, standingsAt, { retryRevision++ }, Modifier.fillMaxWidth())
@@ -484,17 +495,11 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             val lastPage = (future.size - 1).coerceAtLeast(0) / 14
                             val currentPage = page.coerceIn(0, lastPage)
                             val games = if (useFuture) future.drop(currentPage * 14).take(14) else todayList
-                            if (games.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (games.isEmpty()) Box(Modifier.fillMaxWidth()) {
                                 SportsStatusPanel(selectedCompetition, enabled, selectedLoad, now, fetchedAt, { retryRevision++ })
                             } else LazyColumn(state = matchList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                                 if (selectedLoad.loading || selectedLoad.issue != null) item {
                                     SportsStatusPanel(selectedCompetition, enabled, selectedLoad, now, fetchedAt, { retryRevision++ }, Modifier.fillMaxWidth())
-                                }
-                                if (section == MatchcenterSection.FARJESTAD) item {
-                                    standings.singleOrNull { SportsCatalog.identity(it.team, selectedCompetition.sport)?.id == selectedTeams.primaryTeamId }?.let {
-                                        TvText(stringResource(R.string.mintv_fbk_position, NumberFormat.getIntegerInstance().format(it.rank),
-                                            NumberFormat.getIntegerInstance().format(it.points)), size = 27, color = MinTvTeal, bold = true)
-                                    }
                                 }
                                 item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                                     if (todayList.isNotEmpty()) HomeButton(stringResource(if (useFuture) R.string.mintv_shl_today else R.string.mintv_shl_upcoming), { upcoming = !useFuture; page = 0 })
@@ -508,7 +513,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                     val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
                                     val cached = resolvedCards[key]?.takeIf { now < it.first && game.competition.id in freshCompetitions }
                                     val direct = if (game == gameToMatch) directChannel else directCards[key].takeIf { cached != null }
-                                    MatchScorecard(game, now, selectedTeams.hideScores, assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },
+                                    MatchScorecard(game, now, selectedTeams.hideScores, game.follows(selectedTeams), assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },
                                         direct?.let { channel -> { play(channel, cached?.second.orEmpty().ifEmpty { listOf(channel) }) } }, Modifier.fillMaxWidth().focusRequester(focus))
                                 }
                             }
@@ -584,31 +589,46 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
 }
 
 @Composable
-private fun MatchScorecard(game: SportFixture, now: Long, hideScores: Boolean, broadcaster: String?, onClick: () -> Unit, onWatch: (() -> Unit)?, modifier: Modifier) {
+private fun MatchScorecard(game: SportFixture, now: Long, hideScores: Boolean, favorite: Boolean, broadcaster: String?, onClick: () -> Unit, onWatch: (() -> Unit)?, modifier: Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
-    TvCard(onClick, Modifier.weight(1f)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
-                TvText(pairLabel(game), size = 34, bold = true)
-                TvText(fixtureWhen(game, now), size = 25, color = MinTvMuted, lines = 1)
-                broadcaster?.takeIf { it.isNotBlank() }?.let { TvText(it, size = 26, color = MinTvTeal, lines = 1) }
-            }
-            TvText(game.result?.takeUnless { hideScores } ?: stockholmTime(game.faceoff), size = 32, bold = true, lines = 1)
-            if (game.result != null && !hideScores) TvText(stringResource(R.string.mintv_saved_result), size = 20, color = MinTvMuted, lines = 1)
+    TvCard(onClick, Modifier.weight(1f), selected = favorite) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            TvText(game.competition.name, size = 18, color = MinTvMuted, lines = 1)
+            TvText(fixtureWhen(game, now), size = 20, color = MinTvMuted, lines = 1)
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+            SportsTeamLabel(game.home, Modifier.weight(1f))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                TvText(game.result?.takeUnless { hideScores } ?: stockholmTime(game.faceoff), size = 32, bold = true, lines = 1)
+                if (game.result != null && !hideScores) TvText(stringResource(R.string.mintv_saved_result), size = 16, color = MinTvMuted, lines = 1)
+            }
+            SportsTeamLabel(game.away, Modifier.weight(1f))
+        }
+        TvText(broadcaster?.takeIf(String::isNotBlank) ?: stringResource(R.string.mintv_shl_choose), size = 19, color = MinTvTeal, lines = 1)
     }
-    onWatch?.let { HomeButton(stringResource(R.string.mintv_watch_match), it) }
+    onWatch?.let { HomeButton(stringResource(R.string.mintv_watch_match), it, primary = true) }
+    }
+}
+
+/** Text monograms from verified club names, never unverified official logos or image downloads. */
+@Composable
+private fun SportsTeamLabel(name: String, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(48.mpx).background(Color(0xFF0D1722), CircleShape), contentAlignment = Alignment.Center) {
+            TvText(shortTeam(name).take(2).uppercase(java.util.Locale.ROOT), size = 19, color = MinTvTeal, bold = true, lines = 1)
+        }
+        TvText(shortTeam(name), Modifier.weight(1f), size = 27, bold = true, lines = 2)
     }
 }
 
 @Composable
 private fun StandingRow(position: String, team: String, played: String?, difference: String?, points: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-        TvText(position, Modifier.width(70.mpx), size = 25, bold = true, lines = 1)
-        TvText(team, Modifier.weight(1f), size = 27, bold = true, lines = 1)
-        played?.let { TvText(it, Modifier.width(120.mpx), size = 25, lines = 1) }
-        difference?.let { TvText(it, Modifier.width(160.mpx), size = 25, lines = 1) }
-        TvText(points, Modifier.width(100.mpx), size = 27, color = MinTvTeal, bold = true, lines = 1)
+        TvText(position, Modifier.width(60.mpx), size = 23, bold = true, lines = 1)
+        TvText(team, Modifier.weight(1f), size = 25, bold = true, lines = 1)
+        played?.let { TvText(it, Modifier.width(100.mpx), size = 23, lines = 1) }
+        difference?.let { TvText(it, Modifier.width(120.mpx), size = 23, lines = 1) }
+        TvText(points, Modifier.width(80.mpx), size = 25, color = MinTvTeal, bold = true, lines = 1)
     }
 }
 

@@ -105,8 +105,10 @@ No avatar is fetched in this iteration; no screenshots, thumbnails or video exis
    enable the required account 2FA and register your personal app as **Public**
    client type. If a redirect URL is required, use `http://localhost`; device-code
    login does not start a redirect listener. Do not generate/share a client secret.
-2. Configure the legitimate public ID once through the optional build variable
-   **MINTV_TWITCH_CLIENT_ID**, or enter it once on the TV. See the
+2. In v0.3 the owner's registered public ID is configured for QA and Production.
+   **Anslut Twitch** starts authorization immediately without typing a Client ID.
+   **MINTV_TWITCH_CLIENT_ID** can override the project default; manual changes remain
+   under advanced account settings. See the
    [registration/build instructions](min-tv-redesign.md#one-time-public-twitch-client-id).
    In Min TV Test → ohnePixel, select **Anslut Twitch**.
 3. On your Mac open the validated Twitch activation URL shown on TV (including

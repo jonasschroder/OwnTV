@@ -6,5 +6,6 @@ import org.junit.runners.Suite
 /** One runner selector; CI also verifies each member's individual executed result. */
 @RunWith(Suite::class)
 @Suite.SuiteClasses(HomeDpadTraversalTest::class, HomeChannelDefaultsStorageTest::class,
-    SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, HomeContentViewportTest::class)
+    SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, HomeContentViewportTest::class,
+    SportsLoadingNavigationTest::class, HomePresentationTest::class, TwitchOnboardingTest::class)
 class HomeRegressionSuite

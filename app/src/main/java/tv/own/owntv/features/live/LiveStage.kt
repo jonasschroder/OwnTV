@@ -166,13 +166,13 @@ internal fun LiveStageRow(
                         append(title)
                         if (left != null) withStyle(SpanStyle(color = (if (focused) Color(0xFFD9E6E1) else StageColors.Muted).copy(alpha = 0.6f))) { append(" · $left") }
                     },
-                    style = stageText(17, 400), color = if (focused) Color(0xFFD9E6E1) else StageColors.Muted,
+                    style = stageText(18, 400), color = if (focused) Color(0xFFD9E6E1) else StageColors.Muted,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
             if (now != null) {
                 Spacer(Modifier.height(8.mpx))
-                StageProgress(progressOf(now), Modifier.width(300.mpx), flat = true)
+                StageProgress(progressOf(now), Modifier.fillMaxWidth(), flat = true)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {

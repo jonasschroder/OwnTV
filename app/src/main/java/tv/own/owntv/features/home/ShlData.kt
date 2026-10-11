@@ -16,6 +16,11 @@ internal data class ShlGame(val id: String, val home: String, val away: String, 
 internal data class ShlStanding(val rank: Int, val team: String, val points: Int,
     val played: Int? = null, val goalDifference: Int? = null)
 internal data class ShlSnapshot(val seasonId: String, val games: List<ShlGame>, val fetchedAt: Long, val sourceUpdatedAt: Long? = null)
+internal enum class HockeyFormatReason { PAGE, COMPETITION, SEASON, ROUTE, HEADERS, ROWS, TEAMS }
+internal class HockeyFormatException(val reason: HockeyFormatReason) : IllegalArgumentException(reason.name)
+private fun hockeyFormat(condition: Boolean, reason: HockeyFormatReason) {
+    if (!condition) throw HockeyFormatException(reason)
+}
 
 /** No DOM or script execution. Only the named table, desktop cells and known columns are accepted. */
 internal object SwehockeyParser {
@@ -25,14 +30,14 @@ internal object SwehockeyParser {
         require(html.length <= 600_000 && season.matches(Regex("\\d{1,9}")))
         val today = Instant.ofEpochMilli(now).atZone(Stockholm).toLocalDate()
         val year = if (today.monthValue >= 8) today.year else today.year - 1
-        require(Regex("<h1\\b[^>]*>\\s*${Regex.escape(competition.name)}\\s*</h1>").containsMatchIn(html))
-        require(Regex("<label>\\s*${Regex.escape(competition.name)} - $year-${(year + 1) % 100}\\s*</label>").containsMatchIn(html))
+        hockeyFormat(Regex("<h1\\b[^>]*>\\s*${Regex.escape(competition.name)}\\s*</h1>").containsMatchIn(html), HockeyFormatReason.COMPETITION)
+        hockeyFormat(Regex("<label>\\s*${Regex.escape(competition.name)} - $year-${(year + 1) % 100}\\s*</label>").containsMatchIn(html), HockeyFormatReason.SEASON)
         val route = "/ScheduleAndResults/${if (table) "Standings" else "Schedule"}/$season"
         val selected = Regex("<option\\b([^>]*)>").findAll(html).filter {
             Regex("\\bselected=\"selected\"").containsMatchIn(it.groupValues[1])
         }.mapNotNull { Regex("\\bvalue=\"([^\"]+)\"").find(it.groupValues[1])?.groupValues?.get(1) }
             .filter { it.matches(Regex("/ScheduleAndResults/(?:Schedule|Standings)/\\d{1,9}")) }.distinct().toList()
-        require(selected == listOf(route))
+        hockeyFormat(selected == listOf(route), HockeyFormatReason.ROUTE)
     }
     private val row = Regex("<tr\\b[^>]*>(.*?)</tr>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
     private val cell = Regex("<t[dh]\\b([^>]*?)(?:/\\s*>|>(.*?)</t[dh]>)", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
@@ -54,9 +59,9 @@ internal object SwehockeyParser {
     private fun rows(html: String, title: String): List<Pair<String, List<String>>> {
         require(html.length <= 600_000)
         val start = Regex("<h2>\\s*${Regex.escape(title)}\\s*</h2>").find(html)?.range?.first ?: -1
-        require(start >= 0)
+        hockeyFormat(start >= 0, HockeyFormatReason.PAGE)
         val end = html.indexOf("</table>", start)
-        require(end > start)
+        hockeyFormat(end > start, HockeyFormatReason.PAGE)
         return row.findAll(html.substring(start, end)).take(450).map { r ->
             r.value to cell.findAll(r.value).filterNot { it.groupValues[1].contains("d-sm-none") }
                 .map { text(it.groupValues[2]) }.toList()
@@ -68,7 +73,7 @@ internal object SwehockeyParser {
         require(league in listOf("SHL", "HockeyAllsvenskan"))
         val ids = Regex("href=\"/ScheduleAndResults/(?:Live|Overview)/(\\d+)\"[^>]*>\\s*${Regex.escape(league)}\\s*<")
             .findAll(html).map { it.groupValues[1] }.distinct().toList()
-        require(ids.size == 1)
+        hockeyFormat(ids.size == 1, HockeyFormatReason.ROUTE)
         return ids.single()
     }
 
@@ -80,7 +85,7 @@ internal object SwehockeyParser {
     fun schedule(html: String): List<ShlGame> {
         var lastDate: String? = null
         val rows = rows(html, "Schedule and Results")
-        require(rows.firstOrNull()?.second?.take(4) == listOf("Date", "Time", "Game", "Result"))
+        hockeyFormat(rows.firstOrNull()?.second?.take(4) == listOf("Date", "Time", "Game", "Result"), HockeyFormatReason.HEADERS)
         val games = rows.drop(1).map { (raw, cells) ->
             require(cells.size >= 4)
             date.matchEntire(cells[0])?.let { lastDate = it.value }
@@ -93,14 +98,14 @@ internal object SwehockeyParser {
                 .atZone(Stockholm).toInstant().toEpochMilli()
             ShlGame(id, pair[0], pair[1], whenMs, score.find(cells[3])?.value?.replace(" ", ""))
         }
-        require(games.isNotEmpty() && games.size <= 400 && games.map { it.id }.distinct().size == games.size)
+        require(games.size <= 400 && games.map { it.id }.distinct().size == games.size)
         return games.sortedBy { it.faceoff }
     }
 
     fun standings(html: String): List<ShlStanding> {
         val rows = rows(html, "Standings")
-        require(rows.firstOrNull()?.second?.take(6) == listOf("RK", "Team", "GP", "W", "T", "L"))
-        require(rows.first().second.getOrNull(7) == "TP")
+        hockeyFormat(rows.firstOrNull()?.second?.take(6) == listOf("RK", "Team", "GP", "W", "T", "L"), HockeyFormatReason.HEADERS)
+        hockeyFormat(rows.first().second.getOrNull(7) == "TP", HockeyFormatReason.HEADERS)
         val ranks = rows.drop(1).filterNot { (raw, cells) ->
             cells == listOf("") && raw.contains("colspan=\"12\"") && raw.contains("<hr ")
         }.map { (_, cells) ->
@@ -115,7 +120,7 @@ internal object SwehockeyParser {
             }
             ShlStanding(rank, cells[1], cells[7].toInt(), played, difference)
         }
-        require(ranks.size == 14 && ranks.map { it.rank }.toSet() == (1..14).toSet())
+        require(ranks.isEmpty() || ranks.size == 14 && ranks.map { it.rank }.toSet() == (1..14).toSet())
         return ranks
     }
 

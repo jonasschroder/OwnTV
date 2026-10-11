@@ -16,12 +16,14 @@ import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.tv.material3.MaterialTheme
 import org.junit.Rule
+import org.junit.Before
 import org.junit.Test
 import tv.own.owntv.features.home.*
 
 /** Real Android key dispatch and production card/navigation in a scrolling Compose lazy list. */
 class HomeDpadTraversalTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @Before fun remoteInputMode() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
     @Test fun noTeamsChooseTeamsAndBack() = traverse(false)
     @Test fun multipleTeamsMatchcenterAndBack() = traverse(true)
 

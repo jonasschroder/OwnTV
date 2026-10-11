@@ -19,9 +19,10 @@ import coil3.compose.AsyncImage
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageText
 
-internal val MinTvNavy = Color(0xFF101820)
-internal val MinTvTeal = Color(0xFF69DCC5)
-internal val MinTvMuted = Color(0xFFAFBDC8)
+internal val MinTvNavy = Color(0xFF0B1018)
+internal val MinTvTeal = Color(0xFF85E2CC)
+internal val MinTvMuted = Color(0xFFA6AFBC)
+internal val MinTvPanel = Color(0xFF151E2A)
 
 @Composable
 internal fun TvText(value: String, modifier: Modifier = Modifier, size: Int = 22, color: Color = Color.White,
@@ -30,37 +31,45 @@ internal fun TvText(value: String, modifier: Modifier = Modifier, size: Int = 22
         maxLines = lines, overflow = TextOverflow.Ellipsis)
 }
 
-/** Low-cost rectangular TV card. Focus changes border/colour without layout or decoder changes. */
+/** Dark, inexpensive TV cards: focus changes outline/colour without relayout or new surfaces. */
 @Composable
 internal fun TvCard(onClick: () -> Unit, modifier: Modifier = Modifier, selected: Boolean = false,
     content: @Composable ColumnScope.() -> Unit) {
     Button(onClick = onClick, modifier = modifier,
         contentPadding = PaddingValues(20.mpx),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(12.mpx)),
-        colors = ButtonDefaults.colors(containerColor = if (selected) Color(0xFF223D3D) else Color(0xFF1B2732),
-            contentColor = Color.White, focusedContainerColor = Color(0xFF294348), focusedContentColor = Color.White),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(16.mpx)),
+        colors = ButtonDefaults.colors(containerColor = if (selected) Color(0xFF1B3034) else MinTvPanel,
+            contentColor = Color.White, focusedContainerColor = Color(0xFF253542), focusedContentColor = Color.White),
         border = ButtonDefaults.border(border = Border(BorderStroke(1.mpx, if (selected) MinTvTeal else Color.Transparent)),
             focusedBorder = Border(BorderStroke(3.mpx, MinTvTeal))),
-        scale = ButtonDefaults.scale(focusedScale = 1.02f)) {
+        scale = ButtonDefaults.scale(focusedScale = 1.015f)) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.mpx), content = content)
     }
 }
 
 @Composable
 internal fun ChannelCard(name: String, logo: String?, detail: String?, onClick: () -> Unit,
-    modifier: Modifier = Modifier, selected: Boolean = false) {
+    modifier: Modifier = Modifier, selected: Boolean = false, progress: Float? = null) {
     TvCard(onClick, modifier, selected) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-            Box(Modifier.size(58.mpx).background(Color(0xFF111C25), RoundedCornerShape(8.mpx)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(68.mpx).background(Color(0xFF0D141E), RoundedCornerShape(12.mpx)), contentAlignment = Alignment.Center) {
                 if (logo != null) AsyncImage(model = logo, contentDescription = null, contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize().padding(5.mpx))
                 else TvText(name.take(2), size = 22, color = MinTvTeal, lines = 1, bold = true)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
-                TvText(name, size = 23, bold = true)
-                detail?.let { TvText(it, size = 18, color = MinTvMuted, lines = 1) }
+                TvText(name, size = 24, bold = true, lines = 2)
+                detail?.let { TvText(it, size = 19, color = MinTvMuted, lines = 1) }
             }
         }
+        progress?.let { ProgrammeProgress(it) }
+    }
+}
+
+@Composable
+internal fun ProgrammeProgress(progress: Float, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().height(4.mpx).background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(2.mpx))) {
+        Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight().background(MinTvTeal, RoundedCornerShape(2.mpx)))
     }
 }
 
@@ -68,7 +77,7 @@ internal fun ChannelCard(name: String, logo: String?, detail: String?, onClick: 
 @Composable
 internal fun FocusPanel(highlighted: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().background(if (highlighted) Color(0xFF223D3D) else Color(0xFF1B2732), RoundedCornerShape(10.mpx))
+    Column(Modifier.fillMaxWidth().background(if (highlighted) Color(0xFF1B3034) else MinTvPanel, RoundedCornerShape(12.mpx))
         .onFocusChanged { focused = it.isFocused }.border(if (focused) 3.mpx else 1.mpx, if (focused) MinTvTeal else Color.Transparent,
-            RoundedCornerShape(10.mpx)).focusable().padding(18.mpx), content = content)
+            RoundedCornerShape(12.mpx)).focusable().padding(14.mpx), content = content)
 }

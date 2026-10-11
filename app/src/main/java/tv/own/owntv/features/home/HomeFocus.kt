@@ -6,5 +6,6 @@ import androidx.compose.ui.focus.FocusRequester
 internal fun FocusRequester.requestSafely(): Boolean = try {
     requestFocus()
 } catch (_: IllegalStateException) {
+    SportsDiagnostics.record(SportsDiagnostics.Event.DETACHED_FOCUS)
     false
 }

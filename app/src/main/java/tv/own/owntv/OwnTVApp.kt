@@ -98,7 +98,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.core.CoreBuildInfo.tvHome = false
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.
-        tv.own.owntv.core.util.CrashRecorder.diagnostics = { tv.own.owntv.player.LiveDiagnosticsLog.snapshot() }
+        tv.own.owntv.core.util.CrashRecorder.diagnostics = {
+            tv.own.owntv.player.LiveDiagnosticsLog.snapshot() + "\n--- sports context ---\n" +
+                tv.own.owntv.features.home.SportsDiagnostics.snapshot()
+        }
         tv.own.owntv.core.util.CrashRecorder.install(this)
         // Core learns a panel's session limit while syncing; the engine is what acts on it. Registered
         // before Koin so the very first source flow already reaches the player (see LiveSessionLimit).

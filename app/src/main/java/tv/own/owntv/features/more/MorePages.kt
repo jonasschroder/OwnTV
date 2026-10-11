@@ -563,6 +563,13 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
                     exportFailed = path == null
                 }
             })
+            StageTool(stringResource(R.string.mintv_export_crash), boxed = true, icon = OwnTVIcon.DOWNLOADS, onClick = {
+                scope.launch {
+                    val path = withContext(Dispatchers.IO) { tv.own.owntv.features.home.SportsDiagnostics.export(context) }
+                    exportPath = path
+                    exportFailed = path == null
+                }
+            })
             if (!entries.isNullOrEmpty()) StageTool(stringResource(R.string.settings_clear_log), icon = OwnTVIcon.TRASH, danger = true, onClick = {
                 PlaybackErrorLog.clear(context)
                 exportPath = null

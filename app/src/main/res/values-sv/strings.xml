@@ -3,4 +3,5 @@
     <string name="content_search_channels">Sök kanaler…</string>
     <string name="content_search_movies">Sök filmer…</string>
     <string name="content_search_series">Sök serier…</string>
+    <string name="mintv_export_crash">Exportera kraschrapport</string>
 </resources>

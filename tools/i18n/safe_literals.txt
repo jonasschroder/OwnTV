@@ -36,6 +36,7 @@
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profile-id-loaded
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profiles-loaded
 1	compiler	app/src/main/java/tv/own/owntv/MainActivityColours.kt	UNUSED_PARAMETER
+1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	--- sports context ---
 1	compiler	app/src/main/java/tv/own/owntv/OwnTVApp.kt	DEPRECATION
 1	file-path	app/src/main/java/tv/own/owntv/OwnTVApp.kt	image_cache
 1	url	app/src/main/java/tv/own/owntv/OwnTVApp.kt	jonasschroder/OwnTV
@@ -170,6 +171,7 @@
 3	technical	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	w1280
 1	technical	app/src/main/java/tv/own/owntv/features/home/MatchcenterTabs.kt	sports-tab-${tab.name}
 11	empty	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	\0
+1	log	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	:
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	broadcast-enabled
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	hockey-window-count
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-access-blocked
@@ -186,6 +188,7 @@
 1	regex	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	^(?:IF|HC)\\s+|\\s+(?:BK|HC|IK|Redhawks|Lakers)$
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	mintv-companion
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-client-id
+1	technical	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-public-client-id
 1	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	4K
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	8K
@@ -371,6 +374,24 @@
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-access-blocked
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-blocked-code
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-enabled
+2	empty	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	\0
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${BuildConfig.APPLICATION_ID}; Android API ${Build.VERSION.SDK_INT}
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${System.currentTimeMillis()} ${event.name}${stage?.let { " ${it.name}" }.orEmpty()}
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${it.name}
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Current sports context:
+1	file-path	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Download/mintv-sports-crash-report.txt
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Min TV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Original crash frames (messages removed):
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Previous sports context:
+3	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	SPORTS_FRAME
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	SPORTS_FRAME $it
+1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?
+1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	^(?:Caused by: |Suppressed: )?([a-zA-Z_$][a-zA-Z0-9_.$]*(?:Exception|Error))(?:[: ].*)?$
+1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	at [a-zA-Z0-9_.$<>]+\\([a-zA-Z0-9_.$]+(?::[0-9]+)?\\)
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	exit: timestamp=${it.timestamp} reason=${it.reason} status=${it.status}
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	memory: pssKb=${it.pss} rssKb=${it.rss}
+2	file-path	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	mintv-sports-crash-report.txt
+1	mime	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	text/plain
 1	empty	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	-
 1	protocol	app/src/main/java/tv/own/owntv/features/home/SportsModels.kt	:
@@ -2005,4 +2026,3 @@
 1	technical	app/src/main/java/tv/own/owntv/ui/theme/Glass.kt	glassPosition
 2	empty	app/src/main/java/tv/own/owntv/ui/theme/OwnTVColors.kt	\0
 2	empty	app/src/main/java/tv/own/owntv/ui/theme/Theme.kt	\0
-1	technical	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-public-client-id

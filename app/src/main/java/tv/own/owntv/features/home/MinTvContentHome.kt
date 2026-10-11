@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
@@ -313,7 +312,7 @@ fun MinTvContentHome(
                         LazyRow(state = favoriteListState, horizontalArrangement = Arrangement.spacedBy(16.mpx), contentPadding = PaddingValues(6.mpx), modifier = Modifier.onFocusChanged {
                             if (it.hasFocus) navigation.selected = 1
                             favoriteRowFocused = it.hasFocus
-                        }.focusRestorer().focusGroup()) {
+                        }.focusGroup()) {
                             itemsIndexed(favorites, key = { _, channel -> channel.id }) { _, channel ->
                                 val programme = (guide?.now.takeIf { channel.id == selected?.id } ?: favoriteProgrammes[channel.id])
                                     ?.takeIf { clock in it.startMs until it.stopMs }

@@ -7,5 +7,5 @@ import org.junit.runners.Suite
 @RunWith(Suite::class)
 @Suite.SuiteClasses(HomeDpadTraversalTest::class, HomeChannelDefaultsStorageTest::class,
     SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, HomeContentViewportTest::class,
-    SportsLoadingNavigationTest::class)
+    SportsLoadingNavigationTest::class, HomePresentationTest::class, TwitchOnboardingTest::class)
 class HomeRegressionSuite

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="mintv_sports_loading">Loading matches…</string>
+    <string name="mintv_watch_channel">Watch channel</string>
+    <string name="mintv_sports_not_loaded">Match information has not been loaded yet.</string>
+    <string name="mintv_team_separator">" · "</string>
     <string name="mintv_sports_fetch_failed">Could not load the matches.</string>
     <string name="mintv_sports_diagnostic_reason">Failure: %1$s · Validation: %2$s</string>
     <string name="app_name" translatable="false">Min TV</string>
@@ -96,10 +99,10 @@
     <string name="mintv_tomorrow">Tomorrow</string>
     <string name="mintv_fixture_time">%1$s %2$s</string>
     <string name="mintv_ohnepixel">ohnePixel</string>
-    <string name="mintv_twitch_public_id_hint">Register your own public Twitch app on your Mac. Enter its Client ID once; see the APK instructions.</string>
+    <string name="mintv_twitch_public_id_hint">Only change this public identifier to use another registered Twitch app. Never enter a Client Secret or token.</string>
     <string name="mintv_twitch_activation_help">Open the address on your Mac and enter the code. Close to cancel.</string>
     <string name="mintv_twitch_connection_failed">Connection failed. Check your public Client ID and try again.</string>
-    <string name="mintv_twitch_edit_id">Edit Client ID</string>
+    <string name="mintv_twitch_edit_id">Advanced: edit Client ID</string>
     <string name="mintv_cached_updated">Cached · updated %1$s</string>
     <style name="Theme.MinTV.Starting" parent="Theme.OwnTV.Starting">
         <item name="windowSplashScreenAnimatedIcon">@mipmap/mintv_icon</item>
@@ -123,7 +126,7 @@
     <string name="mintv_move_down">Move down</string>
     <string name="mintv_remove_team">Remove</string>
     <string name="mintv_swedish_football">Swedish football</string>
-    <string name="mintv_schedule_unavailable">You can follow these clubs. Fixtures and standings are unavailable until a reliable, permitted source is verified.</string>
+    <string name="mintv_schedule_unavailable">Matches and standings are not available yet.</string>
     <string name="mintv_team_following">Following ✓</string>
     <string name="mintv_follow_team">Follow</string>
     <string name="mintv_choose_teams">Choose teams</string>
@@ -142,7 +145,7 @@
     <string name="mintv_sports_format">The source format could not be verified. No results were guessed.</string>
     <string name="mintv_sports_limited">The source request limit has been reached.</string>
     <string name="mintv_sports_storage">Sports data could not be saved or read.</string>
-    <string name="mintv_sports_no_scheduled">No scheduled matches for this selection.</string>
+    <string name="mintv_sports_no_scheduled">No match information to show for this selection.</string>
     <string name="mintv_sports_retry">Try again</string>
     <string name="mintv_sports_retry_at">Try again after %1$s</string>
     <string name="mintv_sports_diagnostics">Sports data diagnostics</string>

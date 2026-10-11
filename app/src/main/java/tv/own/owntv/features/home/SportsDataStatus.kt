@@ -1,6 +1,8 @@
 package tv.own.owntv.features.home
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,7 +21,7 @@ internal fun sportsSnapshotFresh(snapshot: SportSnapshot?, state: SportsLoadStat
 internal fun retryReady(issue: HockeyIssue?, now: Long) = issue?.retryable == true && now >= (issue.retryAt ?: 0)
 
 @Composable
-internal fun sportsStatusText(competition: Competition, enabled: Boolean, state: SportsLoadState): String = stringResource(when {
+internal fun sportsStatusText(competition: Competition, enabled: Boolean, state: SportsLoadState, hasSnapshot: Boolean = false): String = stringResource(when {
     !competition.scheduleAvailable -> R.string.mintv_schedule_unavailable
     !enabled || state.issue?.kind == HockeyFailureKind.DISABLED -> R.string.mintv_shl_disabled
     state.loading -> R.string.mintv_sports_loading
@@ -31,17 +33,18 @@ internal fun sportsStatusText(competition: Competition, enabled: Boolean, state:
         HockeyFailureKind.CACHE -> R.string.mintv_sports_fetch_failed
         HockeyFailureKind.DISABLED -> R.string.mintv_shl_disabled
     }
-    else -> R.string.mintv_sports_no_scheduled
+    hasSnapshot -> R.string.mintv_sports_no_scheduled
+    else -> R.string.mintv_sports_not_loaded
 })
 
 /** One useful TV-sized state; HTTP detail belongs only in Settings, never a match card. */
 @Composable
 internal fun SportsStatusPanel(competition: Competition, enabled: Boolean, state: SportsLoadState,
     now: Long, timestamp: Long?, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.padding(24.mpx), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.mpx)) {
-        TvText(sportsStatusText(competition, enabled, state), size = 27, lines = 3)
-        if (timestamp != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(timestamp, now)), color = MinTvMuted, size = 21)
+    Column(modifier.fillMaxWidth().background(MinTvPanel, RoundedCornerShape(16.mpx)).padding(22.mpx),
+        horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(12.mpx)) {
+        TvText(sportsStatusText(competition, enabled, state, timestamp != null || state.cached), size = 25, lines = 3)
+        if (timestamp != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(timestamp, now)), color = MinTvMuted, size = 19)
         if (enabled && competition.scheduleAvailable && state.issue?.retryable == true) {
             if (retryReady(state.issue, now)) HomeButton(stringResource(R.string.mintv_sports_retry), onRetry)
             else TvText(stringResource(R.string.mintv_sports_retry_at, stockholmTime(state.issue.retryAt!!)), size = 21, color = MinTvMuted)

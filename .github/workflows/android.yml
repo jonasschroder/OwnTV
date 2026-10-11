@@ -47,6 +47,11 @@ jobs:
         run: ./gradlew :app:lintStandardDebug :app:lintQaDebug --stacktrace
       - name: Assemble ARM debug APK and device tests
         run: ./gradlew :app:assembleStandardDebug :app:assembleQaDebug :app:assembleStandardDebugAndroidTest :app:assembleQaDebugAndroidTest --stacktrace
+      - name: Verify public Twitch configuration in optimized ARM release APKs
+        run: |
+          ./gradlew :app:assembleQaRelease :app:assembleStandardRelease --max-workers=4 --stacktrace
+          python3 tools/verify-twitch-apk.py --apk app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk
+          python3 tools/verify-twitch-apk.py --apk app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk
       - name: Verify and stage Min TV APK
         shell: bash
         run: |
@@ -127,7 +132,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ./gradlew :app:connectedX86_64DebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite --max-workers=4 --stacktrace
-      - name: Require all eight regression tests to execute
+      - name: Require all ten regression tests to execute
         if: always()
         run: |
           python3 - <<'PYTEST'
@@ -142,6 +147,10 @@ jobs:
               ('tv.own.owntv.home.HomeContentViewportTest', 'programmeDescriptionIsBoundedAndCannotScrollAcrossClockArea'),
               ('tv.own.owntv.home.SportsLoadingNavigationTest', 'tabsAndBackRemainUsableWhileFetchingAndReopeningCancelsOldWork'),
               ('tv.own.owntv.home.SportsLoadingNavigationTest', 'slowRequestEndsInErrorAndLeavesTabsFocusable'),
+              ('tv.own.owntv.home.HomePresentationTest', 'heroPreservesClockViewportAndOkUsesExistingWatchActionWithoutAutoplay'),
+              ('tv.own.owntv.home.HomePresentationTest', 'failedSportsPanelIsCompactAndContainsNoHttpOrParserDetails'),
+              ('tv.own.owntv.home.TwitchOnboardingTest', 'configuredPublicIdStartsAuthorizationOnFirstClickAndCloseCancels'),
+              ('tv.own.owntv.home.TwitchOnboardingTest', 'advancedPublicIdOverrideTakesPrecedenceAndRemainsEditable'),
           }
           found = set()
           for path in Path('app/build/outputs/androidTest-results').rglob('TEST-*.xml'):
@@ -150,7 +159,7 @@ jobs:
                   assert not any(case.find(tag) is not None for tag in ('failure', 'error', 'skipped')), E.tostring(case)
                   found.add((case.get('classname'), case.get('name')))
           assert required <= found, ('Missing executed tests', required - found)
-          print('All 8 Home/sports/layout/profile regressions executed and passed')
+          print('All 12 Home/sports/layout/profile/Twitch regressions executed and passed')
           PYTEST
       - name: Upload device regression reports
         if: always()

@@ -49,7 +49,7 @@ android {
         targetSdk = 36
         // Independent version sequence for Min TV. CI supplies a monotonically increasing code.
         versionCode = (System.getenv("VERSION_CODE") ?: "2").toInt()
-        versionName = System.getenv("MINTV_VERSION_NAME") ?: "0.2"
+        versionName = System.getenv("MINTV_VERSION_NAME") ?: "0.3"
         manifestPlaceholders["minTvLinkScheme"] = "mintv"
         manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
         buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")
@@ -57,7 +57,7 @@ android {
         val stablePin = (pins["stable"] as Map<*, *>)["certificate_sha256"] as? String ?: ""
         buildConfigField("String", "UPDATE_CERTIFICATE_SHA256", "\"$stablePin\"")
         // Public identifier only. Register your own Twitch public client; never supply a secret/token.
-        val twitchClientId = System.getenv("MINTV_TWITCH_CLIENT_ID")
+        val twitchClientId = System.getenv("MINTV_TWITCH_CLIENT_ID")?.takeIf { it.isNotBlank() }
             ?: providers.gradleProperty("mintv.twitchClientId").orNull ?: ""
         require(twitchClientId.isEmpty() || twitchClientId.matches(Regex("[a-zA-Z0-9]{8,128}")))
         buildConfigField("String", "TWITCH_CLIENT_ID", "\"$twitchClientId\"")

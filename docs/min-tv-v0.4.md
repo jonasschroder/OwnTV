@@ -195,12 +195,11 @@ passed i18n and native signing checks. Full v0.4 final CI/emulator results and
 artifact links are recorded in the PR once executed; compilation alone is not
 an emulator pass. No local accelerated emulator is available in this environment.
 
-Comparable local unsigned release sizes (same Core/toolchain/ARM ABIs):
-
-| Variant | v0.3 bytes | v0.4 bytes | Change |
-|---|---:|---:|---:|
-| QA | 63,666,984 | Pending final metadata/controls build | Pending |
-| Production | 63,665,972 | Pending final metadata/controls build | Pending |
+The comparable v0.3 unsigned release size baseline is **63,666,984 bytes QA**
+and **63,665,972 bytes Production** (same Core/toolchain/ARM ABIs). The final
+v0.4 measurements, difference and exact CI source commit are recorded in
+[PR #6](https://github.com/jonasschroder/OwnTV/pull/6) after the complete optimized
+build. This keeps preliminary sizes from being mistaken for the final artifact.
 
 These are local verification outputs, not permanently signed installers. RAM,
 startup time, physical scrolling latency and decoder performance have **not**

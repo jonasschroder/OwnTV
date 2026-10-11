@@ -42,3 +42,17 @@ Physical checks required: the reported arrival crash with original stack/export,
 preview/promotion, decoder/audio/subtitles, actual large provider libraries, remote focus,
 and update-in-place preserving profiles/favorites/history. Emulator fixtures cannot verify
 provider access, Chromecast RAM/decoder performance or permanent owner-key updates.
+
+## Implementation following this audit
+
+The app decorates the existing metadata provider with conservative search filtering
+(0.92 minimum title score, 0.12 ambiguity margin, exact supplied year and media type).
+The destructive-normalization guard is scoped to new searches only: positive stored
+matches, known-ID details and cache-only artwork/episode reads remain available.
+Provider data, manual corrections and historical positive caches are preserved.
+No Core revision, database schema, metadata service or dependency was replaced.
+
+Home now uses existing real profile continuation; hidden legacy hero/trending
+enrichment is not eagerly run when that content is absent. Cinematic grid geometry
+is bounded without rewriting saved preferences. See [the implementation report](min-tv-v0.4.md)
+and PR #6 for final tests, performance evidence and physical limitations.

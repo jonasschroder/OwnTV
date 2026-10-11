@@ -661,10 +661,10 @@ fun MoviesScreen(
                                     StagePoster(
                                         title = movie.name,
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                    line = listOfNotNull(movie.year?.toString(), movie.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(" · ").takeIf(String::isNotBlank),
+                                        line = listOfNotNull(movie.year?.toString(), movie.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(" · ").takeIf(String::isNotBlank),
 
-                                    progress = movieProgress[movie.id]?.takeIf { it.durationMs > 0 && !vm.isMovieCompleted(it) }?.let { it.positionMs.toFloat() / it.durationMs },
-                                    watched = movieProgress[movie.id]?.let(vm::isMovieCompleted) == true,
+                                        progress = movieProgress[movie.id]?.takeIf { it.durationMs > 0 && !vm.isMovieCompleted(it) }?.let { it.positionMs.toFloat() / it.durationMs },
+                                        watched = movieProgress[movie.id]?.let(vm::isMovieCompleted) == true,
                                         width = 196.mpx, height = 294.mpx,
                                         onClick = { contextMovieId = movie.id; detailsMovie = movie },
                                         onLongClick = { openMenu(movie, index) },
@@ -1195,7 +1195,12 @@ private fun metaLine(movie: MovieEntity, meta: tv.own.owntv.core.database.entity
     val rating = if (tmdbWins) meta?.rating?.takeIf { it > 0 } ?: movie.rating?.takeIf { it > 0 }
         else movie.rating?.takeIf { it > 0 } ?: meta?.rating?.takeIf { it > 0 }
     year?.let { parts.add(localizedInteger(it, grouping = false)) }
-    rating?.let { parts.add(stringResource(R.string.content_rating, it)) }
+    rating?.let {
+        parts.add(stringResource(R.string.content_rating, it))
+        val fromTmdb = meta?.rating?.takeIf { value -> value > 0 } != null &&
+            (tmdbWins || movie.rating?.takeIf { value -> value > 0 } == null)
+        parts.add(stringResource(if (fromTmdb) R.string.mintv_tmdb_rating else R.string.mintv_provider_rating))
+    }
     movie.durationSecs?.takeIf { it > 0 }?.let { secs ->
         val h = secs / 3600
         val m = (secs % 3600) / 60

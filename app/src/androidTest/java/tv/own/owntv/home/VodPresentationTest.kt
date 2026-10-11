@@ -48,7 +48,7 @@ class VodPresentationTest {
         var closed = false
         compose.setContent {
             MaterialTheme {
-                MediaDetailsScreen(MediaDetailsUi("Instrumented provider title", plot = "Provider synopsis"),
+                MediaDetailsScreen(MediaDetailsUi("Instrumented provider title", plot = "Provider synopsis. ".repeat(150)),
                     onExit = { closed = true }, onPlay = { plays++ }, playLabel = "Play fixture")
             }
         }
@@ -56,6 +56,8 @@ class VodPresentationTest {
         compose.onNodeWithText("Play fixture").assertIsFocused()
         assertEquals(0, plays)
         screenshot("provider-details-test-fixture.png")
+        repeat(3) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+        compose.onNodeWithText("Play fixture").assertIsFocused().assertIsDisplayed()
         key(KeyEvent.KEYCODE_DPAD_CENTER)
         assertEquals(1, plays)
         key(KeyEvent.KEYCODE_BACK)

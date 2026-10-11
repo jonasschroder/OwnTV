@@ -1,5 +1,6 @@
 package tv.own.owntv.features.metadata
 
+import kotlinx.coroutines.currentCoroutineContext
 import tv.own.owntv.core.metadata.MetadataProvider
 import tv.own.owntv.core.metadata.MetadataSearchResult
 import tv.own.owntv.core.metadata.MetadataType
@@ -8,10 +9,14 @@ import tv.own.owntv.core.metadata.TitleMatchScorer
 /** One existing authorized request, existing budgets/cache; abstain on ambiguous search results.
  * Known-ID details, episodes, trending and transport null semantics are delegated unchanged. */
 class ConservativeMetadataProvider(private val upstream: MetadataProvider) : MetadataProvider by upstream {
-    override suspend fun searchMovie(title: String, year: Int?, includeAdult: Boolean): List<MetadataSearchResult>? =
-        choose(title, year, MetadataType.MOVIE, upstream.searchMovie(title, year, includeAdult))
-    override suspend fun searchTv(title: String, year: Int?, includeAdult: Boolean): List<MetadataSearchResult>? =
-        choose(title, year, MetadataType.TV, upstream.searchTv(title, year, includeAdult))
+    override suspend fun searchMovie(title: String, year: Int?, includeAdult: Boolean): List<MetadataSearchResult>? {
+        if (currentCoroutineContext()[MetadataSearchAbstention] != null) return null
+        return choose(title, year, MetadataType.MOVIE, upstream.searchMovie(title, year, includeAdult))
+    }
+    override suspend fun searchTv(title: String, year: Int?, includeAdult: Boolean): List<MetadataSearchResult>? {
+        if (currentCoroutineContext()[MetadataSearchAbstention] != null) return null
+        return choose(title, year, MetadataType.TV, upstream.searchTv(title, year, includeAdult))
+    }
 
     companion object {
         internal fun choose(title: String, year: Int?, type: MetadataType,

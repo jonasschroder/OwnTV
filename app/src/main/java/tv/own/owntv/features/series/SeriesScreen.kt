@@ -668,7 +668,7 @@ private fun SeriesGrid(
                                     StagePoster(
                                         title = show.name,
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                    line = listOfNotNull(show.year?.toString(), show.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(" · ").takeIf(String::isNotBlank),
+                                        line = listOfNotNull(show.year?.toString(), show.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(" · ").takeIf(String::isNotBlank),
                                         width = 196.mpx, height = 294.mpx,
                                         onClick = { vm.openSeries(show) },
                                         onLongClick = { openMenu(show, index) },
@@ -1156,7 +1156,11 @@ private fun buildSeriesDetails(
     val year = if (tmdbWins) meta?.year ?: s.year else s.year ?: meta?.year
     val rating = if (tmdbWins) meta?.rating?.takeIf { it > 0 } ?: s.rating?.takeIf { it > 0 }
         else s.rating?.takeIf { it > 0 } ?: meta?.rating?.takeIf { it > 0 }
-    val metaLine = listOfNotNull(year?.let { localizedInteger(it, grouping = false) }, rating?.let { stringResource(R.string.content_rating, it) }).joinToString(stringResource(R.string.content_metadata_separator))
+    val ratingFromTmdb = meta?.rating?.takeIf { it > 0 } != null && (tmdbWins || s.rating?.takeIf { it > 0 } == null)
+    val metaLine = listOfNotNull(year?.let { localizedInteger(it, grouping = false) },
+        rating?.let { stringResource(R.string.content_rating, it) },
+        rating?.let { stringResource(if (ratingFromTmdb) R.string.mintv_tmdb_rating else R.string.mintv_provider_rating) },
+    ).joinToString(stringResource(R.string.content_metadata_separator))
     return tv.own.owntv.features.shell.components.MediaDetailsUi(
         title = s.name,
         backdropUrl = backdrop,
@@ -1187,6 +1191,7 @@ private fun buildEpisodeDetails(
     val metaLine = listOfNotNull(
         rememberAirDateLabel(ep, meta) ?: meta?.year?.let { localizedInteger(it, grouping = false) },
         meta?.rating?.takeIf { it > 0 }?.let { stringResource(R.string.content_rating, it) },
+        meta?.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_tmdb_rating) },
     ).joinToString(stringResource(R.string.content_metadata_separator))
     return tv.own.owntv.features.shell.components.MediaDetailsUi(
         title = title,

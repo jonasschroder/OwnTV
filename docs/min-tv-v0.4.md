@@ -102,7 +102,9 @@ No new catalog, player, decoder, WebView, background service or dependency.
   remain the existing provider-backed controls, not a new whole-catalog genre
   index or speculative recommendations.
 - Movie poster OK opens the reused details screen with Play and Back actions.
-  Provider-only/offline/ambiguous titles can still open details and play. Resume
+  Provider-only/offline/ambiguous titles can still open details and play. Play
+  and Back remain visible while scrolling long descriptions; detail ratings
+  also identify provider/TMDB. Resume
   uses the existing saved-position policy; returning restores the selected ID.
 - Series keeps existing season selection, episode details, progress, audio,
   subtitles, next-episode behavior and playback controls. Shared presentation
@@ -122,11 +124,15 @@ another eligible distinct ID. Ambiguous results abstain; transport `null` stays
 `null` so a failed service is not converted into a negative-cache hit. Known-ID
 provider calls delegate unchanged.
 
-A separate guard prevents automatic app enrichment when the pinned normalizer
-would discard meaningful bracketed words or numeric title content. Provider
+A coroutine-scoped guard prevents new automatic searches when the pinned
+normalizer would discard meaningful bracketed words or numeric title content.
+Existing positive matches/ID details and cache-only poster/episode reads still
+run through Core before considering a search. The guard follows Core's IO work
+without leaking into another request. Provider
 titles are never rewritten. This is deliberately conservative: numeric titles
-such as *1917* and some unfamiliar filename decorations keep provider artwork
-and details until a manual **Set TMDB name / Refetch** correction is made. It is
+such as *1917* and some unfamiliar filename decorations without an existing
+match keep provider artwork and details until a manual **Set TMDB name / Refetch**
+correction is made. It is
 not a complete replacement title normalizer. Existing positive caches are not
 automatically purged or revalidated; historical wrong matches may still need
 Refetch/manual correction. No speculative IMDb scraping or new external-ID
@@ -170,8 +176,8 @@ titles, not a real IPTV library or a claim of physical Chromecast testing.
 
 | Check | Result |
 |---|---|
-| QA JVM tests | 331 passed; zero failures/errors/skips |
-| Production JVM tests | 331 passed; zero failures/errors/skips |
+| QA JVM tests | 333 passed; zero failures/errors/skips |
+| Production JVM tests | 333 passed; zero failures/errors/skips |
 | Core / player-core JVM tests | 939 / 271 passed; zero failures/errors/skips |
 | Android test Kotlin compilation | Passed |
 | QA/Production debug and optimized release packaging | Passed |
@@ -193,8 +199,8 @@ Comparable local unsigned release sizes (same Core/toolchain/ARM ABIs):
 
 | Variant | v0.3 bytes | v0.4 bytes | Change |
 |---|---:|---:|---:|
-| QA | 63,666,984 | 63,684,008 | +17,024 (+0.027%) |
-| Production | 63,665,972 | 63,682,996 | +17,024 (+0.027%) |
+| QA | 63,666,984 | Pending final metadata/controls build | Pending |
+| Production | 63,665,972 | Pending final metadata/controls build | Pending |
 
 These are local verification outputs, not permanently signed installers. RAM,
 startup time, physical scrolling latency and decoder performance have **not**

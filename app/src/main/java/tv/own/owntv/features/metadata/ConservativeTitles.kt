@@ -1,5 +1,8 @@
 package tv.own.owntv.features.metadata
 
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import tv.own.owntv.core.database.entity.MovieEntity
 import tv.own.owntv.core.database.entity.SeriesEntity
 import tv.own.owntv.core.database.entity.EpisodeEntity
@@ -22,22 +25,33 @@ internal object ConservativeTitles {
 }
 
 internal suspend fun MetadataRepository.resolveSafeMovie(movie: MovieEntity) =
-    if (ConservativeTitles.safeForAutoMatch(movie.name) || movieOverride(movie) != null) resolveMovie(movie) else null
+    withSafeMetadataSearch(movie.name, { movieOverride(movie) != null }) { resolveMovie(movie) }
 
 internal suspend fun MetadataRepository.resolveSafeSeries(series: SeriesEntity) =
-    if (ConservativeTitles.safeForAutoMatch(series.name) || seriesOverride(series) != null) resolveSeries(series) else null
+    withSafeMetadataSearch(series.name, { seriesOverride(series) != null }) { resolveSeries(series) }
 
 internal suspend fun MetadataRepository.cachedSafeMoviePosters(movies: List<MovieEntity>) =
-    cachedMoviePosters(movies.filter { ConservativeTitles.safeForAutoMatch(it.name) || movieOverride(it) != null })
+    cachedMoviePosters(movies)
 
 internal suspend fun MetadataRepository.cachedSafeSeriesPosters(series: List<SeriesEntity>) =
-    cachedSeriesPosters(series.filter { ConservativeTitles.safeForAutoMatch(it.name) || seriesOverride(it) != null })
+    cachedSeriesPosters(series)
 
 internal suspend fun MetadataRepository.resolveSafeEpisode(series: SeriesEntity, episode: EpisodeEntity) =
-    if (ConservativeTitles.safeForAutoMatch(series.name) || seriesOverride(series) != null) resolveEpisode(series, episode) else null
+    withSafeMetadataSearch(series.name, { seriesOverride(series) != null }) { resolveEpisode(series, episode) }
 
 internal suspend fun MetadataRepository.cachedSafeSeasonEpisodes(series: SeriesEntity, episodes: List<EpisodeEntity>) =
-    if (ConservativeTitles.safeForAutoMatch(series.name) || seriesOverride(series) != null) cachedSeasonEpisodes(series, episodes) else emptyMap()
+    cachedSeasonEpisodes(series, episodes)
 
 internal suspend fun MetadataRepository.resolveSafeSeasonEpisodes(series: SeriesEntity, episodes: List<EpisodeEntity>) =
-    if (ConservativeTitles.safeForAutoMatch(series.name) || seriesOverride(series) != null) resolveSeasonEpisodes(series, episodes) else emptyMap()
+    withSafeMetadataSearch(series.name, { seriesOverride(series) != null }) { resolveSeasonEpisodes(series, episodes) }
+
+/** Block only a NEW automatic search, not existing matches, ID details or cache-only lookups.
+ * Coroutine context follows Core's IO work without leaking into another profile/request. */
+internal class MetadataSearchAbstention : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<MetadataSearchAbstention>
+}
+
+internal suspend fun <T> withSafeMetadataSearch(raw: String, hasOverride: suspend () -> Boolean,
+    resolve: suspend () -> T): T =
+    if (ConservativeTitles.safeForAutoMatch(raw) || hasOverride()) resolve()
+    else withContext(MetadataSearchAbstention()) { resolve() }

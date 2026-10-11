@@ -108,10 +108,12 @@ internal fun TwitchCompanionUi(
             if (!connecting) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     HomeButton(stringResource(R.string.mintv_twitch_connect), { failure = false; connecting = true }, Modifier.focusRequester(connectFocus))
-                    if (!editClientId) HomeButton(stringResource(R.string.mintv_twitch_edit_id), { editClientId = true })
                     if (connected) HomeButton(stringResource(R.string.mintv_twitch_disconnect), { disconnect = true })
                 }
             }
+            if (!editClientId) HomeButton(stringResource(R.string.mintv_twitch_edit_id), {
+                connecting = false; code = null; failure = false; editClientId = true
+            })
             code?.let {
                 TvText(it.verificationUri, size = 22, color = MinTvTeal, lines = 3)
                 TvText(it.code, size = 44, bold = true, lines = 1)

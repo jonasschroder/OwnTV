@@ -144,8 +144,10 @@ variable `MINTV_TWITCH_CLIENT_ID`; the protected workflow itself is unchanged.
 For an unconnected account, **Anslut Twitch** immediately starts the existing
 public-client device flow and displays Twitch's validated activation URL/code.
 No remote Client ID entry or second Connect press is required. Close/Back or
-backgrounding cancels onboarding. After a failure, Retry and **Avancerat: ändra
-Client ID** remain available; a manual public-ID override takes precedence.
+backgrounding cancels onboarding. **Avancerat: ändra Client ID** also remains
+available during authorization: it cancels that attempt before opening the public
+ID editor. After a failure, Retry remains available; a manual public-ID override
+takes precedence.
 Connected-account settings retain disconnect and advanced editing. Tokens remain
 in the unchanged AES-GCM Android Keystore-backed no-backup store. QA/Production
 keep separate Android sandboxes. No secret, new token storage or authentication
@@ -167,8 +169,9 @@ The APK check searches actual packaged DEX string tables after R8, not generated
 BuildConfig/debug files or resource text. CI now builds both optimized ARM release
 variants and verifies the exact configured public ID survives in each. Three
 verifier tests cover secondary DEX, exact matching/resource-only rejection and
-truncation. The production UI tests confirm first-click use and advanced override
-precedence. Real Twitch account completion/API access still needs a physical test.
+truncation. The production UI tests confirm first-click use, cancellation by Close
+or advanced editing, and advanced override precedence. Real Twitch account
+completion/API access still needs a physical test.
 These local/ordinary CI unsigned release outputs are verification artifacts, not
 installers for the owner's permanently signed apps.
 
@@ -186,7 +189,7 @@ installers for the owner's permanently signed apps.
 | Release locale packaging | Both passed; no debug pseudolocales |
 | Actionlint, i18n literal/number/overflow, diff checks | Passed |
 
-QA is 63,666,984 bytes and Production 63,665,972 bytes. The existing approved
+Both measured release APKs are approximately 63.7 MB. The existing approved
 owner-signed QA baseline is 63,693,443 bytes; there is no significant APK growth
 and no new library/player dependency. Those local unsigned outputs are not
 approved installers or candidates for the populated Chromecast.

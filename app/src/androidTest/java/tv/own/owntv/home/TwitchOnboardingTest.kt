@@ -58,15 +58,22 @@ class TwitchOnboardingTest {
         val prefs = compose.activity.getSharedPreferences("twitch-onboarding-test", Context.MODE_PRIVATE)
         prefs.edit().clear().putString("twitch-client-id", "manualPublicClientOverride").commit()
         val received = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val cancelled = AtomicInteger()
         compose.setContent {
             MaterialTheme {
                 TwitchCompanionUi(true, true, prefs, "builtInPublicClientFixture", { false }, { TwitchState.Unavailable },
-                    { id, _ -> received.add(id); error("Synthetic authorization failure") }, {})
+                    { id, _ ->
+                        received.add(id)
+                        if (received.size == 1) {
+                            try { awaitCancellation() } finally { cancelled.incrementAndGet() }
+                        } else error("Synthetic authorization failure")
+                    }, {})
             }
         }
         activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))
         compose.waitUntil { received.isNotEmpty() }
         activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_edit_id)))
+        compose.waitUntil { cancelled.get() == 1 }
         compose.onNodeWithTag("twitch-public-client-id").assertIsDisplayed().performTextReplacement("updatedPublicClientOverride")
         activate(compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_twitch_connect)).filter(hasClickAction()).onLast())
         compose.waitUntil { received.size == 2 }

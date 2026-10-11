@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.dp
@@ -93,7 +94,10 @@ class HomePresentationTest {
         val panel = compose.onNodeWithTag("sports-status").fetchSemanticsNode().boundsInRoot
         val viewport = compose.onNodeWithTag("viewport").fetchSemanticsNode().boundsInRoot
         assertTrue(panel.height < viewport.height * 0.35f)
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_sports_retry)).performClick()
+        val retry = compose.onNodeWithText(compose.activity.getString(R.string.mintv_sports_retry))
+        retry.performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
+        retry.assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER)
         assertEquals(1, retries.get())
     }
 }

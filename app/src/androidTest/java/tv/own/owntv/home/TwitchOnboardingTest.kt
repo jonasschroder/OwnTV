@@ -1,9 +1,11 @@
 package tv.own.owntv.home
 
 import android.content.Context
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.tv.material3.MaterialTheme
 import java.util.concurrent.atomic.AtomicInteger
@@ -20,6 +22,13 @@ class TwitchOnboardingTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @Before fun remoteInputMode() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
 
+    private fun activate(node: SemanticsNodeInteraction) {
+        node.performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
+        node.assertIsFocused()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.waitForIdle()
+    }
+
     @Test fun configuredPublicIdStartsAuthorizationOnFirstClickAndCloseCancels() {
         val prefs = compose.activity.getSharedPreferences("twitch-onboarding-test", Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
@@ -35,12 +44,12 @@ class TwitchOnboardingTest {
                     }, {})
             }
         }
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)).performClick()
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))
         compose.waitUntil { attempts.get() == 1 }
         compose.onNodeWithText(activation.code).assertIsDisplayed()
         compose.onNodeWithText(activation.verificationUri).assertIsDisplayed()
         compose.onNodeWithTag("twitch-public-client-id").assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_close)).performClick()
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_close)))
         compose.waitUntil { cancelled.get() == 1 }
         assertEquals(1, attempts.get())
     }
@@ -55,11 +64,11 @@ class TwitchOnboardingTest {
                     { id, _ -> received.add(id); error("Synthetic authorization failure") }, {})
             }
         }
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)).performClick()
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))
         compose.waitUntil { received.isNotEmpty() }
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_edit_id)).performClick()
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_edit_id)))
         compose.onNodeWithTag("twitch-public-client-id").assertIsDisplayed().performTextReplacement("updatedPublicClientOverride")
-        compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_twitch_connect)).filter(hasClickAction()).onLast().performClick()
+        activate(compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_twitch_connect)).filter(hasClickAction()).onLast())
         compose.waitUntil { received.size == 2 }
         assertEquals(listOf("manualPublicClientOverride", "updatedPublicClientOverride"), received)
     }

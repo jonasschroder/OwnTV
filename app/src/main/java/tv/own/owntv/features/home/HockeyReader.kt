@@ -88,6 +88,8 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
         catch (e: TimeoutCancellationException) {
             currentCoroutineContext().ensureActive()
             throw HockeyDataException(HockeyIssue(HockeyFailureKind.TIMEOUT, stage, now))
+        } catch (e: CompanionResponseTooLarge) {
+            throw HockeyDataException(HockeyIssue(HockeyFailureKind.FORMAT, stage, now))
         } catch (e: IOException) {
             throw HockeyDataException(HockeyIssue(HockeyFailureKind.NETWORK, stage, now))
         }

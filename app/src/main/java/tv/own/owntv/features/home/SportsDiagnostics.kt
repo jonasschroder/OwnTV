@@ -83,6 +83,8 @@ internal object SportsDiagnostics {
                     appendLine("memory: pssKb=${it.pss} rssKb=${it.rss}")
                 }
             }
+            val runtime = Runtime.getRuntime()
+            appendLine("current-memory: heapBytes=${runtime.totalMemory() - runtime.freeMemory()} heapLimitBytes=${runtime.maxMemory()} nativeHeapBytes=${android.os.Debug.getNativeHeapAllocatedSize()}")
             appendLine("Current sports context:")
             appendLine(snapshot())
             // Preserve only our enum-only ring from the previous process' crash diagnostics.

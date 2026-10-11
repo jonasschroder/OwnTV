@@ -93,6 +93,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	…
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	→
 1	empty	app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt	\0
+1	log	app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt	Response exceeds source budget
 2	protocol	app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt	Retry-After
 1	empty	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	\0
 3	url	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/ishockey/shl
@@ -390,6 +391,7 @@
 1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?
 1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	^(?:Caused by: |Suppressed: )?([a-zA-Z_$][a-zA-Z0-9_.$]*(?:Exception|Error))(?:[: ].*)?$
 1	regex	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	at [a-zA-Z0-9_.$<>]+\\([a-zA-Z0-9_.$]+(?::[0-9]+)?\\)
+1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	current-memory: heapBytes=${runtime.totalMemory() - runtime.freeMemory()} heapLimitBytes=${runtime.maxMemory()} nativeHeapBytes=${android.os.Debug.getNativeHeapAllocatedSize()}
 1	file-path	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	diagnostics/sports-context.txt
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	exit: timestamp=${it.timestamp} reason=${it.reason} status=${it.status}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	memory: pssKb=${it.pss} rssKb=${it.rss}

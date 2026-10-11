@@ -12,6 +12,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /** Uses Core's ordinary client. Bounded reads run on OkHttp's worker; cancellation closes the call. */
+internal class CompanionResponseTooLarge : IOException("Response exceeds source budget")
+
 internal data class CompanionResponse(val status: Int, val body: String, val retryAfter: String? = null)
 
 internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int): Pair<Int, String> =
@@ -19,6 +21,7 @@ internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int)
 
 internal suspend fun OkHttpClient.companionResponse(request: Request, limit: Int): CompanionResponse =
     suspendCancellableCoroutine { continuation ->
+        require(limit in 1..600_000)
         val call = newCall(request)
         call.timeout().timeout(8, TimeUnit.SECONDS)
         continuation.invokeOnCancellation { call.cancel() }
@@ -35,14 +38,14 @@ internal suspend fun OkHttpClient.companionResponse(request: Request, limit: Int
                             return
                         }
                         val body = it.body
-                        if (body.contentLength() > limit) throw IOException()
+                        if (body.contentLength() > limit) throw CompanionResponseTooLarge()
                         val bytes = body.byteStream().use { stream ->
                             val output = java.io.ByteArrayOutputStream()
                             val buffer = ByteArray(8192)
                             while (true) {
                                 val count = stream.read(buffer)
                                 if (count < 0) break
-                                if (output.size() + count > limit) throw IOException()
+                                if (output.size() + count > limit) throw CompanionResponseTooLarge()
                                 output.write(buffer, 0, count)
                             }
                             output.toByteArray()

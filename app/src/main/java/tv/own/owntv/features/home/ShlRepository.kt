@@ -11,6 +11,7 @@ import okhttp3.Request
 /** Android persistence/HTTP adapter; the replaceable reader owns validation and request policy. */
 internal class ShlRepository(context: Context, client: OkHttpClient) {
     val preferences = context.getSharedPreferences("mintv-companion", Context.MODE_PRIVATE)
+    private val parsingIo = Dispatchers.IO.limitedParallelism(1)
     private val reader = HockeyReader(object : HockeyStorage {
         override fun enabled() = preferences.getBoolean("shl-enabled", false)
         override fun blocked() = preferences.getBoolean("shl-access-blocked", false)
@@ -39,13 +40,13 @@ internal class ShlRepository(context: Context, client: OkHttpClient) {
         }
     }, HockeyHttpPages(client))
     suspend fun cached(competition: Competition = SportsCatalog.shl, now: Long = System.currentTimeMillis()): ShlSnapshot? =
-        withContext(Dispatchers.IO) { reader.cached(competition, now) }
+        withContext(parsingIo) { reader.cached(competition, now) }
     suspend fun cachedStandings(competition: Competition, season: String): HockeyTable? =
-        withContext(Dispatchers.IO) { reader.cachedTable(competition, season) }
+        withContext(parsingIo) { reader.cachedTable(competition, season) }
     suspend fun refresh(now: Long, competition: Competition = SportsCatalog.shl): ShlSnapshot =
-        withContext(Dispatchers.IO) { reader.refresh(competition, now) }
+        withContext(parsingIo) { reader.refresh(competition, now) }
     suspend fun standings(season: String, now: Long, competition: Competition = SportsCatalog.shl): HockeyTable =
-        withContext(Dispatchers.IO) { reader.standings(competition, season, now) }
+        withContext(parsingIo) { reader.standings(competition, season, now) }
     fun diagnostic(competition: Competition, table: Boolean = false) = reader.diagnostic(competition, table)
     fun lastResponse(competition: Competition) = reader.lastResponse(competition)
 }

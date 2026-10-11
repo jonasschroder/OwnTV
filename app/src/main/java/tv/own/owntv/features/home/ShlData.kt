@@ -62,10 +62,20 @@ internal object SwehockeyParser {
         hockeyFormat(start >= 0, HockeyFormatReason.PAGE)
         val end = html.indexOf("</table>", start)
         hockeyFormat(end > start, HockeyFormatReason.PAGE)
-        return row.findAll(html.substring(start, end)).take(450).map { r ->
-            r.value to cell.findAll(r.value).filterNot { it.groupValues[1].contains("d-sm-none") }
-                .map { text(it.groupValues[2]) }.toList()
-        }.toList()
+        val result = mutableListOf<Pair<String, List<String>>>()
+        var cursor = start
+        while (true) {
+            val opening = html.indexOf("<tr", cursor, ignoreCase = true)
+            if (opening < 0 || opening >= end) break
+            val closing = html.indexOf("</tr>", opening, ignoreCase = true)
+            hockeyFormat(closing in (opening + 1) until end && closing - opening <= 16_384 && result.size < 450, HockeyFormatReason.ROWS)
+            val raw = html.substring(opening, closing + 5)
+            val cells = cell.findAll(raw).take(25).toList()
+            hockeyFormat(cells.size <= 24, HockeyFormatReason.ROWS)
+            result += raw to cells.filterNot { it.groupValues[1].contains("d-sm-none") }.map { text(it.groupValues[2]) }
+            cursor = closing + 5
+        }
+        return result
     }
 
     fun discover(html: String, league: String = "SHL"): String {

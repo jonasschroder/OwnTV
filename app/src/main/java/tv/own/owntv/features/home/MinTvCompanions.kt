@@ -166,42 +166,31 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
         if (competitions.isEmpty()) return@LaunchedEffect
-        while (true) {
-            var wakeAt = System.currentTimeMillis() + 60 * 60_000L
-            for (competition in competitions) {
-                val started = System.currentTimeMillis()
-                val previous = loadStates[competition.id]?.issue
-                if (previous?.retryAt != null && previous.retryAt > started) {
-                    wakeAt = minOf(wakeAt, previous.retryAt)
-                    continue
-                }
-                val result = fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
-                    sports.cached(competition)?.let { data = data + (competition.id to it) }
-                    sports.refresh(competition, started)
-                }, { value -> data = data + (competition.id to value); value.fetchedAt < started },
-                    { loadStates[competition.id] = it })
-                result.issue?.retryAt?.let { wakeAt = minOf(wakeAt, it) }
-            }
-            delay((wakeAt - System.currentTimeMillis()).coerceAtLeast(60_000))
+        // One visible refresh; repository TTL/retry gates survive Home/Matchcenter changes.
+        // No automatic retry loop or work after the screen leaves the foreground.
+        for (competition in competitions) {
+            val started = System.currentTimeMillis()
+            sports.cached(competition)?.let { data = data + (competition.id to it) }
+            fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
+                sports.refresh(competition, started)
+            }, { value -> data = data + (competition.id to value); value.fetchedAt < started },
+                { loadStates[competition.id] = it })
         }
     }
+
     val tableRequest = data[selectedCompetition.id]?.seasonId?.takeIf {
         available && enabled && screen && !teamsOpen && selectedId == null &&
             section in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)
     }?.let { selectedCompetition to it }
     LaunchedEffect(profileId, tableRequest, retryRevision) {
         val (competition, season) = tableRequest ?: return@LaunchedEffect
-        while (true) {
-            val started = System.currentTimeMillis()
-            val retryAt = tableState.issue?.retryAt
-            if (retryAt != null && retryAt > started) { delay(retryAt - started); continue }
-            fetchSports(started, HockeyStage.TABLE, { table != null }, {
-                sports.cachedStandings(competition, season)?.let { table = it }
-                sports.standings(competition, season, started)
-            }, { value -> table = value; value.fetchedAt < started }, { tableState = it })
-            delay(tableState.issue?.retryAt?.let { (it - System.currentTimeMillis()).coerceAtLeast(60_000) } ?: (6 * 60 * 60_000L))
-        }
+        val started = System.currentTimeMillis()
+        sports.cachedStandings(competition, season)?.let { table = it }
+        fetchSports(started, HockeyStage.TABLE, { table != null }, {
+            sports.standings(competition, season, started)
+        }, { value -> table = value; value.fetchedAt < started }, { tableState = it })
     }
+
     val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
     val gameToMatch = if (teamsOpen || !broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
         else if (selectedId != null) selected else myToday.firstOrNull().takeIf { expanded }

@@ -21,7 +21,7 @@ internal object ProviderFolderOrder {
 internal class ProviderFolderCollector(private val folders: Map<Long, ProviderFolder>) {
     private val groups = linkedMapOf<Long, MutableList<DiscoveryCard>>()
     private val order = compareBy<DiscoveryCard> { it.providerOrder }.thenBy { it.name }.thenBy { it.id }
-    private fun identity(card: DiscoveryCard): String = if (card.tmdbId != null && card.year != null)
+    private fun identity(card: DiscoveryCard): String = if (card.tmdbId != null && card.tmdbId > 0 && card.year != null && card.year in 1888..2100)
         "${card.type}:${card.tmdbId}:${card.year}" else card.stableKey
 
     fun add(input: DiscoveryCard) {

@@ -56,6 +56,20 @@
 1	technical	app/src/main/java/tv/own/owntv/features/customize/CustomizeScreen.kt	first
 1	technical	app/src/main/java/tv/own/owntv/features/customize/CustomizeScreen.kt	▶
 1	empty	app/src/main/java/tv/own/owntv/features/customize/CustomizeViewModel.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	$metadataType:
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	$metadataType:$lang:
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	${cursor.getLong(1)}:${if (cursor.isNull(2)) name else cursor.getString(2)}
+1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	,
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	:kids
+1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	?
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	LEFT JOIN metadata_match m ON m.localKey = ('$metadataType:' || c.sourceId || ':' || COALESCE(c.remoteId,c.name) || '$matchTail') AND m.type = ? AND m.confidence >= 0.92 LEFT JOIN metadata_cache mc ON mc.key = (? || m.tmdbId)
+1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9) FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400
+1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT mc.genresJson FROM $table c$join WHERE c.sourceId IN ($marks) AND (EXISTS (SELECT 1 FROM watch_history h WHERE h.profileId=? AND h.mediaType=? AND h.itemId=c.id) OR EXISTS (SELECT 1 FROM favorites f WHERE f.profileId=? AND f.mediaType=? AND f.itemId=c.id)) ORDER BY c.id DESC LIMIT 24
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	movie
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	movies
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	series
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	tv
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	\0
 1	file-path	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	/
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	content://
@@ -763,6 +777,7 @@
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	(?i)^\\s*(?:SE|EN|SV|NO|DK|FI|DE|FR|4K|FHD|UHD|HD)\\s*[|:]\\s*
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	[\\[(](19[0-9]{2}|20[0-9]{2})[\\])]\\s*$
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	\\s+
+2	protocol	app/src/main/java/tv/own/owntv/features/metadata/MetadataResponseLimit.kt	Metadata response budget
 2	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	$it
 1	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	%d:%02d
@@ -945,7 +960,7 @@
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	zh
 2	technical	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	•
 5	empty	app/src/main/java/tv/own/owntv/features/settings/NetworkSettingsScreen.kt	\0
-2	empty	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	\0
+8	empty	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	\0
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	${locale.language}-${locale.country}
 1	regex	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	^(\\d{1,2}):(\\d{2}):(\\d{2})$
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	ar
@@ -988,7 +1003,7 @@
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	vi
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	zh-cn
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	zh-tw
-2	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	OpenSubtitles
+3	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	OpenSubtitles
 1	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	user-info refresh failed: ${it.message}
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_post_roll
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_pre_roll
@@ -1302,7 +1317,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	$l — $d
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	—
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	◀ ▶
-1	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
+2	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
 20	empty	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#%06X
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#F5B400

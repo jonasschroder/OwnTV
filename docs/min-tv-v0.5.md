@@ -58,3 +58,60 @@ are reused; entity authorization context is fetched afresh before playback.
 The selected channel's real current/next EPG is displayed; no synthetic guide.
 Eight pure recognition/grouping tests passed; playback/D-pad/provider fixtures and
 physical device checks follow in the integration phase.
+
+## C. Authorized discovery and local indexing
+
+Audited Core MetadataRepository, TmdbProvider, title/match overrides, metadata_match,
+metadata_cache, TrendingScheduleStore, indexed catalog fields, Room/Paging, Home
+continuations and provider progress before adding discovery. No second metadata DB,
+no schema migration and no network scan of the library. Existing provider configuration
+precedence (self-host > personal API key > shared metered worker) and allowances remain.
+A metadata-only transport bounds decompressed responses to 1 MiB and calls to 15 s;
+IPTV transport is unchanged. Trending calls are serialized/coalesced through the same
+provider instance used by Core's import worker. Visible discovery uses one page (20
+candidates) per media type, shared existing disk cache, 24-hour TTL and 15-minute
+failure backoff. Cached data survives a failed refresh. No requests on focus.
+
+Daily movie/TV trending uses documented `/3/trending/movie/day` and `/3/trending/tv/day`.
+Official weekly trending, movie/tv popular, top_rated, recommendations and similar
+endpoints exist, but are not additional feeds in this prototype: adding all of them
+would consume the shared quota and duplicate traffic. Top 10 is the highest-ranked
+verified available subset of the bounded daily feed, never Min TV viewership. Fewer
+than ten matches produces fewer cards; only the first feed page is covered. Rankings
+are explicitly attributed and stamped. Provider rating rows remain labelled as such.
+
+Local primary-key metadata matches (confidence >= .92, correct media type and Kids
+scope) are preferred. Without an ID, exact safe original/localized title AND known
+matching year are required; ambiguous/remake/missing-year/destructively normalized
+names abstain. Existing historical positive metadata can still require manual correction;
+it is not purged. Accessible profile/source/hidden/Kids policies are applied. Catalog
+queries walk 400 compact rows per IO batch (100,000 hard maximum), retain fixed-size
+rows (12 items, 6 genres), and never retain all 7,000 movies as Compose state. Genre
+recommendations use locally cached genre overlap from bounded profile history/favorites;
+no history, provider URL or credential is sent to TMDB. Newness is real provider addedAt.
+
+Five discovery tests plus eight channel tests passed locally, including a synthetic
+7,000-title bounded collector, partial trend coverage, ambiguity, type/year protection,
+profile genre seeds and completed-content exclusion. Android/Room integration follows.
+
+### Source feasibility and manual setup
+
+- TMDB: [official API documentation](https://developer.themoviedb.org/reference/trending-all),
+  [API FAQ/terms](https://developer.themoviedb.org/docs/faq). Free noncommercial API access
+  is subject to TMDB's terms and attribution, not an exemption for personal use. Owner
+  should review those terms; no paid plan or new service was adopted. Existing TMDB logo
+  and required non-endorsement statement are reused in discovery. The documentation
+  host could not be reached from this runtime; official endpoint usage is source-verified
+  against the pinned Core, not a new live-account/key verification. Recommended personal
+  key setup is existing Settings → Content & metadata → Metadata (TMDB) → remote QR/PIN
+  entry, avoiding remote typing. Never commit the key; metadata failure keeps local browse.
+- SHL's public site returned HTTP 403; no bypass attempted. Swehockey robots returned
+  404 (absence of robots is NOT reuse permission). No documented free official API and
+  verified license covering BOTH SHL and HockeyAllsvenskan were established. Existing
+  experimental opt-in reader is retained with stricter bounds; no new automatic source.
+- Sportradar's documented ice-hockey product and potential licensed league/federation
+  feeds require a coverage/licensing/account discussion. Its documentation host was
+  unavailable here, so current both-league coverage, prices and rate limits are unverified.
+  Sportmonks hockey product URL was also unavailable. No registration, purchase, private
+  endpoint reverse engineering or paid service adoption was performed. An owner-approved
+  officially licensed replacement must verify season/team coverage and terms first.

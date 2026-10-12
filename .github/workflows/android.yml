@@ -144,6 +144,11 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'providerFoldersRetainExactMembershipVariantsCustomizationAndOfflineAccess'),
+              ('tv.own.owntv.home.DiscoveryPresentationTest', 'providerFolderFooterOpensTheExactCategoryWithRemoteWithoutAutoplay'),
+              ('tv.own.owntv.home.DiscoveryPresentationTest', 'verifiedVariantPickerDoesNotAutoplayAndRemoteSelectsTheOriginalEntity'),
+              ('tv.own.owntv.home.TwitchOnboardingTest', 'authorizationFailureShowsSafeStageAndHttpStatus'),
+              ('tv.own.owntv.home.TwitchOnboardingTest', 'previewVisibilityChangesKeepPendingAuthorizationButBackgroundCancels'),
               ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'bundledDriverSupportsScopedRankingsOfflineResyncAndHiddenContent'),
               ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'curatedPreferencesSurviveResyncAndKeepOriginalFavoritesAndAuthorization'),
               ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'largePagedCatalogRetainsBoundedShelvesAndReportsMeasuredWork'),
@@ -203,7 +208,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v7
         with:
-          name: mintv-v05-presentation-test-fixtures
+          name: mintv-v06-presentation-test-fixtures
           path: v04-device-screenshots/*.png
           if-no-files-found: error
           retention-days: 14

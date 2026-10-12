@@ -33,4 +33,13 @@
   <string name="mintv_next_episode_row">Nästa avsnitt</string>
   <string name="mintv_show_home_section">Visa %1$s på Home</string>
   <string name="mintv_hide_home_section">Dölj %1$s på Home</string>
+  <string name="mintv_twitch_error_client">Twitch avvisade appens ID. Kontrollera att appen är registrerad som Public. Använd avancerade inställningar om du har ändrat ID:t.</string>
+  <string name="mintv_twitch_error_access">Twitch nekade åtkomst. Kontrollera nätverket och appregistreringen. Åtkomstbegränsningar kringgås inte.</string>
+  <string name="mintv_twitch_error_denied">Anslutningen nekades. Välj Anslut Twitch för att få en ny kod.</string>
+  <string name="mintv_twitch_error_expired">Aktiveringskoden har gått ut. Välj Anslut Twitch för en ny kod och slutför aktiveringen på mobilen.</string>
+  <string name="mintv_twitch_error_network">Twitch kunde inte nås. Kontrollera anslutningen och försök igen. En tidigare sparad inloggning behålls.</string>
+  <string name="mintv_twitch_error_rate">Twitch vill att du väntar. Försök igen senare.</string>
+  <string name="mintv_twitch_error_response">Twitch gav ett oväntat svar. Begär en ny kod och kontrollera appregistreringen om felet återkommer.</string>
+  <string name="mintv_twitch_error_auth">Twitch kunde inte verifiera kontot. Anslut igen med en ny aktiveringskod.</string>
+  <string name="mintv_twitch_error_storage">Android kunde inte spara inloggningen säkert. Starta om appen och försök igen. Radera inte appdata.</string>
 </resources>

@@ -33,4 +33,13 @@
   <string name="mintv_next_episode_row">Next episode</string>
   <string name="mintv_show_home_section">Show %1$s on Home</string>
   <string name="mintv_hide_home_section">Hide %1$s on Home</string>
+  <string name="mintv_twitch_error_client">Twitch rejected the app ID. Check that the registered app is Public; use Advanced settings if you changed its ID.</string>
+  <string name="mintv_twitch_error_access">Twitch denied access. Check your network and app registration; access restrictions will not be bypassed.</string>
+  <string name="mintv_twitch_error_denied">Authorization was declined. Choose Connect Twitch to request a new code.</string>
+  <string name="mintv_twitch_error_expired">The activation code expired. Choose Connect Twitch for a new code and complete activation on your phone.</string>
+  <string name="mintv_twitch_error_network">Twitch could not be reached. Check the connection and try again. Previously saved sign-in is kept.</string>
+  <string name="mintv_twitch_error_rate">Twitch requested a pause. Wait before trying again.</string>
+  <string name="mintv_twitch_error_response">Twitch returned an unexpected answer. Request a new code; check app registration if it keeps failing.</string>
+  <string name="mintv_twitch_error_auth">Twitch could not validate the account. Connect again with a new activation code.</string>
+  <string name="mintv_twitch_error_storage">Android could not securely save the sign-in. Restart the app and try again; do not clear app data.</string>
 </resources>

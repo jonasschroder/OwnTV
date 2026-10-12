@@ -152,3 +152,37 @@ Compact favorite-team Matchcenter defaults to up to three upcoming matches plus
 five verified previous scores and existing cached standings/team cards. No result
 is guessed when missing; experimental controls/diagnostics stay in its Settings tab.
 Home navigation, discovery and sports targeted JVM checks passed locally.
+
+## F. Twitch
+
+Owner confirmed Public client registration. On 2026-10-12, the official
+`https://id.twitch.tv/oauth2/device` endpoint returned HTTP 200 for the configured
+public ID with empty scopes, valid activation schema, interval 5 s and expiry
+1,800 s. One unapproved `/oauth2/token` poll returned HTTP 400
+`authorization_pending`, as documented. Codes/device IDs/bodies/tokens were never
+printed or saved. No live account approval was performed. The actual physical
+v0.4 failure remains unconfirmed; valid Client ID is not proof of completed login.
+
+Official [device grant documentation](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#device-code-grant-flow)
+was reachable. Existing device request fields, endpoint and activation validation
+match its Public flow. Fixed missing denial/expiry/slow-down/rate-limit/network
+states, monotonic expiry and polling discipline, pre-storage token identity
+validation, and erroneous deletion of saved credentials on a transient refresh
+failure. Explicit invalid refresh/unauthorized tokens still require reconnection;
+single-use refresh tokens are never transparently retried. Existing Android Keystore
+AES-GCM/AtomicFile/no-backup storage and certificate/update configuration are retained.
+
+Selecting Connect starts immediately with the configured ID (advanced override still
+wins). The code/official URL stay visible while polling. Close/Back/background cancel
+the request/poll loop; explicit retry creates a new flow. Actionable EN/SV messages
+identify registration, restriction, denial, expiry, network, rate-limit, invalid
+response, identity and secure-storage errors, without exposing server bodies.
+
+Seven injectable-protocol tests plus existing activation tests passed locally. Cases
+cover code-before-poll, no client secret, pending/slow-down intervals, denial/expiry,
+rate/network retry, cancellation, response sanitization and token identity. Completed
+mobile authorization, Chromecast focus/background/resume, real token refresh and
+account status still require physical/live-account acceptance. On the phone, open
+the exact supplied Public activation URL and approve the short code; if rejected,
+check the app remains Public and the advanced override matches the registered ID.
+Never enter a Client Secret; never clear TV application data to retry Twitch.

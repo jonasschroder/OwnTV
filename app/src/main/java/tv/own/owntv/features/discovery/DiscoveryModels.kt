@@ -7,9 +7,14 @@ import tv.own.owntv.features.metadata.ConservativeTitles
 
 internal data class DiscoveryCard(val id: Long, val sourceId: Long, val stableKey: String, val type: MetadataType,
     val name: String, val poster: String?, val year: Int?, val addedAt: Long?, val rating: Double?,
-    val genres: Set<String>, val tmdbId: Int?, val completed: Boolean = false)
-internal enum class DiscoveryKind { TOP, TRENDING, RECENT, RATED, RECOMMENDED, GENRE }
-internal data class DiscoveryRow(val kind: DiscoveryKind, val cards: List<DiscoveryCard>, val genre: String? = null)
+    val genres: Set<String>, val tmdbId: Int?, val completed: Boolean = false,
+    val categoryId: Long? = null, val providerOrder: Int = 0, val variants: List<DiscoveryCard> = emptyList(),
+    val folderKey: String? = null)
+internal enum class DiscoveryKind { PROVIDER, TOP, TRENDING, RECENT, RATED, RECOMMENDED, GENRE }
+internal data class DiscoveryRow(val kind: DiscoveryKind, val cards: List<DiscoveryCard>, val genre: String? = null,
+    val folder: ProviderFolder? = null) {
+    val key: String get() = folder?.let { "provider:${it.stableKey}" } ?: "$kind:$genre"
+}
 internal data class DiscoveryShelf(val rows: List<DiscoveryRow> = emptyList(), val rankedAt: Long? = null,
     val failed: Boolean = false, val bounded: Boolean = false)
 

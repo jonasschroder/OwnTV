@@ -1,0 +1,11 @@
+<resources>
+    <string name="mintv_provider_folders_hint">Dina valda leverantörsmappar visas först. De är bibliotekssamlingar, inte streamingabonnemang eller officiella topplistor.</string>
+    <string name="mintv_provider_folder">Leverantörsmapp</string>
+    <string name="mintv_provider_folder_source">Leverantörens mapp · %1$s</string>
+    <string name="mintv_folder_all_entries">Alla poster i den här mappen</string>
+    <string name="mintv_vod_choose_variant">Välj en spelbar version</string>
+    <plurals name="mintv_vod_variants">
+        <item quantity="one">%1$d version visas</item>
+        <item quantity="other">%1$d versioner visas</item>
+    </plurals>
+</resources>

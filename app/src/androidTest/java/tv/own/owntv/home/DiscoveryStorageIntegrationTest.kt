@@ -112,6 +112,40 @@ class DiscoveryStorageIntegrationTest {
             println("V05_SYNTHETIC_CATALOG movies=7000 series=1900 queryMs=$elapsed heapBytes=${runtime.totalMemory()-runtime.freeMemory()} heapLimitBytes=${runtime.maxMemory()}")
         }
     }
+    @Test fun providerFoldersRetainExactMembershipVariantsCustomizationAndOfflineAccess():Unit=runBlocking {
+        fixture { context, db, settings, custom ->
+            val oscar = CategoryEntity(501,101,MediaType.MOVIE,"MOVIE: Oscar Movies","oscar")
+            val top = CategoryEntity(502,101,MediaType.MOVIE,"MOVIE: IMDB Top 250","top")
+            val netflix = CategoryEntity(503,101,MediaType.SERIES,"SERIES: Netflix","netflix")
+            db.categoryDao().upsertAll(listOf(oscar,top,netflix,top.copy(id=504,sourceId=102,remoteId="foreign")))
+            val film = MovieEntity(id=1,sourceId=101,categoryId=501,name="Real film FHD",remoteId="one",year=2025,streamUrl="https://example.invalid/one")
+            db.movieDao().upsertAll(listOf(film,film.copy(id=2,name="Real film HD",remoteId="two"),
+                film.copy(id=3,categoryId=502,remoteId="three"),film.copy(id=4,categoryId=504,sourceId=102,remoteId="foreign")))
+            db.seriesDao().upsertSeries(listOf(SeriesEntity(id=1,sourceId=101,categoryId=503,name="Actual series",remoteId="series")))
+            for (remote in listOf("one","two","three")) db.metadataDao().upsertMatch(MetadataMatchEntity("movie:101:$remote","movie",77,1.0,System.currentTimeMillis()))
+            settings.setMetadataMode(MetadataMode.PROVIDER)
+            val provider=OfflineProvider(); val repo=DiscoveryRepository(db,settings,custom,provider,TrendingScheduleStore(context))
+            val rows=repo.shelf(101,listOf(101),MetadataType.MOVIE).rows.filter { it.kind==DiscoveryKind.PROVIDER }
+            assertEquals(listOf(502L,501L),rows.map { it.folder!!.id })
+            assertEquals(3L,rows[0].cards.single().id)
+            assertEquals(listOf(1L,2L),listOf(rows[1].cards.single().id)+rows[1].cards.single().variants.map { it.id })
+            assertTrue(repo.folderAvailable(rows[0].folder!!,101,MetadataType.MOVIE))
+            assertFalse(repo.folderAvailable(rows[0].folder!!,101,MetadataType.TV))
+            assertEquals(503L,repo.shelf(101,listOf(101),MetadataType.TV).rows.single { it.kind==DiscoveryKind.PROVIDER }.folder!!.id)
+            custom.renameCategory(101,MediaType.MOVIE,tv.own.owntv.core.customize.CustomizeKeys.category(oscar),"My awards")
+            custom.setCategoryOrder(101,MediaType.MOVIE,listOf(tv.own.owntv.core.customize.CustomizeKeys.category(oscar)))
+            val reordered=repo.shelf(101,listOf(101),MetadataType.MOVIE).rows.filter { it.kind==DiscoveryKind.PROVIDER }
+            assertEquals("My awards",reordered.first().folder!!.name)
+            custom.setItemMovedFromOrigin(101,MediaType.MOVIE,"101:three",tv.own.owntv.core.customize.CustomizeKeys.category(top),true)
+            assertTrue(repo.shelf(101,listOf(101),MetadataType.MOVIE).rows.none { it.folder?.id==502L })
+            assertFalse(repo.available(rows[0].cards.single(),101))
+            db.categoryDao().updateAll(listOf(oscar.copy(remoteId="replacement")))
+            assertFalse(repo.folderAvailable(reordered.first().folder!!,101,MetadataType.MOVIE))
+            settings.setActiveProfile(102)
+            assertFalse(repo.available(rows[1].cards.single(),101))
+            assertEquals(0,provider.calls)
+        }
+    }
     @Test fun curatedPreferencesSurviveResyncAndKeepOriginalFavoritesAndAuthorization():Unit=runBlocking {
         fixture {context,db,_,custom ->
             val sd=ChannelEntity(id=1,sourceId=101,name="SE | TV4 SD",remoteId="sd",number=4,streamUrl="https://example.invalid/sd",httpHeaders="X-Synthetic: fixture",catchup=true,catchupDays=3)

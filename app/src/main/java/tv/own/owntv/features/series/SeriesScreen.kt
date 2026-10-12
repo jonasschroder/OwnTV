@@ -615,8 +615,8 @@ private fun SeriesGrid(
         if (cinematic && !completeLibrary && searchQuery.isBlank()) {
             DiscoveryScreen(MetadataType.TV, resumeItems,
                 onContinue = { item -> scope.launch { if (vm.playFromHomeAsync(0L, item.targetItemId, item.positionMs) && !vm.externalPlayerOn.value) onFullscreen() } },
-                onSelect = { card -> vm.openSeriesById(card.id) }, onLibrary = { completeLibrary = true },
-                restoreFocus = restoreSelected, onRestored = onRestoredSelected, onEntryHook = onEntryHook, modifier = Modifier)
+                onSelect = { card -> vm.openSeriesById(card.id) }, onLibrary = { vm.select(LiveKey.All); completeLibrary = true },
+                restoreFocus = restoreSelected, onRestored = onRestoredSelected, onEntryHook = onEntryHook, modifier = Modifier, onFolder = { folder -> vm.select(LiveKey.Folder(folder.id)); completeLibrary = true })
         } else if (cinematic) {
             val requestedHero = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 240.mpx
             val heroH = vodBrowseHeroHeight(maxHeight / 1.mpx - if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) 280f else 0f, requestedHero / 1.mpx).mpx

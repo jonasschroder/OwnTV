@@ -1,0 +1,11 @@
+<resources>
+    <string name="mintv_provider_folders_hint">Your provider’s selected folders come first. These are library collections, not streaming subscriptions or official rankings.</string>
+    <string name="mintv_provider_folder">Provider folder</string>
+    <string name="mintv_provider_folder_source">Provider folder · %1$s</string>
+    <string name="mintv_folder_all_entries">All entries in this folder</string>
+    <string name="mintv_vod_choose_variant">Choose a playable version</string>
+    <plurals name="mintv_vod_variants">
+        <item quantity="one">%1$d version shown</item>
+        <item quantity="other">%1$d versions shown</item>
+    </plurals>
+</resources>

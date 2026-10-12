@@ -143,7 +143,7 @@ internal fun DiscoveryPosterRow(row: DiscoveryRow, type: MetadataType, rankedAt:
             itemsIndexed(row.cards, key = { _, card -> card.stableKey }) { index, card ->
                 val key = "${row.kind}:${row.genre}:${card.stableKey}"
                 val focus = remember(targets, key) { targets?.getOrPut(key) { FocusRequester() } }
-                StagePoster(title = card.name, rating = card.rating?.takeIf { it > 0 }?.let { "%.1f".format(it) },
+                StagePoster(title = card.name, rating = card.rating?.takeIf { it > 0 }?.let { tv.own.owntv.features.shell.components.vodRating(it) },
                     line = listOfNotNull(card.year?.toString(), card.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(stringResource(R.string.mintv_team_separator)),
                     width = 176.mpx, height = 264.mpx, onClick = { onSelect(card) },
                     modifier = Modifier.then(if (focus != null) Modifier.focusRequester(focus) else Modifier)

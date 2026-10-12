@@ -3,6 +3,7 @@ package tv.own.owntv.home
 import android.net.Uri
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,7 +40,7 @@ class VodPresentationTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val dir = File(context.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
         File(dir, name).outputStream().use {
-            assertTrue(compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap()
+            assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
                 .compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
         }
     }
@@ -71,7 +72,7 @@ class VodPresentationTest {
             MaterialTheme {
                 val first = remember { FocusRequester() }
                 LaunchedEffect(Unit) { withFrameNanos { }; first.requestSafely() }
-                Box(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize().background(MinTvNavy)) {
                     HomeContinuationRow(listOf(item), Modifier.focusRequester(first)) { played = it }
                 }
             }

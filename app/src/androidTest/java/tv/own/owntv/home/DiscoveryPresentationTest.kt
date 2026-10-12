@@ -2,6 +2,7 @@ package tv.own.owntv.home
 
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,13 +36,13 @@ class DiscoveryPresentationTest {
     private fun screenshot(name:String){
         val app=InstrumentationRegistry.getInstrumentation().targetContext
         val dir=File(app.getExternalFilesDir(null),"v04-screenshots").apply{mkdirs()}
-        File(dir,name).outputStream().use {assertTrue(compose.onAllNodes(isRoot()).onLast().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it))}
+        File(dir,name).outputStream().use {assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it))}
     }
     @Test fun providerRowsKeepStableIdentityAndOkDoesNotAutoplayOnFocus(){
         var chosen:DiscoveryCard?=null
         compose.setContent {MaterialTheme {
             val first=remember{FocusRequester()}
-            LazyColumn(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(24.dp)) {
+            LazyColumn(Modifier.fillMaxSize().background(MinTvNavy).padding(24.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
                 item {DiscoveryPosterRow(DiscoveryRow(DiscoveryKind.TOP,cards),MetadataType.MOVIE,System.currentTimeMillis(),{chosen=it},first=Modifier.focusRequester(first).testTag("discovery-first"))}
                 item {DiscoveryPosterRow(DiscoveryRow(DiscoveryKind.RECENT,cards.reversed()),MetadataType.MOVIE,null,{chosen=it})}
             }

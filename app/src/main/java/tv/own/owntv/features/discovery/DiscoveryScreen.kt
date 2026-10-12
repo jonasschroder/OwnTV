@@ -13,14 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
@@ -40,6 +38,8 @@ import tv.own.owntv.features.home.TvText
 import tv.own.owntv.features.home.requestSafely
 import tv.own.owntv.features.home.updateLabel
 import tv.own.owntv.ui.stage.StagePoster
+import tv.own.owntv.features.shell.components.VodPosterArt
+import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.theme.mpx
 
 /** Visibility-scoped adapter, no always-on collector or network refresh on focus. */
@@ -150,7 +150,7 @@ internal fun DiscoveryPosterRow(row: DiscoveryRow, type: MetadataType, rankedAt:
                     width = 176.mpx, height = 264.mpx, onClick = { onSelect(card) },
                     modifier = Modifier.then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
                         .then(if (index == 0) first else Modifier).onFocusChanged { if (it.isFocused) onFocused(key) }) {
-                    AsyncImage(card.poster, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    VodPosterArt(card.poster, if (type == MetadataType.MOVIE) OwnTVIcon.MOVIES else OwnTVIcon.SERIES)
                 }
             }
         }

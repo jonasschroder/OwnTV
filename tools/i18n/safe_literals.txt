@@ -62,11 +62,14 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	$metadataType:$lang:
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	${cursor.getLong(1)}:${if (cursor.isNull(2)) name else cursor.getString(2)}
 1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	,
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	..
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	/[A-Za-z0-9_./-]+
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	:kids
 1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	?
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	LEFT JOIN metadata_match m ON m.localKey = ('$metadataType:' || c.sourceId || ':' || COALESCE(c.remoteId,c.name) || '$matchTail') AND m.type = ? AND m.confidence >= 0.92 LEFT JOIN metadata_cache mc ON mc.key = (? || m.tmdbId)
-1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9) FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400
+1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9),mc.posterPath FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400
 1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT mc.genresJson FROM $table c$join WHERE c.sourceId IN ($marks) AND (EXISTS (SELECT 1 FROM watch_history h WHERE h.profileId=? AND h.mediaType=? AND h.itemId=c.id) OR EXISTS (SELECT 1 FROM favorites f WHERE f.profileId=? AND f.mediaType=? AND f.itemId=c.id)) ORDER BY c.id DESC LIMIT 24
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	https://image.tmdb.org/t/p/w342$it
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	movie
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	movies
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	series

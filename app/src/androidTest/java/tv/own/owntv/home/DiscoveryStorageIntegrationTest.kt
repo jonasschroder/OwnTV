@@ -64,12 +64,21 @@ class DiscoveryStorageIntegrationTest {
             db.metadataDao().upsertMatch(MetadataMatchEntity("movie:101:b","movie",22,1.0,now))
             val candidates=listOf(TrendingCandidate(22,MetadataType.MOVIE,"Verified B",null,2025,null,null,null,8.5,10.0,1),
                 TrendingCandidate(11,MetadataType.MOVIE,"Verified A",null,2025,null,null,null,8.5,9.0,2))
+            val cacheKey=MetadataRepository.cacheKey(11,settings.metadataConfig().resolvedLanguage)
+            db.metadataDao().upsertCache(MetadataCacheEntity(key=cacheKey,tmdbId=11,imdbId=null,type="movie",title="Verified A",year=2025,
+                overview=null,posterPath="/synthetic.jpg",backdropPath=null,rating=8.5,genresJson="[\"Drama\"]",castJson=null,trailerKey=null,logoPath=null,updatedAt=now))
             val schedule=TrendingScheduleStore(context)
             schedule.storeCandidates(TrendingScheduleStore.Candidates("",now,candidates,emptyList(),1,1,1,1))
             val provider=OfflineProvider();val repo=DiscoveryRepository(db,settings,custom,provider,schedule)
             assertTrue(repo.refresh());assertEquals(0,provider.calls)
             val row=repo.shelf(101,listOf(101),MetadataType.MOVIE).rows.single{it.kind==DiscoveryKind.TOP}
             assertEquals(listOf(2L,1L),row.cards.map{it.id});assertTrue(repo.available(row.cards[0],101))
+            assertEquals("https://image.tmdb.org/t/p/w342/synthetic.jpg",row.cards.single{it.id==1L}.poster)
+            settings.setMetadataMode(MetadataMode.PROVIDER)
+            val providerOnly=repo.shelf(101,listOf(101),MetadataType.MOVIE)
+            assertTrue(providerOnly.rows.none{it.kind in listOf(DiscoveryKind.TOP,DiscoveryKind.GENRE,DiscoveryKind.RECOMMENDED)})
+            assertTrue(providerOnly.rows.flatMap{it.cards}.all{it.poster==null})
+            settings.setMetadataMode(MetadataMode.PROVIDER_PLUS_TMDB)
             assertTrue(repo.shelf(101,listOf(102),MetadataType.MOVIE).rows.isEmpty())
             custom.setItemHidden(101,MediaType.MOVIE,"101:b","Synthetic",true)
             assertFalse(repo.available(row.cards[0],101))

@@ -294,3 +294,12 @@ numeric display formatter. Those were corrected without new exceptions or a base
 increase; existing vodRating is reused. The subsequent baseline revision executed all
 23 Android TV tests and disposable-key upgrade checks successfully. The final follow-up
 is revalidated on its own commit; exact final run links/results are maintained in PR #7.
+
+Artwork/screenshot follow-up: discovery now reuses cached metadata poster paths with
+Core's provider/TMDB precedence and the existing VodPosterArt neutral fallback. No
+new artwork API or invented poster is introduced; Provider-only excludes cached TMDB
+art/genres/trends. Real bundled-driver tests verify this policy. Downloaded baseline
+fixture screenshots exposed a white test activity background and semantics capture
+that missed the dialog layer. Test fixtures now use the app's dark surface and capture
+the actual emulator screen (including dialogs). All content is still synthetic and
+must not be described as the owner's real catalogue or a physical Chromecast.

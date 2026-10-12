@@ -62,10 +62,11 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
         val cats = db.categoryDao().observe(scopedSources, media).first()
         val forbidden = cats.filter { CustomizeKeys.category(it) in cust.hiddenCategories ||
             !tv.own.owntv.core.content.AdultCategoryClassifier.allows(profile, it.id, db.profileDao(), db.categoryDao()) }.map { it.id }.toSet()
-        val metadataEnabled = settings.metadataConfig().enabled
+        val config = settings.metadataConfig()
+        val metadataEnabled = config.enabled
         val stored = schedule.candidates().takeIf { metadataEnabled }
         val candidates = (if (type == MetadataType.MOVIE) stored?.movies else stored?.series).orEmpty().take(20)
-        val lang = settings.metadataConfig().resolvedLanguage
+        val lang = config.resolvedLanguage
         val matchTail = if (owner.isKids) ":kids" else ""
         val cachePrefix = if (lang.isBlank()) "$metadataType:" else "$metadataType:$lang:"
         val marks = scopedSources.joinToString(",") { "?" }
@@ -83,15 +84,20 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
             currentCoroutineContext().ensureActive()
             var count = 0
             db.readCatalog(
-                "SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9) FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400",
+                "SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9),mc.posterPath FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400",
                 (listOf<Any>(profile, media.name, metadataType, cachePrefix) + scopedSources + last).toTypedArray()) { cursor ->
                 while (cursor.moveToNext()) {
                     last = cursor.getLong(0); scanned++; count++
                     val name = cursor.getString(3)
                     val key = "${cursor.getLong(1)}:${if (cursor.isNull(2)) name else cursor.getString(2)}"
                     if (key in cust.hiddenItems || !cursor.isNull(8) && cursor.getLong(8) in forbidden) continue
+                    val providerPoster = if (cursor.isNull(4)) null else cursor.getString(4).takeIf { it.isNotBlank() }
+                    val cachedPoster = if (!metadataEnabled || cursor.isNull(12)) null else cursor.getString(12)
+                        .takeIf { it.length <= 1024 && it.matches(Regex("/[A-Za-z0-9_./-]+")) && !it.contains("..") }
+                        ?.let { "https://image.tmdb.org/t/p/w342$it" }
+                    val poster = if (config.mode.tmdbWins) cachedPoster ?: providerPoster else providerPoster ?: cachedPoster
                     collector.add(DiscoveryCard(last, cursor.getLong(1), key, type, name,
-                        if (cursor.isNull(4)) null else cursor.getString(4), if (cursor.isNull(5)) null else cursor.getInt(5),
+                        poster, if (cursor.isNull(5)) null else cursor.getInt(5),
                         if (cursor.isNull(6)) null else cursor.getLong(6), if (cursor.isNull(7)) null else cursor.getDouble(7),
                         if (metadataEnabled) genres(if (cursor.isNull(10)) null else cursor.getString(10)) else emptySet(), if (cursor.isNull(9)) null else cursor.getInt(9), cursor.getInt(11) == 1))
                 }

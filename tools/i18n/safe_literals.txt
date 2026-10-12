@@ -259,6 +259,7 @@
 1	url	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	/ScheduleAndResults/${if (table) "Standings" else "Schedule"}/$season
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	/ScheduleAndResults/(?:Schedule|Standings)/\\d{1,9}
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	</table>
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	</tr>
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<[^>]+>
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<h1\\b[^>]*>\\s*${Regex.escape(competition.name)}\\s*</h1>
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<h2>\\s*${Regex.escape(title)}\\s*</h2>
@@ -266,6 +267,7 @@
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<label>\\s*${Regex.escape(competition.name)} - $year-${(year + 1) % 100}\\s*</label>
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<option\\b([^>]*)>
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<t[dh]\\b([^>]*?)(?:/\\s*>|>(.*?)</t[dh]>)
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<tr
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	<tr\\b[^>]*>(.*?)</tr>
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Date
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Disallow:
@@ -670,6 +672,92 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/ProviderTags.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/features/live/ProviderTags.kt	\\s+
 1	regex	app/src/main/java/tv/own/owntv/features/live/ProviderTags.kt	^([A-Z]{2,3})\\s*\\|\\s*
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	${cursor.getLong(1)}:${if (cursor.isNull(2)) raw else cursor.getString(2)}
+1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	(?:stockholm|skane|skåne|goteborg|göteborg|\\+1|english|norsk|dansk)
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	,
+1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	:$it
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	?
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	SELECT id,sourceId,remoteId,name,number,categoryId,epgChannelId FROM channels WHERE sourceId IN ($marks) AND id > ? ORDER BY id LIMIT 400
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	hidden
+1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	mintv-swedish-channels
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	order
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	owner
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	preferred
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	profile:$profile
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	uhd
+2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	variants
+13	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	(?i)(?<![a-z0-9])(?:ultra[ -]?hd|3840[x×]2160|2160p|1080p|720p|576p|480p|4k|uhd|fhd|hd|sd)(?![a-z0-9])
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	-
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	1080p
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	2160p
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	3840x2160
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	3840×2160
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	480p
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	4k
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	576p
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	720p
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Al Jazeera
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	BBC News
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	CNN
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Cartoon Network
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Disney Channel
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport 1
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport 2
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Kanal 11
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Kanal 5
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Kanal 9
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Kunskapskanalen
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Nick Jr
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Nickelodeon
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SE
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVERIGE
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT Barn
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT1
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT2
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT24
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SWE
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SWEDEN
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Sjuan
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Sport
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV10
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV12
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV3
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Fotboll
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 1
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 2
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 3
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 4
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sportkanalen
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV6
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV8
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport 1
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport 2
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport 3
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Extra
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Motor
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Premium
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Vinter
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\\s+
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\\s+(SE|SWE|SVERIGE|SWEDEN)$
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	^(SE|SWE|SVERIGE|SWEDEN|[A-Z]{2})\\s*[:|]\\s*
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	fhd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	hd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	sd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tv4playhockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tv7
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	uhd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	ultrahd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	SVT Barn
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	SVT24
+1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	categories
+1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	channels
+1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	profiles
 4	empty	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	(?i)[\\[(](?:4K|FHD|UHD|HD|SD|HDR|HDR10|HEVC|H264|H265|X264|X265|MULTI-SUB|DUAL-AUDIO|1080p|720p)[\\])]
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	(?i)^\\s*(?:SE|EN|SV|NO|DK|FI|DE|FR|4K|FHD|UHD|HD)\\s*[|:]\\s*

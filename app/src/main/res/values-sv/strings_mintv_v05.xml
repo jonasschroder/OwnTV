@@ -1,0 +1,18 @@
+<resources>
+  <string name="mintv_swedish_channels">Svenska kanaler</string>
+  <string name="mintv_hockey_sport">Hockey &amp; sport</string>
+  <string name="mintv_news">Nyheter</string>
+  <string name="mintv_children">Barn</string>
+  <string name="mintv_other_swedish">Övriga svenska kanaler</string>
+  <string name="mintv_full_library">Alla kanaler / sök</string>
+  <string name="mintv_collection_settings">Anpassa samlingen</string>
+  <string name="mintv_curated_partial">Samlingen är begränsad eller otillgänglig. Alla kanaler finns kvar i hela biblioteket.</string>
+  <string name="mintv_curated_empty">Inga matchande kanaler. Öppna Alla kanaler för att söka i ditt bibliotek.</string>
+  <string name="mintv_show_uhd">Visa 4K- och UHD-kanaler</string>
+  <string name="mintv_hide_uhd">Dölj 4K- och UHD-kanaler</string>
+  <string name="mintv_show_variants">Visa / dölj alla kvaliteter och källor</string>
+  <string name="mintv_restore_collection">Återställ standardsamlingen</string>
+  <string name="mintv_choose_variant">Välj kvalitet / källa</string>
+  <string name="mintv_pin_channel">Fäst / ta bort favorit</string>
+  <string name="mintv_hide_channel">Dölj den här kanalen</string>
+</resources>

@@ -30,3 +30,31 @@ failure. Conservative caches remain labelled with their last update time.
 
 Targeted sports/Hockey JVM tests passed locally before presentation work. Physical
 crash reproduction and measured Chromecast performance are still required.
+
+## B. Swedish Live TV
+
+New default Live view derives Swedish logical channels from the existing library.
+SVT1–TV12 ordering is explicit; absent services are omitted. Separate Sport, News,
+Children and Other views and All channels/search retain the original category view.
+Exact broadcaster names and explicit Swedish country markers are recognized;
+country/quality decorations are removed without substring-merging channel numbers.
+Unknown regional/audio/+1 names remain distinct (or in All if untagged); explicit
+regional EPG evidence also separates groups. TV4 Play Hockey is not synthesized as
+linear playback. Recognition is conservative, not a universal provider naming map.
+
+One preferred variant is shown, FHD → HD → SD → unknown → UHD (labels are only
+advertised quality, never measured reliability). Explicit prior choice wins. UHD is
+off by default only in the curated view; full library, existing favorites, direct
+links, catch-up, recordings and numbering remain intact. Choose quality/source,
+show variants, reorder, hide, favorite, and restore controls are available in the
+collection. Source marks distinguish identical provider names. Preferences use a
+stable source/remote-or-name identity and profile creation stamp; resync does not
+clear them. No existing data is deleted and the Room schema is unchanged.
+
+Derived catalog reads use 400-row IO batches, at most 100,000 scanned rows and 4,096
+compact candidates; exceeding bounds reports an incomplete collection and points
+to the complete paged library. The existing Live controller, EPG and preview surface
+are reused; entity authorization context is fetched afresh before playback.
+The selected channel's real current/next EPG is displayed; no synthetic guide.
+Eight pure recognition/grouping tests passed; playback/D-pad/provider fixtures and
+physical device checks follow in the integration phase.

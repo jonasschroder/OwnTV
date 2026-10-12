@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="mintv_sports_loading">Loading matches…</string>
+    <string name="mintv_sports_loading">Updating match data. You can continue browsing; cached information remains available.</string>
     <string name="mintv_watch_channel">Watch channel</string>
     <string name="mintv_sports_not_loaded">Match information has not been loaded yet.</string>
     <string name="mintv_team_separator">" · "</string>

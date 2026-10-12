@@ -128,6 +128,8 @@ import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import androidx.tv.material3.Text
 import tv.own.owntv.R
+import tv.own.owntv.features.discovery.DiscoveryScreen
+import tv.own.owntv.core.metadata.MetadataType
 import tv.own.owntv.features.customize.categoryRestoreSummary
 import tv.own.owntv.features.customize.CategoryRestorePlan
 import androidx.compose.runtime.produceState
@@ -305,6 +307,8 @@ private fun SeriesGrid(
     val settingsVm: tv.own.owntv.features.settings.SettingsViewModel = koinViewModel()
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
+    var completeLibrary by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = completeLibrary && lockedKey == null) { completeLibrary = false }
     val cinematic = vodLayout == SettingsRepository.VodLayout.CINEMATIC && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.SERIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only. The stored choice is deliberately not rewritten, so switching back to
@@ -608,7 +612,12 @@ private fun SeriesGrid(
         // Horizontal geometry is a fraction of the mockup's 1920 width, so every zoom reflows.
         val screenW = maxWidth
         fun fx(px: Int) = screenW * (px / 1920f)
-        if (cinematic) {
+        if (cinematic && !completeLibrary && searchQuery.isBlank()) {
+            DiscoveryScreen(MetadataType.TV, resumeItems,
+                onContinue = { item -> scope.launch { if (vm.playFromHomeAsync(0L, item.targetItemId, item.positionMs) && !vm.externalPlayerOn.value) onFullscreen() } },
+                onSelect = { card -> vm.openSeriesById(card.id) }, onLibrary = { completeLibrary = true },
+                restoreFocus = restoreSelected, onRestored = onRestoredSelected, onEntryHook = onEntryHook, modifier = Modifier)
+        } else if (cinematic) {
             val requestedHero = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 240.mpx
             val heroH = vodBrowseHeroHeight(maxHeight / 1.mpx - if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) 280f else 0f, requestedHero / 1.mpx).mpx
             val toolTop = 100.mpx + heroH

@@ -115,3 +115,21 @@ profile genre seeds and completed-content exclusion. Android/Room integration fo
   Sportmonks hockey product URL was also unavailable. No registration, purchase, private
   endpoint reverse engineering or paid service adoption was performed. An owner-approved
   officially licensed replacement must verify season/team coverage and terms first.
+
+## D. Movies and Series presentation
+
+Cinematic default now shows a compact header and lazy horizontal discovery rows
+rather than the giant grid/hero. Continue Watching and verified Next episode use
+Core's real per-profile continuation objects and positions. Empty discovery rows
+are omitted. Top available, additional trending matches, provider-recent/provider-
+rated, local genre recommendations and bounded genre shelves come from real data.
+Missing metadata/library gracefully offers All movies/series with existing search,
+category, sort, manual metadata correction and Paging, and Back returns to discovery.
+Separate layout and More → Favorites/History remain unchanged.
+
+Movie selection opens existing MediaDetailsScreen and its resume/play policy;
+series selection opens existing seasons/episodes and playback controller. Provider
+artwork, rating source labels, clear focus and profile-keyed saved focus reuse
+existing StagePoster and continuation components. No new player or large-image
+preloading. Instrumentation screenshots must use synthetic data and cannot prove
+real catalogue matching, artwork performance or Chromecast remote behavior.

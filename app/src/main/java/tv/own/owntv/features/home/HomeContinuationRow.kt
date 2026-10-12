@@ -22,11 +22,11 @@ internal fun homeContinuations(state: HomeUiState, profileId: Long?): List<Launc
 
 /** Existing profile history and still-image cards. Focus never starts a VOD decoder. */
 @Composable
-internal fun HomeContinuationRow(items: List<LauncherContinuationItem>, first: Modifier,
+internal fun HomeContinuationRow(items: List<LauncherContinuationItem>, first: Modifier, heading: String? = null,
     onPlay: (LauncherContinuationItem) -> Unit) {
     if (items.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-        TvText(stringResource(R.string.search_continue), size = 26, bold = true, lines = 1)
+        TvText(heading ?: stringResource(R.string.search_continue), size = 26, bold = true, lines = 1)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(6.mpx), modifier = Modifier.focusGroup()) {
             itemsIndexed(items, key = { _, item -> item.stableKey }) { index, item ->
                 StageStill(title = item.title, line = item.subtitle, onClick = { onPlay(item) },

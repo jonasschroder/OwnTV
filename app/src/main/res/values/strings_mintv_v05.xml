@@ -15,4 +15,20 @@
   <string name="mintv_choose_variant">Choose quality / source</string>
   <string name="mintv_pin_channel">Toggle favorite</string>
   <string name="mintv_hide_channel">Hide this logical channel</string>
+  <string name="mintv_all_movies">All movies / search</string>
+  <string name="mintv_all_series">All series / search</string>
+  <string name="mintv_discovery_fallback">Some discovery data is unavailable. Your full library is still available.</string>
+  <string name="mintv_discovery_empty">Discovery rows appear when your library contains qualifying titles. Open the full library to browse or search.</string>
+  <string name="mintv_top_available_movies">Top 10 among my movies</string>
+  <string name="mintv_top_available_series">Top 10 among my series</string>
+  <string name="mintv_trending_available">Trending in my library</string>
+  <string name="mintv_recently_added_library">Recently added to my library</string>
+  <string name="mintv_high_rated_provider">Highly rated · provider ratings</string>
+  <string name="mintv_recommended_genres">For you · genres you watch</string>
+  <string name="mintv_genre_collection">Genres</string>
+  <string name="mintv_tmdb_source">TMDB</string>
+  <string name="mintv_tmdb_disclaimer">This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
+  <string name="mintv_tmdb_rank_date">TMDB daily trending · last updated %1$s</string>
+  <string name="mintv_local_recommendation_explanation">Recommendations use cached genres from your watch history and favorites on this device. Your history is never sent to TMDB.</string>
+  <string name="mintv_next_episode_row">Next episode</string>
 </resources>

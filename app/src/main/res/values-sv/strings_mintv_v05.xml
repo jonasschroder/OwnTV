@@ -15,4 +15,20 @@
   <string name="mintv_choose_variant">Välj kvalitet / källa</string>
   <string name="mintv_pin_channel">Fäst / ta bort favorit</string>
   <string name="mintv_hide_channel">Dölj den här kanalen</string>
+  <string name="mintv_all_movies">Alla filmer / sök</string>
+  <string name="mintv_all_series">Alla serier / sök</string>
+  <string name="mintv_discovery_fallback">Viss upptäcktsdata saknas. Hela ditt bibliotek finns fortfarande tillgängligt.</string>
+  <string name="mintv_discovery_empty">Upptäcktsrader visas när ditt bibliotek innehåller lämpliga titlar. Öppna hela biblioteket för att bläddra eller söka.</string>
+  <string name="mintv_top_available_movies">Topp 10 bland mina filmer</string>
+  <string name="mintv_top_available_series">Topp 10 bland mina serier</string>
+  <string name="mintv_trending_available">Trendande i mitt bibliotek</string>
+  <string name="mintv_recently_added_library">Nyligen tillagt i mitt bibliotek</string>
+  <string name="mintv_high_rated_provider">Högt betygsatta · leverantörens betyg</string>
+  <string name="mintv_recommended_genres">För dig · genrer du tittar på</string>
+  <string name="mintv_genre_collection">Genrer</string>
+  <string name="mintv_tmdb_source">TMDB</string>
+  <string name="mintv_tmdb_disclaimer">Den här produkten använder TMDB:s API men är inte godkänd eller certifierad av TMDB.</string>
+  <string name="mintv_tmdb_rank_date">TMDB:s dagliga trender · senast uppdaterat %1$s</string>
+  <string name="mintv_local_recommendation_explanation">Rekommendationer använder cachade genrer från din historik och dina favoriter på den här enheten. Din historik skickas aldrig till TMDB.</string>
+  <string name="mintv_next_episode_row">Nästa avsnitt</string>
 </resources>

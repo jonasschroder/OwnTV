@@ -133,3 +133,22 @@ artwork, rating source labels, clear focus and profile-keyed saved focus reuse
 existing StagePoster and continuation components. No new player or large-image
 preloading. Instrumentation screenshots must use synthetic data and cannot prove
 real catalogue matching, artwork performance or Chromecast remote behavior.
+
+## E. Home
+
+Home order is Live preview, real favorites, Continue Watching, favorite-team sport,
+available movie trends, available series trends, Twitch and external shortcuts.
+Empty optional rows collapse. Stable section IDs map to real lazy-item indices as
+data arrives; dynamic rows do not renumber Twitch/apps identities. Per-profile
+section visibility is customizable in Home settings. Hiding Live stops its decoder
+preview and leaves compact Live/Guide/Settings actions. Existing real favorites
+(including deliberately saved UHD/non-Swedish channels) are preserved.
+
+Discovery activates only when relevant lower Home content approaches the visible
+viewport, shares the same cache/request gates with Movies/Series, and cancels on
+background/hidden content. The single existing Live preview controller and protected
+surface remain. Sidebar destinations and external launch recovery are retained.
+Compact favorite-team Matchcenter defaults to up to three upcoming matches plus
+five verified previous scores and existing cached standings/team cards. No result
+is guessed when missing; experimental controls/diagnostics stay in its Settings tab.
+Home navigation, discovery and sports targeted JVM checks passed locally.

@@ -72,7 +72,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var enabled by remember { mutableStateOf(repository.preferences.getBoolean("shl-enabled", false)) }
     var expansion by remember { mutableStateOf(repository.preferences.getBoolean("shl-expand", true)) }
     var screen by rememberSaveable(profileId) { mutableStateOf(false) }
-    var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.MATCHES) }
+    var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.FARJESTAD) }
     var selectedId by rememberSaveable(profileId) { mutableStateOf<String?>(null) }
     var picker by rememberSaveable(profileId) { mutableStateOf(false) }
     var searchOpen by rememberSaveable(profileId) { mutableStateOf(false) }
@@ -484,7 +484,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             val useFuture = upcoming || todayList.isEmpty()
                             val lastPage = (future.size - 1).coerceAtLeast(0) / 14
                             val currentPage = page.coerceIn(0, lastPage)
-                            val games = if (useFuture) future.drop(currentPage * 14).take(14) else todayList
+                            val recent = allGames.filter { it.competition == selectedCompetition && it.follows(selectedTeams) && it.score != null && it.faceoff < now }
+                                .sortedByDescending { it.faceoff }.take(5)
+                            val games = if (section == MatchcenterSection.FARJESTAD) (future.take(3) + recent).distinctBy { it.id }
+                                else if (useFuture) future.drop(currentPage * 14).take(14) else todayList
                             if (games.isEmpty()) Box(Modifier.fillMaxWidth()) {
                                 SportsStatusPanel(selectedCompetition, enabled, selectedLoad, now, fetchedAt, { retryRevision++ })
                             } else LazyColumn(state = matchList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {

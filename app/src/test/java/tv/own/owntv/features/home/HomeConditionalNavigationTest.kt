@@ -4,6 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class HomeConditionalNavigationTest {
+    @Test fun discoveryArrivalAndHiddenSectionsKeepActualLazyIndices() {
+        val before = homeSectionIndices(listOf(true, true, false, true, false, false, true, true))
+        assertEquals(listOf(0, 1, -1, 2, -1, -1, 3, 4), before)
+        assertEquals(6, nextHomeSection(3, 1, before))
+        val after = homeSectionIndices(listOf(true, true, true, true, true, true, true, true))
+        assertEquals((0..7).toList(), after)
+        assertEquals(4, nextHomeSection(3, 1, after))
+        assertEquals(listOf(0, -1, -1, -1, -1, -1, -1, -1), homeSectionIndices(listOf(true, false, false, false, false, false, false, false)))
+    }
+
     @Test fun emptyRealHistorySkipsResumeInBothDirections() {
         val rows = listOf(0, 1, 2, -1, 3, 4)
         assertEquals(4, nextHomeSection(2, 1, rows))

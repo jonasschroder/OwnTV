@@ -31,4 +31,6 @@
   <string name="mintv_tmdb_rank_date">TMDB:s dagliga trender · senast uppdaterat %1$s</string>
   <string name="mintv_local_recommendation_explanation">Rekommendationer använder cachade genrer från din historik och dina favoriter på den här enheten. Din historik skickas aldrig till TMDB.</string>
   <string name="mintv_next_episode_row">Nästa avsnitt</string>
+  <string name="mintv_show_home_section">Visa %1$s på Home</string>
+  <string name="mintv_hide_home_section">Dölj %1$s på Home</string>
 </resources>

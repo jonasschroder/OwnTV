@@ -31,4 +31,6 @@
   <string name="mintv_tmdb_rank_date">TMDB daily trending · last updated %1$s</string>
   <string name="mintv_local_recommendation_explanation">Recommendations use cached genres from your watch history and favorites on this device. Your history is never sent to TMDB.</string>
   <string name="mintv_next_episode_row">Next episode</string>
+  <string name="mintv_show_home_section">Show %1$s on Home</string>
+  <string name="mintv_hide_home_section">Hide %1$s on Home</string>
 </resources>

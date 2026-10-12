@@ -401,8 +401,10 @@ internal fun MinTvContentHome(
                     }, first = navigation.section(5))
                 }
                 if (showTwitch) item(key = "mintv-twitch") {
-                    TwitchCompanion(visible = twitchVisible, modifier = navigation.section(6), active = previewEnabled && !preferencesOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
-                        && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
+                    // Stream-status polling may yield to Live TV work. A pending device grant
+                    // must remain active while its dialog is open, independent of preview/focus.
+                    TwitchCompanion(visible = twitchVisible && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING,
+                        modifier = navigation.section(6), active = previewEnabled && !preferencesOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED))
                 }
                 if (showApps) item(key = "mintv-apps") {
                     Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {

@@ -8,7 +8,11 @@ import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
 
 internal enum class TwitchFailureKind { CLIENT, ACCESS, DENIED, EXPIRED, NETWORK, TIMEOUT, RATE_LIMITED, RESPONSE, AUTHENTICATION, STORAGE }
-internal class TwitchFailure(val kind: TwitchFailureKind) : Exception(kind.name)
+internal enum class TwitchStage { DEVICE, POLL, VALIDATION, STORAGE, REFRESH, STATUS }
+/** Only fixed enums/status codes. Never include server messages, codes, identifiers or token values. */
+internal class TwitchFailure(val kind: TwitchFailureKind, val stage: TwitchStage? = null, val status: Int? = null) : Exception(kind.name) {
+    init { require(status == null || status in 100..599) }
+}
 internal fun twitchError(response: CompanionResponse): TwitchFailureKind {
     val name = runCatching { val o = JSONObject(response.body); o.optString("error").ifBlank { o.optString("message") } }.getOrDefault("")
     return when {
@@ -29,7 +33,7 @@ internal class TwitchDeviceGrant(private val post: suspend (String, Map<String, 
     suspend fun login(clientId: String, onCode: suspend (TwitchActivation) -> Unit): JSONObject {
         if (!clientId.matches(Regex("[a-zA-Z0-9]{8,128}"))) throw TwitchFailure(TwitchFailureKind.CLIENT)
         val device = request("device", mapOf("client_id" to clientId, "scopes" to ""))
-        if (device.status != 200) throw TwitchFailure(twitchError(device))
+        if (device.status != 200) throw TwitchFailure(twitchError(device), TwitchStage.DEVICE, device.status)
         val data = parse { JSONObject(device.body) }
         val duration = parse { data.getLong("expires_in").also { require(it in 1..1800) } } * 1000
         var interval = parse { data.getLong("interval").also { require(it in 1..300) } }.coerceAtLeast(5) * 1000
@@ -48,7 +52,7 @@ internal class TwitchDeviceGrant(private val post: suspend (String, Map<String, 
                 interval = maxOf(interval, 10_000) // Bounded by the original expiry, never busy retry.
                 continue
             }
-            if (result.status == 200) return parse { JSONObject(result.body).also(::validateTokens) }
+            if (result.status == 200) return parse(TwitchStage.POLL) { JSONObject(result.body).also(::validateTokens) }
             val message = runCatching { val o = JSONObject(result.body); o.optString("error").ifBlank { o.optString("message") } }.getOrDefault("")
             when {
                 result.status == 400 && message == "authorization_pending" -> Unit
@@ -60,18 +64,20 @@ internal class TwitchDeviceGrant(private val post: suspend (String, Map<String, 
                     interval = maxOf(interval, retry, 60_000)
                 }
                 result.status >= 500 -> interval = maxOf(interval, 10_000)
-                else -> throw TwitchFailure(twitchError(result))
+                else -> throw TwitchFailure(twitchError(result), TwitchStage.POLL, result.status)
             }
         }
-        throw TwitchFailure(TwitchFailureKind.EXPIRED)
+        throw TwitchFailure(TwitchFailureKind.EXPIRED, TwitchStage.POLL)
     }
     private suspend fun request(path: String, fields: Map<String, String>): CompanionResponse = try { post(path, fields) }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: java.io.InterruptedIOException) { currentCoroutineContext().ensureActive(); throw TwitchFailure(TwitchFailureKind.TIMEOUT) }
-        catch (_: IOException) { currentCoroutineContext().ensureActive(); throw TwitchFailure(TwitchFailureKind.NETWORK) }
-    private fun <T> parse(block: () -> T): T = try { block() }
+        catch (_: java.io.InterruptedIOException) { currentCoroutineContext().ensureActive(); throw TwitchFailure(TwitchFailureKind.TIMEOUT,
+            if (path == "device") TwitchStage.DEVICE else TwitchStage.POLL) }
+        catch (_: IOException) { currentCoroutineContext().ensureActive(); throw TwitchFailure(TwitchFailureKind.NETWORK,
+            if (path == "device") TwitchStage.DEVICE else TwitchStage.POLL) }
+    private fun <T> parse(stage: TwitchStage = TwitchStage.DEVICE, block: () -> T): T = try { block() }
         catch (error: TwitchFailure) { throw error }
-        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.RESPONSE) }
+        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.RESPONSE, stage, 200) }
     companion object {
         fun validateTokens(value: JSONObject) {
             require(value.getString("access_token").length in 1..4096 && value.getString("refresh_token").length in 1..4096)

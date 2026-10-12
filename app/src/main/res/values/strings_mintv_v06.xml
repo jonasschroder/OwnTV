@@ -8,4 +8,14 @@
         <item quantity="one">%1$d version shown</item>
         <item quantity="other">%1$d versions shown</item>
     </plurals>
+    <string name="mintv_twitch_qr">Scan to open Twitch’s official activation page</string>
+    <string name="mintv_twitch_waiting_approval">Waiting for approval on your phone. The TV connects automatically after approval; keep this dialog open.</string>
+    <string name="mintv_twitch_diagnostic_stage">Step: %1$s</string>
+    <string name="mintv_twitch_diagnostic_http">Step: %1$s · HTTP %2$d</string>
+    <string name="mintv_twitch_stage_device">Request activation code</string>
+    <string name="mintv_twitch_stage_poll">Wait for approval / receive token</string>
+    <string name="mintv_twitch_stage_validation">Verify authorized account</string>
+    <string name="mintv_twitch_stage_storage">Secure Android storage</string>
+    <string name="mintv_twitch_stage_refresh">Refresh account authorization</string>
+    <string name="mintv_twitch_stage_status">Check stream status</string>
 </resources>

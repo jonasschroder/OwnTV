@@ -16,8 +16,13 @@ internal data class TwitchActivation(val code: String, val verificationUri: Stri
                 require(pair.size == 2)
                 URLDecoder.decode(pair[0], "UTF-8") to URLDecoder.decode(pair[1], "UTF-8")
             }
-            require(fields.size == 2 && fields.map { it.first }.toSet() == setOf("public", "device-code") &&
-                fields.toMap()["public"] == "true" && fields.toMap()["device-code"] == code)
+            // The official endpoint also returns only device-code (verified live 2026-10-12).
+            // Preserve that exact address. Optional public must still be true; never synthesize it.
+            val keys = fields.map { it.first }
+            val values = fields.toMap()
+            require(fields.size in 1..2 && keys.distinct().size == keys.size &&
+                keys.all { it in setOf("public", "device-code") } && values["device-code"] == code &&
+                ("public" !in values || values["public"] == "true"))
             return TwitchActivation(code, uri.toASCIIString())
         }
     }

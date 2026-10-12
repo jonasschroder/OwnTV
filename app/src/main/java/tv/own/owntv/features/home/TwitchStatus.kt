@@ -66,13 +66,17 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
         val tokens = TwitchDeviceGrant(post = { path, fields -> postResponse(path, fields) }).login(clientId) { activation ->
             withContext(Dispatchers.Main.immediate) { onCode(activation) }
         }
-        val validation = client.companionResponse(Request.Builder().url("https://id.twitch.tv/oauth2/validate")
-            .header("Authorization", "OAuth ${tokens.getString("access_token")}").build(), 16_384)
-        if (validation.status != 200) throw TwitchFailure(twitchError(validation))
+        val validation = try { client.companionResponse(Request.Builder().url("https://id.twitch.tv/oauth2/validate")
+            .header("Authorization", "OAuth ${tokens.getString("access_token")}").build(), 16_384) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: CompanionResponseTooLarge) { throw TwitchFailure(TwitchFailureKind.RESPONSE, TwitchStage.VALIDATION) }
+        catch (_: java.io.InterruptedIOException) { throw TwitchFailure(TwitchFailureKind.TIMEOUT, TwitchStage.VALIDATION) }
+        catch (_: java.io.IOException) { throw TwitchFailure(TwitchFailureKind.NETWORK, TwitchStage.VALIDATION) }
+        if (validation.status != 200) throw TwitchFailure(twitchError(validation), TwitchStage.VALIDATION, validation.status)
         try { TwitchDeviceGrant.validateIdentity(JSONObject(validation.body), clientId) }
-        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.AUTHENTICATION) }
+        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.AUTHENTICATION, TwitchStage.VALIDATION, validation.status) }
         try { save(tokens.put("client_id", clientId).put("expires_at", System.currentTimeMillis() + tokens.getLong("expires_in") * 1000)) }
-        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.STORAGE) }
+        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.STORAGE, TwitchStage.STORAGE) }
         validatedAt = System.currentTimeMillis()
     } }
 
@@ -83,7 +87,7 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
             // Public-client refresh rotates single-use refresh tokens; never retry transparently.
             val refreshed = post("token", mapOf("client_id" to clientId, "grant_type" to "refresh_token", "refresh_token" to token.getString("refresh_token")))
             if (refreshed.first in listOf(400, 401)) { file.delete(); return@withContext TwitchState.Unavailable }
-            if (refreshed.first != 200) throw TwitchFailure(twitchError(CompanionResponse(refreshed.first, "")))
+            if (refreshed.first != 200) throw TwitchFailure(twitchError(CompanionResponse(refreshed.first, "")), TwitchStage.REFRESH, refreshed.first)
             token = JSONObject(refreshed.second).also { TwitchDeviceGrant.validateTokens(it) }.put("client_id", clientId)
             token.put("expires_at", now + token.getLong("expires_in") * 1000)
             save(token)
@@ -94,15 +98,15 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
             val validation = client.companionRequest(Request.Builder().url("https://id.twitch.tv/oauth2/validate")
                 .header("Authorization", "OAuth $access").build(), 16_384)
             if (validation.first == 401) file.delete()
-            if (validation.first != 200) throw TwitchFailure(twitchError(CompanionResponse(validation.first, "")))
+            if (validation.first != 200) throw TwitchFailure(twitchError(CompanionResponse(validation.first, "")), TwitchStage.VALIDATION, validation.first)
             try { TwitchDeviceGrant.validateIdentity(JSONObject(validation.second), clientId) }
-            catch (_: Exception) { file.delete(); validatedAt = 0; throw TwitchFailure(TwitchFailureKind.AUTHENTICATION) }
+            catch (_: Exception) { file.delete(); validatedAt = 0; throw TwitchFailure(TwitchFailureKind.AUTHENTICATION, TwitchStage.VALIDATION, validation.first) }
             validatedAt = now
         }
         val response = client.companionRequest(Request.Builder().url("https://api.twitch.tv/helix/streams?user_login=ohnepixel")
             .header("Client-ID", clientId).header("Authorization", "Bearer $access").build(), 32_768)
         if (response.first == 401) { file.delete(); validatedAt = 0 }
-        if (response.first != 200) throw TwitchFailure(twitchError(CompanionResponse(response.first, "")))
+        if (response.first != 200) throw TwitchFailure(twitchError(CompanionResponse(response.first, "")), TwitchStage.STATUS, response.first)
         parse(response.second)
     } }
 

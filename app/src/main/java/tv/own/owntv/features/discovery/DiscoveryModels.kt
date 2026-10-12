@@ -16,6 +16,7 @@ internal data class DiscoveryShelf(val rows: List<DiscoveryRow> = emptyList(), v
 /** Pure local resolver. A time/rating/popularity/name resemblance alone is never identity. */
 internal object DiscoverySelection {
     fun candidate(card: DiscoveryCard, candidates: List<TrendingCandidate>): TrendingCandidate? {
+        if (candidates.isEmpty()) return null
         if (card.tmdbId != null) return candidates.singleOrNull { it.type == card.type && it.tmdbId == card.tmdbId }
         if (!ConservativeTitles.safeForAutoMatch(card.name)) return null
         val name = TitleNormalizer.normalize(card.name)

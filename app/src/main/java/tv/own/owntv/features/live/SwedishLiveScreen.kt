@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.withFrameNanos
 import org.koin.compose.koinInject
 import tv.own.owntv.R
 import tv.own.owntv.core.database.OwnTVDatabase
@@ -28,7 +29,7 @@ import tv.own.owntv.ui.theme.mpx
 /** One logical row, real provider variants and the existing Live controller/EPG surface. */
 @Composable
 internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFullscreen: () -> Unit,
-    onOpenGuide: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, modifier: Modifier) {
+    onOpenGuide: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, restoreFocus: Boolean, onRestored: () -> Unit, modifier: Modifier) {
     val store: SwedishChannelStore = koinInject()
     val db: OwnTVDatabase = koinInject()
     val context by vm.homeLibraryContext.collectAsStateWithLifecycle()
@@ -44,6 +45,8 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     var failed by remember(profile) { mutableStateOf(false) }
     val list = rememberLazyListState()
     val entry = remember { FocusRequester() }
+    val targets = remember(profile) { mutableMapOf<String, FocusRequester>() }
+    var loaded by remember(profile) { mutableStateOf(false) }
     val epg by vm.nowNext.collectAsStateWithLifecycle()
     val blocked by vm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val previewSetting by vm.livePreviewEnabled.collectAsStateWithLifecycle()
@@ -56,19 +59,30 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         failed = false
         try {
             db.invalidationTracker.createFlow("channels", "categories", "profiles").collect {
-                library = store.library(profile, context.second, choices)
+                library = store.library(profile, context.second, choices); loaded = true
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { failed = true }
+        catch (_: Exception) { failed = true; loaded = true }
     }
     val groups = library.groups.filter { g ->
         (g.variants.first().name.collection == collection || collection == SwedishCollection.CHILDREN && g.label == "SVT Barn" || collection == SwedishCollection.NEWS && g.label == "SVT24") && g.preferred(choices.preferred[g.identity], choices.showUhd) != null
+    }
+    LaunchedEffect(restoreFocus, loaded, groups) {
+        if (restoreFocus && loaded) {
+            val index = groups.indexOfFirst { it.identity == focusId }
+            if (index >= 0) {
+                list.scrollToItem(index + if (edit) 8 else 0)
+                withFrameNanos { }; withFrameNanos { }
+                if (targets[focusId]?.requestSafely() != true) entry.requestSafely()
+            } else entry.requestSafely()
+            onRestored()
+        }
     }
     val focused = library.groups.firstOrNull { it.identity == focusId }
     LaunchedEffect(focusId, context, choices, library) {
         selected = null
         focused?.preferred(choices.preferred[focused.identity], choices.showUhd)?.let { variant ->
-            selected = vm.homeChannel(variant.id, profile)
+            selected = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
             selected?.let(vm::onChannelFocused)
         }
     }
@@ -76,13 +90,13 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         if (active && previewEnabled && previewSetting) selected?.let { delay(700); vm.playPreview(it) }
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
-    fun play(id: Long) { scope.launch {
-        val channel = vm.homeChannel(id, profile) ?: return@launch
+    fun play(variant: SwedishVariant) { scope.launch {
+        val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId } ?: return@launch
         // Fresh entity retains all provider authorization, DRM, catch-up and EPG context.
         val zap = groups.mapNotNull { it.preferred(choices.preferred[it.identity], choices.showUhd) }
-            .take(200).mapNotNull { vm.homeChannel(it.id, profile) }
+            .take(200).mapNotNull { row -> vm.homeChannel(row.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == row.stableKey && it.sourceId == row.sourceId } }
         vm.watchFullscreen(channel, zap)
-        if (!external) onFullscreen()
+        if (!external || channel.drmConfig != null) onFullscreen()
     } }
     Column(modifier.fillMaxSize().padding(top = 122.mpx, start = 30.mpx, end = 28.mpx, bottom = 24.mpx)
         .onFocusChanged { if (it.hasFocus) onChildFocused() }, verticalArrangement = Arrangement.spacedBy(16.mpx)) {
@@ -120,7 +134,8 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
                 if (groups.isEmpty()) item { TvText(stringResource(R.string.mintv_curated_empty), color = MinTvMuted, lines = 3) }
                 items(groups, key = { it.identity }) { group ->
                     val preferred = group.preferred(choices.preferred[group.identity], choices.showUhd)!!
-                    TvCard({ play(preferred.id) }, Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) focusId = group.identity }, selected = focusId == group.identity) {
+                    val rowFocus = remember(profile, group.identity) { targets.getOrPut(group.identity) { FocusRequester() } }
+                    TvCard({ play(preferred) }, Modifier.fillMaxWidth().focusRequester(rowFocus).onFocusChanged { if (it.isFocused) focusId = group.identity }, selected = focusId == group.identity) {
                         TvText(group.label, size = 26, bold = true)
                         TvText(preferred.rawName, color = MinTvMuted, size = 18)
                     }

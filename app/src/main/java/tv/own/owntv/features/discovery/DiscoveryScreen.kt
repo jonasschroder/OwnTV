@@ -84,6 +84,8 @@ internal fun DiscoveryScreen(type: MetadataType, continuation: List<LauncherCont
     onContinue: (LauncherContinuationItem) -> Unit, onSelect: (DiscoveryCard) -> Unit, onLibrary: () -> Unit,
     restoreFocus: Boolean, onRestored: () -> Unit, onEntryHook: (((() -> Boolean)?) -> Unit)?, modifier: Modifier) {
     val shelf = rememberDiscovery(type)
+    val selection: DiscoveryRepository = koinInject()
+    val scope = rememberCoroutineScope()
     val profileSettings: SettingsRepository = koinInject()
     val profileId by profileSettings.activeProfileId.collectAsStateWithLifecycle(-1L)
     val list = rememberLazyListState()
@@ -110,7 +112,7 @@ internal fun DiscoveryScreen(type: MetadataType, continuation: List<LauncherCont
             if (next.isNotEmpty()) item(key = "next-episode") { HomeContinuationRow(next, Modifier, stringResource(R.string.mintv_next_episode_row), onContinue) }
             if (shelf.rows.isEmpty()) item(key = "empty") { TvText(stringResource(R.string.mintv_discovery_empty), color = MinTvMuted, lines = 3) }
             items(shelf.rows, key = { "${it.kind}:${it.genre}" }) { row ->
-                DiscoveryPosterRow(row, type, shelf.rankedAt, onSelect, { key -> selectedKey = key }, targets)
+                DiscoveryPosterRow(row, type, shelf.rankedAt, { card -> scope.launch { if (selection.available(card, profileId)) onSelect(card) } }, { key -> selectedKey = key }, targets)
             }
             item(key = "tmdb-credit") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.mpx)) {
@@ -140,7 +142,7 @@ internal fun DiscoveryPosterRow(row: DiscoveryRow, type: MetadataType, rankedAt:
         LazyRow(horizontalArrangement = Arrangement.spacedBy(20.mpx), contentPadding = PaddingValues(8.mpx)) {
             itemsIndexed(row.cards, key = { _, card -> card.stableKey }) { index, card ->
                 val key = "${row.kind}:${row.genre}:${card.stableKey}"
-                val focus = targets?.getOrPut(key) { FocusRequester() }
+                val focus = remember(targets, key) { targets?.getOrPut(key) { FocusRequester() } }
                 StagePoster(title = card.name, rating = card.rating?.takeIf { it > 0 }?.let { "%.1f".format(it) },
                     line = listOfNotNull(card.year?.toString(), card.rating?.takeIf { it > 0 }?.let { stringResource(R.string.mintv_provider_rating) }).joinToString(stringResource(R.string.mintv_team_separator)),
                     width = 176.mpx, height = 264.mpx, onClick = { onSelect(card) },

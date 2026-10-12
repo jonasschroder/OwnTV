@@ -1,7 +1,7 @@
 package tv.own.owntv.features.live
 
 import android.content.Context
-import androidx.sqlite.db.SimpleSQLiteQuery
+import tv.own.owntv.features.catalog.readCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -41,20 +41,22 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         require(raw.length <= 65_536); check(prefs.edit().putString("profile:$profile", raw).commit())
     }
     suspend fun library(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary = withContext(Dispatchers.IO) {
-        if (sources.isEmpty()) return@withContext SwedishLibrary(emptyList())
+        val permitted = db.sourceDao().observeForProfile(profile).first().filter { it.syncLive }.map { it.id }.toSet()
+        val scopedSources = sources.filter { it in permitted }
+        if (scopedSources.isEmpty()) return@withContext SwedishLibrary(emptyList())
         val cust = customize.observe(profile, MediaType.LIVE).first()
-        val categories = db.categoryDao().observe(sources, MediaType.LIVE).first()
+        val categories = db.categoryDao().observe(scopedSources, MediaType.LIVE).first()
         val forbidden = categories.filter { CustomizeKeys.category(it) in cust.hiddenCategories ||
             !tv.own.owntv.core.content.AdultCategoryClassifier.allows(profile, it.id, db.profileDao(), db.categoryDao()) }.map { it.id }.toSet()
         val candidates = ArrayList<SwedishVariant>()
         var last = 0L; var scanned = 0; var ended = false
-        val marks = sources.joinToString(",") { "?" }
+        val marks = scopedSources.joinToString(",") { "?" }
         while (scanned < 100_000 && candidates.size < 4096) {
             currentCoroutineContext().ensureActive()
             var count = 0
-            db.openHelper.readableDatabase.query(SimpleSQLiteQuery(
+            db.readCatalog(
                 "SELECT id,sourceId,remoteId,name,number,categoryId,epgChannelId FROM channels WHERE sourceId IN ($marks) AND id > ? ORDER BY id LIMIT 400",
-                (sources + last).toTypedArray())).use { cursor ->
+                (scopedSources + last).toTypedArray()) { cursor ->
                 while (cursor.moveToNext()) {
                     last = cursor.getLong(0); count++; scanned++
                     val raw = cursor.getString(3)

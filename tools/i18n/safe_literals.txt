@@ -42,6 +42,7 @@
 1	url	app/src/main/java/tv/own/owntv/OwnTVApp.kt	jonasschroder/OwnTV
 1	performance	app/src/main/java/tv/own/owntv/OwnTVApp.kt	koin-started
 3	empty	app/src/main/java/tv/own/owntv/core/i18n/LocalizedContent.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/catalog/CatalogRead.kt	Unsupported catalog argument
 1	empty	app/src/main/java/tv/own/owntv/features/customize/CustomizeItemsScreen.kt	\0
 1	assertion	app/src/main/java/tv/own/owntv/features/customize/CustomizeItemsViewModel.kt	EPISODE not applicable
 2	assertion	app/src/main/java/tv/own/owntv/features/customize/CustomizeItemsViewModel.kt	EPISODE not applicable to category items

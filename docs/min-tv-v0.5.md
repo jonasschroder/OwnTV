@@ -186,3 +186,95 @@ account status still require physical/live-account acceptance. On the phone, ope
 the exact supplied Public activation URL and approve the short code; if rejected,
 check the app remains Public and the advanced override matches the registered ID.
 Never enter a Client Secret; never clear TV application data to retry Twitch.
+
+## G. Integration and release safety
+
+The production Core database uses BundledSQLiteDriver. Integration review caught
+legacy `openHelper` calls in the new readers; these were replaced with bounded
+prepared reads through `useReaderConnection`, and regression fixtures run against
+the real bundled driver. Source/profile ownership is rechecked before displaying
+and selecting entries. After resync, stale row IDs cannot substitute another provider
+identity. Home movie selections now open existing details/resume policy rather than
+forcing a film to start at zero. Live return focus and protected-video fullscreen
+promotion retain the existing controller and DRM behavior.
+
+New Android TV suite members verify real Room matching/order, offline cached lists,
+hidden and foreign-profile refusal, provider replacement, preferred quality/source
+persistence, favorite preservation, headers/EPG/numbering/catch-up context, 7,000-movie/
+1,900-series bounded queries, D-pad selection and insertion while apps retain focus.
+A synthetic Twitch transport verifies real Android Keystore encryption and preservation
+of credentials after a transient refresh failure. No owner's data/account or signing
+key is used. Screenshots are production row components with explicitly synthetic
+records, not the owner's IPTV library. CI requires every old and new case to execute
+without failures/errors/skips. Signing upgrade tests use disposable credentials.
+
+### Manual acceptance before any QA rollout
+
+Installed QA is `0.4.0-beta.1`. Do not uninstall, clear data, use a debug APK over it,
+or modify system packages/settings. No permanent signing/distribution workflow was
+started. Owner will review/merge and manually create a new QA candidate through the
+existing protected process, with a higher approved versionCode and the SAME permanent
+certificate. App IDs, channel isolation, authenticated update checks, signing environments,
+keys, version counters, player and pinned Core remain unchanged. Only development
+versionName defaults to 0.5; protected caller-supplied names/codes still take precedence.
+
+Before approving an in-place update, export an encrypted Core backup to the Mac,
+verify its integrity/password with the existing backup tools, and retain the old
+working signed installer. The owner's physical backup has not been obtained or
+verified in this workspace. New derived Home/channel preferences survive in-place
+updates; they are app-private preferences and are not newly added to Core's backup
+schema. Token files remain in no-backup storage. Never recommend a clean reinstall
+as an authentication fix or upgrade path.
+
+Physical acceptance required: collect the sanitized sports exit report; rapid
+Home/Matchcenter/league/team/profile navigation during data arrival; real matchdays,
+robots/access/rate/offline failures; thousands of provider channels and variant names;
+FHD/HD/SD/UHD selection, distinct regional broadcasts, saved UHD favorites, direct
+number tuning/zapping, EPG/catch-up/recording; preview mute/fullscreen/DRM/stream quota;
+large real VOD titles/artwork, ambiguous/manual metadata corrections, details/resume,
+seasons/episodes/audio/subtitles/return focus; Twitch phone approval, expiry/Back/
+background and real single-use refresh; app shortcuts and EN/SV/system language;
+same-key QA update preserving profiles/favorites/history/settings and Production data.
+
+Measure Chromecast Java/native/graphics/decoder memory and smoothness using the
+existing sanitized export and read-only diagnostics (`dumpsys meminfo` when ADB is
+already authorized). Emulator query timing/heap output is synthetic evidence only;
+it cannot establish Chromecast RAM/startup/frame/decoder performance or prove the
+reported physical crash is fixed. Metadata's existing provider may return null for
+transport, parsing or allowance failures; the UI honestly reports unavailable discovery
+rather than inventing a specific upstream HTTP cause.
+
+### Local validation snapshot
+
+- Full JVM: QA 358 + Production 358 + Core 939 + player-core 271 = 1,926;
+  no failures/errors/skips. Security/policy Python: 45 passed.
+- Both ARM debug and optimized unsigned release builds passed. All four lint variants
+  passed with zero errors (139 debug / 136 release warnings plus 22 hints each).
+  A new FocusRequester lint error was corrected using remembered composition identity;
+  no lint baseline, assertion or security check was weakened.
+- Release package/provider/permission/component/link isolation and absence of HOME
+  registration passed, both public Twitch-ID post-R8 DEX checks passed, release
+  pseudolocales absent. i18n ratchet remains 45 baseline entries; actionlint/whitespace pass.
+- Comparable unsigned release sizes: QA 63,744,580 bytes; Production 63,743,576 bytes.
+  Versus v0.4: +60,572 / +60,580 bytes (~0.095%). These are development artifacts,
+  not approved permanently signed update candidates. VCS metadata can alter final hashes.
+- Android TV fixtures compiled locally; no local KVM device is available. Actual emulator
+  execution, screenshots, i18n UI checks and disposable-signature upgrade results will
+  be recorded with exact final-commit GitHub Actions links in the PR after completion.
+
+Build commands (JDK 21, Android SDK 37, pinned Core):
+
+```sh
+bash tools/prepare-core.sh
+./gradlew :app:testQaDebugUnitTest :app:testStandardDebugUnitTest \
+  :OwnTV_Core:core:testDebugUnitTest :OwnTV_Core:player-core:testDebugUnitTest
+python3 -m unittest discover -s tools/tests -v
+./gradlew :app:lintQaDebug :app:lintStandardDebug :app:lintQaRelease :app:lintStandardRelease \
+  :app:assembleQaDebug :app:assembleStandardDebug :app:assembleQaRelease :app:assembleStandardRelease \
+  :app:compileX86_64DebugAndroidTestKotlin --max-workers=4
+```
+
+Use the prepared cloud helper `python3 /workspace/cloud-setup/run.py ./gradlew ...`
+in this retained workspace. Ordinary CI intentionally does not upload debug installers;
+only reports and synthetic screenshots are downloadable. Do not install unsigned/debug
+artifacts over the permanently signed populated QA application.

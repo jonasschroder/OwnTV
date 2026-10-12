@@ -59,7 +59,7 @@ private val HomeTeal = MinTvTeal
 
 /** Content-only destination in OwnTVShell: no Activity, player or provider session of its own. */
 @Composable
-fun MinTvContentHome(
+internal fun MinTvContentHome(
     vm: HomeViewModel,
     liveVm: LiveViewModel,
     activeProfileId: Long?,
@@ -69,6 +69,7 @@ fun MinTvContentHome(
     onLiveTv: () -> Unit,
     onGuide: () -> Unit,
     onPlayMovie: (Long, Long) -> Unit,
+    onOpenMovie: (DiscoveryCard) -> Unit,
     onPlayEpisode: (Long, Long, Long) -> Unit,
     onOpenSeries: (Long) -> Unit,
     onSources: () -> Unit,
@@ -111,6 +112,7 @@ fun MinTvContentHome(
     val continuations = remember(state.continueMovies, state.continueSeries, state.profileId, activeProfileId) {
         homeContinuations(state, activeProfileId)
     }
+    val discoverySelection: DiscoveryRepository = koinInject()
     val sectionStore: HomeSections = koinInject()
     val sportsPreferences: SportsPreferences = koinInject()
     val sportsRevision by sportsPreferences.changes.collectAsStateWithLifecycle()
@@ -390,12 +392,12 @@ fun MinTvContentHome(
                 if (showSport) item(key = "mintv-shl") { shlCard() }
                 if (showMovies) item(key = "mintv-movies") {
                     DiscoveryPosterRow(movieRow!!, MetadataType.MOVIE, movieDiscovery.rankedAt, { card ->
-                        pauseOrDispose(); controller.setActive(false); vm.stopPreview(); onPlayMovie(card.id, 0)
+                        scope.launch { activeProfileId?.let { if (discoverySelection.available(card, it)) { pauseOrDispose(); controller.setActive(false); vm.stopPreview(); onOpenMovie(card) } } }
                     }, first = navigation.section(4))
                 }
                 if (showSeries) item(key = "mintv-series") {
                     DiscoveryPosterRow(seriesRow!!, MetadataType.TV, seriesDiscovery.rankedAt, { card ->
-                        pauseOrDispose(); controller.setActive(false); vm.stopPreview(); onOpenSeries(card.id)
+                        scope.launch { activeProfileId?.let { if (discoverySelection.available(card, it)) { pauseOrDispose(); controller.setActive(false); vm.stopPreview(); onOpenSeries(card.id) } } }
                     }, first = navigation.section(5))
                 }
                 if (showTwitch) item(key = "mintv-twitch") {

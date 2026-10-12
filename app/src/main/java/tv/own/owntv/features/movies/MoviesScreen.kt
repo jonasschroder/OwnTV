@@ -204,6 +204,8 @@ fun MoviesScreen(
     var creatingCategory by remember { mutableStateOf(false) }
     // Fullscreen TMDB details window (§11.1); null = closed.
     var detailsMovie by remember { mutableStateOf<MovieEntity?>(null) }
+
+
     // "Set TMDB name" dialog target (§11.2 U5b); null = closed.
     var setTmdbNameMovie by remember { mutableStateOf<MovieEntity?>(null) }
     // In-app trailer playback (§7.3 U4); non-null = fullscreen player open with this YouTube key.
@@ -220,6 +222,19 @@ fun MoviesScreen(
     // un-Favourite while on the Favorites category), it's gone from the paged list, so we re-focus the
     // nearest surviving neighbour by position instead of escaping to the CategoryRail.
     var contextMovieId by remember { mutableStateOf<Long?>(null) }
+    val requestedDetails by vm.detailsRequest.collectAsStateWithLifecycle()
+    val requestedCatalog: tv.own.owntv.core.database.dao.MovieDao = koinInject()
+    val requestedAccess: tv.own.owntv.features.discovery.DiscoveryRepository = koinInject()
+    LaunchedEffect(requestedDetails) {
+        requestedDetails?.let { (card, profile) ->
+            if (requestedAccess.available(card, profile)) requestedCatalog.getById(card.id)?.let { movie ->
+                if (tv.own.owntv.core.customize.CustomizeKeys.movie(movie) == card.stableKey) {
+                    vm.onMovieFocused(movie); contextMovieId = movie.id; detailsMovie = movie
+                }
+            }
+            vm.consumeDetailsRequest()
+        }
+    }
     var contextMovieIndex by remember { mutableStateOf(-1) }
     val contextFocus = remember { FocusRequester() }
     val selectedProgress by vm.selectedProgress.collectAsStateWithLifecycle()

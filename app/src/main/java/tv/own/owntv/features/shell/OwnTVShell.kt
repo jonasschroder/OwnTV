@@ -1170,6 +1170,7 @@ fun OwnTVShell(
                             onLiveTv = { onSelectSection(MainSection.LIVE_TV) },
                             onGuide = { onSelectSection(MainSection.EPG) },
                             onOpenSeries = { id -> seriesVm.openSeriesById(id); onSelectSection(MainSection.SERIES) },
+                            onOpenMovie = { card -> movieVm.requestDetails(card); onSelectSection(MainSection.MOVIES) },
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
                             onPlayEpisode = { seriesId, epId, pos -> scope.launch { if (seriesVm.playFromHomeAsync(seriesId, epId, pos) && !seriesVm.externalPlayerOn.value) openFullscreen(MainSection.SERIES) } },
                             onSources = {

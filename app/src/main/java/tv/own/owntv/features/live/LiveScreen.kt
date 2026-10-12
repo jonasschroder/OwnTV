@@ -139,7 +139,7 @@ fun LiveScreen(
     val curatedReveal by vm.reveal.collectAsStateWithLifecycle()
     LaunchedEffect(curatedReveal) { if (curatedReveal != null) fullLibrary = true }
     if (lockedKey == null && !fullLibrary && curatedReveal == null) {
-        SwedishLiveScreen(vm, { fullLibrary = true }, onFullscreen, onOpenGuide, onChildFocused, previewEnabled, modifier)
+        SwedishLiveScreen(vm, { fullLibrary = true }, onFullscreen, onOpenGuide, onChildFocused, previewEnabled, restoreFocus, onRestored, modifier)
         return
     }
     androidx.activity.compose.BackHandler(enabled = fullLibrary && lockedKey == null) { fullLibrary = false }

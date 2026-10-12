@@ -29,6 +29,23 @@ class BoundedMetadataTest {
         testScheduler.runCurrent();job.cancelAndJoin()
         assertNotNull(cache.trendingPage(MetadataType.MOVIE,1));assertEquals(3,calls)
     }
+    @Test fun cancellingVisibleRequestClosesActualBlockingHttpCall()=runBlocking {
+        val started=CompletableDeferred<Call>()
+        val client=OkHttpClient.Builder().addInterceptor(MetadataResponseLimit()).addInterceptor { chain ->
+            started.complete(chain.call())
+            val deadline=System.nanoTime()+2_000_000_000
+            while (!chain.call().isCanceled() && System.nanoTime()<deadline) Thread.sleep(5)
+            throw java.io.IOException("Synthetic blocking request completed")
+        }.build()
+        val upstream=object:Provider(){override suspend fun trendingPage(type:MetadataType,page:Int):TrendingFeedPage?=
+            withContext(Dispatchers.IO){ client.newCall(Request.Builder().url("https://example.invalid/cancel-fixture").build()).execute().use{null} }
+        }
+        val cache=BoundedTrendingProvider(upstream)
+        val work=launch{cache.trendingPage(MetadataType.MOVIE,1)}
+        val call=withTimeout(2000){started.await()};withTimeout(2000){work.cancelAndJoin()}
+        assertTrue(call.isCanceled())
+        client.connectionPool.evictAll()
+    }
     @Test fun nullAndWrongTypeAreNeverConvertedToConfirmedRankings()=runTest {
         var calls=0
         val upstream=object:Provider(){override suspend fun trendingPage(type:MetadataType,page:Int):TrendingFeedPage?{calls++;return when(calls){1->null;2->page(MetadataType.TV);else->page(type)}}}
@@ -38,11 +55,17 @@ class BoundedMetadataTest {
         testScheduler.advanceTimeBy(61000);assertNotNull(cache.trendingPage(MetadataType.MOVIE,1))
     }
     @Test fun metadataResponseLimitAcceptsBoundedPayloadAndRejectsOversizeBeforeBuffering() {
-        fun client(size:Int)=OkHttpClient.Builder().addInterceptor(MetadataResponseLimit()).addInterceptor {chain ->
-            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("Fixture").body("x".repeat(size).toResponseBody()).build()
+        fun client(size:Int,unknown:Boolean=false)=OkHttpClient.Builder().addInterceptor(MetadataResponseLimit()).addInterceptor {chain ->
+            val original="x".repeat(size).toResponseBody()
+            val body=if(!unknown) original else object:ResponseBody(){
+                override fun contentType()=original.contentType()
+                override fun contentLength()=-1L
+                override fun source()=original.source()
+            }
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("Fixture").body(body).build()
         }.build()
         val request=Request.Builder().url("https://example.invalid/metadata-fixture").build()
         client(1024).newCall(request).execute().use{assertEquals(1024,it.body.string().length)}
-        try {client(1_048_577).newCall(request).execute().use{it.body.string()};fail("Unbounded response accepted")} catch(_:java.io.IOException){}
+        for (unknown in listOf(false,true)) try {client(1_048_577,unknown).newCall(request).execute().use{it.body.string()};fail("Unbounded response accepted")} catch(_:java.io.IOException){}
     }
 }

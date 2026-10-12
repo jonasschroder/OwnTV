@@ -20,10 +20,11 @@ internal class BoundedTrendingProvider(private val upstream: MetadataProvider,
         val key = type to page
         pages[key]?.takeIf { now() - it.first in 0 until 60_000 }?.let { return@withLock it.second }
         val value = try {
-            withTimeout(15_000) { upstream.trendingPage(type, page) }
+            withTimeout(15_000) { withMetadataNetwork { upstream.trendingPage(type, page) } }
         } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
             currentCoroutineContext().ensureActive(); null
         } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: java.io.IOException) { currentCoroutineContext().ensureActive(); null }
         currentCoroutineContext().ensureActive()
         val verified = value?.takeIf { it.page == page && it.candidates.size <= 20 && it.candidates.all { candidate -> candidate.type == type && candidate.tmdbId > 0 } }
         pages[key] = now() to verified

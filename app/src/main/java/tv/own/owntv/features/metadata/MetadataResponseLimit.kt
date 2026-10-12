@@ -11,12 +11,17 @@ import okio.buffer
 /** Only the metadata client's decompressed response; never changes IPTV transport or headers. */
 internal class MetadataResponseLimit : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val response = chain.proceed(chain.request())
+        val network = MetadataNetwork.current.get()
+        val call = chain.call()
+        network?.add(call)
+        val response = try { chain.proceed(chain.request()) }
+            catch (error: Exception) { network?.remove(call); throw error }
         val original = response.body
-        if (original.contentLength() > LIMIT) { response.close(); throw IOException("Metadata response budget") }
+        if (original.contentLength() > LIMIT) { response.close(); network?.remove(call); throw IOException("Metadata response budget") }
         val bounded = object : ResponseBody() {
             private val reader = object : ForwardingSource(original.source()) {
                 private var total = 0L
+                override fun close() { try { super.close() } finally { network?.remove(call) } }
                 override fun read(sink: okio.Buffer, byteCount: Long): Long {
                     val count = super.read(sink, minOf(byteCount, LIMIT - total + 1))
                     if (count > 0) total += count

@@ -124,8 +124,8 @@ internal fun MinTvContentHome(
     val discoveryVisible by remember { derivedStateOf {
         listState.layoutInfo.visibleItemsInfo.any { it.key in listOf("mintv-resume", "mintv-shl", "mintv-movies", "mintv-series", "mintv-twitch", "mintv-apps") }
     } }
-    val movieDiscovery = rememberDiscovery(MetadataType.MOVIE, HomeSection.MOVIES !in hidden && discoveryVisible && previewEnabled && !matchcenterOpen && !preferencesOpen)
-    val seriesDiscovery = rememberDiscovery(MetadataType.TV, HomeSection.SERIES !in hidden && discoveryVisible && previewEnabled && !matchcenterOpen && !preferencesOpen)
+    val movieDiscovery = rememberDiscovery(MetadataType.MOVIE, visible = discoveryVisible, enabled = HomeSection.MOVIES !in hidden && previewEnabled && !matchcenterOpen && !preferencesOpen)
+    val seriesDiscovery = rememberDiscovery(MetadataType.TV, visible = discoveryVisible, enabled = HomeSection.SERIES !in hidden && previewEnabled && !matchcenterOpen && !preferencesOpen)
     val movieRow = movieDiscovery.rows.firstOrNull { it.kind == DiscoveryKind.TOP }
     val seriesRow = seriesDiscovery.rows.firstOrNull { it.kind == DiscoveryKind.TOP }
     val previewAllowed = active && HomeSection.LIVE !in hidden

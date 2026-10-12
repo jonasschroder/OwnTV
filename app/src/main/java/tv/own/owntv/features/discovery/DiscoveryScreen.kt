@@ -22,9 +22,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.debounce
 import org.koin.compose.koinInject
 import tv.own.owntv.R
 import tv.own.owntv.core.database.OwnTVDatabase
@@ -46,7 +45,7 @@ import tv.own.owntv.ui.theme.mpx
 /** Visibility-scoped adapter, no always-on collector or network refresh on focus. */
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @Composable
-internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true): DiscoveryShelf {
+internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enabled: Boolean = true): DiscoveryShelf {
     val repository: DiscoveryRepository = koinInject()
     val settings: SettingsRepository = koinInject()
     val sourceDao: SourceDao = koinInject()
@@ -54,25 +53,28 @@ internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true): Dis
     val context by remember { activeProfileSources(settings, sourceDao) }
         .collectAsStateWithLifecycle(ActiveProfileSources(-1, emptyList()))
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
-    val active = visible && lifecycle == Lifecycle.State.RESUMED
+    val active = enabled && lifecycle == Lifecycle.State.RESUMED
+    val metadataMode by settings.metadataMode.collectAsStateWithLifecycle(tv.own.owntv.core.metadata.MetadataMode.PROVIDER_PLUS_TMDB)
     var shelf by remember(context, type) { mutableStateOf(DiscoveryShelf()) }
-    LaunchedEffect(context, type, active) {
+    LaunchedEffect(context, type, active, metadataMode) {
         if (!active) return@LaunchedEffect
         val ids = if (type == MetadataType.MOVIE) context.movieSourceIds else context.seriesSourceIds
         if (ids.isEmpty()) return@LaunchedEffect
         try {
             shelf = repository.shelf(context.profileId, ids, type)
-            coroutineScope {
-                launch {
-                    db.invalidationTracker.createFlow(if (type == MetadataType.MOVIE) "movies" else "series",
-                        "metadata_match", "metadata_cache", "watch_history", "favorites", "playback_progress", "categories")
-                        .debounce(750).collect { shelf = repository.shelf(context.profileId, ids, type).copy(failed = shelf.failed) }
-                }
-                launch {
-                    val success = repository.refresh()
-                    shelf = repository.shelf(context.profileId, ids, type).copy(failed = !success)
-                }
-            }
+            db.invalidationTracker.createFlow(if (type == MetadataType.MOVIE) "movies" else "series",
+                "metadata_match", "metadata_cache", "watch_history", "favorites", "playback_progress", "categories")
+                .debounce(750).collect { shelf = repository.shelf(context.profileId, ids, type).copy(failed = shelf.failed) }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { shelf = shelf.copy(failed = true) }
+    }
+    LaunchedEffect(context, type, active, visible, metadataMode) {
+        if (!active || !visible) return@LaunchedEffect
+        val ids = if (type == MetadataType.MOVIE) context.movieSourceIds else context.seriesSourceIds
+        if (ids.isEmpty()) return@LaunchedEffect
+        try {
+            val success = repository.refresh()
+            shelf = repository.shelf(context.profileId, ids, type).copy(failed = !success)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { shelf = shelf.copy(failed = true) }
     }

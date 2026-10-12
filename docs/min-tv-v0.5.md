@@ -278,3 +278,19 @@ Use the prepared cloud helper `python3 /workspace/cloud-setup/run.py ./gradlew .
 in this retained workspace. Ordinary CI intentionally does not upload debug installers;
 only reports and synthetic screenshots are downloadable. Do not install unsigned/debug
 artifacts over the permanently signed populated QA application.
+
+Final lifecycle follow-up: local discovery reads and Room observers are separate from
+network visibility, so cached rows can appear before scrolling to them. Hidden sections
+and background state stop their work; metadata-mode changes re-read local policy. The
+new daily-feed requests now attach their actual OkHttp calls to the caller's cancellation,
+including Core's synchronous IO. A temporary request child closes the socket immediately
+on cancellation and is removed on completion; no service or polling loop is introduced.
+The regression uses a genuinely blocking intercepted HTTP call and verifies Call.cancel,
+with real time so a virtual deadline cannot skip request start. Known-length and unknown-
+length oversized response tests both enforce the decompressed 1 MiB budget.
+
+The first PR CI attempt stopped BEFORE Android tests on exact literal counts and a new
+numeric display formatter. Those were corrected without new exceptions or a baseline
+increase; existing vodRating is reused. The subsequent baseline revision executed all
+23 Android TV tests and disposable-key upgrade checks successfully. The final follow-up
+is revalidated on its own commit; exact final run links/results are maintained in PR #7.

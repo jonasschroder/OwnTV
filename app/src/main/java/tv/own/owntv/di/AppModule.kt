@@ -16,6 +16,9 @@ import tv.own.owntv.core.home.HomeFeedReader
 import tv.own.owntv.core.live.GuideReader
 import tv.own.owntv.core.live.LiveEpgReader
 import tv.own.owntv.features.home.HomeViewModel
+import tv.own.owntv.features.live.SwedishChannelStore
+import tv.own.owntv.features.discovery.DiscoveryRepository
+import tv.own.owntv.features.home.HomeSections
 import tv.own.owntv.features.home.ShlRepository
 import tv.own.owntv.features.home.SportsPreferences
 import tv.own.owntv.features.home.SportsRepository
@@ -63,6 +66,9 @@ val appModule = module {
     singleOf(::GuideReader)
     singleOf(::SearchReader)
     singleOf(::HomeFeedReader)
+    singleOf(::HomeSections)
+    singleOf(::DiscoveryRepository)
+    singleOf(::SwedishChannelStore)
     singleOf(::ShlRepository)
     singleOf(::SportsPreferences)
     singleOf(::SportsRepository)

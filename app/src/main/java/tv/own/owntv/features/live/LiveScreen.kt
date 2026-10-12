@@ -135,6 +135,14 @@ fun LiveScreen(
     onOpenGuide: () -> Unit = {},
 ) {
     val vm: LiveViewModel = koinViewModel()
+    var fullLibrary by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val curatedReveal by vm.reveal.collectAsStateWithLifecycle()
+    LaunchedEffect(curatedReveal) { if (curatedReveal != null) fullLibrary = true }
+    if (lockedKey == null && !fullLibrary && curatedReveal == null) {
+        SwedishLiveScreen(vm, { fullLibrary = true }, onFullscreen, onOpenGuide, onChildFocused, previewEnabled, restoreFocus, onRestored, modifier)
+        return
+    }
+    androidx.activity.compose.BackHandler(enabled = fullLibrary && lockedKey == null) { fullLibrary = false }
     // Locking and unlocking are one pair: the pin belongs to this screen's lifetime, not to the view
     // model's. On the television that view model is a single instance shared with the browse section,
     // so a pin left behind froze its category rail. `DisposableEffect` (not `LaunchedEffect`) also

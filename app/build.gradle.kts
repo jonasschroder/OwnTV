@@ -49,7 +49,7 @@ android {
         targetSdk = 36
         // Independent version sequence for Min TV. CI supplies a monotonically increasing code.
         versionCode = (System.getenv("VERSION_CODE") ?: "2").toInt()
-        versionName = System.getenv("MINTV_VERSION_NAME") ?: "0.4"
+        versionName = System.getenv("MINTV_VERSION_NAME") ?: "0.5"
         manifestPlaceholders["minTvLinkScheme"] = "mintv"
         manifestPlaceholders["minTvBanner"] = "@drawable/mintv_banner"
         buildConfigField("String", "APP_LINK_SCHEME", "\"mintv\"")

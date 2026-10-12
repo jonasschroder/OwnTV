@@ -106,6 +106,11 @@ class MovieViewModel(
     private val subtitleController: tv.own.owntv.core.subtitles.SubtitleController,
 ) : ViewModel() {
 
+    private val _detailsRequest = MutableStateFlow<Pair<tv.own.owntv.features.discovery.DiscoveryCard, Long>?>(null)
+    internal val detailsRequest = _detailsRequest.asStateFlow()
+    internal fun requestDetails(card: tv.own.owntv.features.discovery.DiscoveryCard) { viewModelScope.launch { _detailsRequest.value = card to settings.activeProfileIdNow() } }
+    fun consumeDetailsRequest() { _detailsRequest.value = null }
+
     /** The categories' search text, held here so it survives the player (see LiveViewModel). */
     private val _categoryQuery = kotlinx.coroutines.flow.MutableStateFlow("")
     val categoryQuery: kotlinx.coroutines.flow.StateFlow<String> = _categoryQuery

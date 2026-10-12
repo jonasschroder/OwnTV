@@ -44,7 +44,7 @@ internal fun TwitchCompanionUi(
     var connected by remember { mutableStateOf(false) }
     var connecting by remember { mutableStateOf(false) }
     var code by remember { mutableStateOf<TwitchActivation?>(null) }
-    var failure by remember { mutableStateOf(false) }
+    var failure by remember { mutableStateOf<TwitchFailureKind?>(null) }
     var disconnect by remember { mutableStateOf(false) }
     var generation by remember { mutableIntStateOf(0) }
     var checkedAt by remember { mutableLongStateOf(0) }
@@ -59,6 +59,7 @@ internal fun TwitchCompanionUi(
             now = System.currentTimeMillis()
             state = try { readStatus(now) } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { TwitchState.Unavailable }
+            connected = readConnection()
             checkedAt = System.currentTimeMillis()
             delay(60_000)
         }
@@ -70,7 +71,7 @@ internal fun TwitchCompanionUi(
             prefs.edit().putString("twitch-client-id", clientId).apply() // public identifier only
             authorize(clientId) { code = it }; setup = false; restore = true; generation++
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { failure = true }
+        catch (error: Exception) { failure = (error as? TwitchFailure)?.kind ?: TwitchFailureKind.NETWORK }
         finally { connecting = false; code = null }
     }
     LaunchedEffect(disconnect) {
@@ -83,7 +84,7 @@ internal fun TwitchCompanionUi(
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
     TvCard({
-        setup = true; failure = false; editClientId = clientId.isBlank()
+        setup = true; failure = null; editClientId = clientId.isBlank()
         connecting = !connected && clientId.isNotBlank()
     }, Modifier.fillMaxWidth().then(modifier).focusRequester(entryFocus)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
@@ -107,12 +108,12 @@ internal fun TwitchCompanionUi(
             }
             if (!connecting) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    HomeButton(stringResource(R.string.mintv_twitch_connect), { failure = false; connecting = true }, Modifier.focusRequester(connectFocus))
+                    HomeButton(stringResource(R.string.mintv_twitch_connect), { failure = null; connecting = true }, Modifier.focusRequester(connectFocus))
                     if (connected) HomeButton(stringResource(R.string.mintv_twitch_disconnect), { disconnect = true })
                 }
             }
             if (!editClientId) HomeButton(stringResource(R.string.mintv_twitch_edit_id), {
-                connecting = false; code = null; failure = false; editClientId = true
+                connecting = false; code = null; failure = null; editClientId = true
             })
             code?.let {
                 TvText(it.verificationUri, size = 22, color = MinTvTeal, lines = 3)
@@ -120,10 +121,22 @@ internal fun TwitchCompanionUi(
                 TvText(stringResource(R.string.mintv_twitch_activation_help), size = 22, color = MinTvMuted)
             }
             if (connecting && code == null) TvText(stringResource(R.string.mintv_companion_loading))
-            if (failure) {
-                TvText(stringResource(R.string.mintv_twitch_connection_failed), color = MinTvMuted)
+            if (failure != null) {
+                TvText(stringResource(twitchFailureText(failure!!)), color = MinTvMuted, lines = 4)
             }
             HomeButton(stringResource(R.string.mintv_close), { setup = false; connecting = false; code = null; restore = true }, if (connecting) Modifier.focusRequester(connectFocus) else Modifier)
         }
     }
+}
+
+internal fun twitchFailureText(kind: TwitchFailureKind) = when (kind) {
+    TwitchFailureKind.CLIENT -> R.string.mintv_twitch_error_client
+    TwitchFailureKind.ACCESS -> R.string.mintv_twitch_error_access
+    TwitchFailureKind.DENIED -> R.string.mintv_twitch_error_denied
+    TwitchFailureKind.EXPIRED -> R.string.mintv_twitch_error_expired
+    TwitchFailureKind.NETWORK, TwitchFailureKind.TIMEOUT -> R.string.mintv_twitch_error_network
+    TwitchFailureKind.RATE_LIMITED -> R.string.mintv_twitch_error_rate
+    TwitchFailureKind.RESPONSE -> R.string.mintv_twitch_error_response
+    TwitchFailureKind.AUTHENTICATION -> R.string.mintv_twitch_error_auth
+    TwitchFailureKind.STORAGE -> R.string.mintv_twitch_error_storage
 }

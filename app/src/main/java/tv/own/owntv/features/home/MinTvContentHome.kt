@@ -5,6 +5,8 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -38,6 +40,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.compose.koinInject
 import tv.own.owntv.R
+import tv.own.owntv.features.discovery.*
+import tv.own.owntv.core.metadata.MetadataType
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.live.EpgNowNext
@@ -55,7 +59,7 @@ private val HomeTeal = MinTvTeal
 
 /** Content-only destination in OwnTVShell: no Activity, player or provider session of its own. */
 @Composable
-fun MinTvContentHome(
+internal fun MinTvContentHome(
     vm: HomeViewModel,
     liveVm: LiveViewModel,
     activeProfileId: Long?,
@@ -65,7 +69,9 @@ fun MinTvContentHome(
     onLiveTv: () -> Unit,
     onGuide: () -> Unit,
     onPlayMovie: (Long, Long) -> Unit,
+    onOpenMovie: (DiscoveryCard) -> Unit,
     onPlayEpisode: (Long, Long, Long) -> Unit,
+    onOpenSeries: (Long) -> Unit,
     onSources: () -> Unit,
     onManageSources: () -> Unit,
     onChildFocused: () -> Unit,
@@ -102,15 +108,38 @@ fun MinTvContentHome(
     val previewState by liveVm.previewEngine.state.collectAsStateWithLifecycle()
     val blocked by liveVm.previewBlockedSingleSession.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    val navigation = rememberHomeDpadNavigation(firstRowFocusRequester, sectionCount = 6, profileKey = activeProfileId)
+    val navigation = rememberHomeDpadNavigation(firstRowFocusRequester, sectionCount = 8, profileKey = activeProfileId)
     val continuations = remember(state.continueMovies, state.continueSeries, state.profileId, activeProfileId) {
         homeContinuations(state, activeProfileId)
     }
-    val hasResume = continuations.isNotEmpty()
-    LaunchedEffect(hasResume) {
-        if (!hasResume && navigation.selected == 3) {
-            navigation.selected = 2
-            withFrameNanos { }; navigation.focus[2].requestSafely()
+    val discoverySelection: DiscoveryRepository = koinInject()
+    val sectionStore: HomeSections = koinInject()
+    val sportsPreferences: SportsPreferences = koinInject()
+    val sportsRevision by sportsPreferences.changes.collectAsStateWithLifecycle()
+    var hidden by remember(activeProfileId) { mutableStateOf<Set<HomeSection>>(emptySet()) }
+    var sportsSelection by remember(activeProfileId) { mutableStateOf(SportPreferences()) }
+    var chooseTeams by remember { mutableStateOf(false) }
+    LaunchedEffect(activeProfileId) { activeProfileId?.let { hidden = sectionStore.hidden(it) } }
+    LaunchedEffect(activeProfileId, sportsRevision) { activeProfileId?.let { sportsSelection = sportsPreferences.read(it) } }
+    val discoveryVisible by remember { derivedStateOf {
+        listState.layoutInfo.visibleItemsInfo.any { it.key in listOf("mintv-resume", "mintv-shl", "mintv-movies", "mintv-series", "mintv-twitch", "mintv-apps") }
+    } }
+    val movieDiscovery = rememberDiscovery(MetadataType.MOVIE, visible = discoveryVisible, enabled = HomeSection.MOVIES !in hidden && previewEnabled && !matchcenterOpen && !preferencesOpen)
+    val seriesDiscovery = rememberDiscovery(MetadataType.TV, visible = discoveryVisible, enabled = HomeSection.SERIES !in hidden && previewEnabled && !matchcenterOpen && !preferencesOpen)
+    val movieRow = movieDiscovery.rows.firstOrNull { it.kind == DiscoveryKind.TOP }
+    val seriesRow = seriesDiscovery.rows.firstOrNull { it.kind == DiscoveryKind.TOP }
+    val previewAllowed = active && HomeSection.LIVE !in hidden
+    val showFavorites = HomeSection.FAVORITES !in hidden && favorites.isNotEmpty()
+    val hasResume = HomeSection.CONTINUE !in hidden && continuations.isNotEmpty()
+    val showSport = HomeSection.SPORT !in hidden && sportsSelection.teamIds.isNotEmpty() && sportsSelection.prominent
+    val showMovies = HomeSection.MOVIES !in hidden && movieRow != null
+    val showSeries = HomeSection.SERIES !in hidden && seriesRow != null
+    val showTwitch = HomeSection.TWITCH !in hidden
+    val showApps = HomeSection.APPS !in hidden
+    val sectionItems = homeSectionIndices(listOf(true, showFavorites, hasResume, showSport, showMovies, showSeries, showTwitch, showApps))
+    LaunchedEffect(sectionItems) {
+        if (sectionItems.getOrNull(navigation.selected) == -1) {
+            navigation.selected = 0; withFrameNanos { }; navigation.focus[0].requestSafely()
         }
     }
     LaunchedEffect(library) {
@@ -149,7 +178,7 @@ fun MinTvContentHome(
                 // Earlier navigation on the loading card must not arm a newly inserted default.
                 remoteNavigationSeen = false
                 controller.setActive(false)
-                controller.setActive(active)
+                controller.setActive(previewAllowed)
                 withFrameNanos { }; withFrameNanos { }; navigation.focus[1].requestSafely()
             }
             restoreFavoriteAfterLoad = false
@@ -166,10 +195,10 @@ fun MinTvContentHome(
             controller.setActive(false)
         }
     }
-    LaunchedEffect(active, activeProfileId) {
+    LaunchedEffect(previewAllowed, activeProfileId) {
         remoteNavigationSeen = false
         controller.setActive(false)
-        controller.setActive(active)
+        controller.setActive(previewAllowed)
     }
     DisposableEffect(lifecycle, controller) {
         val observer = LifecycleEventObserver { _, event ->
@@ -185,9 +214,9 @@ fun MinTvContentHome(
     LaunchedEffect(selected?.id, activeProfileId, favoriteRowFocused, heroFocused) {
         controller.focus(selected.takeIf { favoriteRowFocused || heroFocused })
     }
-    LaunchedEffect(selected?.id, activeProfileId, lifecycle, matchcenterOpen, preferencesOpen) {
+    LaunchedEffect(selected?.id, activeProfileId, lifecycle, matchcenterOpen, preferencesOpen, hidden) {
         guide = null // never label a new channel with the previous one's programme
-        if (matchcenterOpen || preferencesOpen) return@LaunchedEffect // hidden Home must not poll provider EPG
+        if (matchcenterOpen || preferencesOpen || HomeSection.LIVE in hidden) return@LaunchedEffect // hidden Home must not poll provider EPG
         val channel = selected ?: return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
@@ -206,7 +235,7 @@ fun MinTvContentHome(
     DisposableEffect(firstRowFocusRequester, favorites.isEmpty()) {
         onEntryHook {
             if (matchcenterOpen) matchcenterEntry?.invoke() == true
-            else if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestSafely() else navigation.focus[navigation.selected].requestSafely()
+            else if (sectionItems.getOrNull(navigation.selected) == -1) liveFocus.requestSafely() else navigation.focus[navigation.selected].requestSafely()
         }
         onDispose { onEntryHook(null) }
     }
@@ -214,7 +243,7 @@ fun MinTvContentHome(
         if (restoreFocus && previewEnabled) {
             withFrameNanos { }; withFrameNanos { }
             if (matchcenterOpen) matchcenterEntry?.invoke()
-            else if (navigation.selected == 1 && favorites.isEmpty()) emptyFocus.requestSafely()
+            else if (sectionItems.getOrNull(navigation.selected) == -1) liveFocus.requestSafely()
             else navigation.focus[navigation.selected].requestSafely()
             onRestored()
         }
@@ -241,7 +270,7 @@ fun MinTvContentHome(
         contentStart = contentStart, onSources = { pauseOrDispose(); controller.setActive(false); onSources() },
         reservedTop = reservedTop,
         onMatchcenterEntry = { matchcenterEntry = it },
-        homeCardModifier = navigation.section(2),
+        homeCardModifier = navigation.section(3),
     ) { shlCard, screen ->
         LaunchedEffect(screen) {
             matchcenterOpen = screen
@@ -256,14 +285,19 @@ fun MinTvContentHome(
                     if (event.type == KeyEventType.KeyDown && event.key in listOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)) {
                         // Re-enable after a failed external launch, but never on automatic focus restoration.
                         remoteNavigationSeen = true
-                        controller.setActive(active)
+                        controller.setActive(previewAllowed)
                         if (favoriteRowFocused || heroFocused) controller.onRemoteNavigation()
                     }
                     false
-                }.then(homeDpadModifier(navigation, listState, listOf(0, 1, 2, if (hasResume) 3 else -1, if (hasResume) 4 else 3, if (hasResume) 5 else 4))).onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
+                }.then(homeDpadModifier(navigation, listState, sectionItems)).onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup(),
             ) {
                 item(key = "mintv-live-hero") {
-                    val hasVideo = active && selected != null && previewState != LivePreviewEngine.State.IDLE && previewState != LivePreviewEngine.State.ERROR
+                    if (HomeSection.LIVE in hidden) Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
+                        HomeButton(stringResource(R.string.common_nav_live_tv), onLiveTv, navigation.section(0).focusRequester(liveFocus))
+                        HomeButton(stringResource(R.string.common_nav_guide), onGuide)
+                        HomeButton(stringResource(R.string.mintv_companion_settings), { preferencesOpen = true })
+                    } else {
+                    val hasVideo = HomeSection.LIVE !in hidden && active && selected != null && previewState != LivePreviewEngine.State.IDLE && previewState != LivePreviewEngine.State.ERROR
                     val previewMessage = when {
                         selected == null -> R.string.mintv_favorites_empty
                         !previewsOn -> R.string.mintv_preview_disabled
@@ -291,7 +325,8 @@ fun MinTvContentHome(
                         } else TvText(stringResource(R.string.app_name), size = 42, color = MinTvTeal, bold = true)
                     }
                 }
-                item(key = "mintv-favorites") {
+                    }
+                if (showFavorites) item(key = "mintv-favorites") {
                     if (favorites.isEmpty()) {
                         val status = if (library.profileId != activeProfileId || state.isLoading || state.profileId != activeProfileId || library.status == HomeLibraryStatus.READY) HomeLibraryStatus.LOADING else library.status
                         TvCard({
@@ -344,9 +379,8 @@ fun MinTvContentHome(
                         }
                     }
                 }
-                item(key = "mintv-shl") { shlCard() }
                 if (hasResume) item(key = "mintv-resume") {
-                    HomeContinuationRow(continuations, navigation.section(3)) { item ->
+                    HomeContinuationRow(continuations, navigation.section(2)) { item ->
                         pauseOrDispose(); controller.setActive(false); vm.stopPreview()
                         when (item.kind) {
                             tv.own.owntv.core.launcher.LauncherContinuationKind.MOVIE -> onPlayMovie(item.sourceItemId, item.positionMs)
@@ -355,11 +389,22 @@ fun MinTvContentHome(
                         }
                     }
                 }
-                item(key = "mintv-twitch") {
-                    TwitchCompanion(visible = twitchVisible, modifier = navigation.section(4), active = previewEnabled && !preferencesOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+                if (showSport) item(key = "mintv-shl") { shlCard() }
+                if (showMovies) item(key = "mintv-movies") {
+                    DiscoveryPosterRow(movieRow!!, MetadataType.MOVIE, movieDiscovery.rankedAt, { card ->
+                        scope.launch { activeProfileId?.let { if (discoverySelection.available(card, it)) { pauseOrDispose(); controller.setActive(false); vm.stopPreview(); onOpenMovie(card) } } }
+                    }, first = navigation.section(4))
+                }
+                if (showSeries) item(key = "mintv-series") {
+                    DiscoveryPosterRow(seriesRow!!, MetadataType.TV, seriesDiscovery.rankedAt, { card ->
+                        scope.launch { activeProfileId?.let { if (discoverySelection.available(card, it)) { pauseOrDispose(); controller.setActive(false); vm.stopPreview(); onOpenSeries(card.id) } } }
+                    }, first = navigation.section(5))
+                }
+                if (showTwitch) item(key = "mintv-twitch") {
+                    TwitchCompanion(visible = twitchVisible, modifier = navigation.section(6), active = previewEnabled && !preferencesOpen && lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
                         && !favoriteRowFocused && previewState != LivePreviewEngine.State.LOADING)
                 }
-                item(key = "mintv-apps") {
+                if (showApps) item(key = "mintv-apps") {
                     Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Text(stringResource(R.string.mintv_apps_title), style = stageText(25, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
@@ -369,7 +414,7 @@ fun MinTvContentHome(
                                     controller.setActive(false)
                                     val intent = MinTvExternalApps.launch(context, shortcut.packages)
                                     if (intent != null) openExternal(intent) else missingApp = shortcut
-                                }, Modifier.weight(1f).height(82.mpx).then(if (index == 0) navigation.section(5) else Modifier))
+                                }, Modifier.weight(1f).height(82.mpx).then(if (index == 0) navigation.section(7) else Modifier))
                             }
                         }
                     }
@@ -379,17 +424,28 @@ fun MinTvContentHome(
     }
     if (preferencesOpen) {
         Dialog(onDismissRequest = { preferencesOpen = false }) {
-            Column(Modifier.width(720.mpx).background(HomeNavy, RoundedCornerShape(14.mpx)).padding(32.mpx), verticalArrangement = Arrangement.spacedBy(20.mpx)) {
+            Column(Modifier.width(720.mpx).heightIn(max = 820.mpx).background(HomeNavy, RoundedCornerShape(14.mpx)).padding(32.mpx).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.mpx)) {
                 TvText(stringResource(R.string.mintv_companion_settings), size = 30, bold = true)
                 HomeButton(stringResource(if (previewsOn) R.string.mintv_preview_on else R.string.mintv_preview_off), {
                     controller.setActive(false); scope.launch { settings.setLivePreviewEnabled(!previewsOn) }
                 })
+                HomeButton(stringResource(R.string.mintv_choose_teams), { chooseTeams = true })
+                HomeSection.entries.forEach { section ->
+                    HomeButton(stringResource(if (section in hidden) R.string.mintv_show_home_section else R.string.mintv_hide_home_section,
+                        stringResource(homeSectionLabel(section))), {
+                        activeProfileId?.let { profile -> scope.launch {
+                            val next = if (section in hidden) hidden - section else hidden + section
+                            sectionStore.save(profile, next); hidden = next
+                        } }
+                    })
+                }
                 HomeButton(stringResource(R.string.mintv_add_source), { preferencesOpen = false; pauseOrDispose(); controller.setActive(false); onSources() })
                 HomeButton(stringResource(R.string.mintv_home_settings), { preferencesOpen = false; openExternal(MinTvIntents.settings()) })
                 HomeButton(stringResource(R.string.mintv_close), { preferencesOpen = false })
             }
         }
     }
+    if (chooseTeams && activeProfileId != null) SportsTeamPicker(activeProfileId) { chooseTeams = false }
     if (missingApp != null || launchFailed) {
         Dialog(onDismissRequest = { missingApp = null; launchFailed = false }) {
             Column(Modifier.width(820.mpx).background(HomeNavy, RoundedCornerShape(24.mpx)).padding(36.mpx), verticalArrangement = Arrangement.spacedBy(24.mpx)) {
@@ -424,4 +480,15 @@ internal fun HomeButton(label: String, onClick: () -> Unit, modifier: Modifier =
         logo?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(48.mpx).padding(end = 10.mpx)) }
         Text(label, style = stageText(22, 600), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
+}
+
+private fun homeSectionLabel(section: HomeSection) = when (section) {
+    HomeSection.LIVE -> R.string.common_nav_live_tv
+    HomeSection.FAVORITES -> R.string.mintv_swedish_channels
+    HomeSection.CONTINUE -> R.string.search_continue
+    HomeSection.SPORT -> R.string.mintv_my_sport
+    HomeSection.MOVIES -> R.string.common_nav_movies
+    HomeSection.SERIES -> R.string.common_nav_series
+    HomeSection.TWITCH -> R.string.mintv_twitch_connect
+    HomeSection.APPS -> R.string.mintv_apps_title
 }

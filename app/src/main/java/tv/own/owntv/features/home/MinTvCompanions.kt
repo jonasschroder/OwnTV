@@ -72,7 +72,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var enabled by remember { mutableStateOf(repository.preferences.getBoolean("shl-enabled", false)) }
     var expansion by remember { mutableStateOf(repository.preferences.getBoolean("shl-expand", true)) }
     var screen by rememberSaveable(profileId) { mutableStateOf(false) }
-    var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.MATCHES) }
+    var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.FARJESTAD) }
     var selectedId by rememberSaveable(profileId) { mutableStateOf<String?>(null) }
     var picker by rememberSaveable(profileId) { mutableStateOf(false) }
     var searchOpen by rememberSaveable(profileId) { mutableStateOf(false) }
@@ -166,42 +166,31 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
         if (competitions.isEmpty()) return@LaunchedEffect
-        while (true) {
-            var wakeAt = System.currentTimeMillis() + 60 * 60_000L
-            for (competition in competitions) {
-                val started = System.currentTimeMillis()
-                val previous = loadStates[competition.id]?.issue
-                if (previous?.retryAt != null && previous.retryAt > started) {
-                    wakeAt = minOf(wakeAt, previous.retryAt)
-                    continue
-                }
-                val result = fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
-                    sports.cached(competition)?.let { data = data + (competition.id to it) }
-                    sports.refresh(competition, started)
-                }, { value -> data = data + (competition.id to value); value.fetchedAt < started },
-                    { loadStates[competition.id] = it })
-                result.issue?.retryAt?.let { wakeAt = minOf(wakeAt, it) }
-            }
-            delay((wakeAt - System.currentTimeMillis()).coerceAtLeast(60_000))
+        // One visible refresh; repository TTL/retry gates survive Home/Matchcenter changes.
+        // No automatic retry loop or work after the screen leaves the foreground.
+        for (competition in competitions) {
+            val started = System.currentTimeMillis()
+            sports.cached(competition)?.let { data = data + (competition.id to it) }
+            fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
+                sports.refresh(competition, started)
+            }, { value -> data = data + (competition.id to value); value.fetchedAt < started },
+                { loadStates[competition.id] = it })
         }
     }
+
     val tableRequest = data[selectedCompetition.id]?.seasonId?.takeIf {
         available && enabled && screen && !teamsOpen && selectedId == null &&
             section in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)
     }?.let { selectedCompetition to it }
     LaunchedEffect(profileId, tableRequest, retryRevision) {
         val (competition, season) = tableRequest ?: return@LaunchedEffect
-        while (true) {
-            val started = System.currentTimeMillis()
-            val retryAt = tableState.issue?.retryAt
-            if (retryAt != null && retryAt > started) { delay(retryAt - started); continue }
-            fetchSports(started, HockeyStage.TABLE, { table != null }, {
-                sports.cachedStandings(competition, season)?.let { table = it }
-                sports.standings(competition, season, started)
-            }, { value -> table = value; value.fetchedAt < started }, { tableState = it })
-            delay(tableState.issue?.retryAt?.let { (it - System.currentTimeMillis()).coerceAtLeast(60_000) } ?: (6 * 60 * 60_000L))
-        }
+        val started = System.currentTimeMillis()
+        sports.cachedStandings(competition, season)?.let { table = it }
+        fetchSports(started, HockeyStage.TABLE, { table != null }, {
+            sports.standings(competition, season, started)
+        }, { value -> table = value; value.fetchedAt < started }, { tableState = it })
     }
+
     val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
     val gameToMatch = if (teamsOpen || !broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
         else if (selectedId != null) selected else myToday.firstOrNull().takeIf { expanded }
@@ -495,7 +484,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             val useFuture = upcoming || todayList.isEmpty()
                             val lastPage = (future.size - 1).coerceAtLeast(0) / 14
                             val currentPage = page.coerceIn(0, lastPage)
-                            val games = if (useFuture) future.drop(currentPage * 14).take(14) else todayList
+                            val recent = allGames.filter { it.competition == selectedCompetition && it.follows(selectedTeams) && it.score != null && it.faceoff < now }
+                                .sortedByDescending { it.faceoff }.take(5)
+                            val games = if (section == MatchcenterSection.FARJESTAD) (future.take(3) + recent).distinctBy { it.id }
+                                else if (useFuture) future.drop(currentPage * 14).take(14) else todayList
                             if (games.isEmpty()) Box(Modifier.fillMaxWidth()) {
                                 SportsStatusPanel(selectedCompetition, enabled, selectedLoad, now, fetchedAt, { retryRevision++ })
                             } else LazyColumn(state = matchList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {

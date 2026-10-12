@@ -105,6 +105,8 @@ import org.koin.compose.koinInject
 import org.koin.androidx.compose.koinViewModel
 import androidx.tv.material3.Text
 import tv.own.owntv.R
+import tv.own.owntv.features.discovery.DiscoveryScreen
+import tv.own.owntv.core.metadata.MetadataType
 import tv.own.owntv.features.customize.categoryRestoreSummary
 import tv.own.owntv.features.customize.CategoryRestorePlan
 import androidx.compose.runtime.produceState
@@ -202,6 +204,8 @@ fun MoviesScreen(
     var creatingCategory by remember { mutableStateOf(false) }
     // Fullscreen TMDB details window (§11.1); null = closed.
     var detailsMovie by remember { mutableStateOf<MovieEntity?>(null) }
+
+
     // "Set TMDB name" dialog target (§11.2 U5b); null = closed.
     var setTmdbNameMovie by remember { mutableStateOf<MovieEntity?>(null) }
     // In-app trailer playback (§7.3 U4); non-null = fullscreen player open with this YouTube key.
@@ -218,6 +222,19 @@ fun MoviesScreen(
     // un-Favourite while on the Favorites category), it's gone from the paged list, so we re-focus the
     // nearest surviving neighbour by position instead of escaping to the CategoryRail.
     var contextMovieId by remember { mutableStateOf<Long?>(null) }
+    val requestedDetails by vm.detailsRequest.collectAsStateWithLifecycle()
+    val requestedCatalog: tv.own.owntv.core.database.dao.MovieDao = koinInject()
+    val requestedAccess: tv.own.owntv.features.discovery.DiscoveryRepository = koinInject()
+    LaunchedEffect(requestedDetails) {
+        requestedDetails?.let { (card, profile) ->
+            if (requestedAccess.available(card, profile)) requestedCatalog.getById(card.id)?.let { movie ->
+                if (tv.own.owntv.core.customize.CustomizeKeys.movie(movie) == card.stableKey) {
+                    vm.onMovieFocused(movie); contextMovieId = movie.id; detailsMovie = movie
+                }
+            }
+            vm.consumeDetailsRequest()
+        }
+    }
     var contextMovieIndex by remember { mutableStateOf(-1) }
     val contextFocus = remember { FocusRequester() }
     val selectedProgress by vm.selectedProgress.collectAsStateWithLifecycle()
@@ -261,6 +278,10 @@ fun MoviesScreen(
     val settingsVm: tv.own.owntv.features.settings.SettingsViewModel = koinViewModel()
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
+    var completeLibrary by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val discoveryReveal by vm.reveal.collectAsStateWithLifecycle()
+    LaunchedEffect(discoveryReveal) { if (discoveryReveal != null) completeLibrary = true }
+    androidx.activity.compose.BackHandler(enabled = completeLibrary && lockedKey == null) { completeLibrary = false }
     val cinematic = vodLayout == SettingsRepository.VodLayout.CINEMATIC && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.MOVIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only: the List rows have nowhere to put a full-bleed backdrop. The stored
@@ -601,7 +622,15 @@ fun MoviesScreen(
         // Horizontal geometry is a fraction of the mockup's 1920 width, so every zoom reflows.
         val screenW = maxWidth
         fun fx(px: Int) = screenW * (px / 1920f)
-        if (cinematic) {
+        if (cinematic && !completeLibrary && discoveryReveal == null && searchQuery.isBlank()) {
+            val catalog: tv.own.owntv.core.database.dao.MovieDao = koinInject()
+            DiscoveryScreen(MetadataType.MOVIE, resumeItems,
+                onContinue = { item -> scope.launch { if (vm.playByIdAsync(item.sourceItemId, item.positionMs)) goFullscreen() } },
+                onSelect = { card -> scope.launch { catalog.getById(card.id)?.let { movie ->
+                    vm.onMovieFocused(movie); contextMovieId = movie.id; detailsMovie = movie
+                } } }, onLibrary = { completeLibrary = true }, restoreFocus = restoreFocus || (detailsMovie == null && contextMovieId != null),
+                onRestored = onRestored, onEntryHook = onEntryHook, modifier = Modifier)
+        } else if (cinematic) {
             val requestedHero = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 240.mpx
             val heroH = vodBrowseHeroHeight(maxHeight / 1.mpx - if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) 280f else 0f, requestedHero / 1.mpx).mpx
             val toolTop = 100.mpx + heroH

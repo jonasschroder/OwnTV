@@ -144,6 +144,12 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'bundledDriverSupportsScopedRankingsOfflineResyncAndHiddenContent'),
+              ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'curatedPreferencesSurviveResyncAndKeepOriginalFavoritesAndAuthorization'),
+              ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'largePagedCatalogRetainsBoundedShelvesAndReportsMeasuredWork'),
+              ('tv.own.owntv.home.TwitchTokenStorageTest', 'validatedTokensStayEncryptedAndTransientRefreshDoesNotDeleteSignIn'),
+              ('tv.own.owntv.home.DiscoveryPresentationTest', 'providerRowsKeepStableIdentityAndOkDoesNotAutoplayOnFocus'),
+              ('tv.own.owntv.home.DiscoveryPresentationTest', 'discoveryArrivalKeepsFocusedAppsAndRemoteCanReachInsertedRows'),
               ('tv.own.owntv.home.HomeDpadTraversalTest', 'noTeamsChooseTeamsAndBack'),
               ('tv.own.owntv.home.HomeDpadTraversalTest', 'multipleTeamsMatchcenterAndBack'),
               ('tv.own.owntv.home.HomeChannelDefaultsStorageTest', 'preservesFavoritesRemovalRestartSyncAndProfileIsolation'),
@@ -197,7 +203,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v7
         with:
-          name: mintv-v04-presentation-test-fixtures
+          name: mintv-v05-presentation-test-fixtures
           path: v04-device-screenshots/*.png
           if-no-files-found: error
           retention-days: 14

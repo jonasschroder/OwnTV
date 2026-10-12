@@ -11,7 +11,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -64,29 +63,17 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
     suspend fun disconnect() = authMutex.withLock { withContext(Dispatchers.IO) { file.delete(); validatedAt = 0 } }
 
     suspend fun login(clientId: String, onCode: (TwitchActivation) -> Unit) = authMutex.withLock { withContext(Dispatchers.IO) {
-        require(clientId.matches(Regex("[a-zA-Z0-9]{8,128}")))
-        val device = post("device", mapOf("client_id" to clientId, "scopes" to ""))
-        require(device.first == 200)
-        val data = JSONObject(device.second)
-        val code = data.getString("user_code")
-        require(code.matches(Regex("[A-Z0-9]{4,16}")))
-        onCode(TwitchActivation.parse(code, data.getString("verification_uri")))
-        val until = System.currentTimeMillis() + data.getLong("expires_in").coerceIn(1, 1800) * 1000
-        val interval = data.getLong("interval").coerceIn(5, 60) * 1000
-        while (System.currentTimeMillis() < until) {
-            delay(interval)
-            val result = post("token", mapOf("client_id" to clientId, "scopes" to "", "device_code" to data.getString("device_code"),
-                "grant_type" to "urn:ietf:params:oauth:grant-type:device_code"))
-            if (result.first == 200) {
-                val tokens = JSONObject(result.second)
-                require(tokens.getString("access_token").length in 1..4096)
-                save(tokens.put("client_id", clientId).put("expires_at", System.currentTimeMillis() + tokens.getLong("expires_in") * 1000))
-                validatedAt = 0
-                return@withContext
-            }
-            require(result.first == 400 && JSONObject(result.second).optString("message") == "authorization_pending")
+        val tokens = TwitchDeviceGrant(post = { path, fields -> postResponse(path, fields) }).login(clientId) { activation ->
+            withContext(Dispatchers.Main.immediate) { onCode(activation) }
         }
-        error("expired")
+        val validation = client.companionResponse(Request.Builder().url("https://id.twitch.tv/oauth2/validate")
+            .header("Authorization", "OAuth ${tokens.getString("access_token")}").build(), 16_384)
+        if (validation.status != 200) throw TwitchFailure(twitchError(validation))
+        try { TwitchDeviceGrant.validateIdentity(JSONObject(validation.body), clientId) }
+        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.AUTHENTICATION) }
+        try { save(tokens.put("client_id", clientId).put("expires_at", System.currentTimeMillis() + tokens.getLong("expires_in") * 1000)) }
+        catch (_: Exception) { throw TwitchFailure(TwitchFailureKind.STORAGE) }
+        validatedAt = System.currentTimeMillis()
     } }
 
     suspend fun status(now: Long): TwitchState = authMutex.withLock { withContext(Dispatchers.IO) {
@@ -95,8 +82,9 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
         if (token.getLong("expires_at") <= now + 60_000) {
             // Public-client refresh rotates single-use refresh tokens; never retry transparently.
             val refreshed = post("token", mapOf("client_id" to clientId, "grant_type" to "refresh_token", "refresh_token" to token.getString("refresh_token")))
-            if (refreshed.first != 200) { file.delete(); return@withContext TwitchState.Unavailable }
-            token = JSONObject(refreshed.second).put("client_id", clientId)
+            if (refreshed.first in listOf(400, 401)) { file.delete(); return@withContext TwitchState.Unavailable }
+            if (refreshed.first != 200) throw TwitchFailure(twitchError(CompanionResponse(refreshed.first, "")))
+            token = JSONObject(refreshed.second).also { TwitchDeviceGrant.validateTokens(it) }.put("client_id", clientId)
             token.put("expires_at", now + token.getLong("expires_in") * 1000)
             save(token)
             validatedAt = 0
@@ -106,18 +94,22 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
             val validation = client.companionRequest(Request.Builder().url("https://id.twitch.tv/oauth2/validate")
                 .header("Authorization", "OAuth $access").build(), 16_384)
             if (validation.first == 401) file.delete()
-            require(validation.first == 200 && JSONObject(validation.second).getString("client_id") == clientId)
+            if (validation.first != 200) throw TwitchFailure(twitchError(CompanionResponse(validation.first, "")))
+            try { TwitchDeviceGrant.validateIdentity(JSONObject(validation.second), clientId) }
+            catch (_: Exception) { file.delete(); validatedAt = 0; throw TwitchFailure(TwitchFailureKind.AUTHENTICATION) }
             validatedAt = now
         }
         val response = client.companionRequest(Request.Builder().url("https://api.twitch.tv/helix/streams?user_login=ohnepixel")
             .header("Client-ID", clientId).header("Authorization", "Bearer $access").build(), 32_768)
         if (response.first == 401) { file.delete(); validatedAt = 0 }
-        require(response.first == 200)
+        if (response.first != 200) throw TwitchFailure(twitchError(CompanionResponse(response.first, "")))
         parse(response.second)
     } }
 
     private suspend fun post(path: String, fields: Map<String, String>): Pair<Int, String> =
-        client.companionRequest(Request.Builder().url("https://id.twitch.tv/oauth2/$path").post(FormBody.Builder().apply {
+        postResponse(path, fields).let { it.status to it.body }
+    private suspend fun postResponse(path: String, fields: Map<String, String>): CompanionResponse =
+        client.companionResponse(Request.Builder().url("https://id.twitch.tv/oauth2/$path").post(FormBody.Builder().apply {
             fields.forEach { (key, value) -> add(key, value) }
         }.build()).build(), 16_384)
 

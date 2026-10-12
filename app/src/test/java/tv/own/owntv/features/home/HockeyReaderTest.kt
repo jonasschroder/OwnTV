@@ -43,6 +43,14 @@ class HockeyReaderTest {
     private suspend fun failure(operation: suspend () -> Any?): HockeyIssue = try { operation(); error("Expected failure") }
         catch (e: HockeyDataException) { e.issue }
 
+    @Test fun oversizedHttpResponseIsInvalidDataAndKeepsVerifiedCache() = runBlocking {
+        val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+        val cached = reader.refresh(shl, now)
+        source.error = CompanionResponseTooLarge()
+        assertEquals(HockeyFailureKind.FORMAT, failure { reader.refresh(shl, now + 7 * 60 * 60_000) }.kind)
+        assertEquals(cached, reader.cached(shl, now + 7 * 60 * 60_000))
+    }
+
     @Test fun disabledAndPreviouslyBlockedReadersSendZeroRequests() = runBlocking {
         val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
         store.on = false; assertEquals(HockeyFailureKind.DISABLED, failure { reader.refresh(shl, now) }.kind)

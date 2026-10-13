@@ -68,7 +68,12 @@ class V07PresentationTest {
         compose.onNodeWithText("Counter-Strike 2").assertIsDisplayed(); assertEquals(0, launches)
         screenshot("v07-twitch-live-synthetic.png")
         compose.onNodeWithTag("twitch-watch").performClick()
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_open_direct, player.name)).assertIsDisplayed()
+        val playerLabel = compose.activity.getString(R.string.mintv_twitch_open_direct, player.name)
+        // Player discovery runs on IO; wait for the actual dialog window and remote focus.
+        compose.waitUntil(5000) { runCatching {
+            compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused(); true
+        }.getOrDefault(false) }
+        compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, launches); assertEquals(0, authorizations)
     }
     @Test fun missingTwitchPlayerShowsGracefulFallbackAndRemoteClose() {

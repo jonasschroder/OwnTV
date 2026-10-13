@@ -9,6 +9,13 @@ class TwitchActivationTest {
         val value = "https://www.twitch.tv/activate?public=true&device-code=$code"
         assertEquals(TwitchActivation(code, value), TwitchActivation.parse(code, value))
     }
+    @Test fun officialEndpointAddressWithoutOptionalPublicFlagIsPreserved() {
+        val value = "https://www.twitch.tv/activate?device-code=$code"
+        assertEquals(TwitchActivation(code, value), TwitchActivation.parse(code, value))
+        assertTrue(runCatching { TwitchActivation.parse(code, "$value&device-code=$code") }.isFailure)
+        assertTrue(runCatching { TwitchActivation.parse(code, "$value&unknown=true") }.isFailure)
+        assertTrue(runCatching { TwitchActivation.parse(code, "https://www.twitch.tv/activate?public=true") }.isFailure)
+    }
     @Test fun untrustedOriginsAndUnexpectedParametersFailClosed() {
         val rejected = listOf("http://www.twitch.tv/activate?public=true&device-code=$code",
             "https://evil.example/activate?public=true&device-code=$code", "https://www.twitch.tv.evil.example/activate?public=true&device-code=$code",

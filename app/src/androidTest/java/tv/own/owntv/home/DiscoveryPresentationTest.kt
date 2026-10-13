@@ -79,4 +79,28 @@ class DiscoveryPresentationTest {
         compose.onNodeWithTag("inserted-row").assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER);assertEquals(77L,chosen!!.id)
     }
+    @Test fun providerFolderFooterOpensTheExactCategoryWithRemoteWithoutAutoplay(){
+        val folder=ProviderFolder(501,101,"movie:101:oscar","MOVIE: Oscar Movies","Synthetic source",0)
+        var opened:ProviderFolder?=null;var selected:DiscoveryCard?=null
+        compose.setContent {MaterialTheme {
+            val first=remember{FocusRequester()}
+            Column(Modifier.fillMaxSize().background(MinTvNavy).padding(24.dp)) {
+                DiscoveryPosterRow(DiscoveryRow(DiscoveryKind.PROVIDER,cards.take(1),folder=folder),MetadataType.MOVIE,null,
+                    {selected=it},first=Modifier.focusRequester(first).testTag("folder-first"),onFolder={opened=it})
+            }
+            LaunchedEffect(Unit){withFrameNanos{};withFrameNanos{};first.requestSafely()}
+        }}
+        compose.onNodeWithTag("folder-first").assertIsFocused();assertNull(selected);assertNull(opened)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT);key(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(folder,opened);assertNull(selected)
+        screenshot("v06-provider-folder-synthetic.png")
+    }
+    @Test fun verifiedVariantPickerDoesNotAutoplayAndRemoteSelectsTheOriginalEntity(){
+        var selected:DiscoveryCard?=null
+        val film=cards.first().copy(name="Synthetic FHD",variants=listOf(cards.last().copy(name="Synthetic HD")))
+        compose.setContent {MaterialTheme {ProviderVariantPicker(film,{selected=it},{},{})}}
+        compose.onNodeWithText("Synthetic FHD").assertIsFocused();assertNull(selected)
+        key(KeyEvent.KEYCODE_DPAD_DOWN);key(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(78L,selected!!.id);assertEquals("101:synthetic-b",selected!!.stableKey)
+    }
 }

@@ -57,26 +57,29 @@
 1	technical	app/src/main/java/tv/own/owntv/features/customize/CustomizeScreen.kt	first
 1	technical	app/src/main/java/tv/own/owntv/features/customize/CustomizeScreen.kt	▶
 1	empty	app/src/main/java/tv/own/owntv/features/customize/CustomizeViewModel.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryModels.kt	$kind:$genre
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryModels.kt	provider:${it.stableKey}
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	$metadataType:
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	$metadataType:$lang:
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	${cursor.getLong(1)}:${if (cursor.isNull(2)) name else cursor.getString(2)}
-1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	,
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	,
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	..
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	/[A-Za-z0-9_./-]+
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	:kids
-1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	?
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	?
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	LEFT JOIN metadata_match m ON m.localKey = ('$metadataType:' || c.sourceId || ':' || COALESCE(c.remoteId,c.name) || '$matchTail') AND m.type = ? AND m.confidence >= 0.92 LEFT JOIN metadata_cache mc ON mc.key = (? || m.tmdbId)
-1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9),mc.posterPath FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400
+1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9),mc.posterPath,c.sortOrder FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400
 1	sql	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	SELECT mc.genresJson FROM $table c$join WHERE c.sourceId IN ($marks) AND (EXISTS (SELECT 1 FROM watch_history h WHERE h.profileId=? AND h.mediaType=? AND h.itemId=c.id) OR EXISTS (SELECT 1 FROM favorites f WHERE f.profileId=? AND f.mediaType=? AND f.itemId=c.id)) ORDER BY c.id DESC LIMIT 24
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	https://image.tmdb.org/t/p/w342$it
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	movie
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	movies
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	series
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryRepository.kt	tv
-1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	${it.kind}:${it.genre}
-1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	${row.kind}:${row.genre}:${card.stableKey}
-1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	${row.kind}:${row.genre}:${it.stableKey}
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	${row.key}:${card.stableKey}
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	${row.key}:${it.stableKey}
+2	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	${row.key}:all
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	all
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	categories
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	continue
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	discovery-all-library
@@ -90,6 +93,20 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	series
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	tmdb-credit
 1	protocol	app/src/main/java/tv/own/owntv/features/discovery/DiscoveryScreen.kt	watch_history
+2	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	${card.type}:${card.tmdbId}:${card.year}
+1	regex	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	\\s+
+1	regex	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	^(?:MOVIE|MOVIES|SERIES)\\s*:\\s*
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	amazon prime
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	christmas
+2	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	disney
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	english
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	imdb top 250
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	multi subtitles
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	netflix
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	oscar movies
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	swedish
+1	protocol	app/src/main/java/tv/own/owntv/features/discovery/ProviderFolders.kt	swedish (kids)
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	\0
 1	file-path	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	/
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	content://
@@ -230,6 +247,7 @@
 1	locale	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	HH:mm
 1	regex	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	^(?:IF|HC)\\s+|\\s+(?:BK|HC|IK|Redhawks|Lakers)$
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	mintv-companion
+1	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-activation-qr
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-client-id
 1	technical	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-public-client-id
 1	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
@@ -614,7 +632,7 @@
 1	regex	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	[A-Z0-9]{4,16}
 2	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	device-code
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	https
-2	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	public
+3	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	public
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	true
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchActivation.kt	www.twitch.tv
 4	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	\0
@@ -626,7 +644,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	bearer
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	client
 3	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	client_id
-1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	device
+3	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	device
 2	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	device_code
 2	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	error
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TwitchDeviceGrant.kt	expired_device_code

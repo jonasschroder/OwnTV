@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="mintv_sports_loading">Hämtar matcher…</string>
+    <string name="mintv_sports_loading">Uppdaterar matchdata. Du kan fortsätta bläddra; cachad information finns kvar.</string>
     <string name="mintv_watch_channel">Se kanalen</string>
     <string name="mintv_sports_not_loaded">Matchinformationen har inte hämtats ännu.</string>
     <string name="mintv_team_separator">" · "</string>

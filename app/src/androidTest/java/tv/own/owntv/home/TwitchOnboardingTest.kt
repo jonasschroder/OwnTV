@@ -3,6 +3,7 @@ package tv.own.owntv.home
 import android.content.Context
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.semantics.SemanticsActions
@@ -48,6 +49,8 @@ class TwitchOnboardingTest {
         compose.waitUntil { attempts.get() == 1 }
         compose.onNodeWithText(activation.code).assertIsDisplayed()
         compose.onNodeWithText(activation.verificationUri).assertIsDisplayed()
+        compose.waitUntil(5000) { compose.onAllNodesWithTag("twitch-activation-qr").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("twitch-activation-qr").assertIsDisplayed()
         compose.onNodeWithTag("twitch-public-client-id").assertDoesNotExist()
         activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_close)))
         compose.waitUntil { cancelled.get() == 1 }
@@ -78,5 +81,37 @@ class TwitchOnboardingTest {
         activate(compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_twitch_connect)).filter(hasClickAction()).onLast())
         compose.waitUntil { received.size == 2 }
         assertEquals(listOf("manualPublicClientOverride", "updatedPublicClientOverride"), received)
+    }
+    @Test fun authorizationFailureShowsSafeStageAndHttpStatus(){
+        val prefs=compose.activity.getSharedPreferences("twitch-onboarding-test",Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        compose.setContent {MaterialTheme {
+            TwitchCompanionUi(true,true,prefs,"publicClientFixture123",{false},{TwitchState.Unavailable},
+                {_,_->throw TwitchFailure(TwitchFailureKind.ACCESS,TwitchStage.DEVICE,403)}, {})
+        }}
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))
+        val stage=compose.activity.getString(R.string.mintv_twitch_stage_device)
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_diagnostic_http,stage,403)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_error_access)).assertIsDisplayed()
+    }
+    @Test fun previewVisibilityChangesKeepPendingAuthorizationButBackgroundCancels(){
+        val prefs=compose.activity.getSharedPreferences("twitch-onboarding-test",Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        val cancelled=AtomicInteger();val attempts=AtomicInteger()
+        var hideStatus:(()->Unit)?=null;var background:(()->Unit)?=null
+        val activation=TwitchActivation.parse("ABCD1234","https://www.twitch.tv/activate?public=true&device-code=ABCD1234")
+        compose.setContent {MaterialTheme {
+            var visible by remember{mutableStateOf(true)};var active by remember{mutableStateOf(true)}
+            hideStatus={visible=false};background={active=false}
+            TwitchCompanionUi(visible,active,prefs,"publicClientFixture123",{false},{TwitchState.Unavailable},
+                {_,show->attempts.incrementAndGet();show(activation);try{awaitCancellation()}finally{cancelled.incrementAndGet()}},{})
+        }}
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))
+        compose.waitUntil {attempts.get()==1}
+        compose.runOnIdle{hideStatus!!.invoke()}
+        compose.onNodeWithText(activation.code).assertIsDisplayed();assertEquals(0,cancelled.get());assertEquals(1,attempts.get())
+        compose.runOnIdle{background!!.invoke()}
+        compose.waitUntil {cancelled.get()==1}
+        compose.onNodeWithText(activation.code).assertDoesNotExist()
     }
 }

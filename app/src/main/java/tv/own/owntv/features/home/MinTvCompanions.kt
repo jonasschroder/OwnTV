@@ -166,11 +166,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
         if (competitions.isEmpty()) return@LaunchedEffect
+        // Hydrate every relevant league before any network wait. A slow first league must not
+        // conceal another league's verified cache for up to the request deadline.
+        for (competition in competitions) {
+            sports.cached(competition)?.let { cached ->
+                data = data + (competition.id to cached)
+                loadStates[competition.id] = SportsLoadState(cached = true)
+            }
+        }
         // One visible refresh; repository TTL/retry gates survive Home/Matchcenter changes.
         // No automatic retry loop or work after the screen leaves the foreground.
         for (competition in competitions) {
             val started = System.currentTimeMillis()
-            sports.cached(competition)?.let { data = data + (competition.id to it) }
             fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
                 sports.refresh(competition, started)
             }, { value -> data = data + (competition.id to value); value.fetchedAt < started },

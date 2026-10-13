@@ -76,4 +76,21 @@ class TwitchDeviceGrantTest {
         }
         try {TwitchDeviceGrant.validateTokens(JSONObject("""{"access_token":"synthetic","expires_in":100,"token_type":"bearer"}"""));fail("Accepted missing refresh token")} catch (_:Exception) {}
     }
+    @Test fun diagnosticsDistinguishDeviceAndTokenFailuresWithoutExposingBodies() = runTest {
+        for (stage in listOf(TwitchStage.DEVICE,TwitchStage.POLL)) {
+            val grant=TwitchDeviceGrant({path,_->if(path=="device" && stage==TwitchStage.POLL) device()
+                else CompanionResponse(403,"synthetic secret must never appear")},{testScheduler.currentTime})
+            try {grant.login(client) {};fail("Expected access refusal")} catch(error:TwitchFailure) {
+                assertEquals(stage,error.stage);assertEquals(403,error.status)
+                assertEquals(TwitchFailureKind.ACCESS,error.kind);assertFalse(error.toString().contains("secret"));assertNull(error.cause)
+            }
+        }
+    }
+    @Test fun officialDeviceResponseWithoutPublicQueryFlagContinuesIntoTokenPolling() = runTest {
+        var displayed=false;var polls=0
+        val response=device().copy(body=device().body.replace("public=true&", ""))
+        val grant=TwitchDeviceGrant({path,_->if(path=="device") response else {polls++;tokens()}},{testScheduler.currentTime})
+        grant.login(client) { activation -> displayed=true;assertEquals("https://www.twitch.tv/activate?device-code=ABCDEFGH",activation.verificationUri) }
+        assertTrue(displayed);assertEquals(1,polls)
+    }
 }

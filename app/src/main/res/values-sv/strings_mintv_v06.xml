@@ -1,0 +1,21 @@
+<resources>
+    <string name="mintv_provider_folders_hint">Dina valda leverantörsmappar visas först. De är bibliotekssamlingar, inte streamingabonnemang eller officiella topplistor.</string>
+    <string name="mintv_provider_folder">Leverantörsmapp</string>
+    <string name="mintv_provider_folder_source">Leverantörens mapp · %1$s</string>
+    <string name="mintv_folder_all_entries">Alla poster i den här mappen</string>
+    <string name="mintv_vod_choose_variant">Välj en spelbar version</string>
+    <plurals name="mintv_vod_variants">
+        <item quantity="one">%1$d version visas</item>
+        <item quantity="other">%1$d versioner visas</item>
+    </plurals>
+    <string name="mintv_twitch_qr">Skanna för att öppna Twitchs officiella aktiveringssida</string>
+    <string name="mintv_twitch_waiting_approval">Väntar på godkännande på mobilen. TV:n ansluter automatiskt efter godkännandet; låt den här dialogen vara öppen.</string>
+    <string name="mintv_twitch_diagnostic_stage">Steg: %1$s</string>
+    <string name="mintv_twitch_diagnostic_http">Steg: %1$s · HTTP %2$d</string>
+    <string name="mintv_twitch_stage_device">Begär aktiveringskod</string>
+    <string name="mintv_twitch_stage_poll">Vänta på godkännande / ta emot token</string>
+    <string name="mintv_twitch_stage_validation">Verifiera godkänt konto</string>
+    <string name="mintv_twitch_stage_storage">Säker lagring i Android</string>
+    <string name="mintv_twitch_stage_refresh">Förnya kontots behörighet</string>
+    <string name="mintv_twitch_stage_status">Kontrollera streamstatus</string>
+</resources>

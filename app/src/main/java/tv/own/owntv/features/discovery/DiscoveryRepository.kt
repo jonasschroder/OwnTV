@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -26,6 +28,8 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
     private val customize: CustomizationStore, private val provider: MetadataProvider, private val schedule: TrendingScheduleStore) {
     private val mutex = Mutex()
     private var retryAt = 0L
+    private val revision = MutableStateFlow(0L)
+    val candidateRevision = revision.asStateFlow()
     suspend fun refresh(): Boolean = withContext(Dispatchers.IO) { mutex.withLock {
         if (!settings.metadataConfig().enabled) return@withLock true
         val now = System.currentTimeMillis()
@@ -39,6 +43,7 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
                 if (movies == null || series == null) { retryAt = now + 15 * 60_000; return@withTimeout false }
                 schedule.storeCandidates(TrendingScheduleStore.Candidates(settings.metadataConfig().resolvedLanguage, now,
                     movies.candidates.take(20), series.candidates.take(20), movies.totalPages, series.totalPages, 1, 1))
+                revision.value += 1
                 true
             }
         } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
@@ -60,8 +65,7 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
         val owner = db.profileDao().getById(profile) ?: return@withContext DiscoveryShelf()
         val cust = customize.observe(profile, media).first()
         val cats = db.categoryDao().observe(scopedSources, media).first()
-        val forbidden = cats.filter { CustomizeKeys.category(it) in cust.hiddenCategories ||
-            !tv.own.owntv.core.content.AdultCategoryClassifier.allows(profile, it.id, db.profileDao(), db.categoryDao()) }.map { it.id }.toSet()
+        val forbidden = tv.own.owntv.core.content.AdultCategoryClassifier.hiddenCategoryIds(cats, cust.hiddenCategories, owner.isKids)
         val config = settings.metadataConfig()
         val metadataEnabled = config.enabled
         val stored = schedule.candidates().takeIf { metadataEnabled }
@@ -73,18 +77,26 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
         // Primary-key metadata lookup per catalog row; source/id keyset pages and no network enrichment.
         val join = " LEFT JOIN metadata_match m ON m.localKey = ('$metadataType:' || c.sourceId || ':' || COALESCE(c.remoteId,c.name) || '$matchTail') AND m.type = ? AND m.confidence >= 0.92 LEFT JOIN metadata_cache mc ON mc.key = (? || m.tmdbId)"
         val seedGenres = linkedSetOf<String>()
-        db.readCatalog(
+        if (metadataEnabled) db.readCatalog(
             "SELECT mc.genresJson FROM $table c$join WHERE c.sourceId IN ($marks) AND (EXISTS (SELECT 1 FROM watch_history h WHERE h.profileId=? AND h.mediaType=? AND h.itemId=c.id) OR EXISTS (SELECT 1 FROM favorites f WHERE f.profileId=? AND f.mediaType=? AND f.itemId=c.id)) ORDER BY c.id DESC LIMIT 24",
             (listOf<Any>(metadataType, cachePrefix) + scopedSources + listOf<Any>(profile, media.name, profile, media.name)).toTypedArray()) { cursor ->
-            while (cursor.moveToNext()) if (metadataEnabled) seedGenres += genres(if (cursor.isNull(0)) null else cursor.getString(0))
+            while (cursor.moveToNext()) seedGenres += genres(if (cursor.isNull(0)) null else cursor.getString(0))
         }
+        val sourceNames = scopedSources.associateWith { db.sourceDao().getById(it)?.name.orEmpty() }
+        val explicitOrder = cust.categoryOrder.withIndex().associate { it.value to it.index }
+        val folders = cats.filter { it.id !in forbidden }.sortedWith(
+            compareBy<tv.own.owntv.core.database.entity.CategoryEntity> { explicitOrder[CustomizeKeys.category(it)] ?: Int.MAX_VALUE }
+                .thenBy { ProviderFolderOrder.priority(it.name, type) }.thenBy { scopedSources.indexOf(it.sourceId) }.thenBy { it.sortOrder }.thenBy { it.id })
+            .mapIndexed { index, cat -> cat.id to ProviderFolder(cat.id, cat.sourceId, CustomizeKeys.category(cat),
+                cust.categoryNames[CustomizeKeys.category(cat)] ?: cat.name, sourceNames[cat.sourceId].orEmpty(), index) }.toMap()
+        val folderCollector = ProviderFolderCollector(folders)
         val collector = DiscoveryAccumulator(candidates, seedGenres.take(8).toSet())
         var last = 0L; var scanned = 0; var ended = false
         while (scanned < 100_000) {
             currentCoroutineContext().ensureActive()
             var count = 0
             db.readCatalog(
-                "SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9),mc.posterPath FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400",
+                "SELECT c.id,c.sourceId,c.remoteId,c.name,c.posterUrl,c.year,c.addedAt,c.rating,c.categoryId,m.tmdbId,mc.genresJson,EXISTS (SELECT 1 FROM playback_progress p WHERE p.profileId=? AND p.mediaType=? AND p.itemId=c.id AND p.durationMs>0 AND p.positionMs >= p.durationMs * 0.9),mc.posterPath,c.sortOrder FROM $table c$join WHERE c.sourceId IN ($marks) AND c.id > ? ORDER BY c.id LIMIT 400",
                 (listOf<Any>(profile, media.name, metadataType, cachePrefix) + scopedSources + last).toTypedArray()) { cursor ->
                 while (cursor.moveToNext()) {
                     last = cursor.getLong(0); scanned++; count++
@@ -93,18 +105,22 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
                     if (key in cust.hiddenItems || !cursor.isNull(8) && cursor.getLong(8) in forbidden) continue
                     val providerPoster = if (cursor.isNull(4)) null else cursor.getString(4).takeIf { it.isNotBlank() }
                     val cachedPoster = if (!metadataEnabled || cursor.isNull(12)) null else cursor.getString(12)
-                        .takeIf { it.length <= 1024 && it.matches(Regex("/[A-Za-z0-9_./-]+")) && !it.contains("..") }
+                        .takeIf { it.length <= 1024 && it.matches(posterPathPattern) && !it.contains("..") }
                         ?.let { "https://image.tmdb.org/t/p/w342$it" }
                     val poster = if (config.mode.tmdbWins) cachedPoster ?: providerPoster else providerPoster ?: cachedPoster
-                    collector.add(DiscoveryCard(last, cursor.getLong(1), key, type, name,
+                    val card = DiscoveryCard(last, cursor.getLong(1), key, type, cust.itemNames[key] ?: name,
                         poster, if (cursor.isNull(5)) null else cursor.getInt(5),
                         if (cursor.isNull(6)) null else cursor.getLong(6), if (cursor.isNull(7)) null else cursor.getDouble(7),
-                        if (metadataEnabled) genres(if (cursor.isNull(10)) null else cursor.getString(10)) else emptySet(), if (cursor.isNull(9)) null else cursor.getInt(9), cursor.getInt(11) == 1))
+                        if (metadataEnabled) genres(if (cursor.isNull(10)) null else cursor.getString(10)) else emptySet(), if (cursor.isNull(9)) null else cursor.getInt(9), cursor.getInt(11) == 1,
+                        if (cursor.isNull(8)) null else cursor.getLong(8), cursor.getInt(13))
+                    collector.add(card)
+                    val folder = folders[card.categoryId]
+                    if (folder != null && cust.movedFromOrigin[key] != folder.stableKey) folderCollector.add(card)
                 }
             }
             if (count < 400) { ended = true; break }
         }
-        DiscoveryShelf(collector.rows(), stored?.fetchedAt, bounded = !ended)
+        DiscoveryShelf(folderCollector.rows() + collector.rows(), stored?.fetchedAt, bounded = !ended)
     }
     suspend fun available(card: DiscoveryCard, profile: Long): Boolean = withContext(Dispatchers.IO) {
         val access = activeProfileSources(settings, db.sourceDao()).first()
@@ -118,15 +134,33 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
         val source = entity?.sourceId ?: series?.sourceId ?: return@withContext false
         val key = entity?.let(CustomizeKeys::movie) ?: series?.let(CustomizeKeys::series)
         val category = entity?.categoryId ?: series?.categoryId
-        if (source != card.sourceId || key != card.stableKey) return@withContext false
+        if (source != card.sourceId || key != card.stableKey || card.categoryId != null && category != card.categoryId) return@withContext false
         if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(profile, category, db.profileDao(), db.categoryDao())) return@withContext false
         val cust = customize.observe(profile, media).first()
         if (key in cust.hiddenItems) return@withContext false
+        if (card.folderKey != null) {
+            val actualFolder = category?.let { db.categoryDao().getById(it) } ?: return@withContext false
+            if (CustomizeKeys.category(actualFolder) != card.folderKey || cust.movedFromOrigin[key] == card.folderKey) return@withContext false
+        }
         category?.let { db.categoryDao().getById(it) }?.let { if (CustomizeKeys.category(it) in cust.hiddenCategories) return@withContext false }
         settings.activeProfileIdNow() == profile
+    }
+    suspend fun folderAvailable(folder: ProviderFolder, profile: Long, type: MetadataType): Boolean = withContext(Dispatchers.IO) {
+        val access = activeProfileSources(settings, db.sourceDao()).first()
+        val media = if (type == MetadataType.MOVIE) MediaType.MOVIE else MediaType.SERIES
+        val allowed = if (type == MetadataType.MOVIE) access.movieSourceIds else access.seriesSourceIds
+        if (access.profileId != profile || folder.sourceId !in allowed) return@withContext false
+        val actual = db.categoryDao().getById(folder.id) ?: return@withContext false
+        actual.sourceId == folder.sourceId && actual.mediaType == media && CustomizeKeys.category(actual) == folder.stableKey &&
+            folder.stableKey !in customize.observe(profile, media).first().hiddenCategories &&
+            tv.own.owntv.core.content.AdultCategoryClassifier.allows(profile, actual.id, db.profileDao(), db.categoryDao()) &&
+            settings.activeProfileIdNow() == profile
     }
     private fun genres(raw: String?): Set<String> = runCatching {
         if (raw == null || raw.length > 4096) return emptySet()
         val rows = JSONArray(raw); (0 until minOf(rows.length(), 8)).map { rows.getString(it).take(80) }.toSet()
     }.getOrDefault(emptySet())
+    private companion object {
+        val posterPathPattern = Regex("/[A-Za-z0-9_./-]+")
+    }
 }

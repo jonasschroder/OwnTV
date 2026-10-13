@@ -41,4 +41,15 @@ class DiscoverySelectionTest {
         assertEquals(0,DiscoverySelection.recommend(card(1,"Title"),setOf("Comedy")))
         assertEquals(0,DiscoverySelection.recommend(card(1,"Title",completed=true),setOf("Drama")))
     }
+    @Test fun streamedRankingsChooseTheSameVersionAsBatchRankingsRegardlessOfScanOrder() {
+        val feed = listOf(candidate(10, "Available"))
+        val olderId = card(1, "Available", tmdb = 10).copy(sourceId = 9, stableKey = "9:1")
+        val preferred = card(2, "Available", tmdb = 10)
+        for (input in listOf(listOf(olderId, preferred), listOf(preferred, olderId))) {
+            val collector = DiscoveryAccumulator(feed, emptySet())
+            input.forEach(collector::add)
+            assertEquals(DiscoverySelection.ranking(input, feed), collector.rows().single { it.kind == DiscoveryKind.TOP }.cards)
+            assertEquals(listOf(2L), collector.rows().single { it.kind == DiscoveryKind.TOP }.cards.map { it.id })
+        }
+    }
 }

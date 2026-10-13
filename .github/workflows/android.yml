@@ -210,7 +210,7 @@ jobs:
           retention-days: 14
 
       - name: Upload synthetic presentation screenshots
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: mintv-v06-presentation-test-fixtures

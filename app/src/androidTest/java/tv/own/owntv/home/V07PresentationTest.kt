@@ -12,6 +12,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.tv.material3.MaterialTheme
@@ -67,7 +68,9 @@ class V07PresentationTest {
         compose.waitUntil(5000) { compose.onAllNodesWithTag("twitch-watch").fetchSemanticsNodes().size == 1 }
         compose.onNodeWithText("Counter-Strike 2").assertIsDisplayed(); assertEquals(0, launches)
         screenshot("v07-twitch-live-synthetic.png")
-        compose.onNodeWithTag("twitch-watch").performClick()
+        compose.onNodeWithTag("twitch-watch").performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
+        compose.onNodeWithTag("twitch-watch").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER)
         val playerLabel = compose.activity.getString(R.string.mintv_twitch_open_direct, player.name)
         // Player discovery runs on IO; wait for the actual dialog window and remote focus.
         try {

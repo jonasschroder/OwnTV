@@ -70,8 +70,16 @@ class V07PresentationTest {
         compose.onNodeWithTag("twitch-watch").performClick()
         val playerLabel = compose.activity.getString(R.string.mintv_twitch_open_direct, player.name)
         // Player discovery runs on IO; wait for the actual dialog window and remote focus.
-        compose.waitUntil(5000) { runCatching {
-            compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused(); true
+        try {
+            compose.waitUntil(5000) { runCatching {
+                compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused(); true
+            }.getOrDefault(false) }
+        } catch (error: androidx.compose.ui.test.ComposeTimeoutException) {
+            screenshot("v07-twitch-picker-failure-synthetic.png")
+            compose.onAllNodes(isRoot()).printToLog("V07_SYNTHETIC_TWITCH_PICKER")
+            throw error
+        }
+        compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused(); true
         }.getOrDefault(false) }
         compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, launches); assertEquals(0, authorizations)

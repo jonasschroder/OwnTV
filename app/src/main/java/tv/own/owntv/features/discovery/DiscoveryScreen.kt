@@ -98,7 +98,7 @@ internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enab
 internal fun DiscoveryScreen(type: MetadataType, continuation: List<LauncherContinuationItem>,
     onContinue: (LauncherContinuationItem) -> Unit, onSelect: (DiscoveryCard) -> Unit, onLibrary: () -> Unit,
     restoreFocus: Boolean, onRestored: () -> Unit, onEntryHook: (((() -> Boolean)?) -> Unit)?, modifier: Modifier,
-    onFolder: (ProviderFolder) -> Unit = { onLibrary() }) {
+    onFolder: (ProviderFolder) -> Unit = { onLibrary() }, onPlay: (DiscoveryCard) -> Unit = onSelect) {
     val shelf = rememberDiscovery(type)
     val selection: DiscoveryRepository = koinInject()
     val scope = rememberCoroutineScope()
@@ -109,11 +109,14 @@ internal fun DiscoveryScreen(type: MetadataType, continuation: List<LauncherCont
     var selectedKey by rememberSaveable(profileId, type) { mutableStateOf<String?>(null) }
     val targets = remember(profileId, type) { mutableMapOf<String, FocusRequester>() }
     var variants by remember(profileId, type) { mutableStateOf<Pair<DiscoveryRow, DiscoveryCard>?>(null) }
-    val entry by rememberUpdatedState({ selectedKey?.let { targets[it]?.requestSafely() } == true || header.requestSafely() })
+    var playVariant by remember(profileId, type) { mutableStateOf(false) }
+    val heroKey = shelf.hero?.card?.stableKey?.let { "hero:$it" }
+    val entry by rememberUpdatedState({ selectedKey?.let { targets[it]?.requestSafely() } == true ||
+        heroKey?.let { targets[it]?.requestSafely() } == true || header.requestSafely() })
     DisposableEffect(onEntryHook) { onEntryHook?.invoke { entry() }; onDispose { onEntryHook?.invoke(null) } }
     LaunchedEffect(restoreFocus) { if (restoreFocus) { withFrameNanos { }; entry(); onRestored() } }
-    DisposableEffect(shelf.rows) {
-        val keys = shelf.rows.flatMap { row -> row.cards.map { "${row.key}:${it.stableKey}" } + "${row.key}:all" }.toSet()
+    DisposableEffect(shelf.rows, heroKey) {
+        val keys = shelf.rows.flatMap { row -> row.cards.map { "${row.key}:${it.stableKey}" } + "${row.key}:all" }.toSet() + listOfNotNull(heroKey, heroKey?.let { "$it:info" })
         targets.keys.retainAll(keys)
         onDispose { }
     }
@@ -125,13 +128,33 @@ internal fun DiscoveryScreen(type: MetadataType, continuation: List<LauncherCont
         if (shelf.failed || shelf.bounded) TvText(stringResource(R.string.mintv_discovery_fallback), color = MinTvMuted, size = 18, lines = 2)
         if (shelf.rows.any { it.folder != null }) TvText(stringResource(R.string.mintv_provider_folders_hint), color = MinTvMuted, size = 18, lines = 2)
         LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(24.mpx), contentPadding = PaddingValues(bottom = 32.mpx)) {
+            shelf.hero?.let { hero -> item(key = "featured") {
+                val key = "hero:${hero.card.stableKey}"
+                val first = remember(targets, key) { targets.getOrPut(key) { FocusRequester() } }
+                val info = remember(targets, key) { targets.getOrPut("$key:info") { FocusRequester() } }
+                val resume = DiscoveryHeroSelection.continuation(hero.card, continuation)
+                val label = stringResource(if (resume != null) R.string.mintv_featured_continue
+                    else if (type == MetadataType.MOVIE) R.string.mintv_featured_play else R.string.mintv_featured_episodes)
+                DiscoveryFeaturedHero(hero, label, {
+                    scope.launch {
+                        if (selection.available(hero.card, profileId)) {
+                            if (resume != null) onContinue(resume)
+                            else if (hero.card.variants.isNotEmpty() && type == MetadataType.MOVIE) {
+                                playVariant = true; variants = DiscoveryRow(DiscoveryKind.RECENT, listOf(hero.card)) to hero.card
+                            } else if (type == MetadataType.MOVIE) onPlay(hero.card) else onSelect(hero.card)
+                        }
+                    }
+                }, { scope.launch { if (selection.available(hero.card, profileId)) onSelect(hero.card) } },
+                    primaryModifier = Modifier.focusRequester(first).onFocusChanged { if (it.isFocused) selectedKey = key },
+                    informationModifier = Modifier.focusRequester(info).onFocusChanged { if (it.isFocused) selectedKey = "$key:info" })
+            } }
             if (continuation.isNotEmpty()) item(key = "continue") { HomeContinuationRow(continuation.filter { type != MetadataType.TV || it.watchNextType != tv.own.owntv.core.launcher.LauncherWatchNextType.NEXT }, Modifier, onPlay = onContinue) }
             val next = continuation.filter { type == MetadataType.TV && it.watchNextType == tv.own.owntv.core.launcher.LauncherWatchNextType.NEXT }
             if (next.isNotEmpty()) item(key = "next-episode") { HomeContinuationRow(next, Modifier, stringResource(R.string.mintv_next_episode_row), onContinue) }
             if (shelf.rows.isEmpty()) item(key = "empty") { TvText(stringResource(R.string.mintv_discovery_empty), color = MinTvMuted, lines = 3) }
             items(shelf.rows, key = { it.key }) { row ->
                 DiscoveryPosterRow(row, type, shelf.rankedAt, { card ->
-                    if (card.variants.isNotEmpty()) variants = row to card
+                    if (card.variants.isNotEmpty()) { playVariant = false; variants = row to card }
                     else scope.launch { if (selection.available(card, profileId)) onSelect(card) }
                 }, { key -> selectedKey = key }, targets, onFolder = { folder ->
                     scope.launch { if (selection.folderAvailable(folder, profileId, type)) onFolder(folder) }
@@ -147,7 +170,7 @@ internal fun DiscoveryScreen(type: MetadataType, continuation: List<LauncherCont
         }
     }
     variants?.let { (row, card) -> ProviderVariantPicker(card, onSelect = { variant -> scope.launch {
-        if (selection.available(variant, profileId)) { variants = null; onSelect(variant) }
+        if (selection.available(variant, profileId)) { variants = null; if (playVariant) onPlay(variant) else onSelect(variant) }
     } }, onAll = { row.folder?.let { folder -> scope.launch {
         if (selection.folderAvailable(folder, profileId, type)) { variants = null; onFolder(folder) }
     } } }, onDismiss = { variants = null }) }

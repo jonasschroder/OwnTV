@@ -16,7 +16,7 @@ internal data class DiscoveryRow(val kind: DiscoveryKind, val cards: List<Discov
     val key: String get() = folder?.let { "provider:${it.stableKey}" } ?: "$kind:$genre"
 }
 internal data class DiscoveryShelf(val rows: List<DiscoveryRow> = emptyList(), val rankedAt: Long? = null,
-    val failed: Boolean = false, val bounded: Boolean = false)
+    val failed: Boolean = false, val bounded: Boolean = false, val hero: DiscoveryHero? = null)
 
 /** Pure local resolver. A time/rating/popularity/name resemblance alone is never identity. */
 internal object DiscoverySelection {

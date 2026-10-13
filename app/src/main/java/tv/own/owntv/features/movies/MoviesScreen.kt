@@ -629,7 +629,8 @@ fun MoviesScreen(
                 onSelect = { card -> scope.launch { catalog.getById(card.id)?.let { movie ->
                     vm.onMovieFocused(movie); contextMovieId = movie.id; detailsMovie = movie
                 } } }, onLibrary = { vm.select(LiveKey.All); completeLibrary = true }, restoreFocus = restoreFocus || (detailsMovie == null && contextMovieId != null),
-                onRestored = onRestored, onEntryHook = onEntryHook, modifier = Modifier, onFolder = { folder -> vm.select(LiveKey.Folder(folder.id)); completeLibrary = true })
+                onRestored = onRestored, onEntryHook = onEntryHook, modifier = Modifier, onFolder = { folder -> vm.select(LiveKey.Folder(folder.id)); completeLibrary = true },
+                onPlay = { card -> scope.launch { if (vm.playByIdAsync(card.id)) goFullscreen() } })
         } else if (cinematic) {
             val requestedHero = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 240.mpx
             val heroH = vodBrowseHeroHeight(maxHeight / 1.mpx - if (resumeItems.isNotEmpty() && searchQuery.isBlank() && selectedKey == LiveKey.All) 280f else 0f, requestedHero / 1.mpx).mpx

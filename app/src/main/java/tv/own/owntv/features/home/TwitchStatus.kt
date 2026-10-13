@@ -22,7 +22,7 @@ import org.json.JSONObject
 internal sealed interface TwitchState {
     data object Unavailable : TwitchState
     data object Offline : TwitchState
-    data class Live(val title: String, val viewers: Int) : TwitchState
+    data class Live(val title: String, val viewers: Int, val category: String? = null) : TwitchState
 }
 
 /** No thumbnails, player, scopes, embedded secret or server. Optional public-client device login. */
@@ -126,7 +126,7 @@ internal class TwitchStatus(context: Context, client: OkHttpClient) {
             require(stream.getString("user_login").equals("ohnepixel", ignoreCase = true) && stream.getString("type") == "live")
             val count = stream.getInt("viewer_count")
             require(count >= 0)
-            return TwitchState.Live(stream.getString("title").take(240), count)
+            return TwitchState.Live(stream.getString("title").take(240), count, stream.optString("game_name").trim().take(120).takeIf { it.isNotEmpty() && it != "null" })
         }
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.window.Dialog
 import java.text.NumberFormat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
@@ -29,8 +30,9 @@ internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifi
     val repository = koinInject<TwitchStatus>()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mintv-companion", 0) }
+    val playback = remember(context) { TwitchPlayback(context) }
     TwitchCompanionUi(visible, active, prefs, BuildConfig.TWITCH_CLIENT_ID,
-        repository::connected, repository::status, repository::login, repository::disconnect, modifier)
+        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open)
 }
 
 /** Presentation adapter; token storage and Twitch protocol remain in TwitchStatus. */
@@ -39,8 +41,13 @@ internal fun TwitchCompanionUi(
     visible: Boolean, active: Boolean, prefs: android.content.SharedPreferences, configuredClientId: String,
     readConnection: suspend () -> Boolean, readStatus: suspend (Long) -> TwitchState,
     authorize: suspend (String, (TwitchActivation) -> Unit) -> Unit, disconnectAccount: suspend () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier, listPlayers: () -> List<TwitchPlayer> = { emptyList() },
+    openPlayer: (TwitchPlayer) -> Boolean = { false },
 ) {
+    val scope = rememberCoroutineScope()
+    var playbackOpen by remember { mutableStateOf(false) }
+    var players by remember { mutableStateOf<List<TwitchPlayer>>(emptyList()) }
+    var launchFailed by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf<TwitchState>(TwitchState.Unavailable) }
     var setup by remember { mutableStateOf(false) }
     var clientId by remember { mutableStateOf(prefs.getString("twitch-client-id", null)?.takeIf { it.isNotBlank() } ?: configuredClientId) }
@@ -70,7 +77,7 @@ internal fun TwitchCompanionUi(
         }
     }
     LaunchedEffect(active, connecting, setup) {
-        if (!active) { connecting = false; code = null; state = TwitchState.Unavailable; return@LaunchedEffect }
+        if (!active) { playbackOpen = false; connecting = false; code = null; state = TwitchState.Unavailable; return@LaunchedEffect }
         if (!connecting || !setup) return@LaunchedEffect
         try {
             prefs.edit().putString("twitch-client-id", clientId).apply() // public identifier only
@@ -88,10 +95,11 @@ internal fun TwitchCompanionUi(
         else if (restore) { entryFocus.requestSafely(); restore = false }
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
     TvCard({
         setup = true; failure = if (connected) statusFailure else null; editClientId = clientId.isBlank()
         connecting = !connected && clientId.isNotBlank()
-    }, Modifier.fillMaxWidth().then(modifier).focusRequester(entryFocus)) {
+    }, Modifier.weight(1f).then(modifier).focusRequester(entryFocus)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
             TvText(stringResource(R.string.mintv_ohnepixel), size = 24, bold = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -100,10 +108,22 @@ internal fun TwitchCompanionUi(
                     TwitchState.Offline -> stringResource(R.string.mintv_twitch_offline)
                     is TwitchState.Live -> stringResource(R.string.mintv_twitch_live, fresh.title, NumberFormat.getIntegerInstance().format(fresh.viewers))
                 }, size = 21, color = if (fresh is TwitchState.Live) MinTvTeal else MinTvMuted)
+                (fresh as? TwitchState.Live)?.category?.let { TvText(it, size = 19, color = MinTvMuted) }
             }
             TvText(stringResource(if (connected) R.string.mintv_companion_settings else R.string.mintv_twitch_connect), size = 20)
         }
     }
+    if (fresh is TwitchState.Live) HomeButton(stringResource(R.string.mintv_twitch_watch), {
+        scope.launch {
+            players = withContext(Dispatchers.IO) { runCatching { listPlayers() }.getOrDefault(emptyList()) }
+            launchFailed = false; playbackOpen = true
+        }
+    }, Modifier.testTag("twitch-watch"))
+    }
+    if (playbackOpen) TwitchPlayerPicker(players, launchFailed, { player ->
+        if (active && visible && fresh is TwitchState.Live && System.currentTimeMillis() - checkedAt in 0..90_000 && openPlayer(player)) { playbackOpen = false; restore = true }
+        else launchFailed = true
+    }, { playbackOpen = false; restore = true })
     if (setup) Dialog(onDismissRequest = { setup = false; connecting = false; code = null; restore = true }) {
         Column(Modifier.width(760.mpx).background(MinTvNavy, RoundedCornerShape(14.mpx)).padding(32.mpx), verticalArrangement = Arrangement.spacedBy(22.mpx)) {
             TvText(stringResource(R.string.mintv_twitch_connect), size = 30, bold = true)
@@ -167,4 +187,23 @@ internal fun twitchFailureText(kind: TwitchFailureKind) = when (kind) {
     TwitchFailureKind.RESPONSE -> R.string.mintv_twitch_error_response
     TwitchFailureKind.AUTHENTICATION -> R.string.mintv_twitch_error_auth
     TwitchFailureKind.STORAGE -> R.string.mintv_twitch_error_storage
+}
+
+@Composable
+internal fun TwitchPlayerPicker(players: List<TwitchPlayer>, failed: Boolean, onSelect: (TwitchPlayer) -> Unit, onDismiss: () -> Unit) {
+    val first = remember { FocusRequester() }
+    Dialog(onDismissRequest = onDismiss) {
+        LaunchedEffect(Unit) { withFrameNanos { }; first.requestSafely() }
+        Column(Modifier.width(760.mpx).background(MinTvNavy, RoundedCornerShape(14.mpx)).padding(32.mpx), verticalArrangement = Arrangement.spacedBy(20.mpx)) {
+            TvText(stringResource(R.string.mintv_twitch_watch), size = 30, bold = true)
+            if (players.isEmpty()) TvText(stringResource(R.string.mintv_twitch_no_player), size = 22, color = MinTvMuted, lines = 4)
+            players.forEachIndexed { index, player ->
+                HomeButton(stringResource(if (player.direct) R.string.mintv_twitch_open_direct else R.string.mintv_twitch_open_manual, player.name),
+                    { onSelect(player) }, if (index == 0) Modifier.focusRequester(first) else Modifier)
+            }
+            if (players.any { !it.direct }) TvText(stringResource(R.string.mintv_twitch_manual_help), size = 21, color = MinTvMuted, lines = 3)
+            if (failed) TvText(stringResource(R.string.mintv_twitch_launch_failed), size = 21, color = MinTvMuted, lines = 3)
+            HomeButton(stringResource(R.string.mintv_close), onDismiss, if (players.isEmpty()) Modifier.focusRequester(first) else Modifier)
+        }
+    }
 }

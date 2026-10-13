@@ -98,6 +98,32 @@ class DiscoveryStorageIntegrationTest {
             assertTrue(repo.refresh());assertEquals(0,provider.calls)
         }
     }
+    @Test fun featuredMetadataIsCachedScopedAndPreservesProviderRatingPreference(): Unit = runBlocking {
+        fixture { context, db, settings, custom ->
+            val movie = MovieEntity(id = 71, sourceId = 101, name = "Synthetic featured film", remoteId = "hero", year = 2026,
+                addedAt = 1, rating = 8.4, streamUrl = "https://example.invalid/synthetic")
+            db.movieDao().upsertAll(listOf(movie))
+            val now = System.currentTimeMillis()
+            db.metadataDao().upsertMatch(MetadataMatchEntity("movie:101:hero", "movie", 11, 1.0, now))
+            db.metadataDao().upsertCache(MetadataCacheEntity(MetadataRepository.cacheKey(11, settings.metadataConfig().resolvedLanguage),
+                11, null, "movie", "Synthetic featured film", 2026, "Syntetisk svensk handling.", null, "/synthetic.jpg", 7.1,
+                "[\"Drama\"]", null, null, null, now))
+            val provider = OfflineProvider(); val repo = DiscoveryRepository(db, settings, custom, provider, TrendingScheduleStore(context))
+            val hero = repo.shelf(101, listOf(101), MetadataType.MOVIE).hero!!
+            assertEquals(71L, hero.card.id); assertEquals("https://image.tmdb.org/t/p/w780/synthetic.jpg", hero.backdrop)
+            assertEquals("Syntetisk svensk handling.", hero.overview); assertFalse(hero.ratingFromTmdb); assertEquals(8.4, hero.rating!!, 0.0)
+            assertNull(repo.shelf(102, listOf(101), MetadataType.MOVIE).hero)
+            settings.setMetadataMode(MetadataMode.TMDB_ONLY)
+            val tmdb = repo.shelf(101, listOf(101), MetadataType.MOVIE).hero!!
+            assertTrue(tmdb.ratingFromTmdb); assertEquals(7.1, tmdb.rating!!, 0.0)
+            settings.setMetadataMode(MetadataMode.PROVIDER)
+            val local = repo.shelf(101, listOf(101), MetadataType.MOVIE).hero!!
+            assertNull(local.backdrop); assertNull(local.overview); assertFalse(local.ratingFromTmdb)
+            custom.setItemHidden(101, MediaType.MOVIE, "101:hero", "Synthetic", true)
+            assertNull(repo.shelf(101, listOf(101), MetadataType.MOVIE).hero)
+            assertEquals(0, provider.calls)
+        }
+    }
     @Test fun largePagedCatalogRetainsBoundedShelvesAndReportsMeasuredWork():Unit=runBlocking {
         fixture {context,db,settings,custom ->
             db.categoryDao().upsertAll(listOf(

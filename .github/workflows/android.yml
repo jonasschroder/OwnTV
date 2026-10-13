@@ -144,6 +144,14 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'featuredMetadataIsCachedScopedAndPreservesProviderRatingPreference'),
+              ('tv.own.owntv.home.HockeyLocalStorageTest', 'storedGuideHonorsManualMappingOffsetsProfileGuardAndChosenQuality'),
+              ('tv.own.owntv.home.V07PresentationTest', 'featuredMoviesAndSeriesExposePlayAndInformationWithRemoteWithoutAutoplay'),
+              ('tv.own.owntv.home.V07PresentationTest', 'liveTwitchShowsCategoryLaunchesChosenPlayerWithoutAuthorization'),
+              ('tv.own.owntv.home.V07PresentationTest', 'missingTwitchPlayerShowsGracefulFallbackAndRemoteClose'),
+              ('tv.own.owntv.home.V07PresentationTest', 'offlineTwitchOffersSettingsWithoutStreamActionOrAuthorization'),
+              ('tv.own.owntv.home.V07PresentationTest', 'hockeySummaryShowsSpecificEpgChannelAndRemoteWatchWithoutExternalRequests'),
+              ('tv.own.owntv.home.V07PresentationTest', 'featuredContinuationChecksStableSourceAndSeriesIdentityInsteadOfTitleGuessing'),
               ('tv.own.owntv.home.DiscoveryStorageIntegrationTest', 'providerFoldersRetainExactMembershipVariantsCustomizationAndOfflineAccess'),
               ('tv.own.owntv.home.DiscoveryPresentationTest', 'providerFolderFooterOpensTheExactCategoryWithRemoteWithoutAutoplay'),
               ('tv.own.owntv.home.DiscoveryPresentationTest', 'verifiedVariantPickerDoesNotAutoplayAndRemoteSelectsTheOriginalEntity'),

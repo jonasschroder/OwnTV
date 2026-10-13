@@ -8,5 +8,5 @@ import org.junit.runners.Suite
 @Suite.SuiteClasses(HomeDpadTraversalTest::class, HomeChannelDefaultsStorageTest::class,
     SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, HomeContentViewportTest::class,
     SportsLoadingNavigationTest::class, SportsArrivalNavigationTest::class, VodPresentationTest::class,
-    HomePresentationTest::class, TwitchOnboardingTest::class, DiscoveryStorageIntegrationTest::class, DiscoveryPresentationTest::class, TwitchTokenStorageTest::class)
+    HomePresentationTest::class, TwitchOnboardingTest::class, DiscoveryStorageIntegrationTest::class, DiscoveryPresentationTest::class, TwitchTokenStorageTest::class, HockeyLocalStorageTest::class, V07PresentationTest::class)
 class HomeRegressionSuite

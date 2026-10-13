@@ -9,6 +9,36 @@ class HockeyEpgGuideTest {
     private val now = Instant.parse("2026-10-13T15:00:00Z").toEpochMilli()
     private val start = now + 2 * 60 * 60_000
     private val favorites = SportPreferences(listOf(SportsCatalog.farjestadId))
+    private fun channel(id: Long, quality: String, source: Long = 101, name: String = "TV4 Sport Live 2") =
+        tv.own.owntv.core.database.entity.ChannelEntity(id = id, sourceId = source, remoteId = "$id", name = "$name $quality", epgChannelId = "same-service", streamUrl = "https://example.invalid")
+    @Test fun verifiedFixtureVariantsPreferHdSdFhdAndExplicitChoiceWins() {
+        val rows = listOf(channel(1, "FHD"), channel(2, "SD"), channel(3, "HD"), channel(4, ""), channel(5, "UHD"))
+        val defaults = tv.own.owntv.features.live.SwedishChoices(showUhd = true)
+        assertEquals(rows[2], preferredHockeyChannel(rows, defaults))
+        assertEquals(rows[1], preferredHockeyChannel(rows.filter { it.id != 3L }, defaults))
+        assertEquals(rows[0], preferredHockeyChannel(listOf(rows[0], rows[3]), defaults))
+        assertEquals(rows[0], preferredHockeyChannel(listOf(rows[0]), defaults))
+        assertNull(preferredHockeyChannel(listOf(rows[4]), defaults))
+        val identity = tv.own.owntv.features.live.SwedishChannels.recognize(rows[0].name)!!.identity
+        for (row in rows) {
+            val choice = defaults.copy(showUhd = false, preferred = mapOf(identity to tv.own.owntv.core.customize.CustomizeKeys.channel(row)))
+            assertEquals(row, preferredHockeyChannel(rows, choice))
+        }
+        assertEquals(5, rows.size)
+    }
+    @Test fun variantPreferenceDoesNotGuessAcrossSourcesBroadcastersOrEpgServices() {
+        val hd = channel(1, "HD")
+        val fhd = channel(2, "FHD")
+        val choices = tv.own.owntv.features.live.SwedishChoices()
+        assertNull(preferredHockeyChannel(listOf(hd, fhd.copy(sourceId = 102)), choices))
+        assertNull(preferredHockeyChannel(listOf(hd, channel(2, "FHD", name = "TV4 Sport Live 1")), choices))
+        assertNull(preferredHockeyChannel(listOf(hd, fhd.copy(epgChannelId = "regional-service")), choices))
+        assertNull(preferredHockeyChannel(listOf(hd, channel(2, "HD")), choices))
+        assertNull(preferredHockeyChannel(listOf(channel(1, ""), channel(2, "")), choices))
+        val identity = tv.own.owntv.features.live.SwedishChannels.recognize(hd.name)!!.identity
+        assertEquals(fhd.copy(sourceId = 102), preferredHockeyChannel(listOf(hd, fhd.copy(sourceId = 102)),
+            choices.copy(preferred = mapOf(identity to tv.own.owntv.core.customize.CustomizeKeys.channel(fhd.copy(sourceId = 102))))))
+    }
     @Test fun automaticGuideHonorsHiddenGroupsAndDefaultUhdWithoutRemovingStoredFavorites() {
         val fhd = tv.own.owntv.core.database.entity.ChannelEntity(id = 1, sourceId = 101, name = "SE | TV4 Sport Live 2 FHD", remoteId = "fhd", streamUrl = "https://example.invalid")
         val uhd = fhd.copy(id = 2, name = "SE | TV4 Sport Live 2 UHD", remoteId = "uhd")

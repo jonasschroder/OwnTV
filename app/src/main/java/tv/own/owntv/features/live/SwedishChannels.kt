@@ -3,7 +3,16 @@ package tv.own.owntv.features.live
 import java.text.Normalizer
 import java.util.Locale
 
-internal enum class ChannelQuality { FHD, HD, SD, UNKNOWN, UHD }
+internal enum class ChannelQuality { FHD, HD, SD, UNKNOWN, UHD;
+    // Keep declaration order stable; advertised quality is not measured stream quality.
+    val automaticRank: Int get() = when (this) {
+        HD -> 0
+        SD -> 1
+        FHD -> 2
+        UNKNOWN -> 3
+        UHD -> 4
+    }
+}
 internal enum class SwedishCollection { GENERAL, SPORT, NEWS, CHILDREN, OTHER }
 internal data class SwedishName(val identity: String, val label: String, val quality: ChannelQuality,
     val collection: SwedishCollection, val order: Int)
@@ -12,7 +21,7 @@ internal data class SwedishVariant(val id: Long, val sourceId: Long, val stableK
 internal data class SwedishGroup(val identity: String, val label: String, val variants: List<SwedishVariant>) {
     fun preferred(key: String?, showUhd: Boolean): SwedishVariant? = variants.firstOrNull { it.stableKey == key }
         ?: variants.filter { showUhd || it.name.quality != ChannelQuality.UHD }
-            .minWithOrNull(compareBy<SwedishVariant> { it.name.quality.ordinal }.thenBy { it.sourceId }.thenBy { it.id })
+            .minWithOrNull(compareBy<SwedishVariant> { it.name.quality.automaticRank }.thenBy { it.sourceId }.thenBy { it.id })
 }
 
 /** Names are evidence of identity/advertised quality, never proof of stream reliability. */

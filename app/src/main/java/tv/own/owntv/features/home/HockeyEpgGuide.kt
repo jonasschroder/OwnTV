@@ -2,6 +2,11 @@ package tv.own.owntv.features.home
 
 import java.time.Instant
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
+import tv.own.owntv.core.database.entity.ChannelEntity
+import tv.own.owntv.core.customize.CustomizeKeys
+import tv.own.owntv.features.live.ChannelQuality
+import tv.own.owntv.features.live.SwedishChannels
+import tv.own.owntv.features.live.SwedishChoices
 
 internal enum class HockeyChannelEvidence { BROADCAST_SCHEDULE, SPECIFIC_EPG, MANUAL, SUGGESTED, UNKNOWN }
 internal data class EpgHockeyMatch(val fixture: SportFixture, val channelIds: List<Long>,
@@ -16,6 +21,23 @@ internal fun hockeyGuideChannels(channels: List<tv.own.owntv.core.database.entit
     name == null || name.identity !in choices.hidden && (choices.showUhd ||
         name.quality != tv.own.owntv.features.live.ChannelQuality.UHD ||
         choices.preferred[name.identity] == tv.own.owntv.core.customize.CustomizeKeys.channel(channel))
+}
+
+/** Call only after fixture evidence and a complete scan. Never choose between broadcasters/sources. */
+internal fun preferredHockeyChannel(channels: List<ChannelEntity>, choices: SwedishChoices): ChannelEntity? {
+    val rows = hockeyGuideChannels(channels, choices).distinctBy { it.id }
+    if (rows.isEmpty()) return null
+    rows.singleOrNull()?.takeIf { SwedishChannels.recognize(it.name) == null }?.let { return it }
+    val named = rows.map { channel -> channel to (SwedishChannels.recognize(channel.name) ?: return null) }
+    if (named.map { it.second.identity }.distinct().size != 1) return null
+    val identity = named.first().second.identity
+    rows.singleOrNull { CustomizeKeys.channel(it) == choices.preferred[identity] }?.let { return it }
+    if (rows.map { it.sourceId }.distinct().size != 1) return null
+    // Different EPG services can carry regional, audio or time-shift variants.
+    if (rows.map { it.epgChannelId }.distinct().size != 1) return null
+    val eligible = named.filter { it.second.quality != ChannelQuality.UHD }
+    val rank = eligible.minOfOrNull { it.second.quality.automaticRank } ?: return null
+    return eligible.filter { it.second.quality.automaticRank == rank }.singleOrNull()?.first
 }
 
 /** Local evidence only: no HTTP, channel-name guesses or external schedule prerequisite. */

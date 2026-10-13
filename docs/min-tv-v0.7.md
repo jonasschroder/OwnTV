@@ -78,7 +78,7 @@ Europe/Stockholm, including DST. No score is inferred from EPG.
 Manual choices remain per profile and fixture, with actual source/quality channel
 identity and expiration; they never bind all a team's games to one channel. The
 UI distinguishes specific EPG evidence, broadcast information, manual choice and
-unknown assignment. Multiple actual channel variants open the existing picker;
+unknown assignment. Ambiguous actual channel variants open the existing picker;
 a truncated scan never implies uniqueness. Before EPG-based direct playback the
 programme, channel identity, profile and accessibility are rechecked. Missing or
 expired evidence fails safely and preserves manual browsing. Playback delegates
@@ -117,6 +117,30 @@ The reviewed Apache-2.0 JetStreamCompose sample at
 LazyColumn composition and visible focus/navigation patterns. This implementation
 reuses OwnTV's existing components; no sample assets, copyrighted service branding,
 Jellyfin code or additional library were copied into the app.
+
+## Channel quality defaults
+
+Automatic Swedish channel choice now uses HD, SD, FHD, unknown, then UHD, with
+stable source/id tie breaking. Unknown labels never imply a measured resolution.
+UHD remains excluded by default; the existing explicit Show UHD setting permits it
+as a last fallback in the curated library. A saved variant always wins, including
+FHD/UHD. No enum constants, preference keys, stored values, source identities,
+favorites or Swedish group ordering change; no migration or stream probing occurs.
+
+The hockey guide applies the same HD/SD/FHD/unknown preference only after reliable
+fixture evidence and a complete scan, for a unique best variant of the same
+broadcaster, source and EPG service. Different broadcasters (including numbered
+Sport Live channels), sources, EPG services and equal-quality alternatives retain
+the picker. A saved channel variant can resolve the source choice; an explicit
+fixture choice has precedence. UHD requires an explicit saved variant or manual
+selection for direct hockey playback. All candidates remain available in the
+existing picker/library; quality selection never expands a fixture's assignments.
+
+Focused JVM regressions cover the ranking, unknown labels, FHD-only availability,
+UHD visibility/selection, stable resync keys, manual choices and ambiguous hockey
+variants. The existing Room/emulator regression now also verifies all saved
+visibility/order/hidden/preferred fields and independent selections in two profiles,
+source authorization, unchanged original favorites and reused-profile isolation.
 
 ## Twitch stream opening
 

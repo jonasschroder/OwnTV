@@ -116,6 +116,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var matchedBroadcast by remember(profileId) { mutableStateOf<BroadcastAssignment?>(null) }
     var choiceVersion by remember(profileId) { mutableIntStateOf(0) }
     var candidatesComplete by remember(profileId) { mutableStateOf(false) }
+    var guideChoices by remember(profileId) { mutableStateOf(tv.own.owntv.features.live.SwedishChoices()) }
     val entryFocus = remember { FocusRequester() }
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
@@ -179,9 +180,11 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             try {
                 val at = System.currentTimeMillis()
                 val known = externalGames.filter { game -> sportsSnapshotFresh(currentData[game.competition.id], loadStates[game.competition.id], at) }
+                val choices = swedishChannels.choices(profileId)
+                guideChoices = choices
                 val loaded = withContext(Dispatchers.IO) { withTimeout(8_000) {
                     val pool = liveVm.homeMatchCandidates("", favorites, profileId, listOf("TV12"))
-                    val eligible = hockeyGuideChannels(pool.channels, swedishChannels.choices(profileId))
+                    val eligible = hockeyGuideChannels(pool.channels, choices)
                     val collector = HockeyEpgCollector(selectedTeams, at, known)
                     for (channel in eligible.take(64)) {
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -291,6 +294,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             } }
             manualChoice = manual.takeIf { chosenChannel != null }
             val choices = swedishChannels.choices(profileId)
+            guideChoices = choices
             val rawPool = liveVm.homeMatchCandidates("", favorites, profileId, validBroadcast?.channels.orEmpty().map { it.name })
             val pool = rawPool.copy(channels = hockeyGuideChannels(rawPool.channels, choices))
             val rawDiscovered = liveVm.homeBroadcastCandidates(validBroadcast?.channels.orEmpty(), profileId)
@@ -389,7 +393,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         localEvidence == null || (localEvidence.channelStops[channel.id] ?: 0) > now
     }
     val manualChannel = chosenChannel.takeIf { matchedGame == gameToMatch && !matching && now < (manualChoice?.expiresAt ?: 0L) }
-    val directChannel = manualChannel ?: reliableChannels.singleOrNull().takeIf { candidatesComplete }
+    val directChannel = manualChannel ?: preferredHockeyChannel(reliableChannels, guideChoices).takeIf { candidatesComplete }
     fun browseChannels() {
         if (gameToMatch != null) selectedId = gameToMatch.id else selectedId = null
         screen = true; picker = true; browsing = false; searchOpen = false; query = ""; restoreTarget = pickerFocus
@@ -600,7 +604,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                     val cached = resolvedCards[key]?.takeIf { now < it.first && game.competition.id in freshCompetitions }
                                     val epg = localMatches.singleOrNull { it.fixture.id == game.id }
                                     val epgChannels = epg?.channelIds.orEmpty().filter { (epg?.channelStops?.get(it) ?: 0) > now }.mapNotNull { localChannels[it] }
-                                    val direct = if (game == gameToMatch) directChannel else epgChannels.singleOrNull().takeIf { epg?.truncated == false } ?: directCards[key].takeIf { cached != null }
+                                    val direct = if (game == gameToMatch) directChannel else directCards[key].takeIf { cached != null } ?: preferredHockeyChannel(epgChannels, guideChoices).takeIf { epg?.truncated == false }
                                     MatchScorecard(game, now, selectedTeams.hideScores, game.follows(selectedTeams), epgChannels.firstOrNull()?.name ?: assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },
                                         direct?.let { channel -> { play(channel, epgChannels.ifEmpty { cached?.second.orEmpty().ifEmpty { listOf(channel) } }, game) } }, Modifier.fillMaxWidth().focusRequester(focus))
                                 }

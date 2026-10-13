@@ -180,9 +180,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             try {
                 val at = System.currentTimeMillis()
                 val known = externalGames.filter { game -> sportsSnapshotFresh(currentData[game.competition.id], loadStates[game.competition.id], at) }
-                val choices = swedishChannels.choices(profileId)
-                guideChoices = choices
                 val loaded = withContext(Dispatchers.IO) { withTimeout(8_000) {
+                    val choices = swedishChannels.choices(profileId)
                     val pool = liveVm.homeMatchCandidates("", favorites, profileId, listOf("TV12"))
                     val eligible = hockeyGuideChannels(pool.channels, choices)
                     val collector = HockeyEpgCollector(selectedTeams, at, known)
@@ -190,9 +189,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         for (programme in liveVm.homeHockeyProgrammes(channel, at, profileId)) collector.add(channel.id, programme)
                     }
-                    collector.result(pool.truncated || eligible.size > 64) to eligible.take(64).associateBy { it.id }
+                    Triple(collector.result(pool.truncated || eligible.size > 64), eligible.take(64).associateBy { it.id }, choices)
                 } }
-                localChannels = loaded.second; localMatches = loaded.first
+                localChannels = loaded.second; localMatches = loaded.first; guideChoices = loaded.third
             } catch (timeout: TimeoutCancellationException) {
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 localFailed = true; SportsDiagnostics.failure(timeout, HockeyStage.CACHE)

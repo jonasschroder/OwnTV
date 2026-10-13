@@ -79,8 +79,6 @@ class V07PresentationTest {
             compose.onAllNodes(isRoot()).printToLog("V07_SYNTHETIC_TWITCH_PICKER")
             throw error
         }
-        compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused(); true
-        }.getOrDefault(false) }
         compose.onNodeWithText(playerLabel).assertIsDisplayed().assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, launches); assertEquals(0, authorizations)
     }

@@ -9,6 +9,15 @@ internal data class EpgHockeyMatch(val fixture: SportFixture, val channelIds: Li
     val channelStarts: Map<Long, Long> = emptyMap())
 internal data class HockeyEpgFixture(val fixture: SportFixture, val start: Long, val stop: Long, val timeFromEpg: Boolean)
 
+/** Reuse Swedish visibility preferences; an explicit preferred UHD entry remains an owner's choice. */
+internal fun hockeyGuideChannels(channels: List<tv.own.owntv.core.database.entity.ChannelEntity>,
+    choices: tv.own.owntv.features.live.SwedishChoices) = channels.filter { channel ->
+    val name = tv.own.owntv.features.live.SwedishChannels.recognize(channel.name)
+    name == null || name.identity !in choices.hidden && (choices.showUhd ||
+        name.quality != tv.own.owntv.features.live.ChannelQuality.UHD ||
+        choices.preferred[name.identity] == tv.own.owntv.core.customize.CustomizeKeys.channel(channel))
+}
+
 /** Local evidence only: no HTTP, channel-name guesses or external schedule prerequisite. */
 internal class HockeyEpgParser(private val selection: SportPreferences, private val now: Long,
     private val known: List<SportFixture> = emptyList()) {

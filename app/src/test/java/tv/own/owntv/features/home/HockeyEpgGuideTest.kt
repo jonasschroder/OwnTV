@@ -9,6 +9,19 @@ class HockeyEpgGuideTest {
     private val now = Instant.parse("2026-10-13T15:00:00Z").toEpochMilli()
     private val start = now + 2 * 60 * 60_000
     private val favorites = SportPreferences(listOf(SportsCatalog.farjestadId))
+    @Test fun automaticGuideHonorsHiddenGroupsAndDefaultUhdWithoutRemovingStoredFavorites() {
+        val fhd = tv.own.owntv.core.database.entity.ChannelEntity(id = 1, sourceId = 101, name = "SE | TV4 Sport Live 2 FHD", remoteId = "fhd", streamUrl = "https://example.invalid")
+        val uhd = fhd.copy(id = 2, name = "SE | TV4 Sport Live 2 UHD", remoteId = "uhd")
+        val rows = listOf(fhd, uhd)
+        val defaults = tv.own.owntv.features.live.SwedishChoices()
+        assertEquals(listOf(fhd), hockeyGuideChannels(rows, defaults))
+        assertEquals(rows, hockeyGuideChannels(rows, defaults.copy(showUhd = true)))
+        val identity = tv.own.owntv.features.live.SwedishChannels.recognize(fhd.name)!!.identity
+        assertTrue(hockeyGuideChannels(rows, defaults.copy(hidden = setOf(identity))).isEmpty())
+        val preferred = defaults.copy(preferred = mapOf(identity to tv.own.owntv.core.customize.CustomizeKeys.channel(uhd)))
+        assertEquals(rows, hockeyGuideChannels(rows, preferred))
+        assertEquals(2, rows.size)
+    }
     private fun programme(title: String, description: String? = null, at: Long = start) = EpgProgrammeEntity(
         id = 1, sourceId = 1, epgChannelId = "sports", startMs = at, stopMs = at + 3 * 60 * 60_000, title = title, description = description)
     @Test fun livePairLeagueAndValidatedAliasesWorkWithoutAnyExternalSchedule() {

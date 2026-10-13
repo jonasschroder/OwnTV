@@ -285,7 +285,6 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	hockey-window-count
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-access-blocked
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-enabled
-2	preference-key	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	shl-expand
 1	empty	app/src/main/java/tv/own/owntv/features/home/MinTvContentHome.kt	\0
 2	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvContentHome.kt	mintv-apps
 2	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvContentHome.kt	mintv-favorites

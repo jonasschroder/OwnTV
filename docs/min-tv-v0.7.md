@@ -55,3 +55,36 @@ load-state JVM cases; final count is recorded with the completed full validation
 Wrong league/season, malformed HTTP 200, disabled/blocked zero-request behavior,
 rate/budget/backoff, cache preservation, cancellation and bounded sanitized journal
 remain under regression tests. Current public HTML is not committed as a new fixture.
+
+## Local-first Min hockey
+
+The primary guide reads already stored EPG, independent of external opt-in, schedule
+availability or standings. Per-profile teams and the existing manual EPG mapping and
+channel/global guide offsets are respected. Relevant actual channels (TV4, TV12,
+hockey/sports names and favorites) are bounded to 64, with at most 128 stored
+programmes each, 32 fixtures and an eight-second local deadline. The guide refreshes
+only while the relevant foreground content is visible; it never fetches provider
+EPG, starts a decoder, polls in the background or clears existing data.
+
+A specific league and exactly two validated team identities must appear as an
+explicit pairing in a title or description. A favorite team is required. Without a
+fresh independently verified schedule, an explicit live/direktsändning marker is
+also required. Replays, studio/highlights, youth/women, cross-league ambiguity and
+contradictory overlapping games on one channel are rejected. Generic “SHL” is not
+confirmation. The displayed time for an EPG-only fixture is clearly labelled as EPG
+programme time, not independently verified faceoff. Epoch instants render through
+Europe/Stockholm, including DST. No score is inferred from EPG.
+
+Manual choices remain per profile and fixture, with actual source/quality channel
+identity and expiration; they never bind all a team's games to one channel. The
+UI distinguishes specific EPG evidence, broadcast information, manual choice and
+unknown assignment. Multiple actual channel variants open the existing picker;
+a truncated scan never implies uniqueness. Before EPG-based direct playback the
+programme, channel identity, profile and accessibility are rechecked. Missing or
+expired evidence fails safely and preserves manual browsing. Playback delegates
+to the existing player. “Andra kanaler” stays reachable without external data.
+
+Home now prioritizes one current/upcoming followed fixture and its real channel;
+finished result snapshots do not drive its watch action. Extra Home-card HTML
+broadcast lookups have been removed. The full guide keeps upcoming matches and
+optional results/standings, with sports browsing and a watch action before tables.

@@ -162,17 +162,20 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     val requestedCompetitions = if (scheduleAvailable && enabled)
         sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled, selectedCompetition) else emptyList()
-    LaunchedEffect(profileId, requestedCompetitions, retryRevision) {
+    LaunchedEffect(profileId, available, requiredCompetitions, requestedCompetitions, retryRevision) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
-        if (competitions.isEmpty()) return@LaunchedEffect
+        if (!available) return@LaunchedEffect
         // Hydrate every relevant league before any network wait. A slow first league must not
         // conceal another league's verified cache for up to the request deadline.
-        for (competition in competitions) {
+        for (competition in requiredCompetitions.filter { it.scheduleAvailable }) {
             sports.cached(competition)?.let { cached ->
                 data = data + (competition.id to cached)
                 loadStates[competition.id] = SportsLoadState(cached = true)
             }
+        }
+        if (!enabled) requiredCompetitions.filter { it.scheduleAvailable }.forEach {
+            repository.notScheduled(it, false, System.currentTimeMillis())
         }
         // One visible refresh; repository TTL/retry gates survive Home/Matchcenter changes.
         // No automatic retry loop or work after the screen leaves the foreground.
@@ -180,14 +183,14 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             val started = System.currentTimeMillis()
             fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
                 sports.refresh(competition, started)
-            }, { value -> data = data + (competition.id to value); value.fetchedAt < started },
+            }, { value -> data = data + (competition.id to value); repository.published(competition, value.fixtures.size, System.currentTimeMillis()); value.fetchedAt < started },
                 { loadStates[competition.id] = it })
         }
     }
 
     val tableRequest = data[selectedCompetition.id]?.seasonId?.takeIf {
         available && enabled && screen && !teamsOpen && selectedId == null &&
-            section in listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD)
+            section == MatchcenterSection.TABLE
     }?.let { selectedCompetition to it }
     LaunchedEffect(profileId, tableRequest, retryRevision) {
         val (competition, season) = tableRequest ?: return@LaunchedEffect
@@ -422,6 +425,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     }
                     when (section) {
                         MatchcenterSection.SETTINGS -> LazyColumn(verticalArrangement = Arrangement.spacedBy(20.mpx)) {
+                            item { HockeyDiagnosticPanel(repository) }
                             item { TvText(stringResource(R.string.mintv_shl_source_heading), size = 28, bold = true) }
                             item { FocusPanel { TvText(stringResource(R.string.mintv_shl_source_notice), color = MinTvMuted, lines = 6) } }
                             item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {

@@ -56,6 +56,45 @@ class HockeyReaderTest {
         store.on = false; assertEquals(HockeyFailureKind.DISABLED, failure { reader.refresh(shl, now) }.kind)
         store.on = true; store.denied = true; assertEquals(HockeyFailureKind.ACCESS, failure { reader.refresh(shl, now) }.kind)
         assertTrue(source.requested.isEmpty())
+        assertEquals(listOf(HockeyOutcome.DISABLED, HockeyOutcome.ACCESS_BLOCKED), reader.diagnostics.events(shl).map { it.outcome })
+        assertEquals(reader.diagnostics.events(shl), HockeyReader(store, source).diagnostics.events(shl))
+    }
+    @Test fun missingUnrelatedLeagueDoesNotPreventRequestedSeasonFromLoading() = runBlocking {
+        val store = Store(); val source = Source()
+        val reader = HockeyReader(store, HockeyPages { path, limit ->
+            val response = source.read(path, limit)
+            if (path == "/") response.copy(body = response.body.replace("HockeyAllsvenskan", "Unrelated competition")) else response
+        })
+        assertEquals(364, reader.refresh(shl, now).games.size)
+        assertEquals(3, source.requested.size)
+        assertEquals(HockeyOutcome.VALID_SUCCESS, reader.diagnostics.events(shl).last().outcome)
+        assertEquals(now, reader.diagnostics.lastSuccess(shl))
+    }
+    @Test fun malformedHttp200AndBackoffHaveDifferentPersistentDiagnosticStages() = runBlocking {
+        val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+        source.response = CompanionResponse(200, "<html>Not a verified schedule; private detail must not be logged</html>")
+        val issue = failure { reader.refresh(shl, now) }
+        assertEquals(HockeyFailureKind.FORMAT, issue.kind)
+        assertEquals(HockeyStage.ROBOTS, reader.diagnostics.events(shl).last().stage)
+        assertEquals(HockeyOutcome.FORMAT_ERROR, reader.diagnostics.events(shl).last().outcome)
+        val calls = source.requested.size
+        failure { HockeyReader(store, source).refresh(shl, now + 1) }
+        assertEquals(calls, source.requested.size)
+        assertEquals(HockeyOutcome.BACKOFF, HockeyReader(store, source).diagnostics.events(shl).last().outcome)
+        assertFalse(reader.diagnostics.report().contains("private"))
+    }
+    @Test fun missingCorruptAndFreshCachesAreDistinguishableWithoutNetwork() = runBlocking {
+        val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+        assertNull(reader.cached(shl, now))
+        assertEquals(HockeyOutcome.CACHE_MISS, reader.diagnostics.events(shl).last().outcome)
+        store.files["mintv-shl"] = "corrupt private response"
+        assertNull(reader.cached(shl, now))
+        assertEquals(HockeyOutcome.CACHE_REJECTED, reader.diagnostics.events(shl).last().outcome)
+        reader.refresh(shl, now)
+        assertEquals(364, reader.cached(shl, now)!!.games.size)
+        assertEquals(HockeyOutcome.CACHE_HIT, reader.diagnostics.events(shl).last().outcome)
+        assertEquals(364, reader.diagnostics.cachedCount(shl))
+        assertEquals(3, source.requested.size)
     }
     @Test fun bothLeaguesShareDiscoveryBudgetButKeepFixturesTablesAndDiskCacheSeparate() = runBlocking {
         val store = Store(); val source = Source(); val reader = HockeyReader(store, source)

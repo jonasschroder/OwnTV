@@ -16,7 +16,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal enum class HockeyFailureKind { DISABLED, ACCESS, NETWORK, FORMAT, HTTP, RATE_LIMITED, CACHE, TIMEOUT }
-internal enum class HockeyStage { POLICY, ROBOTS, DISCOVERY, SCHEDULE, TABLE, CACHE }
+internal enum class HockeyStage { POLICY, ROBOTS, DISCOVERY, SCHEDULE, TABLE, CACHE, VALIDATION, PUBLICATION }
 internal data class HockeyIssue(val kind: HockeyFailureKind, val stage: HockeyStage, val at: Long,
     val httpCode: Int? = null, val retryAt: Long? = null, val detail: HockeyFormatReason? = null) {
     val retryable get() = kind !in listOf(HockeyFailureKind.DISABLED, HockeyFailureKind.ACCESS)
@@ -42,7 +42,10 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
     private val mutex = Mutex()
     private val snapshots = java.util.concurrent.ConcurrentHashMap<String, ShlSnapshot>()
     private val tables = java.util.concurrent.ConcurrentHashMap<String, HockeyTable>()
-    private var discovery: Pair<Long, Map<String, String>>? = null
+    private val discovery = mutableMapOf<String, Pair<Long, String>>()
+    val diagnostics = HockeyDiagnostics(storage)
+    fun trace(c: Competition, stage: HockeyStage, outcome: HockeyOutcome, now: Long, http: Int? = null,
+        count: Int? = null, age: Long? = null, retry: Long? = null, detail: HockeyFormatReason? = null) = diagnostics.record(HockeyTrace(c.id, stage, outcome, now, http, count, age, retry, detail))
     private fun key(c: Competition, table: Boolean) = c.id + if (table) ":table" else ":schedule"
     private fun cacheKey(c: Competition, table: Boolean) = (if (c == SportsCatalog.shl) "mintv-shl" else "mintv-ha") + if (table) "-table" else ""
     private fun requireCompetition(c: Competition) = require(c in listOf(SportsCatalog.shl, SportsCatalog.allsvenskan))
@@ -64,7 +67,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             .put("at", issue.at).put("http", issue.httpCode ?: 0).put("retryAt", issue.retryAt ?: 0)
             .put("detail", issue.detail?.name.orEmpty()).toString())
     }
-    private fun gate(now: Long, c: Competition, table: Boolean) {
+    private fun gate(now: Long, c: Competition, table: Boolean): Unit = try {
         if (!storage.enabled()) throw HockeyDataException(HockeyIssue(HockeyFailureKind.DISABLED, HockeyStage.POLICY, now))
         if (storage.blocked()) throw HockeyDataException(HockeyIssue(HockeyFailureKind.ACCESS, HockeyStage.POLICY, now,
             storage.number("shl-blocked-code").toInt().takeIf { it > 0 }))
@@ -72,6 +75,17 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
         if (limited > now) throw HockeyDataException(HockeyIssue(HockeyFailureKind.RATE_LIMITED, HockeyStage.POLICY, now, 429, limited))
         val retry = storage.number("hockey-retry:" + key(c, table))
         if (retry > now) throw HockeyDataException((diagnostic(c, table) ?: HockeyIssue(HockeyFailureKind.NETWORK, HockeyStage.POLICY, now)).copy(retryAt = retry))
+        Unit
+    } catch (error: HockeyDataException) {
+        val issue = error.issue
+        val outcome = when {
+            issue.kind == HockeyFailureKind.DISABLED -> HockeyOutcome.DISABLED
+            issue.kind == HockeyFailureKind.ACCESS -> HockeyOutcome.ACCESS_BLOCKED
+            issue.kind == HockeyFailureKind.RATE_LIMITED -> HockeyOutcome.RATE_LIMITED
+            else -> HockeyOutcome.BACKOFF
+        }
+        trace(c, HockeyStage.POLICY, outcome, now, issue.httpCode, retry = issue.retryAt)
+        throw error
     }
     private fun reserve(now: Long) {
         val start = storage.number("hockey-window-at")
@@ -83,7 +97,12 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
         storage.journal(mapOf("hockey-window-at" to next.windowAt, "hockey-window-count" to next.count.toLong()))
     }
     private suspend fun page(path: String, stage: HockeyStage, now: Long, c: Competition, table: Boolean, limit: Int = 600_000): CompanionResponse {
-        currentCoroutineContext().ensureActive(); gate(now, c, table); reserve(now)
+        currentCoroutineContext().ensureActive(); gate(now, c, table)
+        try { reserve(now) } catch (error: HockeyDataException) {
+            trace(c, HockeyStage.POLICY, if (error.issue.kind == HockeyFailureKind.RATE_LIMITED) HockeyOutcome.RATE_LIMITED else HockeyOutcome.ACCESS_BLOCKED,
+                now, retry = error.issue.retryAt); throw error
+        }
+        trace(c, stage, HockeyOutcome.REQUESTED, now)
         val response = try { withTimeout(8_000) { pages.read(path, limit) } }
         catch (e: TimeoutCancellationException) {
             currentCoroutineContext().ensureActive()
@@ -94,6 +113,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             throw HockeyDataException(HockeyIssue(HockeyFailureKind.NETWORK, stage, now))
         }
         currentCoroutineContext().ensureActive()
+        trace(c, stage, HockeyOutcome.HTTP_RESPONSE, now, response.status)
         if (!storage.enabled()) throw HockeyDataException(HockeyIssue(HockeyFailureKind.DISABLED, HockeyStage.POLICY, now))
         storage.journal(mapOf("hockey-http-stage:" + c.id to stage.ordinal.toLong() + 1,
             "hockey-http-code:" + c.id to response.status.toLong(), "hockey-http-at:" + c.id to now))
@@ -148,15 +168,20 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
     }
     fun cached(c: Competition, now: Long): ShlSnapshot? {
         requireCompetition(c)
-        return (snapshots[c.id] ?: runCatching {
-            val root = JSONObject(storage.cache(cacheKey(c, false)) ?: return null)
+        val memory = snapshots[c.id]
+        val raw = if (memory == null) storage.cache(cacheKey(c, false)) else null
+        val result = (memory ?: raw?.let { runCatching {
+            val root = JSONObject(it)
             require(root.optString("competition", c.id) == c.id)
             val rows = root.getJSONArray("games"); require(rows.length() in 0..400)
             ShlSnapshot(root.getString("season"), (0 until rows.length()).map { i -> val g = rows.getJSONObject(i)
                 ShlGame(g.getString("id"), g.getString("home"), g.getString("away"), g.getLong("faceoff"), g.optString("result").takeIf { it.isNotEmpty() })
             }, root.getLong("at"), root.optLong("sourceAt").takeIf { it > 0 })
-        }.getOrNull())?.takeIf { it.fetchedAt in 1..now && runCatching { validateGames(c, it.games, now) }.isSuccess }
+        }.getOrNull() })?.takeIf { it.fetchedAt in 1..now && runCatching { validateGames(c, it.games, now) }.isSuccess }
             ?.also { snapshots[c.id] = it }
+        trace(c, HockeyStage.CACHE, if (result != null) HockeyOutcome.CACHE_HIT else if (raw != null || memory != null) HockeyOutcome.CACHE_REJECTED else HockeyOutcome.CACHE_MISS, now,
+            count = result?.games?.size, age = result?.let { now - it.fetchedAt })
+        return result
     }
     fun cachedTable(c: Competition, season: String): HockeyTable? {
         requireCompetition(c)
@@ -175,13 +200,25 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             operation().also {
                 storage.journal(mapOf("hockey-retry:" + key(c, table) to 0, "hockey-failures:" + key(c, table) to 0))
             }
-        } catch (cancelled: CancellationException) { throw cancelled }
+        } catch (cancelled: CancellationException) {
+            trace(c, if (table) HockeyStage.TABLE else HockeyStage.SCHEDULE, HockeyOutcome.CANCELLED, now); throw cancelled
+        }
         catch (error: Exception) {
             val issue = (error as? HockeyDataException)?.issue ?: HockeyIssue(HockeyFailureKind.CACHE, HockeyStage.CACHE, now)
             val failures = (storage.number("hockey-failures:" + key(c, table)) + 1).coerceIn(1, 5)
             val retry = issue.retryAt ?: if (issue.retryable) now + minOf(30 * 60_000L,
                 (if (issue.kind == HockeyFailureKind.FORMAT) 10 * 60_000L else 2 * 60_000L) * (1L shl (failures.toInt() - 1))) else 0
             val reported = issue.copy(retryAt = retry.takeIf { it > 0 })
+            trace(c, issue.stage, when (issue.kind) {
+                HockeyFailureKind.DISABLED -> HockeyOutcome.DISABLED
+                HockeyFailureKind.ACCESS -> HockeyOutcome.ACCESS_BLOCKED
+                HockeyFailureKind.TIMEOUT -> HockeyOutcome.TIMEOUT
+                HockeyFailureKind.NETWORK -> HockeyOutcome.NETWORK_ERROR
+                HockeyFailureKind.RATE_LIMITED -> HockeyOutcome.RATE_LIMITED
+                HockeyFailureKind.CACHE -> HockeyOutcome.CACHE_WRITE_FAILED
+                HockeyFailureKind.FORMAT -> if (issue.detail == HockeyFormatReason.SEASON) HockeyOutcome.SEASON_MISSING else HockeyOutcome.FORMAT_ERROR
+                HockeyFailureKind.HTTP -> HockeyOutcome.HTTP_RESPONSE
+            }, now, issue.httpCode, retry = reported.retryAt, detail = issue.detail)
             // No valid cache is removed on any failure. A corrupt/unwritable journal fails closed.
             storage.journal(mapOf("hockey-retry:" + key(c, table) to retry, "hockey-failures:" + key(c, table) to failures))
             record(c, table, reported); throw HockeyDataException(reported)
@@ -195,10 +232,14 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
         }
         attempt(c, false, now) {
             access(now, c, false)
-            val season = discovery?.takeIf { now - it.first in 0 until 6 * 60 * 60_000L }?.second?.get(c.id) ?: run {
+            val season = discovery[c.id]?.takeIf { now - it.first in 0 until 6 * 60 * 60_000L }?.second ?: run {
                 val html = page("/", HockeyStage.DISCOVERY, now, c, false).body
-                val ids = parsed(HockeyStage.DISCOVERY, now) { listOf(SportsCatalog.shl, SportsCatalog.allsvenskan).associate { it.id to SwehockeyParser.discover(html, it.name) } }
-                discovery = now to ids; ids.getValue(c.id)
+                val id = parsed(HockeyStage.DISCOVERY, now) { SwehockeyParser.discover(html, c.name) }
+                // Reuse the same root response if the other league is unambiguous, but a missing
+                // unrelated league must never prevent the requested league from loading.
+                for (other in listOf(SportsCatalog.shl, SportsCatalog.allsvenskan).filter { it != c })
+                    runCatching { SwehockeyParser.discover(html, other.name) }.getOrNull()?.let { discovery[other.id] = now to it }
+                discovery[c.id] = now to id; id
             }
             val html = page("/ScheduleAndResults/Schedule/$season", HockeyStage.SCHEDULE, now, c, false).body
             val fresh = parsed(HockeyStage.SCHEDULE, now) {
@@ -210,7 +251,11 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             val root = JSONObject().put("competition", c.id).put("season", season).put("at", now).put("sourceAt", fresh.sourceUpdatedAt ?: 0)
                 .put("games", JSONArray().apply { fresh.games.forEach { g -> put(JSONObject().put("id", g.id).put("home", g.home).put("away", g.away)
                     .put("faceoff", g.faceoff).put("result", g.result.orEmpty())) } })
-            storage.cache(cacheKey(c, false), root.toString()); snapshots[c.id] = fresh; fresh
+            storage.cache(cacheKey(c, false), root.toString()); snapshots[c.id] = fresh
+            storage.text("hockey-diagnostic:" + key(c, false), "")
+            trace(c, HockeyStage.SCHEDULE, if (fresh.games.isEmpty()) HockeyOutcome.EMPTY_SUCCESS else HockeyOutcome.VALID_SUCCESS,
+                now, 200, fresh.games.size)
+            fresh
         }
     }
     suspend fun standings(c: Competition, season: String, now: Long): HockeyTable = mutex.withLock {
@@ -228,7 +273,11 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             val root = JSONObject().put("competition", c.id).put("season", season).put("at", now)
                 .put("rows", JSONArray().apply { fresh.rows.forEach { r -> put(JSONObject().put("rank", r.rank).put("team", r.team).put("points", r.points)
                     .put("played", r.played ?: -1).put("difference", r.goalDifference ?: Int.MIN_VALUE)) } })
-            storage.cache(cacheKey(c, true), root.toString()); tables[c.id] = fresh; fresh
+            storage.cache(cacheKey(c, true), root.toString()); tables[c.id] = fresh
+            storage.text("hockey-diagnostic:" + key(c, true), "")
+            trace(c, HockeyStage.TABLE, if (fresh.rows.isEmpty()) HockeyOutcome.EMPTY_SUCCESS else HockeyOutcome.VALID_SUCCESS,
+                now, 200, fresh.rows.size)
+            fresh
         }
     }
 }

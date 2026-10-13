@@ -156,7 +156,25 @@
 2	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	_
 1	assertion	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	broadcast access requires review
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	|
-1	empty	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	\0
+2	empty	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	\0
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	shl-access-blocked
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	shl-enabled
+1	empty	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	\0
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	age
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	at
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	count
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	detail
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	hockey-cache-at:
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	hockey-cache-count:
+4	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	hockey-success-at:
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	hockey-success-count:
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	hockey-trace:
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	http
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	outcome
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	retry
+1	technical	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	source=SWEHOCKEY league=${it.league} stage=${it.stage} outcome=${it.outcome} at=${it.at} http=${it.http ?: 0} count=${it.count ?: -1} cacheAgeMs=${it.cacheAge ?: -1} retryAt=${it.retryAt ?: 0} detail=${it.detail?.name.orEmpty()}
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	stage
+3	empty	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	\0
 1	file-path	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	-table
 1	url	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	/
 1	url	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	/ScheduleAndResults/Schedule/$season
@@ -172,7 +190,7 @@
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	difference
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	faceoff
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	games
-2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	hockey-diagnostic:
+4	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	hockey-diagnostic:
 3	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	hockey-failures:
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	hockey-http-at:
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	hockey-http-code:
@@ -437,12 +455,13 @@
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-access-blocked
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-blocked-code
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-enabled
-3	empty	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	\0
+4	empty	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	\0
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${BuildConfig.APPLICATION_ID}; Android API ${Build.VERSION.SDK_INT}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${System.currentTimeMillis()} ${event.name}${stage?.let { " ${it.name}" }.orEmpty()}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${it.name}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Current sports context:
 1	file-path	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Download/mintv-sports-crash-report.txt
+1	technical	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Hockey fetch lifecycle (sanitized public source/league identifiers):
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Min TV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Original crash frames (messages removed):
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	Previous sports context:

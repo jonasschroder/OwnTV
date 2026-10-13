@@ -49,6 +49,13 @@ internal class ShlRepository(context: Context, client: OkHttpClient) {
         withContext(parsingIo) { reader.standings(competition, season, now) }
     fun diagnostic(competition: Competition, table: Boolean = false) = reader.diagnostic(competition, table)
     fun lastResponse(competition: Competition) = reader.lastResponse(competition)
+    val diagnostics get() = reader.diagnostics
+    suspend fun published(competition: Competition, count: Int, now: Long) = withContext(parsingIo) {
+        reader.trace(competition, HockeyStage.PUBLICATION, HockeyOutcome.PUBLISHED, now, count = count.coerceIn(0, 400))
+    }
+    suspend fun notScheduled(competition: Competition, enabled: Boolean, now: Long) = withContext(parsingIo) {
+        reader.trace(competition, HockeyStage.POLICY, if (enabled) HockeyOutcome.CANCELLED else HockeyOutcome.DISABLED, now)
+    }
 }
 
 internal class HockeyHttpPages(client: OkHttpClient) : HockeyPages {

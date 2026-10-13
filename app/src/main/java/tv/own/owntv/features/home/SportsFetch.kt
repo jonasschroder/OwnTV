@@ -13,7 +13,7 @@ internal suspend fun <T> fetchSports(
     stage: HockeyStage,
     hasCache: () -> Boolean,
     operation: suspend () -> T?,
-    accept: (T) -> Boolean,
+    accept: suspend (T) -> Boolean,
     state: (SportsLoadState) -> Unit,
     timeoutMillis: Long = 35_000,
 ): SportsLoadState {
@@ -25,7 +25,7 @@ internal suspend fun <T> fetchSports(
     try {
         val value = withTimeout(timeoutMillis) { operation() }
         publishing = true
-        result = SportsLoadState(cached = value?.let(accept) ?: hasCache())
+        result = SportsLoadState(cached = if (value != null) accept(value) else hasCache())
     } catch (error: TimeoutCancellationException) {
         currentCoroutineContext().ensureActive() // Parent/lifecycle cancellation is not a source error.
         result = SportsLoadState(issue = HockeyIssue(HockeyFailureKind.TIMEOUT, stage, now,

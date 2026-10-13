@@ -70,7 +70,7 @@ internal object SportsDiagnostics {
     }.take(300).joinToString("\n")
 
     /** IO caller; this supplements rather than replaces Core's original crash recorder/export. */
-    fun export(context: Context): String? { return try {
+    fun export(context: Context, hockeyReport: String = ""): String? { return try {
         val text = buildString {
             appendLine("Min TV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             appendLine("${BuildConfig.APPLICATION_ID}; Android API ${Build.VERSION.SDK_INT}")
@@ -87,6 +87,8 @@ internal object SportsDiagnostics {
             appendLine("current-memory: heapBytes=${runtime.totalMemory() - runtime.freeMemory()} heapLimitBytes=${runtime.maxMemory()} nativeHeapBytes=${android.os.Debug.getNativeHeapAllocatedSize()}")
             appendLine("Current sports context:")
             appendLine(snapshot())
+            appendLine("Hockey fetch lifecycle (sanitized public source/league identifiers):")
+            appendLine(hockeyReport.take(16_384))
             // Preserve only our enum-only ring from the previous process' crash diagnostics.
             appendLine("Previous sports context:")
             previousContext.lineSequence().filter(::safeContextLine).take(48).forEach { appendLine(it) }

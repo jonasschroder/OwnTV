@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_hockey_latest_update">Latest hockey update</string>
+    <string name="mintv_hockey_last_attempt">Last attempt: %1$s</string>
+    <string name="mintv_hockey_last_success">Last successful fetch: %1$s</string>
+    <string name="mintv_hockey_cached_count">Cached fixtures: %1$d</string>
+    <string name="mintv_hockey_http_stage">HTTP %1$d · %2$s</string>
+    <string name="mintv_hockey_export">Export hockey diagnostics</string>
+    <string name="mintv_hockey_export_saved">Report saved in Downloads</string>
+    <string name="mintv_hockey_export_failed">Could not save the report</string>
+    <string name="mintv_hockey_status_disabled">Experimental source disabled; no requests sent</string>
+    <string name="mintv_hockey_status_blocked">Access blocked by policy or an earlier refusal; no new requests sent</string>
+    <string name="mintv_hockey_status_backoff">Waiting before the next permitted attempt</string>
+    <string name="mintv_hockey_status_limited">Request budget or rate limit reached</string>
+    <string name="mintv_hockey_status_timeout">Request timed out</string>
+    <string name="mintv_hockey_status_network">Could not reach the source</string>
+    <string name="mintv_hockey_status_format">Could not parse the schedule</string>
+    <string name="mintv_hockey_status_season">Current season was not found</string>
+    <string name="mintv_hockey_status_rejected">Parsed data failed validation</string>
+    <string name="mintv_hockey_status_cache_write">Could not save the cache or diagnostic journal</string>
+    <string name="mintv_hockey_status_cache_invalid">Cached data is invalid or belongs to another season</string>
+    <string name="mintv_hockey_status_empty">Fetch succeeded but returned no fixtures</string>
+    <string name="mintv_hockey_status_success">Validated data loaded</string>
+    <string name="mintv_hockey_status_http">Server response recorded; see HTTP status and stage</string>
+    <string name="mintv_hockey_status_cancelled">Request cancelled when leaving the view</string>
+    <string name="mintv_hockey_status_not_requested">No request recorded yet</string>
+</resources>

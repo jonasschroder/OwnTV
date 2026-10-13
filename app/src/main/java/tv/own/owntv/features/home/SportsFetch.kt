@@ -16,6 +16,7 @@ internal suspend fun <T> fetchSports(
     accept: suspend (T) -> Boolean,
     state: (SportsLoadState) -> Unit,
     timeoutMillis: Long = 35_000,
+    onIssue: suspend (HockeyIssue) -> Unit = {},
 ): SportsLoadState {
     var result = SportsLoadState(cached = hasCache())
     var publishing = false
@@ -30,14 +31,16 @@ internal suspend fun <T> fetchSports(
         currentCoroutineContext().ensureActive() // Parent/lifecycle cancellation is not a source error.
         result = SportsLoadState(issue = HockeyIssue(HockeyFailureKind.TIMEOUT, stage, now,
             retryAt = now + 2 * 60_000), cached = hasCache())
+        onIssue(result.issue!!)
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (error: Exception) {
         SportsDiagnostics.failure(error, stage)
-        if (publishing) { publicationFailed = true; throw error } // Preserve the original UI crash.
+        if (publishing) { publicationFailed = true; throw error } // Surface publication failures instead of misclassifying them as source errors.
         val issue = sportsIssue(error, now)
         result = SportsLoadState(issue = issue.copy(retryAt = issue.retryAt ?:
             (now + 2 * 60_000).takeIf { issue.retryable }), cached = hasCache())
+        if (error !is HockeyDataException) onIssue(result.issue!!)
     } finally {
         SportsDiagnostics.record(when {
             !currentCoroutineContext().isActive -> SportsDiagnostics.Event.CANCELLED

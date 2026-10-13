@@ -17,6 +17,17 @@ class HockeyDiagnosticsTest {
         override fun cache(key: String): String? = null
         override fun cache(key: String, value: String) = Unit
     }
+    @Test fun actualAttemptsAndStoredFixtureCountsAreNotOverwrittenByCachePublicationOrStandings() {
+        val store = Store(); val diagnostic = HockeyDiagnostics(store); val league = SportsCatalog.shl
+        assertNull(diagnostic.lastAttempt(league))
+        diagnostic.record(HockeyTrace(league.id, HockeyStage.SCHEDULE, HockeyOutcome.REQUESTED, 100))
+        diagnostic.record(HockeyTrace(league.id, HockeyStage.SCHEDULE, HockeyOutcome.VALID_SUCCESS, 200, count = 364))
+        assertEquals(364, diagnostic.cachedCount(league))
+        diagnostic.record(HockeyTrace(league.id, HockeyStage.TABLE, HockeyOutcome.VALID_SUCCESS, 300, count = 14))
+        diagnostic.record(HockeyTrace(league.id, HockeyStage.PUBLICATION, HockeyOutcome.PUBLISHED, 400, count = 364))
+        assertEquals(100L, HockeyDiagnostics(store).lastAttempt(league))
+        assertEquals(364, diagnostic.cachedCount(league))
+    }
     @Test fun legacyValidatedCacheSuppliesItsOriginalFetchTimeWithoutInventingANewSuccess() {
         val store = Store(); val diagnostic = HockeyDiagnostics(store)
         diagnostic.record(HockeyTrace(SportsCatalog.shl.id, HockeyStage.CACHE, HockeyOutcome.CACHE_HIT, 200, count = 364, cacheAge = 100))

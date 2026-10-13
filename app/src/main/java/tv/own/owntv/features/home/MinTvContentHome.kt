@@ -488,7 +488,7 @@ private fun homeSectionLabel(section: HomeSection) = when (section) {
     HomeSection.LIVE -> R.string.common_nav_live_tv
     HomeSection.FAVORITES -> R.string.mintv_swedish_channels
     HomeSection.CONTINUE -> R.string.search_continue
-    HomeSection.SPORT -> R.string.mintv_my_sport
+    HomeSection.SPORT -> R.string.mintv_my_hockey
     HomeSection.MOVIES -> R.string.common_nav_movies
     HomeSection.SERIES -> R.string.common_nav_series
     HomeSection.TWITCH -> R.string.mintv_twitch_connect

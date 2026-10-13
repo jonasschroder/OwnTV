@@ -11,24 +11,34 @@ import kotlinx.coroutines.withContext
 import tv.own.owntv.R
 import tv.own.owntv.ui.theme.mpx
 
-/** Reads a small local journal on entry; no HTTP or background refresh. */
+private data class HockeyDiagnosticStatus(val league: Competition, val event: HockeyTrace?, val attempt: Long?, val success: Long?, val cachedCount: Int)
+
+/** Observes only local preference changes while composed; no polling, HTTP or background refresh. */
 @Composable
 internal fun HockeyDiagnosticPanel(repository: ShlRepository) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf<List<Triple<Competition, HockeyTrace?, Pair<Long?, Int>>>>(emptyList()) }
+    var status by remember { mutableStateOf<List<HockeyDiagnosticStatus>>(emptyList()) }
+    var revision by remember { mutableIntStateOf(0) }
+    DisposableEffect(repository) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key?.startsWith("hockey-trace:") == true || key in listOf("shl-enabled", "shl-access-blocked")) revision++
+        }
+        repository.preferences.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { repository.preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     var exported by remember { mutableStateOf(false) }
     var exportFailed by remember { mutableStateOf(false) }
-    LaunchedEffect(repository) {
+    LaunchedEffect(repository, revision) {
         status = withContext(Dispatchers.IO) { listOf(SportsCatalog.shl, SportsCatalog.allsvenskan).map { league ->
             val events = repository.diagnostics.events(league)
-            Triple(league, events.lastOrNull { it.outcome !in listOf(HockeyOutcome.CACHE_HIT, HockeyOutcome.CACHE_MISS) },
-                repository.diagnostics.lastSuccess(league) to repository.diagnostics.cachedCount(league))
+            HockeyDiagnosticStatus(league, events.lastOrNull { it.outcome !in listOf(HockeyOutcome.CACHE_HIT, HockeyOutcome.CACHE_MISS) },
+                repository.diagnostics.lastAttempt(league), repository.diagnostics.lastSuccess(league), repository.diagnostics.cachedCount(league))
         } }
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
         TvText(stringResource(R.string.mintv_hockey_latest_update), size = 26, bold = true)
-        status.forEach { (league, event, cache) ->
+        status.forEach { (league, event, attempt, success, cachedCount) ->
             FocusPanel {
                 TvText(league.name, bold = true)
                 val outcome = when {
@@ -37,11 +47,11 @@ internal fun HockeyDiagnosticPanel(repository: ShlRepository) {
                     else -> event?.outcome
                 }
                 TvText(stringResource(hockeyOutcomeLabel(outcome)), lines = 3)
-                TvText(stringResource(R.string.mintv_hockey_last_attempt, event?.at?.let { stockholmDate(it) + " " + stockholmTime(it) }
+                TvText(stringResource(R.string.mintv_hockey_last_attempt, attempt?.let { stockholmDate(it) + " " + stockholmTime(it) }
                     ?: stringResource(R.string.mintv_companion_unavailable)), color = MinTvMuted, lines = 2)
-                TvText(stringResource(R.string.mintv_hockey_last_success, cache.first?.let { stockholmDate(it) + " " + stockholmTime(it) }
+                TvText(stringResource(R.string.mintv_hockey_last_success, success?.let { stockholmDate(it) + " " + stockholmTime(it) }
                     ?: stringResource(R.string.mintv_companion_unavailable)), color = MinTvMuted, lines = 2)
-                TvText(stringResource(R.string.mintv_hockey_cached_count, cache.second), color = MinTvMuted)
+                TvText(stringResource(R.string.mintv_hockey_cached_count, cachedCount), color = MinTvMuted)
                 event?.http?.let { TvText(stringResource(R.string.mintv_hockey_http_stage, it, event.stage.name), color = MinTvMuted) }
                 event?.retryAt?.let { TvText(stringResource(R.string.mintv_sports_retry_at, stockholmTime(it)), color = MinTvMuted) }
             }

@@ -28,9 +28,11 @@ class SportsFetchTest {
     @Test fun slowResponsesHaveDeadlineAndDoNotPublishLateData() = runTest {
         val states = mutableListOf<SportsLoadState>()
         var accepted = false
+        var journaled: HockeyIssue? = null
         val final = fetchSports(now, HockeyStage.SCHEDULE, { false }, { delay(60_000); "late" },
-            { accepted = true; false }, { states += it }, timeoutMillis = 200)
+            { accepted = true; false }, { states += it }, timeoutMillis = 200, onIssue = { journaled = it })
         assertFalse(accepted)
+        assertEquals(final.issue, journaled)
         assertFalse(states.last().loading)
         assertEquals(HockeyFailureKind.TIMEOUT, final.issue!!.kind)
         assertEquals(HockeyStage.SCHEDULE, final.issue!!.stage)

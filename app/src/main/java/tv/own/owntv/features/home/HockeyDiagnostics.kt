@@ -41,6 +41,10 @@ internal class HockeyDiagnostics(private val storage: HockeyStorage) {
         val rows = (events(c) + value).takeLast(24)
         fallback[c.id] = rows
         try {
+            if (value.outcome == HockeyOutcome.REQUESTED)
+                storage.journal(mapOf("hockey-attempt-at:" + c.id to value.at))
+            if (value.stage == HockeyStage.SCHEDULE && value.outcome in listOf(HockeyOutcome.VALID_SUCCESS, HockeyOutcome.EMPTY_SUCCESS))
+                storage.journal(mapOf("hockey-cache-count:" + c.id to (value.count ?: 0).toLong(), "hockey-cache-at:" + c.id to value.at))
             if (value.outcome in listOf(HockeyOutcome.VALID_SUCCESS, HockeyOutcome.EMPTY_SUCCESS))
                 storage.journal(mapOf("hockey-success-at:" + c.id to value.at, "hockey-success-count:" + c.id to (value.count ?: 0).toLong()))
             if (value.outcome in listOf(HockeyOutcome.CACHE_HIT, HockeyOutcome.CACHE_MISS, HockeyOutcome.CACHE_REJECTED))
@@ -61,6 +65,7 @@ internal class HockeyDiagnostics(private val storage: HockeyStorage) {
         }
     }
 
+    fun lastAttempt(c: Competition): Long? = runCatching { storage.number("hockey-attempt-at:" + c.id).takeIf { it > 0 } }.getOrNull()
     fun lastSuccess(c: Competition): Long? = runCatching { storage.number("hockey-success-at:" + c.id).takeIf { it > 0 } }.getOrNull()
     fun cachedCount(c: Competition): Int = runCatching { storage.number("hockey-cache-count:" + c.id).coerceIn(0, 400).toInt() }.getOrDefault(0)
 

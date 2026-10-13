@@ -61,7 +61,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     LaunchedEffect(profileId, teamRevision) {
         try { selection = profileId?.let { teamStore.read(it) } }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { selection = SportPreferences() }
+        catch (error: Exception) { selection = SportPreferences(); SportsDiagnostics.failure(error, HockeyStage.CACHE) }
     }
     val selectedTeams = selection ?: SportPreferences()
     val requiredCompetitions = SportsCatalog.required(selectedTeams)
@@ -221,7 +221,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             fetchSports(started, HockeyStage.SCHEDULE, { data[competition.id] != null }, {
                 sports.refresh(competition, started)
             }, { value -> data = data + (competition.id to value); repository.published(competition, value.fixtures.size, System.currentTimeMillis()); value.fetchedAt < started },
-                { loadStates[competition.id] = it })
+                { loadStates[competition.id] = it }, onIssue = { repository.failed(competition, it) })
         }
     }
 
@@ -235,7 +235,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         sports.cachedStandings(competition, season)?.let { table = it }
         fetchSports(started, HockeyStage.TABLE, { table != null }, {
             sports.standings(competition, season, started)
-        }, { value -> table = value; value.fetchedAt < started }, { tableState = it })
+        }, { value -> table = value; value.fetchedAt < started }, { tableState = it }, onIssue = { repository.failed(competition, it) })
     }
 
     val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
@@ -426,21 +426,16 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 else if (reliableChannels.isNotEmpty()) browseChannels()
                 else if (selectedTeams.teamIds.isEmpty()) teamsOpen = true else open()
             }, Modifier.weight(1f).then(homeCardModifier).focusRequester(entryFocus), watch = directChannel != null || reliableChannels.isNotEmpty()) {
-                if (!selectedTeams.prominent) { /* Keep the entry reachable; hide prominent fixture information. */ }
-                else if (gameToMatch != null) {
-                    TvText(pairLabel(gameToMatch), size = 25, bold = true, lines = 1)
-                    TvText(fixtureWhen(gameToMatch, now), size = 21, color = MinTvMuted)
-                } else TvText(stringResource(if (localLoading && localMatches.isEmpty()) R.string.mintv_hockey_epg_loading
-                    else R.string.mintv_hockey_channel_unknown), color = MinTvMuted, size = 22)
-                val shown = manualChannel ?: reliableChannels.firstOrNull()
-                shown?.let { TvText(it.name, color = MinTvTeal, size = 22, bold = true) }
-                if (shown != null) TvText(stringResource(if (manualChannel != null) R.string.mintv_hockey_manual_evidence
-                    else if (validBroadcast == null) R.string.mintv_hockey_epg_evidence else R.string.mintv_hockey_broadcast_evidence), color = MinTvMuted, size = 17)
-                if (shown == null && gameToMatch != null) TvText(stringResource(R.string.mintv_hockey_channel_unknown), color = MinTvMuted, size = 18)
-                if (localEvidence?.timeFromEpg == true) TvText(stringResource(R.string.mintv_hockey_epg_time), color = MinTvMuted, size = 17)
-                if (localFailed) TvText(stringResource(R.string.mintv_hockey_epg_failed), color = MinTvMuted, size = 18)
-                val homeAt = currentData.values.minOfOrNull { it.fetchedAt }
-                if (enabled && homeAt != null) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(homeAt, now)), size = 18, color = MinTvMuted, lines = 1)
+                if (selectedTeams.prominent) {
+                    val shown = manualChannel ?: reliableChannels.firstOrNull()
+                    HockeyHomeSummary(gameToMatch, now, shown?.name, when {
+                        manualChannel != null -> HockeyChannelEvidence.MANUAL
+                        shown == null -> HockeyChannelEvidence.UNKNOWN
+                        validBroadcast != null -> HockeyChannelEvidence.BROADCAST_SCHEDULE
+                        else -> HockeyChannelEvidence.SPECIFIC_EPG
+                    }, localEvidence?.timeFromEpg == true, localLoading && localMatches.isEmpty(), localFailed,
+                        currentData.values.minOfOrNull { it.fetchedAt }.takeIf { enabled })
+                }
             }
             HomeButton(stringResource(R.string.mintv_hockey_other_channels), ::browseChannels, Modifier.width(250.mpx))
             }
@@ -730,10 +725,10 @@ internal fun CompanionInput(value: String, modifier: Modifier = Modifier, onChan
 }
 
 @Composable
-private fun pairLabel(game: SportFixture): String = stringResource(R.string.mintv_shl_pair, shortTeam(game.home), shortTeam(game.away))
+internal fun pairLabel(game: SportFixture): String = stringResource(R.string.mintv_shl_pair, shortTeam(game.home), shortTeam(game.away))
 
 @Composable
-private fun fixtureWhen(game: SportFixture, now: Long): String {
+internal fun fixtureWhen(game: SportFixture, now: Long): String {
     val day = stockholmDay(game.faceoff)
     val date = when (day) {
         stockholmDay(now) -> stringResource(R.string.mintv_today)

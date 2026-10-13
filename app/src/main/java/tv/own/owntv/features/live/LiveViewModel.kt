@@ -1101,14 +1101,15 @@ class LiveViewModel(
 
     /** Bounded current/upcoming local EPG; shares manual mapping/offsets and never asks the provider. */
     suspend fun homeHockeyProgrammes(channel: ChannelEntity, now: Long, expectedProfileId: Long): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> = withContext(Dispatchers.IO) {
-        if (ctx.value.profileId != expectedProfileId || !isVisibleToActiveProfile(channel)) return@withContext emptyList()
-        val cust = custom.value
-        val key = (cust.epgMatchResolver.epgIdFor(channel) ?: channel.epgChannelId)?.trim()?.lowercase(java.util.Locale.ROOT)?.takeIf { it.isNotEmpty() }
-            ?: return@withContext emptyList()
-        val shift = tv.own.owntv.core.epg.EpgShift.minutesFor(cust, channel, epgOffset.value)
-        val rows = epgDao.upcoming(key, tv.own.owntv.core.epg.EpgShift.toStored(now, shift), 128).first()
-            .map { tv.own.owntv.core.epg.EpgShift.apply(it, shift) }.filter { it.startMs <= now + 7 * 24 * 60 * 60_000L }
-        if (ctx.value.profileId == expectedProfileId && isVisibleToActiveProfile(channel)) rows else emptyList()
+        val current = ctx.value
+        if (current.profileId != expectedProfileId) return@withContext emptyList()
+        // Read this profile explicitly: the shared display StateFlow may still hold the previous profile.
+        val cust = customize.observe(expectedProfileId, MediaType.LIVE).first()
+        tv.own.owntv.features.home.storedHockeyProgrammes(epgDao, channel, cust, epgOffset.value, now) {
+            ctx.value.profileId == expectedProfileId && channel.sourceId in ctx.value.sourceIds &&
+                settings.activeProfileIdNow() == expectedProfileId && isVisibleInContext(channel, current) &&
+                ctx.value.profileId == expectedProfileId && channel.sourceId in ctx.value.sourceIds && settings.activeProfileIdNow() == expectedProfileId
+        }
     }
 
     suspend fun playHomeChannel(channelId: Long, favorites: List<ChannelEntity>): HomePlayback {

@@ -7,12 +7,13 @@ internal data class ProviderFolder(val id: Long, val sourceId: Long, val stableK
     val name: String, val sourceName: String, val priority: Int)
 
 internal object ProviderFolderOrder {
+    private val prefix = Regex("^(?:MOVIE|MOVIES|SERIES)\\s*:\\s*", RegexOption.IGNORE_CASE)
+    private val spaces = Regex("\\s+")
+    private val movies = listOf("imdb top 250", "oscar movies", "disney", "swedish", "swedish (kids)", "christmas", "english", "multi subtitles")
+    private val series = listOf("netflix", "disney", "amazon prime")
     fun priority(name: String, type: MetadataType): Int {
-        val key = name.trim().replace(Regex("^(?:MOVIE|MOVIES|SERIES)\\s*:\\s*", RegexOption.IGNORE_CASE), "")
-            .lowercase(java.util.Locale.ROOT).replace(Regex("\\s+"), " ")
-        val preferred = if (type == MetadataType.MOVIE)
-            listOf("imdb top 250", "oscar movies", "disney", "swedish", "swedish (kids)", "christmas", "english", "multi subtitles")
-        else listOf("netflix", "disney", "amazon prime")
+        val key = name.trim().replace(prefix, "").lowercase(java.util.Locale.ROOT).replace(spaces, " ")
+        val preferred = if (type == MetadataType.MOVIE) movies else series
         return preferred.indexOf(key).takeIf { it >= 0 } ?: 100
     }
 }
@@ -27,7 +28,6 @@ internal class ProviderFolderCollector(private val folders: Map<Long, ProviderFo
     fun add(input: DiscoveryCard) {
         val folder = folders[input.categoryId] ?: return
         if (folder.sourceId != input.sourceId) return
-        val card = input.copy(folderKey = folder.stableKey)
         if (folder.id !in groups && groups.size >= 12) {
             val worst = groups.keys.maxWithOrNull(compareBy<Long> { folders.getValue(it).priority }.thenBy { it }) ?: return
             val previous = folders.getValue(worst)
@@ -35,7 +35,10 @@ internal class ProviderFolderCollector(private val folders: Map<Long, ProviderFo
             groups.remove(worst)
         }
         val rows = groups.getOrPut(folder.id) { mutableListOf() }
-        val index = rows.indexOfFirst { identity(it) == identity(card) }
+        val key = identity(input)
+        val index = rows.indexOfFirst { identity(it) == key }
+        if (index < 0 && rows.size == 12 && order.compare(input, rows.last()) >= 0) return
+        val card = input.copy(folderKey = folder.stableKey)
         if (index >= 0) {
             val previous = rows[index]
             val variants = (listOf(previous.copy(variants = emptyList())) + previous.variants + card)

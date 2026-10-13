@@ -29,7 +29,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 import tv.own.owntv.R
 import tv.own.owntv.core.database.OwnTVDatabase
@@ -52,7 +53,6 @@ import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.theme.mpx
 
 /** Visibility-scoped adapter, no always-on collector or network refresh on focus. */
-@OptIn(kotlinx.coroutines.FlowPreview::class)
 @Composable
 internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enabled: Boolean = true): DiscoveryShelf {
     val repository: DiscoveryRepository = koinInject()
@@ -69,15 +69,16 @@ internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enab
         if (type == MetadataType.MOVIE) MediaType.MOVIE else MediaType.SERIES) }
         .collectAsStateWithLifecycle(SectionCustomizations())
     var shelf by remember(context, type) { mutableStateOf(DiscoveryShelf()) }
+    val refreshes = remember(context, type, metadataMode) { MutableStateFlow(false) }
     LaunchedEffect(context, type, active, metadataMode, custom) {
         if (!active) return@LaunchedEffect
         val ids = if (type == MetadataType.MOVIE) context.movieSourceIds else context.seriesSourceIds
         if (ids.isEmpty()) return@LaunchedEffect
         try {
-            shelf = repository.shelf(context.profileId, ids, type)
-            db.invalidationTracker.createFlow(if (type == MetadataType.MOVIE) "movies" else "series",
-                "metadata_match", "metadata_cache", "watch_history", "favorites", "playback_progress", "categories")
-                .debounce(750).collect { shelf = repository.shelf(context.profileId, ids, type).copy(failed = shelf.failed) }
+            discoveryShelves(db.invalidationTracker.createFlow(if (type == MetadataType.MOVIE) "movies" else "series",
+                "metadata_match", "metadata_cache", "watch_history", "favorites", "playback_progress", "categories").map { Unit }, repository.candidateRevision, refreshes) {
+                repository.shelf(context.profileId, ids, type)
+            }.collect { shelf = it }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { shelf = shelf.copy(failed = true) }
     }
@@ -86,10 +87,9 @@ internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enab
         val ids = if (type == MetadataType.MOVIE) context.movieSourceIds else context.seriesSourceIds
         if (ids.isEmpty()) return@LaunchedEffect
         try {
-            val success = repository.refresh()
-            shelf = repository.shelf(context.profileId, ids, type).copy(failed = !success)
+            refreshes.value = !repository.refresh()
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { shelf = shelf.copy(failed = true) }
+        catch (_: Exception) { refreshes.value = true }
     }
     return shelf
 }

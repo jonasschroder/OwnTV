@@ -185,3 +185,52 @@ python3 -m unittest discover -s tools/tests -v
 In this retained cloud workspace prefix Gradle with
 `python3 /workspace/cloud-setup/run.py ./gradlew …`. Do not modify cached Core or
 read private signing credentials. Production device acceptance remains manual.
+
+## Follow-up bug and performance review (2026-10-13)
+
+The streaming top-list collector previously kept the first scanned version of a
+verified title, even when the batch resolver would select a different source/id.
+A regression failed on the original implementation. Both scan orders now retain
+the same real entity using the existing source/id tie-breaker. The collector resolves
+each incoming title once and retains at most 20 ranking entries.
+
+Opening discovery previously started two independent readers: an immediate scan,
+Room's initial invalidation scan, and a scan after metadata refresh even if the cache
+was already fresh. They could finish out of order. One `mapLatest` reader now consumes
+Room changes and a repository-wide candidate revision. The initial scan is immediate,
+subsequent import invalidations are debounced by 750 ms, and new metadata notifies
+both Movie and Series shelves. Cached/disabled/failed refreshes only update status.
+A failed local read retains the last shelf and the next change can recover; cancellation
+is propagated. Profile, source, customization and lifecycle effects still cancel the
+reader, and refresh stays visible/foreground scoped with the existing TTL/backoff.
+
+Virtual-clock tests verify one scan at opening with fresh metadata, burst coalescing,
+shared Movie/Series updates, cancellation of old work, recovery after a transient
+failure and no reads after collection stops. This demonstrates less repeated work;
+it does not establish a percentage speedup or Chromecast memory reduction.
+
+Catalog access uses the already loaded profile/categories with Core's existing
+`hiddenCategoryIds` policy instead of re-querying the profile for every category
+(and the category again for kids). Final entity/folder access checks remain intact.
+Provider-only mode skips the unused recommendation seed query. Regexes/comparators
+are reused, recommendations count genre membership without temporary intersection
+sets, and bounded rows reject worse entries before copying/sorting. Full categories
+and omitted variants remain in the original database/pager.
+
+No player, Twitch credentials/token storage, sports source, schema, signing, update,
+application identity, version counter, launcher registration or system setting was
+changed in this follow-up. Physical responsiveness and the previously reported
+sports exit/Twitch account approval still require Chromecast evidence.
+
+Final local verification of the follow-up: 373 QA and 373 regular app JVM tests,
+zero failures/errors/skips. Gradle reused the unchanged Core 939 and player 271
+passing test results (1,956 total valid JVM results); 45 Python tool tests passed.
+All four lint targets passed with zero errors: debug 139 warnings/22 hints each,
+release 136 warnings/22 hints each. Both ARM debug and optimized unsigned release
+APKs built, and both Android test APKs compiled. Identity/provider/permission/link
+isolation, no HOME registration, debug APK integrity, packaged public Twitch ID in
+both release DEX files and debug/release pseudolocale checks passed. i18n remains
+45 baseline/2,181 safe entries; number/overflow checks and actionlint passed.
+Local Android instrumentation was not executed because this host has no KVM;
+ordinary PR CI supplies the TV emulator checks. Debug/unsigned builds are validation
+outputs and must not replace the owner's permanently signed populated installation.

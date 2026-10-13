@@ -24,4 +24,25 @@
     <string name="mintv_hockey_status_http">Serversvar registrerat; se HTTP-status och steg</string>
     <string name="mintv_hockey_status_cancelled">Hämtningen avbröts när vyn lämnades</string>
     <string name="mintv_hockey_status_not_requested">Ingen förfrågning registrerad ännu</string>
+    <string name="mintv_my_hockey">Min hockey</string>
+    <string name="mintv_hockey_channels">Mina sportkanaler</string>
+    <string name="mintv_hockey_other_channels">Andra kanaler</string>
+    <string name="mintv_hockey_channel_unknown">Kanal ännu inte bekräftad. Du kan ändå öppna dina sportkanaler.</string>
+    <string name="mintv_hockey_epg_loading">Läser den lokala TV-guiden…</string>
+    <string name="mintv_hockey_epg_failed">Kunde inte uppdatera den lokala TV-guiden. Sportkanalerna är fortfarande tillgängliga.</string>
+    <string name="mintv_hockey_epg_evidence">Bekräftad av en specifik post i din EPG</string>
+    <string name="mintv_hockey_manual_evidence">Ditt kanalval</string>
+    <string name="mintv_hockey_broadcast_evidence">Sändningsinformation</string>
+    <string name="mintv_hockey_epg_time">Tid enligt din EPG; matchuppgifterna är inte oberoende verifierade</string>
+    <string name="mintv_featured_available">Utvalt ur ditt bibliotek</string>
+    <string name="mintv_featured_information">Mer information</string>
+    <string name="mintv_featured_play">Spela</string>
+    <string name="mintv_featured_continue">Fortsätt titta</string>
+    <string name="mintv_featured_episodes">Välj avsnitt</string>
+    <string name="mintv_twitch_watch">Se stream</string>
+    <string name="mintv_twitch_no_player">Ingen kompatibel TV-spelare är installerad. Din Twitch-inloggning finns kvar. Installera en stödd TV-klient manuellt för att se ohnePixel.</string>
+    <string name="mintv_twitch_open_direct">Se i %1$s</string>
+    <string name="mintv_twitch_open_manual">Öppna %1$s</string>
+    <string name="mintv_twitch_manual_help">Klienten saknar en verifierad kanallänk. Sök efter ohnePixel inne i appen; Min TV överför inga kontotoken till andra appar.</string>
+    <string name="mintv_twitch_launch_failed">Kunde inte öppna spelaren. Kontrollera att den fortfarande är installerad och aktiverad.</string>
 </resources>

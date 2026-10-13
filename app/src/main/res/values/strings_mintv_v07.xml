@@ -24,4 +24,25 @@
     <string name="mintv_hockey_status_http">Server response recorded; see HTTP status and stage</string>
     <string name="mintv_hockey_status_cancelled">Request cancelled when leaving the view</string>
     <string name="mintv_hockey_status_not_requested">No request recorded yet</string>
+    <string name="mintv_my_hockey">My hockey</string>
+    <string name="mintv_hockey_channels">My sports channels</string>
+    <string name="mintv_hockey_other_channels">Other channels</string>
+    <string name="mintv_hockey_channel_unknown">Channel not confirmed yet. You can still browse your sports channels.</string>
+    <string name="mintv_hockey_epg_loading">Checking the local TV guide…</string>
+    <string name="mintv_hockey_epg_failed">Could not update the local TV guide. Sports channels are still available.</string>
+    <string name="mintv_hockey_epg_evidence">Confirmed from your specific EPG listing</string>
+    <string name="mintv_hockey_manual_evidence">Your channel selection</string>
+    <string name="mintv_hockey_broadcast_evidence">Broadcast metadata</string>
+    <string name="mintv_hockey_epg_time">Time according to your EPG; fixture source not independently verified</string>
+    <string name="mintv_featured_available">Featured from your library</string>
+    <string name="mintv_featured_information">More information</string>
+    <string name="mintv_featured_play">Play</string>
+    <string name="mintv_featured_continue">Continue watching</string>
+    <string name="mintv_featured_episodes">Choose episode</string>
+    <string name="mintv_twitch_watch">Watch stream</string>
+    <string name="mintv_twitch_no_player">No compatible TV player is installed. Your Twitch sign-in is preserved. Install a supported TV client manually to watch ohnePixel.</string>
+    <string name="mintv_twitch_open_direct">Watch in %1$s</string>
+    <string name="mintv_twitch_open_manual">Open %1$s</string>
+    <string name="mintv_twitch_manual_help">This client has no verified channel deep link. Find ohnePixel inside the app; Min TV does not pass your account tokens to another app.</string>
+    <string name="mintv_twitch_launch_failed">Could not open the player. Check that it is still installed and enabled.</string>
 </resources>

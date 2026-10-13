@@ -18,6 +18,7 @@ import tv.own.owntv.core.util.CrashRecorder
 /** No provider URLs, fixture/team/profile names, IDs, exception messages or token values. */
 internal object SportsDiagnostics {
     enum class Event { HOME, MATCHCENTER, PROFILE_CHANGED, LOADING, DATA, FAILURE, CANCELLED, DETACHED_FOCUS }
+    private val contextLine = Regex("[0-9]{13} (${Event.entries.joinToString("|") { it.name }})( (${HockeyStage.entries.joinToString("|") { it.name }}))?")
     private val events = ArrayDeque<String>()
     private val updates = Channel<String>(Channel.CONFLATED)
     @Volatile private var previousContext = ""
@@ -118,7 +119,7 @@ internal object SportsDiagnostics {
     } catch (_: Exception) { null } }
 
     private fun safeContextLine(line: String): Boolean =
-        line.matches(Regex("[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?")) ||
+        line.matches(contextLine) ||
             (line.startsWith("SPORTS_FRAME ") && sanitizedStack(line.removePrefix("SPORTS_FRAME ")) == line.removePrefix("SPORTS_FRAME "))
 }
 

@@ -142,8 +142,10 @@ internal object SwehockeyParser {
     }
 }
 
+private val hockeyMarks = Regex("\\p{M}+")
+private val hockeyTokenSeparator = Regex("[^a-z0-9]+")
 internal fun teamTokens(value: String): List<String> = Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD)
-    .replace(Regex("\\p{M}+"), "").split(Regex("[^a-z0-9]+"))
+    .replace(hockeyMarks, "").split(hockeyTokenSeparator)
 
 /** Both teams and a faceoff-adjacent live broadcast are mandatory; league-only listings never qualify. */
 internal object ShlEpgMatcher {

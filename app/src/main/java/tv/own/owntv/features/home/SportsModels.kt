@@ -62,6 +62,8 @@ internal object SportsCatalog {
     val teams = (shlClubs + haClubs).map { make(it, Sport.ICE_HOCKEY) }.distinctBy { it.id } + footballClubs.map { make(it, Sport.FOOTBALL) }
     val farjestadId = make("Färjestad BK", Sport.ICE_HOCKEY).id
     fun team(id: String): Team? = teams.firstOrNull { it.id == id }
+    fun epgAliases(team: Team): List<List<String>> = (listOf(teamTokens(team.name).filter(String::isNotEmpty)) +
+        (aliases[team.name].orEmpty() + ShlTeams.aliases(team.name)).filter { it.length >= 3 }.map { listOf(it) }).distinct()
     fun inCompetition(competition: Competition): List<Team> = when (competition.id) {
         shl.id -> shlClubs.map { make(it, Sport.ICE_HOCKEY) }
         allsvenskan.id -> haClubs.map { make(it, Sport.ICE_HOCKEY) }

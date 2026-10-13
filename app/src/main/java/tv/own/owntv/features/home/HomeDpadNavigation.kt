@@ -61,12 +61,13 @@ internal fun homeDpadModifier(navigation: HomeDpadNavigation, list: LazyListStat
 
 @Composable
 internal fun HomeSportsCard(hasTeams: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier,
+    watch: Boolean = false,
     information: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {}) {
     TvCard(onOpen, modifier) {
         androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            TvText(androidx.compose.ui.res.stringResource(tv.own.owntv.R.string.mintv_my_sport),
+            TvText(androidx.compose.ui.res.stringResource(tv.own.owntv.R.string.mintv_my_hockey),
                 androidx.compose.ui.Modifier.weight(1f), size = 24, bold = true)
-            TvText(androidx.compose.ui.res.stringResource(if (hasTeams) tv.own.owntv.R.string.mintv_matchcenter else tv.own.owntv.R.string.mintv_choose_teams),
+            TvText(androidx.compose.ui.res.stringResource(if (watch) tv.own.owntv.R.string.mintv_watch_match else if (hasTeams) tv.own.owntv.R.string.mintv_my_hockey else tv.own.owntv.R.string.mintv_choose_teams),
                 size = 20, color = MinTvTeal, lines = 1)
         }
         if (hasTeams) information()

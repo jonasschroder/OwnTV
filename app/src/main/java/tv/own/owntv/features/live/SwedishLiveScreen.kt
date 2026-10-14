@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.withFrameNanos
 import org.koin.compose.koinInject
 import tv.own.owntv.R
 import tv.own.owntv.core.database.OwnTVDatabase
@@ -98,7 +97,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         if (active) db.invalidationTracker.createFlow("epg_programmes", "epg_channels", "channels", "categories", "profiles", "sources")
             .debounce(350).collect { revision++ }
     }
-    LaunchedEffect(active, cache) {
+    LaunchedEffect(active, cache, collection) {
         if (!active) return@LaunchedEffect
         while (true) {
             at = System.currentTimeMillis()

@@ -15,6 +15,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.launch
 import org.junit.Assert.*
@@ -47,7 +49,14 @@ class SwedishLivePresentationTest {
     private fun row(index: Int) = if (index == 6) SwedishRowInfo(null, null, null) else SwedishRowInfo(null,
         SwedishProgramme(index * 2L + 1, titles.getOrElse(index) { "Syntetiskt program $index" }, now - 1_800_000, now + 1_800_000),
         SwedishProgramme(index * 2L + 2, "Nästa program $index", now + 1_800_000, now + 3_600_000))
-    @Before fun remoteMode() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
+    @Before fun remoteMode() {
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        compose.runOnUiThread {
+            WindowCompat.setDecorFitsSystemWindows(compose.activity.window, false)
+            WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView)
+                .hide(WindowInsetsCompat.Type.systemBars())
+        }
+    }
     private fun key(code: Int) { InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code); compose.waitForIdle() }
     private fun focus(tag: String) {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
@@ -75,14 +84,18 @@ class SwedishLivePresentationTest {
                     var fullscreen by remember { mutableStateOf(false) }
                     var variants by remember { mutableStateOf(false) }
                     var quality by remember { mutableStateOf(ChannelQuality.HD) }
-                    SideEffect { selected = focused; chosen = quality }
+                    // Read in composition: a deferred SideEffect read alone does not subscribe this
+                    // parent to row-only recomposition, and would report the initial focus forever.
+                    val reportedSelection = focused to quality
+                    SideEffect { selected = reportedSelection.first; chosen = reportedSelection.second }
                     suspend fun restore() = restoreSwedishChannel(list, (0 until count).map { it.toString() }, focused.toString(), 0, targets, entry)
                     BackHandler(fullscreen || variants) {
                         fullscreen = false; variants = false; scope.launch { restore() }
                     }
                     if (fullscreen) {
                         Box(Modifier.fillMaxSize().background(MinTvNavy).testTag("fullscreen-callback")) { TvText("Syntetisk uppspelningskontroll") }
-                    } else SwedishLiveFrame(Modifier.background(MinTvNavy), header = {
+                    } else SwedishLiveFrame(Modifier.background(MinTvNavy).padding(start =
+                        tv.own.owntv.features.shell.components.railDockedReserve(tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT)), header = {
                         TvText(swedish.getString(R.string.mintv_swedish_channels), Modifier.weight(1f), size = 34, bold = true)
                         SwedishLiveAction(swedish.getString(R.string.mintv_full_library), {}, Modifier.focusRequester(entry))
                         SwedishLiveAction(swedish.getString(R.string.mintv_collection_settings), {})
@@ -136,6 +149,10 @@ class SwedishLivePresentationTest {
         compose.onNodeWithTag("row-3").assertIsFocused(); assertEquals(3, selected); assertEquals(0, plays)
         compose.onAllNodesWithText("Nyheterna").assertCountEquals(2) // Row and full selected-pane description.
         screenshot("pr10-swedish-live-selected-tv4-synthetic.png")
+        val next = hasText("Nästa program 3", substring = true) and !hasAnyAncestor(hasTestTag("swedish-list"))
+        compose.onNode(next).performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
+        key(KeyEvent.KEYCODE_DPAD_LEFT)
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("row-3").assertIsFocused(); true }.getOrDefault(false) }
         focus("row-6"); compose.onNodeWithText("Ingen programinformation").assertIsDisplayed()
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, plays) // No EPG does not block OK.
         key(KeyEvent.KEYCODE_BACK); compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("row-6").assertIsFocused(); true }.getOrDefault(false) }

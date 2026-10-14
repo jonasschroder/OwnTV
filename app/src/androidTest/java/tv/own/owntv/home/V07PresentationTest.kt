@@ -6,8 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
@@ -116,6 +118,50 @@ class V07PresentationTest {
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, watched)
         key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, browsing)
     }
+    @Test fun ongoingHockeyFixtureStaysReachableAfterFaceoffAndExpiresAtProgrammeEnd() {
+        val initial = java.time.Instant.parse("2026-10-13T15:00:00Z").toEpochMilli()
+        val selection = SportPreferences(listOf(SportsCatalog.farjestadId))
+        val programme = tv.own.owntv.core.database.entity.EpgProgrammeEntity(sourceId = 101, epgChannelId = "synthetic",
+            startMs = initial + 60_000, stopMs = initial + 3 * 60 * 60_000, title = "SHL LIVE: FBK – LHF")
+        val collector = HockeyEpgCollector(selection, initial)
+        collector.add(10, programme)
+        val evidence = collector.result()
+        var advance: ((Long) -> Unit)? = null
+        var opens = 0; var watches = 0; var browses = 0
+        compose.setContent { MaterialTheme {
+            var at by remember { mutableLongStateOf(initial) }
+            SideEffect { advance = { at = it } }
+            val first = remember { FocusRequester() }
+            val usable = unexpiredHockeyMatches(evidence, at)
+            val games = personalHockeyFeed(usable.map { it.fixture }, selection, usable, at)
+            Column(Modifier.fillMaxSize().background(MinTvNavy).padding(24.dp)) {
+                LazyColumn(Modifier.height(320.dp)) {
+                    items(games, key = { it.id }) { game ->
+                        MatchScorecard(game, at, false, true, "Synthetic TV4 Sport Live 2 HD", { opens++ }, { watches++ },
+                            Modifier.fillMaxWidth().focusRequester(first).testTag("feed-game"))
+                    }
+                }
+                HomeButton(compose.activity.getString(R.string.mintv_hockey_other_channels), { browses++ },
+                    Modifier.testTag("feed-browse"))
+            }
+            LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestSafely() }
+        } }
+        compose.onNodeWithTag("feed-game").assertIsDisplayed()
+        compose.runOnIdle { checkNotNull(advance).invoke(programme.startMs + 90_000) }
+        compose.onNodeWithTag("feed-game").assertIsDisplayed()
+        compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("feed-game"))).assertExists()
+        assertEquals(0, opens); assertEquals(0, watches)
+        screenshot("v07-ongoing-match-feed-synthetic.png")
+        key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, opens)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, watches)
+        compose.runOnIdle { checkNotNull(advance).invoke(programme.stopMs) }
+        compose.onNodeWithTag("feed-game").assertDoesNotExist()
+        compose.onNodeWithTag("feed-browse").assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
+        compose.onNodeWithTag("feed-browse").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, browses)
+    }
+
     @Test fun featuredContinuationChecksStableSourceAndSeriesIdentityInsteadOfTitleGuessing() {
         val card = DiscoveryCard(71, 101, "101:hero", MetadataType.TV, "Synthetic series", null, 2026, 1, null, emptySet(), 11)
         val link = tv.own.owntv.core.launcher.LauncherDeepLink.Episode(seriesSourceId = 101, seriesRemoteId = "hero", seriesItemId = 71, episodeItemId = 90)

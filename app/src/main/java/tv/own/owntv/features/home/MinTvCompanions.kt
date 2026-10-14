@@ -147,15 +147,16 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val tableList = rememberLazyListState()
     val today = stockholmDay(now)
     val currentData = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
+    val currentSnapshotData by rememberUpdatedState(currentData)
     val externalGames = remember(currentData) { currentData.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
-    val allGames = remember(externalGames, localMatches) { (externalGames + localMatches.map { it.fixture }).distinctBy { it.id }.sortedBy { it.faceoff } }
+    val unexpiredMatches = remember(localMatches, now) { unexpiredHockeyMatches(localMatches, now) }
+    val allGames = remember(externalGames, unexpiredMatches) { (externalGames + unexpiredMatches.map { it.fixture }).distinctBy { it.id }.sortedBy { it.faceoff } }
     LaunchedEffect(profileId) { SportsDiagnostics.record(SportsDiagnostics.Event.PROFILE_CHANGED) }
     LaunchedEffect(screen) { SportsDiagnostics.record(if (screen) SportsDiagnostics.Event.MATCHCENTER else SportsDiagnostics.Event.HOME) }
     DisposableEffect(profileId, allGames) {
         gameFocus.keys.retainAll(allGames.mapTo(HashSet()) { it.id })
         onDispose { }
     }
-    val mine = personalFixtures(allGames, selectedTeams, now)
     val todaysGames = allGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it.faceoff })
     val available = active && (visible && selectedTeams.prominent || screen) && selection != null && selectedTeams.teamIds.isNotEmpty()
     val scheduleAvailable = available && sportsScheduleVisible(visible, screen, section, selectedId != null, teamsOpen)
@@ -186,7 +187,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             localLoading = true; localFailed = false
             try {
                 val at = System.currentTimeMillis()
-                val known = externalGames.filter { game -> sportsSnapshotFresh(currentData[game.competition.id], loadStates[game.competition.id], at) }
+                val known = externalGames.filter { game -> sportsSnapshotFresh(currentSnapshotData[game.competition.id], loadStates[game.competition.id], at) }
                 val loaded = withContext(Dispatchers.IO) { withTimeout(8_000) {
                     val choices = swedishChannels.choices(profileId)
                     val pool = liveVm.homeMatchCandidates("", favorites, profileId, listOf("TV12"))
@@ -251,10 +252,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
 
     val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
     val gameToMatch = if (teamsOpen || !broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
-        else if (selectedId != null) selected else mine.firstOrNull { game ->
-            game.status == MatchStatus.SCHEDULED && (game.faceoff >= now || localMatches.any {
-                it.fixture.id == game.id && it.channelStops.values.any { stop -> stop > now } })
-        }
+        else if (selectedId != null) selected else nextPersonalHockeyFixture(allGames, selectedTeams, unexpiredMatches, now)
     val scheduleFresh = gameToMatch?.competition?.id in freshCompetitions
     LaunchedEffect(available, enabled, broadcastEnabled, gameToMatch, scheduleFresh) {
         broadcast = null
@@ -361,20 +359,29 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         scope.launch {
             val actual = liveVm.homeChannel(channel.id, profile) ?: return@launch
             if (tv.own.owntv.core.customize.CustomizeKeys.channel(actual) != tv.own.owntv.core.customize.CustomizeKeys.channel(channel)) return@launch
-            val proof = localMatches.singleOrNull { it.fixture.id == game?.id }
             val manualForGame = game?.let { target -> overrides.read(profile, target.broadcastFixture(), System.currentTimeMillis())
                 ?.usable(profile, target.broadcastFixture(), System.currentTimeMillis(), actual.id, actual.sourceId, actual.name) } == true
             if (game != null && !manualForGame && hockeyGuideChannels(listOf(actual), swedishChannels.choices(profile)).isEmpty()) return@launch
-            if (game != null && proof != null && channel.id in proof.channelIds && !manualForGame) {
+            if (game != null && !manualForGame) {
                 try {
                     val at = System.currentTimeMillis()
                     val known = externalGames.filter { sportsSnapshotFresh(currentData[it.competition.id], loadStates[it.competition.id], at) }
-                    val parser = HockeyEpgParser(selectedTeams, at, known)
-                    val valid = withContext(Dispatchers.IO) { withTimeout(8_000) {
-                        liveVm.homeHockeyProgrammes(actual, at, profile).any { parser.parse(it)?.fixture?.id == game.id }
-                    } }
+                    val assignment = if (enabled && broadcastEnabled && game in known)
+                        knownBroadcasts[fixtureKey(game.broadcastFixture())] else null
+                    val valid = withContext(Dispatchers.IO) {
+                        matchHockeyChannels(listOf(actual), game, selectedTeams, known, assignment, at) {
+                            liveVm.homeHockeyProgrammes(it, at, profile)
+                        }.isNotEmpty()
+                    }
                     if (!valid) {
-                        localMatches = localMatches.map { if (it.fixture.id == game.id) it.copy(channelIds = it.channelIds - channel.id) else it }
+                        if (!currentActive || currentProfile != profile) return@launch
+                        val key = fixtureKey(game.broadcastFixture())
+                        resolvedCards.remove(key); directCards.remove(key)
+                        if (matchedGame == game) {
+                            confirmed = confirmed.filterNot { it.id == channel.id }; candidatesComplete = false
+                        }
+                        localMatches = localMatches.map { if (it.fixture == game) it.copy(channelIds = it.channelIds - channel.id,
+                            channelStarts = it.channelStarts - channel.id, channelStops = it.channelStops - channel.id) else it }
                             .filter { it.channelIds.isNotEmpty() }
                         return@launch
                     }
@@ -617,9 +624,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             val useFuture = upcoming || todayList.isEmpty()
                             val lastPage = (future.size - 1).coerceAtLeast(0) / 14
                             val currentPage = page.coerceIn(0, lastPage)
-                            val recent = allGames.filter { it.competition == selectedCompetition && it.follows(selectedTeams) && it.score != null && it.faceoff < now }
-                                .sortedByDescending { it.faceoff }.take(5)
-                            val games = if (section == MatchcenterSection.FARJESTAD) (future.take(3) + recent).distinctBy { it.id }
+                            val games = if (section == MatchcenterSection.FARJESTAD) personalHockeyFeed(
+                                allGames.filter { it.competition == selectedCompetition }, selectedTeams, unexpiredMatches, now)
                                 else if (useFuture) future.drop(currentPage * 14).take(14) else todayList
                             if (games.isEmpty()) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                                 TvText(stringResource(if (localLoading) R.string.mintv_hockey_epg_loading else R.string.mintv_hockey_channel_unknown), size = 26, lines = 3)

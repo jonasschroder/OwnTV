@@ -21,6 +21,44 @@ internal data class HockeyEpgFixture(val fixture: SportFixture, val start: Long,
 internal fun localHockeyEvidence(matches: List<EpgHockeyMatch>, fixture: SportFixture?): EpgHockeyMatch? =
     fixture?.let { expected -> matches.singleOrNull { it.fixture == expected } }
 
+/** An old scan must not keep ended EPG-only events or expired channel assignments in the feed. */
+internal fun unexpiredHockeyMatches(matches: List<EpgHockeyMatch>, now: Long): List<EpgHockeyMatch> =
+    matches.mapNotNull { match ->
+        val ids = match.channelIds.filter { (match.channelStops[it] ?: 0L) > now }
+        if (ids.isEmpty()) null else match.copy(channelIds = ids,
+            channelStops = match.channelStops.filterKeys { it in ids },
+            channelStarts = match.channelStarts.filterKeys { it in ids })
+    }
+
+/** Match identity, actual programme interval and faceoff must agree; a future stop alone is insufficient. */
+internal fun onAirHockeyFixtures(matches: List<EpgHockeyMatch>, now: Long): Set<SportFixture> =
+    matches.groupBy { it.fixture }.filter { (fixture, evidence) ->
+        fixture.status == MatchStatus.SCHEDULED && fixture.faceoff <= now && evidence.size == 1 &&
+            evidence.single().let { match -> match.channelIds.any { id ->
+                val start = match.channelStarts[id] ?: return@any false
+                val stop = match.channelStops[id] ?: return@any false
+                start <= now && now < stop && start < stop
+            } }
+    }.keys
+
+internal fun nextPersonalHockeyFixture(fixtures: List<SportFixture>, selection: SportPreferences,
+    matches: List<EpgHockeyMatch>, now: Long): SportFixture? {
+    val onAir = onAirHockeyFixtures(matches, now)
+    return fixtures.filter { it.follows(selection) && it.status == MatchStatus.SCHEDULED &&
+        (it.faceoff >= now || it in onAir) }.minByOrNull { it.faceoff }
+}
+
+/** Keep ongoing followed games ahead of upcoming games, including broadcasts across Stockholm midnight. */
+internal fun personalHockeyFeed(fixtures: List<SportFixture>, selection: SportPreferences,
+    matches: List<EpgHockeyMatch>, now: Long): List<SportFixture> {
+    val followed = fixtures.filter { it.follows(selection) }
+    val onAir = onAirHockeyFixtures(matches, now)
+    val playing = followed.filter { it in onAir }.sortedBy { it.faceoff }
+    val upcoming = followed.filter { it.status == MatchStatus.SCHEDULED && it.faceoff >= now }.sortedBy { it.faceoff }.take(3)
+    val recent = followed.filter { it.score != null && it.faceoff < now }.sortedByDescending { it.faceoff }.take(5)
+    return (playing + upcoming + recent).distinctBy { it.id }
+}
+
 /** Verified broadcast names need no database lookup; EPG-only confirmation remains exact and bounded. */
 internal suspend fun matchHockeyChannels(channels: List<ChannelEntity>, fixture: SportFixture,
     selection: SportPreferences, known: List<SportFixture>, assignment: BroadcastAssignment?, now: Long,

@@ -84,7 +84,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var browsing by rememberSaveable(profileId) { mutableStateOf(false) }
     var categoryId by rememberSaveable(profileId) { mutableStateOf<Long?>(null) }
     var categoryPage by rememberSaveable(profileId) { mutableIntStateOf(0) }
-    var categories by remember(profileId) { mutableStateOf<List<LiveViewModel.HomeSportsCategory>>(emptyList()) }
+    var categories by remember(profileId) { mutableStateOf<List<LiveViewModel.HomeSportsCategory>?>(null) }
+    var categoryLoadedKey by remember(profileId) { mutableStateOf<Pair<Long, Int>?>(null) }
+    var categoriesFailed by remember(profileId) { mutableStateOf(false) }
+    var categoryPageFailed by remember(profileId) { mutableStateOf(false) }
+    var pickerSelectedId by rememberSaveable(profileId) { mutableStateOf<Long?>(null) }
+    val pickerList = key(profileId) { rememberLazyListState() }
     var categoryRows by remember(profileId) { mutableStateOf<LiveViewModel.HomeChannelCandidates?>(null) }
     var upcoming by rememberSaveable(profileId) { mutableStateOf(false) }
     var page by rememberSaveable(profileId) { mutableIntStateOf(0) }
@@ -126,16 +131,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val currentEntryScreen by rememberUpdatedState(screen)
     val currentActive by rememberUpdatedState(active)
     val currentProfile by rememberUpdatedState(profileId)
-    val currentEntryFocus by rememberUpdatedState(if (picker) { if (searchOpen) searchFocus else pickerFocus } else if (selectedId != null) detailFocus else tabFocus)
-    DisposableEffect(tabFocus) {
+    val currentEntryFocus by rememberUpdatedState(if (picker) { if (searchOpen && pickerSelectedId == null) searchFocus else pickerFocus } else if (selectedId != null) detailFocus else tabFocus)
+    var restoreTarget by remember(profileId) { mutableStateOf<FocusRequester?>(null) }
+    val currentPicker by rememberUpdatedState(picker)
+    DisposableEffect(tabFocus, profileId) {
         onMatchcenterEntry {
-            currentEntryScreen && (currentEntryFocus.requestSafely() || backFocus.requestSafely())
+            if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
+            else currentEntryScreen && (currentEntryFocus.requestSafely() || backFocus.requestSafely())
         }
         onDispose { onMatchcenterEntry(null) }
     }
 
     val gameFocus = remember(profileId) { mutableMapOf<String, FocusRequester>() }
-    var restoreTarget by remember(profileId) { mutableStateOf<FocusRequester?>(null) }
     val matchList = rememberLazyListState()
     val tableList = rememberLazyListState()
     val today = stockholmDay(now)
@@ -161,7 +168,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardWasVisible by remember { mutableStateOf(false) }
     LaunchedEffect(searchOpen, imeVisible) {
-        if (searchOpen && keyboardWasVisible && !imeVisible) { searchOpen = false; query = ""; restoreTarget = pickerFocus }
+        if (searchOpen && keyboardWasVisible && !imeVisible) { restoreTarget = pickerFocus }
         keyboardWasVisible = searchOpen && imeVisible
     }
     LaunchedEffect(profileId, libraryContext, libraryCount, favorites) { resolvedCards.clear(); directCards.clear() }
@@ -270,8 +277,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     LaunchedEffect(active, screen, picker, selectedId, query, profileId, libraryContext, libraryCount, favorites) {
         if (!active || !screen || !picker || selectedId != null || profileId == null) return@LaunchedEffect
-        matching = true
+        matching = true; matchFailed = false; channels = emptyList()
         try {
+            if (query.isNotBlank()) delay(300)
             hasChannels = liveVm.homeHasChannels(profileId)
             channels = liveVm.homeMatchCandidates(query, favorites, profileId, emptyList()).channels
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -320,12 +328,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         catch (error: Exception) { matchFailed = true; SportsDiagnostics.failure(error, HockeyStage.CACHE) }
         finally { matching = false }
     }
-    LaunchedEffect(restoreTarget, screen, selectedId, picker) {
-        val target = restoreTarget ?: return@LaunchedEffect
-        withFrameNanos { }; withFrameNanos { }
-        if (!target.requestSafely()) backFocus.requestSafely()
-        restoreTarget = null
-    }
     LaunchedEffect(screen) {
         // Saved match IDs can exist before cached fixtures load. Back is always attached.
         if (screen && restoreTarget == null) {
@@ -337,6 +339,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         keyboard?.hide()
         if (browsing) {
             if (categoryId != null) { categoryId = null; categoryPage = 0 } else browsing = false
+            pickerSelectedId = null
             restoreTarget = pickerFocus
             return
         }
@@ -393,7 +396,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val directChannel = manualChannel ?: preferredHockeyChannel(reliableChannels, guideChoices).takeIf { candidatesComplete }
     fun browseChannels() {
         if (gameToMatch != null) selectedId = gameToMatch.id else selectedId = null
-        screen = true; picker = true; browsing = false; searchOpen = false; query = ""; restoreTarget = pickerFocus
+        screen = true; picker = true; browsing = false; searchOpen = false; query = ""; pickerSelectedId = null; restoreTarget = pickerFocus
     }
     LaunchedEffect(matchedGame, matching, directChannel, reliableChannels, validBroadcast, manualChoice) {
         val game = matchedGame ?: return@LaunchedEffect
@@ -409,17 +412,56 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }
         }
     }
-    val pickerRows = (if (browsing && categoryId != null) categoryRows?.channels.orEmpty()
+    val categoryReady = categoryId?.let { categoryLoadedKey == (it to categoryPage) } ?: (categories != null)
+    val pickerRows = (if (browsing && categoryId != null) categoryRows?.channels.orEmpty().takeIf { categoryReady }.orEmpty()
         else listOfNotNull(manualChannel) + reliableChannels + channels.takeIf { reliableChannels.isEmpty() || searchOpen }.orEmpty())
         .distinctBy { it.id }.take(48)
-    LaunchedEffect(active, screen, picker, browsing, categoryId, categoryPage, profileId, libraryContext) {
-        categoryRows = null
+    // Keep category discovery out of page changes; the page reader still rechecks authorization.
+    LaunchedEffect(active, screen, picker, browsing, profileId, libraryContext, libraryCount) {
+        categories = null; categoriesFailed = false
         if (active && screen && picker && browsing && profileId != null) {
-            categories = liveVm.homeSportsCategories(profileId)
-            categoryId?.let { categoryRows = liveVm.homeCategoryChannels(it, categoryPage, profileId) }
+            try { categories = liveVm.homeSportsCategories(profileId) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                categories = emptyList(); categoriesFailed = true; SportsDiagnostics.failure(error, HockeyStage.CACHE)
+            }
         }
     }
+    LaunchedEffect(active, screen, picker, browsing, categoryId, categoryPage, profileId, libraryContext, libraryCount) {
+        categoryRows = null; categoryLoadedKey = null; categoryPageFailed = false
+        val category = categoryId
+        if (active && screen && picker && browsing && category != null && profileId != null) {
+            try { categoryRows = liveVm.homeCategoryChannels(category, categoryPage, profileId) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                categoryRows = LiveViewModel.HomeChannelCandidates(emptyList(), false)
+                categoryPageFailed = true
+                SportsDiagnostics.failure(error, HockeyStage.CACHE)
+            }
+            categoryLoadedKey = category to categoryPage
+        }
+    }
+    val focusedPickerId = pickerSelectedId?.takeIf { id -> pickerRows.any { it.id == id } } ?: pickerRows.firstOrNull()?.id
+    val pickerFailed = matchFailed || browsing && (if (categoryId == null) categoriesFailed else categoryPageFailed)
+    LaunchedEffect(restoreTarget, active, screen, selectedId, picker, hasChannels, browsing, categoryReady, matching, searchOpen) {
+        val target = restoreTarget ?: return@LaunchedEffect
+        if (picker && screen && target in listOf(pickerFocus, searchFocus)) {
+            if (!active || hasChannels == null || browsing && !categoryReady || !browsing && matching && target == pickerFocus)
+                return@LaunchedEffect // Keep the pending request until the intended rows exist.
+            val row = if (target == searchFocus || browsing && categoryId == null) 0 else {
+                val headers = (if (searchOpen) 1 else 0) + (if (matching) 1 else 0) +
+                    (if (pickerFailed) 1 else 0) + (if (reliableChannels.isNotEmpty() && !browsing) 1 else 0)
+                headers + pickerRows.indexOfFirst { it.id == focusedPickerId }.coerceAtLeast(0)
+            }
+            focusPickerItem(pickerList, row, target, backFocus)
+        } else {
+            withFrameNanos { }; withFrameNanos { }
+            if (!target.requestSafely()) backFocus.requestSafely()
+        }
+        restoreTarget = null
+    }
     fun pick(channel: ChannelEntity) {
+        pickerSelectedId = channel.id
         val game = selected ?: run { play(channel, pickerRows); return }
         val profile = profileId ?: return
         overrides.save(FixtureChannelChoice(profile, fixtureKey(game.broadcastFixture()), channel.id,
@@ -610,41 +652,42 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     }
                 } else if (picker) {
                     TvText(if (selected != null) pairLabel(selected) else stringResource(R.string.mintv_hockey_channels), size = 30, bold = true)
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                    LazyColumn(state = pickerList, verticalArrangement = Arrangement.spacedBy(14.mpx)) {
                         if (hasChannels == false) {
                             item { TvText(stringResource(R.string.mintv_no_channels), size = 27, lines = 3) }
                             item { HomeButton(stringResource(R.string.mintv_add_source), onSources, Modifier.focusRequester(pickerFocus)) }
                         } else if (hasChannels == true) {
-                        if (matching) item { TvText(stringResource(R.string.mintv_companion_loading)) }
-                        if (matchFailed) item { TvText(stringResource(R.string.mintv_companion_unavailable)) }
+                        if (searchOpen) item { CompanionInput(query, Modifier.focusRequester(searchFocus)) { query = it.take(80); pickerSelectedId = null } }
+                        if (matching || browsing && !categoryReady) item { TvText(stringResource(R.string.mintv_companion_loading)) }
+                        if (pickerFailed) item { TvText(stringResource(R.string.mintv_companion_unavailable)) }
                         if (browsing && categoryId == null) {
-                            items(categories, key = { it.id }) { category -> HomeButton(category.name, {
-                                categoryId = category.id; categoryPage = 0; restoreTarget = pickerFocus
-                            }, Modifier.fillMaxWidth().then(if (category == categories.firstOrNull()) Modifier.focusRequester(pickerFocus) else Modifier)) }
-                            if (categories.isEmpty()) item { TvText(stringResource(R.string.mintv_no_channel_matches)) }
+                            items(categories.orEmpty(), key = { it.id }) { category -> HomeButton(category.name, {
+                                categoryId = category.id; categoryPage = 0; pickerSelectedId = null; restoreTarget = pickerFocus
+                            }, Modifier.fillMaxWidth().then(if (category == categories?.firstOrNull()) Modifier.focusRequester(pickerFocus) else Modifier)) }
+                            if (categories?.isEmpty() == true) item { TvText(stringResource(R.string.mintv_no_channel_matches)) }
                         } else {
                         if (reliableChannels.isNotEmpty() && !browsing) item { TvText(stringResource(R.string.mintv_confirmed_channels), color = MinTvTeal, bold = true) }
                         items(pickerRows, key = { it.id }) { channel ->
                             ChannelCard(channel.name, channel.displayLogoUrl,
                                 stringResource(if (channel in reliableChannels) R.string.mintv_confirmed_source else R.string.mintv_unconfirmed_source,
                                     NumberFormat.getIntegerInstance().format(channel.sourceId)), { pick(channel) },
-                                Modifier.fillMaxWidth().then(if (channel == pickerRows.firstOrNull() && !searchOpen) Modifier.focusRequester(pickerFocus) else Modifier),
+                                Modifier.fillMaxWidth().then(if (channel.id == focusedPickerId) Modifier.focusRequester(pickerFocus) else Modifier),
                                 selected = channel == manualChannel)
                         }
                         if (pickerRows.isEmpty() && !matching) item { TvText(stringResource(R.string.mintv_no_channel_matches), color = MinTvMuted) }
                         if (browsing) item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                            if (categoryPage > 0) HomeButton(stringResource(R.string.mintv_shl_previous_page), { categoryPage--; restoreTarget = pickerFocus })
-                            if (categoryRows?.truncated == true) HomeButton(stringResource(R.string.mintv_shl_next_page), { categoryPage++; restoreTarget = pickerFocus })
-                            HomeButton(stringResource(R.string.mintv_browse_categories), { categoryId = null; categoryPage = 0; restoreTarget = pickerFocus })
+                            if (categoryPage > 0) HomeButton(stringResource(R.string.mintv_shl_previous_page), { categoryPage--; pickerSelectedId = null; restoreTarget = pickerFocus })
+                            if (categoryRows?.truncated == true) HomeButton(stringResource(R.string.mintv_shl_next_page), { categoryPage++; pickerSelectedId = null; restoreTarget = pickerFocus })
+                            HomeButton(stringResource(R.string.mintv_browse_categories), { categoryId = null; categoryPage = 0; pickerSelectedId = null; restoreTarget = pickerFocus },
+                                if (pickerRows.isEmpty()) Modifier.focusRequester(pickerFocus) else Modifier)
                         } }
                         }
                         if (!browsing) item { HomeButton(stringResource(R.string.mintv_browse_channels), {
-                            browsing = true; categoryId = null; categoryPage = 0; searchOpen = false; restoreTarget = pickerFocus
-                        }, if (pickerRows.isEmpty() && !searchOpen) Modifier.focusRequester(pickerFocus) else Modifier) }
+                            browsing = true; categoryId = null; categoryPage = 0; searchOpen = false; query = ""; pickerSelectedId = null; restoreTarget = pickerFocus
+                        }, if (pickerRows.isEmpty()) Modifier.focusRequester(pickerFocus) else Modifier) }
                         item { HomeButton(stringResource(if (searchOpen) R.string.mintv_close_search else R.string.mintv_channel_search), {
-                            if (searchOpen) back() else { browsing = false; searchOpen = true; restoreTarget = searchFocus }
-                        }) }
-                        if (searchOpen) item { CompanionInput(query, Modifier.focusRequester(searchFocus)) { query = it.take(80) } }
+                            if (searchOpen) back() else { browsing = false; searchOpen = true; pickerSelectedId = null; restoreTarget = searchFocus }
+                        }, if (browsing && categoryId == null && categories.orEmpty().isEmpty()) Modifier.focusRequester(pickerFocus) else Modifier) }
                         item { TvText(stringResource(R.string.mintv_shl_manual), size = 20, color = MinTvMuted) }
                         } else item { TvText(stringResource(R.string.mintv_companion_loading)) }
                     }

@@ -20,31 +20,36 @@ internal suspend fun <T> fetchSports(
 ): SportsLoadState {
     var result = SportsLoadState(cached = hasCache())
     var publishing = false
-    var publicationFailed = false
+    suspend fun report(issue: HockeyIssue) {
+        try { onIssue(issue) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { SportsDiagnostics.failure(error, HockeyStage.CACHE) }
+    }
     state(result.copy(loading = true))
     SportsDiagnostics.record(SportsDiagnostics.Event.LOADING, stage)
     try {
-        val value = withTimeout(timeoutMillis) { operation() }
-        publishing = true
-        result = SportsLoadState(cached = if (value != null) accept(value) else hasCache())
+        result = withTimeout(timeoutMillis) {
+            val value = operation()
+            publishing = true
+            SportsLoadState(cached = if (value != null) accept(value) else hasCache())
+        }
     } catch (error: TimeoutCancellationException) {
         currentCoroutineContext().ensureActive() // Parent/lifecycle cancellation is not a source error.
-        result = SportsLoadState(issue = HockeyIssue(HockeyFailureKind.TIMEOUT, stage, now,
+        result = SportsLoadState(issue = HockeyIssue(HockeyFailureKind.TIMEOUT, if (publishing) HockeyStage.PUBLICATION else stage, now,
             retryAt = now + 2 * 60_000), cached = hasCache())
-        onIssue(result.issue!!)
+        report(result.issue!!)
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (error: Exception) {
-        SportsDiagnostics.failure(error, stage)
-        if (publishing) { publicationFailed = true; throw error } // Surface publication failures instead of misclassifying them as source errors.
-        val issue = sportsIssue(error, now)
+        SportsDiagnostics.failure(error, if (publishing) HockeyStage.PUBLICATION else stage)
+        val issue = if (publishing) HockeyIssue(HockeyFailureKind.CACHE, HockeyStage.PUBLICATION, now) else sportsIssue(error, now)
         result = SportsLoadState(issue = issue.copy(retryAt = issue.retryAt ?:
             (now + 2 * 60_000).takeIf { issue.retryable }), cached = hasCache())
-        if (error !is HockeyDataException) onIssue(result.issue!!)
+        if (publishing || error !is HockeyDataException) report(result.issue!!)
     } finally {
         SportsDiagnostics.record(when {
             !currentCoroutineContext().isActive -> SportsDiagnostics.Event.CANCELLED
-            result.issue != null || publicationFailed -> SportsDiagnostics.Event.FAILURE
+            result.issue != null -> SportsDiagnostics.Event.FAILURE
             else -> SportsDiagnostics.Event.DATA
         }, stage)
         state(result)

@@ -23,13 +23,12 @@ class SportsDiagnosticsTest {
         assertEquals(48, SportsDiagnostics.snapshot().lines().size)
         assertTrue(SportsDiagnostics.snapshot().lines().all { it.matches(Regex("[0-9]+ HOME")) })
     }
-    @Test fun uiPublicationFailureIsRecordedAndPropagatesOriginalException() = runTest {
+    @Test fun uiPublicationFailureIsRecordedWithoutCrashingOrMisclassifyingTheSource() = runTest {
         val error = IllegalStateException("Sensitive programming failure")
         val states = mutableListOf<SportsLoadState>()
-        try {
-            fetchSports(1L, HockeyStage.SCHEDULE, { false }, { "verified" }, { throw error }, { states += it })
-            fail("UI programming failure was converted to a source error")
-        } catch (actual: IllegalStateException) { assertSame(error, actual) }
+        val result = fetchSports(1L, HockeyStage.SCHEDULE, { false }, { "verified" }, { throw error }, { states += it })
+        assertEquals(HockeyStage.PUBLICATION, result.issue!!.stage)
+        assertEquals(HockeyFailureKind.CACHE, result.issue!!.kind)
         assertFalse(states.last().loading)
         assertTrue(SportsDiagnostics.snapshot().contains("java.lang.IllegalStateException"))
         assertFalse(SportsDiagnostics.snapshot().contains("Sensitive"))

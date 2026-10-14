@@ -183,7 +183,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             count = result?.games?.size, age = result?.let { now - it.fetchedAt })
         return result
     }
-    fun cachedTable(c: Competition, season: String): HockeyTable? {
+    fun cachedTable(c: Competition, season: String, now: Long = System.currentTimeMillis()): HockeyTable? {
         requireCompetition(c)
         return (tables[c.id] ?: runCatching {
             val root = JSONObject(storage.cache(cacheKey(c, true)) ?: return null)
@@ -192,7 +192,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             HockeyTable(root.getString("season"), (0 until rows.length()).map { i -> val r = rows.getJSONObject(i)
                 ShlStanding(r.getInt("rank"), r.getString("team"), r.getInt("points"), r.optInt("played", -1).takeIf { it >= 0 }, r.optInt("difference", Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE })
             }, root.getLong("at"))
-        }.getOrNull())?.takeIf { it.seasonId == season && runCatching { validateTable(c, it.rows) }.isSuccess }?.also { tables[c.id] = it }
+        }.getOrNull())?.takeIf { it.fetchedAt in 1..now && it.seasonId == season && runCatching { validateTable(c, it.rows) }.isSuccess }?.also { tables[c.id] = it }
     }
     private suspend fun <T> attempt(c: Competition, table: Boolean, now: Long, operation: suspend () -> T): T {
         gate(now, c, table)
@@ -261,7 +261,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
     suspend fun standings(c: Competition, season: String, now: Long): HockeyTable = mutex.withLock {
         requireCompetition(c); require(season.matches(Regex("\\d{1,9}"))); gate(now, c, true)
         require(cached(c, now)?.seasonId == season)
-        cachedTable(c, season)?.takeIf { now - it.fetchedAt in 0 until 6 * 60 * 60_000L }?.let { return@withLock it }
+        cachedTable(c, season, now)?.takeIf { now - it.fetchedAt in 0 until 6 * 60 * 60_000L }?.let { return@withLock it }
         attempt(c, true, now) {
             access(now, c, true)
             val html = page("/ScheduleAndResults/Standings/$season", HockeyStage.TABLE, now, c, true).body

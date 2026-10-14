@@ -7,12 +7,34 @@ import tv.own.owntv.core.customize.CustomizeKeys
 import tv.own.owntv.features.live.ChannelQuality
 import tv.own.owntv.features.live.SwedishChannels
 import tv.own.owntv.features.live.SwedishChoices
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeout
 
 internal enum class HockeyChannelEvidence { BROADCAST_SCHEDULE, SPECIFIC_EPG, MANUAL, SUGGESTED, UNKNOWN }
 internal data class EpgHockeyMatch(val fixture: SportFixture, val channelIds: List<Long>,
     val channelStops: Map<Long, Long>, val timeFromEpg: Boolean, val truncated: Boolean = false,
     val channelStarts: Map<Long, Long> = emptyMap())
 internal data class HockeyEpgFixture(val fixture: SportFixture, val start: Long, val stop: Long, val timeFromEpg: Boolean)
+
+/** Reused ids do not prove that a rescheduled or changed fixture still has the same EPG evidence. */
+internal fun localHockeyEvidence(matches: List<EpgHockeyMatch>, fixture: SportFixture?): EpgHockeyMatch? =
+    fixture?.let { expected -> matches.singleOrNull { it.fixture == expected } }
+
+/** Verified broadcast names need no database lookup; EPG-only confirmation remains exact and bounded. */
+internal suspend fun matchHockeyChannels(channels: List<ChannelEntity>, fixture: SportFixture,
+    selection: SportPreferences, known: List<SportFixture>, assignment: BroadcastAssignment?, now: Long,
+    read: suspend (ChannelEntity) -> List<EpgProgrammeEntity>): List<ChannelEntity> = withTimeout(8_000) {
+    val broadcast = BroadcastResolver.usable(fixture.broadcastFixture(), assignment, Instant.ofEpochMilli(now))
+    if (broadcast != null) return@withTimeout channels.filter { channel ->
+        broadcast.channels.any { BroadcastResolver.matches(it, channel.name) }
+    }
+    val parser = HockeyEpgParser(selection, now, known)
+    channels.filter { channel ->
+        currentCoroutineContext().ensureActive()
+        read(channel).any { parser.parse(it)?.fixture == fixture }
+    }
+}
 
 /** Reuse Swedish visibility preferences; an explicit preferred UHD entry remains an owner's choice. */
 internal fun hockeyGuideChannels(channels: List<tv.own.owntv.core.database.entity.ChannelEntity>,

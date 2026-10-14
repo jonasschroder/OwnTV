@@ -3,12 +3,59 @@ package tv.own.owntv.features.home
 import java.time.Instant
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.test.runTest
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
 
 class HockeyEpgGuideTest {
     private val now = Instant.parse("2026-10-13T15:00:00Z").toEpochMilli()
     private val start = now + 2 * 60 * 60_000
     private val favorites = SportPreferences(listOf(SportsCatalog.farjestadId))
+    private fun fixture() = SportsCatalog.fixture(SportsCatalog.shl, ShlGame("actual", "Färjestad BK", "Luleå HF", start, null))
+    @Test fun verifiedBroadcastSkipsAllEpgReadsAndKeepsNumberedChannelsDistinct() = runTest {
+        val game = fixture()
+        val broadcast = BroadcastAssignment(game.broadcastFixture(), listOf(BroadcastChannel("TV4 Sport Live 2", true), BroadcastChannel("TV4 Play Hockey", false)),
+            Instant.ofEpochMilli(now), Instant.ofEpochMilli(now + 60_000), "Synthetic verified assignment")
+        val rows = listOf(channel(1, "HD", name = "TV4 Sport Live 1"), channel(2, "HD"), channel(3, "FHD"), channel(4, "", name = "TV4 Play Hockey"))
+        assertEquals(listOf(rows[1], rows[2]), matchHockeyChannels(rows, game, favorites, listOf(game), broadcast, now) {
+            error("Verified broadcast must not query EPG")
+        })
+    }
+    @Test fun expiredBroadcastUsesSpecificFixtureEpgInsteadOfStaleChannelMetadata() = runTest {
+        val game = fixture()
+        val broadcast = BroadcastAssignment(game.broadcastFixture(), listOf(BroadcastChannel("TV4 Sport Live 2", true)),
+            Instant.ofEpochMilli(now - 120_000), Instant.ofEpochMilli(now - 1), "Synthetic expired assignment")
+        val row = channel(1, "HD")
+        var reads = 0
+        assertEquals(listOf(row), matchHockeyChannels(listOf(row), game, favorites, listOf(game), broadcast, now) {
+            reads++; listOf(programme("SHL LIVE: FBK – LHF"))
+        })
+        assertEquals(1, reads)
+        assertTrue(matchHockeyChannels(listOf(row), game, favorites, listOf(game), broadcast, now) {
+            listOf(programme("SHL studio"))
+        }.isEmpty())
+    }
+    @Test fun slowEpgLookupHasDeadlineAndCancelsRemainingReads() = runTest {
+        val game = fixture(); var reads = 0; var finished = false
+        try {
+            matchHockeyChannels(listOf(channel(1, "HD"), channel(2, "FHD")), game, favorites, listOf(game), null, now) {
+                reads++; delay(60_000); finished = true; emptyList()
+            }
+            fail("Slow lookup escaped its deadline")
+        } catch (_: TimeoutCancellationException) { }
+        assertEquals(1, reads)
+        assertFalse(finished)
+    }
+    @Test fun reusedFixtureIdDoesNotCarryLocalProofAcrossReschedulesOrTeamChanges() {
+        val game = fixture()
+        val match = EpgHockeyMatch(game, listOf(1), mapOf(1L to start + 3 * 60 * 60_000), false)
+        assertEquals(match, localHockeyEvidence(listOf(match), game))
+        assertNull(localHockeyEvidence(listOf(match), game.copy(kickoff = game.kickoff.plusSeconds(60))))
+        assertNull(localHockeyEvidence(listOf(match), game.copy(homeTeam = game.awayTeam, awayTeam = game.homeTeam)))
+        assertNull(localHockeyEvidence(listOf(match), game.copy(competition = SportsCatalog.allsvenskan)))
+        assertNull(localHockeyEvidence(listOf(match, match), game))
+    }
     private fun channel(id: Long, quality: String, source: Long = 101, name: String = "TV4 Sport Live 2") =
         tv.own.owntv.core.database.entity.ChannelEntity(id = id, sourceId = source, remoteId = "$id", name = "$name $quality", epgChannelId = "same-service", streamUrl = "https://example.invalid")
     @Test fun verifiedFixtureVariantsPreferHdSdFhdAndExplicitChoiceWins() {

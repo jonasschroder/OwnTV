@@ -111,6 +111,29 @@ class HockeyReaderTest {
         assertEquals(6, source.requested.size)
         assertNull(recreated.cachedTable(shl, b.seasonId))
     }
+    @Test fun storedTableRemainsReadableWithSourceDisabledWithoutAnyRequest() = runBlocking {
+        val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+        val season = reader.refresh(shl, now).seasonId
+        val original = reader.standings(shl, season, now)
+        val count = source.requested.size
+        store.on = false
+        val recreated = HockeyReader(store, source)
+        assertEquals(original, recreated.cachedTable(shl, season, now + 7 * 60 * 60_000))
+        assertEquals(count, source.requested.size)
+        assertNull(recreated.cachedTable(ha, season, now))
+    }
+    @Test fun storedTableRejectsFutureAndInvalidTimestampsWithoutDeletingGoodRows() = runBlocking {
+        val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
+        val season = reader.refresh(shl, now).seasonId
+        val original = reader.standings(shl, season, now)
+        val raw = store.files.getValue("mintv-shl-table")
+        for (at in listOf(0L, -1L, now + 60_000)) {
+            store.files["mintv-shl-table"] = org.json.JSONObject(raw).put("at", at).toString()
+            assertNull(HockeyReader(store, source).cachedTable(shl, season, now))
+        }
+        store.files["mintv-shl-table"] = raw
+        assertEquals(original, HockeyReader(store, source).cachedTable(shl, season, now))
+    }
     @Test fun transientFailureKeepsValidCacheAndPersistsShortBackoffWithoutBypassingIt() = runBlocking {
         val store = Store(); val source = Source(); val reader = HockeyReader(store, source)
         val initial = reader.refresh(shl, now)

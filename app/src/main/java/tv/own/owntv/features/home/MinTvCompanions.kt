@@ -151,6 +151,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val externalGames = remember(currentData) { currentData.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
     val unexpiredMatches = remember(localMatches, now) { unexpiredHockeyMatches(localMatches, now) }
     val allGames = remember(externalGames, unexpiredMatches) { (externalGames + unexpiredMatches.map { it.fixture }).distinctBy { it.id }.sortedBy { it.faceoff } }
+    val currentAllGames by rememberUpdatedState(allGames)
     LaunchedEffect(profileId) { SportsDiagnostics.record(SportsDiagnostics.Event.PROFILE_CHANGED) }
     LaunchedEffect(screen) { SportsDiagnostics.record(if (screen) SportsDiagnostics.Event.MATCHCENTER else SportsDiagnostics.Event.HOME) }
     DisposableEffect(profileId, allGames) {
@@ -391,7 +392,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) { localFailed = true; SportsDiagnostics.failure(error, HockeyStage.CACHE); return@launch }
             }
-            if (currentActive && currentProfile == profile && liveVm.homeChannel(actual.id, profile) != null) onPlay(actual, list)
+            val stillAccessible = liveVm.homeChannel(actual.id, profile) != null
+            if (stillAccessible && currentActive && currentProfile == profile &&
+                hockeyFixtureStillCurrent(game, currentAllGames)) onPlay(actual, list)
         }
     }
     val localEvidence = localHockeyEvidence(localMatches, gameToMatch)

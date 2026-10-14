@@ -2,6 +2,8 @@ package tv.own.owntv.features.home
 
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.*
 import org.junit.Test
 import tv.own.owntv.core.database.entity.ChannelEntity
@@ -109,6 +111,33 @@ class HockeyMatchFeedTest {
         }.isEmpty())
         assertEquals(1, reads)
         assertEquals(listOf(row), matchHockeyChannels(listOf(row), original, favorites, listOf(original), null, now) { listOf(programme) })
+    }
+
+    @Test fun fixtureUpdateWhileEpgReadIsPendingInvalidatesThePreviouslyVerifiedClick() = runTest {
+        val original = game("pending")
+        val changed = original.copy(kickoff = original.kickoff.plusSeconds(60))
+        val row = ChannelEntity(id = 10, sourceId = 101, remoteId = "synthetic", name = "TV4 Sport Live 2 HD", streamUrl = "https://example.invalid")
+        val programme = EpgProgrammeEntity(sourceId = 101, epgChannelId = "synthetic", title = "SHL LIVE: FBK – LHF",
+            startMs = original.faceoff, stopMs = now + 60 * 60_000)
+        var current = listOf(original)
+        val started = CompletableDeferred<Unit>()
+        val response = CompletableDeferred<List<EpgProgrammeEntity>>()
+        val click = async {
+            val verified = matchHockeyChannels(listOf(row), original, favorites, listOf(original), null, now) {
+                started.complete(Unit); response.await()
+            }
+            assertEquals(listOf(row), verified) // The old captured schedule still validates this read.
+            hockeyFixtureStillCurrent(original, current)
+        }
+        started.await()
+        current = listOf(changed)
+        response.complete(listOf(programme))
+        assertFalse(click.await())
+        assertTrue(hockeyFixtureStillCurrent(changed, current))
+        assertFalse(hockeyFixtureStillCurrent(original, emptyList()))
+        assertFalse(hockeyFixtureStillCurrent(original, listOf(original, changed)))
+        assertFalse(hockeyFixtureStillCurrent(original, listOf(original.copy(status = MatchStatus.RESULT_SNAPSHOT, score = Score(2, 1)))))
+        assertTrue(hockeyFixtureStillCurrent(null, emptyList())) // Explicit library playback has no fixture.
     }
 
     @Test fun playbackRevalidationCannotConfirmAnExpiredProgrammeAfterCachedProofDisappears() = runTest {

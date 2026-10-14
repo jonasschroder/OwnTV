@@ -21,6 +21,10 @@ internal data class HockeyEpgFixture(val fixture: SportFixture, val start: Long,
 internal fun localHockeyEvidence(matches: List<EpgHockeyMatch>, fixture: SportFixture?): EpgHockeyMatch? =
     fixture?.let { expected -> matches.singleOrNull { it.fixture == expected } }
 
+/** A delayed click cannot outlive a reschedule/result update or an ambiguous current identity. */
+internal fun hockeyFixtureStillCurrent(fixture: SportFixture?, current: List<SportFixture>): Boolean =
+    fixture == null || current.singleOrNull { it.id == fixture.id } == fixture
+
 /** An old scan must not keep ended EPG-only events or expired channel assignments in the feed. */
 internal fun unexpiredHockeyMatches(matches: List<EpgHockeyMatch>, now: Long): List<EpgHockeyMatch> =
     matches.mapNotNull { match ->

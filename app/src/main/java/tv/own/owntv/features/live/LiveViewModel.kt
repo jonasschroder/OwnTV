@@ -1089,14 +1089,15 @@ class LiveViewModel(
     }
 
     /** Honors existing manual EPG mapping and guide offsets; only reads already stored programmes. */
-    suspend fun homeStoredProgrammes(channel: ChannelEntity, from: Long, to: Long): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> = withContext(Dispatchers.IO) {
-        if (!isVisibleToActiveProfile(channel)) return@withContext emptyList()
-        val cust = custom.value
-        val key = (cust.epgMatchResolver.epgIdFor(channel) ?: channel.epgChannelId)?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
-            ?: return@withContext emptyList()
-        val shift = tv.own.owntv.core.epg.EpgShift.minutesFor(cust, channel, epgOffset.value)
-        epgDao.programmesForChannel(key, tv.own.owntv.core.epg.EpgShift.toStored(from, shift), tv.own.owntv.core.epg.EpgShift.toStored(to, shift))
-            .take(12).map { tv.own.owntv.core.epg.EpgShift.apply(it, shift) }
+    suspend fun homeStoredProgrammes(channel: ChannelEntity, from: Long, to: Long, expectedProfileId: Long): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> = withContext(Dispatchers.IO) {
+        val current = ctx.value
+        if (current.profileId != expectedProfileId) return@withContext emptyList()
+        val cust = customize.observe(expectedProfileId, MediaType.LIVE).first()
+        tv.own.owntv.features.home.storedHockeyWindow(epgDao, channel, cust, epgOffset.value, from, to) {
+            ctx.value.profileId == expectedProfileId && channel.sourceId in ctx.value.sourceIds &&
+                settings.activeProfileIdNow() == expectedProfileId && isVisibleInContext(channel, current) &&
+                ctx.value.profileId == expectedProfileId && channel.sourceId in ctx.value.sourceIds && settings.activeProfileIdNow() == expectedProfileId
+        }
     }
 
     /** Bounded current/upcoming local EPG; shares manual mapping/offsets and never asks the provider. */

@@ -28,6 +28,10 @@ permanent signing and update infrastructure are unchanged.
 - A game card with a resolved variant displays that actual channel name rather
   than an arbitrary other EPG variant. HD/SD/FHD ranking, manual overrides, source
   ambiguity and the existing picker remain unchanged.
+- Both Home/Matchcenter EPG paths now load the explicitly requested profile's
+  manual mapping and offsets and check authorization before and after the read.
+  The exact-fixture path previously used a shared display state that could lag a
+  profile switch. The Room/device regression covers mapping, shifts and revocation.
 
 Ten new JVM cases per app plus the updated diagnostic regression cover publication
 failure, failed journaling, deadlines/cancellation, disabled cache reads, invalid

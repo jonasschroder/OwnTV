@@ -41,6 +41,14 @@ class HockeyLocalStorageTest {
             var checks = 0
             assertTrue(storedHockeyProgrammes(db.epgDao(), channel, custom, 0, now) { ++checks == 1 }.isEmpty())
             assertEquals(2, checks)
+            val window = storedHockeyWindow(db.epgDao(), channel, custom, -120, now, now + 4 * 60 * 60_000) { true }
+            assertEquals(rows, window)
+            val unmapped = storedHockeyWindow(db.epgDao(), channel, SectionCustomizations(), 0, now, now + 4 * 60 * 60_000) { true }
+            assertEquals(listOf("SHL studio"), unmapped.map { it.title })
+            assertNotEquals(window, unmapped)
+            var windowChecks = 0
+            assertTrue(storedHockeyWindow(db.epgDao(), channel, custom, 0, now, now + 4 * 60 * 60_000) { ++windowChecks == 1 }.isEmpty())
+            assertEquals(2, windowChecks)
             val choices = ShlChannelOverrides(isolated)
             choices.save(FixtureChannelChoice(101, fixtureKey(match.fixture.broadcastFixture()), channel.id, channel.sourceId,
                 channel.name, now + 4 * 60 * 60_000), now)

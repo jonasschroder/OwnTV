@@ -306,7 +306,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 matchHockeyChannels(found, game, selectedTeams,
                     externalGames.filter { it.competition == game.competition && scheduleFresh },
                     validBroadcast, System.currentTimeMillis()) { channel ->
-                    liveVm.homeStoredProgrammes(channel, game.faceoff - 60 * 60_000, game.faceoff + 3 * 60 * 60_000)
+                    liveVm.homeStoredProgrammes(channel, game.faceoff - 60 * 60_000, game.faceoff + 3 * 60 * 60_000, profileId)
                 }
             } else emptyList()
             val local = localHockeyEvidence(localMatches, game)
@@ -762,7 +762,7 @@ private suspend fun resolveSportsCard(game: SportFixture, allGames: List<SportFi
         else liveVm.homeMatchCandidates("", favorites, profileId, emptyList())
     val confirmed = if (assignment != null) pool.channels else if (!fresh) emptyList() else withContext(Dispatchers.IO) {
         pool.channels.filter { channel -> liveVm.homeStoredProgrammes(channel, game.faceoff - 60 * 60_000,
-            game.faceoff + 3 * 60 * 60_000).any { epg ->
+            game.faceoff + 3 * 60 * 60_000, profileId).any { epg ->
             ShlEpgMatcher.confirmed(game.hockeyGame(), epg.title, epg.description, epg.startMs, epg.stopMs,
                 allGames.filter { it.competition == game.competition && kotlin.math.abs(it.faceoff - game.faceoff) < 3 * 60 * 60_000 }.map { it.hockeyGame() })
         } }

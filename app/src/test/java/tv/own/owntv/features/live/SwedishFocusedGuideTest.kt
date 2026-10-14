@@ -79,6 +79,7 @@ class SwedishFocusedGuideTest {
         assertEquals("Existing description", snapshot.forChannel(channel, owner, 5_000)!!.now!!.description)
         assertNull(snapshot.forChannel(channel.copy(remoteId = "reused-id"), owner, 5_000))
         assertNull(snapshot.forChannel(channel.copy(sourceId = 99), owner, 5_000))
+        assertNull(snapshot.forChannel(channel, null, 5_000)) // Profile/source handover has no matching metadata yet.
         assertNull(snapshot.forChannel(channel, owner.copy(profileId = 2), 5_000))
         assertNull(snapshot.forChannel(channel, owner.copy(offset = 1), 5_000))
         assertEquals("Next", snapshot.forChannel(channel, owner, 10_000)!!.now!!.title)
@@ -106,5 +107,17 @@ class SwedishFocusedGuideTest {
         selected.value = channel; settle()
         assertEquals("Profile 2 channel 1", values.last()!!.guide!!.now!!.title)
         assertEquals(2, resets) // Ordinary channel navigation retains the current-context cache.
+    }
+
+    @Test fun reopeningAfterBackgroundClearsCacheChangedByAnotherProfileReader() = runTest {
+        var cached: EpgNowNext? = null
+        var resets = 0
+        val source = swedishFocusedGuide(flowOf(owner), flowOf(channel), flowOf(0), { cached = null; resets++ }) { _, _, _ ->
+            cached ?: guide.also { cached = it }
+        }
+        assertEquals(guide, source.filterNotNull().single().guide)
+        cached = guide.copy(now = guide.now!!.copy(title = "Another profile's manual mapping"))
+        assertEquals(guide, source.filterNotNull().single().guide)
+        assertEquals(2, resets)
     }
 }

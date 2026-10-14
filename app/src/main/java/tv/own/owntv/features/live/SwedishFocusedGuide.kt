@@ -8,6 +8,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.transformLatest
 import tv.own.owntv.core.customize.CustomizeKeys
 import tv.own.owntv.core.database.entity.ChannelEntity
@@ -31,9 +33,10 @@ private data class FocusedGuideRequest(val context: SwedishRowContext?, val chan
  */
 internal fun swedishFocusedGuide(context: Flow<SwedishRowContext?>, channel: Flow<ChannelEntity?>, revision: Flow<Int>,
     resetContext: () -> Unit,
-    read: suspend (ChannelEntity, SwedishRowContext, Boolean) -> EpgNowNext?): Flow<SwedishGuideSnapshot?> {
+    read: suspend (ChannelEntity, SwedishRowContext, Boolean) -> EpgNowNext?): Flow<SwedishGuideSnapshot?> = flow {
+    // Per subscription: a pane reopened after backgrounding must not trust another reader's cache.
     var previous: FocusedGuideRequest? = null
-    return combine(context, channel, revision) { c, ch, r -> FocusedGuideRequest(c, ch, r) }
+    emitAll(combine(context, channel, revision) { c, ch, r -> FocusedGuideRequest(c, ch, r) }
         .distinctUntilChanged().transformLatest { request ->
             emit(null)
             val c = request.context ?: return@transformLatest
@@ -49,5 +52,5 @@ internal fun swedishFocusedGuide(context: Flow<SwedishRowContext?>, channel: Flo
             currentCoroutineContext().ensureActive()
             previous = request
             emit(SwedishGuideSnapshot(c, SwedishRowKey(ch.id, ch.sourceId, CustomizeKeys.channel(ch)), request.revision, data))
-        }
+        })
 }

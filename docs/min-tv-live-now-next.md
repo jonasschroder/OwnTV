@@ -37,7 +37,8 @@ The focused pane retains the existing Core reader, including its existing select
 short-guide fallback. It is debounced separately, immediately clears superseded metadata and
 checks full profile/source/customization/channel identity before displaying it. A context change
 clears the shared reader's previous profile/mapping/offset cache, including guides for other
-channels revisited afterwards. Compact rows
+channels revisited afterwards. A restarted subscription also resets this context, so another
+profile's reads while the pane was closed cannot seed stale data on return. Compact rows
 never invoke that fallback. Rows contain brief Now/Next information; the pane retains the selected
 programme's full description. The compact row can show **Ingen programinformation** when only
 the provider's transient short guide is available in the selected pane; no titles are fabricated.

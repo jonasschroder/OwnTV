@@ -46,7 +46,10 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     var collection by rememberSaveable(profile) { mutableStateOf(SwedishCollection.GENERAL) }
     var focusId by rememberSaveable(profile) { mutableStateOf<String?>(null) }
     var resolved by remember(profile) { mutableStateOf<Pair<SwedishRowKey, ChannelEntity>?>(null) }
-    val metadata by vm.swedishRowContext.collectAsStateWithLifecycle()
+    val observedMetadata by vm.swedishRowContext.collectAsStateWithLifecycle()
+    // Library context and per-profile customization arrive on separate flows. During handover,
+    // clear rows/pane immediately, even when both profiles share the same channel/source IDs.
+    val metadata = observedMetadata?.takeIf { it.profileId == profile && it.sourceIds == context.second }
     val currentMetadata by rememberUpdatedState(metadata)
     var revision by remember(context) { mutableIntStateOf(0) }
     val cache = remember(metadata, revision) { SwedishRowCache() }

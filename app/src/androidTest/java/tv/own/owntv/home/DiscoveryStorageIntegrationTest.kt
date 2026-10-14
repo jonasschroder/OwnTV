@@ -98,6 +98,32 @@ class DiscoveryStorageIntegrationTest {
             assertTrue(repo.refresh());assertEquals(0,provider.calls)
         }
     }
+    @Test fun featuredMetadataIsCachedScopedAndPreservesProviderRatingPreference(): Unit = runBlocking {
+        fixture { context, db, settings, custom ->
+            val movie = MovieEntity(id = 71, sourceId = 101, name = "Synthetic featured film", remoteId = "hero", year = 2026,
+                addedAt = 1, rating = 8.4, streamUrl = "https://example.invalid/synthetic")
+            db.movieDao().upsertAll(listOf(movie))
+            val now = System.currentTimeMillis()
+            db.metadataDao().upsertMatch(MetadataMatchEntity("movie:101:hero", "movie", 11, 1.0, now))
+            db.metadataDao().upsertCache(MetadataCacheEntity(MetadataRepository.cacheKey(11, settings.metadataConfig().resolvedLanguage),
+                11, null, "movie", "Synthetic featured film", 2026, "Syntetisk svensk handling.", null, "/synthetic.jpg", 7.1,
+                "[\"Drama\"]", null, null, null, now))
+            val provider = OfflineProvider(); val repo = DiscoveryRepository(db, settings, custom, provider, TrendingScheduleStore(context))
+            val hero = repo.shelf(101, listOf(101), MetadataType.MOVIE).hero!!
+            assertEquals(71L, hero.card.id); assertEquals("https://image.tmdb.org/t/p/w780/synthetic.jpg", hero.backdrop)
+            assertEquals("Syntetisk svensk handling.", hero.overview); assertFalse(hero.ratingFromTmdb); assertEquals(8.4, hero.rating!!, 0.0)
+            assertNull(repo.shelf(102, listOf(101), MetadataType.MOVIE).hero)
+            settings.setMetadataMode(MetadataMode.TMDB_ONLY)
+            val tmdb = repo.shelf(101, listOf(101), MetadataType.MOVIE).hero!!
+            assertTrue(tmdb.ratingFromTmdb); assertEquals(7.1, tmdb.rating!!, 0.0)
+            settings.setMetadataMode(MetadataMode.PROVIDER)
+            val local = repo.shelf(101, listOf(101), MetadataType.MOVIE).hero!!
+            assertNull(local.backdrop); assertNull(local.overview); assertFalse(local.ratingFromTmdb)
+            custom.setItemHidden(101, MediaType.MOVIE, "101:hero", "Synthetic", true)
+            assertNull(repo.shelf(101, listOf(101), MetadataType.MOVIE).hero)
+            assertEquals(0, provider.calls)
+        }
+    }
     @Test fun largePagedCatalogRetainsBoundedShelvesAndReportsMeasuredWork():Unit=runBlocking {
         fixture {context,db,settings,custom ->
             db.categoryDao().upsertAll(listOf(
@@ -171,17 +197,22 @@ class DiscoveryStorageIntegrationTest {
             val favorites=db.favoriteDao().getAllOnce()
             val store=SwedishChannelStore(context,db,custom)
             val group=store.library(101,listOf(101),SwedishChoices()).groups.single()
-            assertEquals(2L,group.preferred(null,false)!!.id)
-            store.save(101,SwedishChoices(preferred=mapOf(group.identity to "101:sd")))
+            assertEquals(1L,group.preferred(null,false)!!.id)
+            val stored = SwedishChoices(showUhd=true,showVariants=true,order=listOf(group.identity),hidden=setOf("svt2"),preferred=mapOf(group.identity to "101:fhd"))
+            store.save(101,stored)
+            val other = SwedishChoices(preferred=mapOf(group.identity to "102:foreign"))
+            store.save(102,other)
             db.channelDao().upsertAll(listOf(sd.copy(id=900),hd.copy(id=901)))
             val recreated=SwedishChannelStore(context,db,custom)
             val choices=recreated.choices(101)
-            assertEquals(900L,recreated.library(101,listOf(101),choices).groups.single().preferred(choices.preferred[group.identity],false)!!.id)
+            assertEquals(stored,choices)
+            assertEquals(901L,recreated.library(101,listOf(101),choices).groups.single().preferred(choices.preferred[group.identity],false)!!.id)
             assertEquals(favorites,db.favoriteDao().getAllOnce());assertNotNull(db.channelDao().getById(3))
             val entity=db.channelDao().getById(900)!!
             assertEquals(sd.httpHeaders,entity.httpHeaders);assertEquals(3,entity.catchupDays);assertEquals(4,entity.number)
             assertTrue(recreated.library(101,listOf(102),choices).groups.isEmpty())
-            assertEquals(SwedishChoices(),recreated.choices(102))
+            assertEquals(other,recreated.choices(102))
+            assertEquals(4L,recreated.library(102,listOf(102),other).groups.single().preferred(other.preferred[group.identity],false)!!.id)
             db.profileDao().delete(db.profileDao().getById(101)!!)
             db.profileDao().insert(ProfileEntity(id=101,name="New owner",avatarColor=0,createdAt=999))
             assertEquals(SwedishChoices(),recreated.choices(101))

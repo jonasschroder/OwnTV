@@ -28,9 +28,11 @@ class SportsFetchTest {
     @Test fun slowResponsesHaveDeadlineAndDoNotPublishLateData() = runTest {
         val states = mutableListOf<SportsLoadState>()
         var accepted = false
+        var journaled: HockeyIssue? = null
         val final = fetchSports(now, HockeyStage.SCHEDULE, { false }, { delay(60_000); "late" },
-            { accepted = true; false }, { states += it }, timeoutMillis = 200)
+            { accepted = true; false }, { states += it }, timeoutMillis = 200, onIssue = { journaled = it })
         assertFalse(accepted)
+        assertEquals(final.issue, journaled)
         assertFalse(states.last().loading)
         assertEquals(HockeyFailureKind.TIMEOUT, final.issue!!.kind)
         assertEquals(HockeyStage.SCHEDULE, final.issue!!.stage)
@@ -94,5 +96,49 @@ class SportsFetchTest {
         assertTrue(sportsRequestCompetitions(selected, true, false, false, true).isEmpty())
         assertTrue(sportsRequestCompetitions(selected, true, true, true, false).isEmpty())
         assertFalse(SportsLoadState().loading)
+    }
+    @Test fun publicationFailuresRetainCacheAndDoNotCrashEvenIfDiagnosticPersistenceFails() = runTest {
+        for (brokenJournal in listOf(false, true)) {
+            val states = mutableListOf<SportsLoadState>()
+            var reported: HockeyIssue? = null
+            val final = fetchSports(now, HockeyStage.SCHEDULE, { true }, { "verified" },
+                { throw IllegalStateException("Synthetic publication failure") }, { states += it },
+                onIssue = { reported = it; if (brokenJournal) throw IllegalStateException("Synthetic journal failure") })
+            assertEquals(HockeyFailureKind.CACHE, final.issue!!.kind)
+            assertEquals(HockeyStage.PUBLICATION, final.issue!!.stage)
+            assertEquals(final.issue, reported)
+            assertTrue(final.cached)
+            assertFalse(states.last().loading)
+        }
+    }
+    @Test fun publicationIsInsideTheDeadlineAndCannotPublishLateData() = runTest {
+        var accepted = false
+        val final = fetchSports(now, HockeyStage.TABLE, { true }, { "verified" },
+            { delay(60_000); accepted = true; false }, {}, timeoutMillis = 200)
+        assertFalse(accepted)
+        assertEquals(HockeyFailureKind.TIMEOUT, final.issue!!.kind)
+        assertEquals(HockeyStage.PUBLICATION, final.issue!!.stage)
+        assertTrue(final.cached)
+        assertFalse(final.loading)
+    }
+    @Test fun diagnosticWriteFailureDoesNotHideTheOriginalSourceTimeout() = runTest {
+        val final = fetchSports<String>(now, HockeyStage.SCHEDULE, { true }, { awaitCancellation() },
+            { false }, {}, timeoutMillis = 200, onIssue = { throw IllegalStateException("Synthetic journal failure") })
+        assertEquals(HockeyFailureKind.TIMEOUT, final.issue!!.kind)
+        assertEquals(HockeyStage.SCHEDULE, final.issue!!.stage)
+        assertTrue(final.cached)
+    }
+    @Test fun cancellationDuringPublicationStillPropagatesAndFinishesLoading() = runTest {
+        val publishing = CompletableDeferred<Unit>()
+        val states = mutableListOf<SportsLoadState>()
+        val work = launch {
+            fetchSports(now, HockeyStage.TABLE, { true }, { "verified" },
+                { publishing.complete(Unit); awaitCancellation() }, { states += it })
+        }
+        publishing.await(); work.cancelAndJoin()
+        assertTrue(work.isCancelled)
+        assertFalse(states.last().loading)
+        assertNull(states.last().issue)
+        assertTrue(states.last().cached)
     }
 }

@@ -540,6 +540,7 @@ internal fun HistoryPage(
 @Composable
 internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () -> Unit) {
     val context = LocalContext.current
+    val hockey: tv.own.owntv.features.home.ShlRepository = koinInject()
     val scope = rememberCoroutineScope()
     var refresh by remember { mutableIntStateOf(0) }
     var exportPath by remember { mutableStateOf<String?>(null) }
@@ -565,7 +566,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
             })
             StageTool(stringResource(R.string.mintv_export_crash), boxed = true, icon = OwnTVIcon.DOWNLOADS, onClick = {
                 scope.launch {
-                    val path = withContext(Dispatchers.IO) { tv.own.owntv.features.home.SportsDiagnostics.export(context) }
+                    val path = withContext(Dispatchers.IO) { tv.own.owntv.features.home.SportsDiagnostics.export(context, hockey.diagnostics.report()) }
                     exportPath = path
                     exportFailed = path == null
                 }

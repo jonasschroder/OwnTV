@@ -37,6 +37,16 @@
 
     <!-- Android 11+ package visibility for explicit external TV shortcuts. -->
     <queries>
+        <!-- Public Twitch channel handlers and a public TV-client filter; no private URI parameters. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="www.twitch.tv" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="s0undtv" android:host="stream" />
+        </intent>
         <package android:name="org.smarttube.stable" />
         <package android:name="org.smarttube.beta" />
         <package android:name="app.smarttube.fdroid" />

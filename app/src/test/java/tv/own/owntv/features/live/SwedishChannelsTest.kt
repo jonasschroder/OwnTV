@@ -30,7 +30,7 @@ class SwedishChannelsTest {
         val rows = listOf(variant(1, "TV4 SD"), variant(2, "TV4 HD"), variant(3, "TV4 FHD"), variant(4, "TV4 UHD", 2))
         val group = SwedishChannels.group(rows).single()
         assertEquals(4, group.variants.size)
-        assertEquals(3L, group.preferred(null, false)!!.id)
+        assertEquals(2L, group.preferred(null, false)!!.id)
         assertEquals(4L, group.preferred("2:4", false)!!.id)
         assertEquals(2, group.variants.map { it.sourceId }.distinct().size)
     }
@@ -43,7 +43,23 @@ class SwedishChannelsTest {
     @Test fun stableProviderChoiceSurvivesResyncAndMissingChoiceFallsBack() {
         val group = SwedishChannels.group(listOf(variant(900, "TV4 HD", remote = "same"), variant(901, "TV4 FHD"))).single()
         assertEquals(900L, group.preferred("1:same", false)!!.id)
-        assertEquals(901L, group.preferred("removed:source", false)!!.id)
+        assertEquals(900L, group.preferred("removed:source", false)!!.id)
+    }
+    @Test fun automaticQualityIsHdThenSdThenFhdThenUnknownWithUhdOptInLast() {
+        val rows = listOf(variant(1, "TV4 UHD"), variant(2, "TV4"), variant(3, "TV4 FHD"), variant(4, "TV4 SD"), variant(5, "TV4 HD"))
+        for (removed in 0..4) {
+            val remaining = rows.dropLast(removed)
+            val group = SwedishChannels.group(remaining).single()
+            assertEquals(5L - removed, group.preferred(null, true)!!.id)
+            if (removed == 4) assertNull(group.preferred(null, false))
+        }
+        assertEquals(rows, SwedishChannels.group(rows).single().variants)
+    }
+    @Test fun everyExplicitVariantOverridesQualityAndVisibilityDefaults() {
+        val rows = listOf("SD", "HD", "FHD", "UHD", "").mapIndexed { index, quality -> variant(index.toLong(), "TV4 $quality") }
+        val group = SwedishChannels.group(rows).single()
+        for (row in rows) assertEquals(row, group.preferred(row.stableKey, false))
+        assertEquals(ChannelQuality.FHD, SwedishChannels.group(listOf(variant(1, "TV4 FHD"))).single().preferred(null, false)!!.name.quality)
     }
     @Test fun manualOrderAndHideOnlyChangeDerivedView() {
         val rows = listOf(variant(1, "SVT1"), variant(2, "SVT2"), variant(3, "TV4"))

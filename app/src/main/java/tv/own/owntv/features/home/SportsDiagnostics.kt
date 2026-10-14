@@ -18,6 +18,7 @@ import tv.own.owntv.core.util.CrashRecorder
 /** No provider URLs, fixture/team/profile names, IDs, exception messages or token values. */
 internal object SportsDiagnostics {
     enum class Event { HOME, MATCHCENTER, PROFILE_CHANGED, LOADING, DATA, FAILURE, CANCELLED, DETACHED_FOCUS }
+    private val contextLine = Regex("[0-9]{13} (${Event.entries.joinToString("|") { it.name }})( (${HockeyStage.entries.joinToString("|") { it.name }}))?")
     private val events = ArrayDeque<String>()
     private val updates = Channel<String>(Channel.CONFLATED)
     @Volatile private var previousContext = ""
@@ -70,7 +71,7 @@ internal object SportsDiagnostics {
     }.take(300).joinToString("\n")
 
     /** IO caller; this supplements rather than replaces Core's original crash recorder/export. */
-    fun export(context: Context): String? { return try {
+    fun export(context: Context, hockeyReport: String = ""): String? { return try {
         val text = buildString {
             appendLine("Min TV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             appendLine("${BuildConfig.APPLICATION_ID}; Android API ${Build.VERSION.SDK_INT}")
@@ -87,6 +88,8 @@ internal object SportsDiagnostics {
             appendLine("current-memory: heapBytes=${runtime.totalMemory() - runtime.freeMemory()} heapLimitBytes=${runtime.maxMemory()} nativeHeapBytes=${android.os.Debug.getNativeHeapAllocatedSize()}")
             appendLine("Current sports context:")
             appendLine(snapshot())
+            appendLine("Hockey fetch lifecycle (sanitized public source/league identifiers):")
+            appendLine(hockeyReport.take(16_384))
             // Preserve only our enum-only ring from the previous process' crash diagnostics.
             appendLine("Previous sports context:")
             previousContext.lineSequence().filter(::safeContextLine).take(48).forEach { appendLine(it) }
@@ -116,7 +119,7 @@ internal object SportsDiagnostics {
     } catch (_: Exception) { null } }
 
     private fun safeContextLine(line: String): Boolean =
-        line.matches(Regex("[0-9]{13} (HOME|MATCHCENTER|PROFILE_CHANGED|LOADING|DATA|FAILURE|CANCELLED|DETACHED_FOCUS)( (SCHEDULE|TABLE))?")) ||
+        line.matches(contextLine) ||
             (line.startsWith("SPORTS_FRAME ") && sanitizedStack(line.removePrefix("SPORTS_FRAME ")) == line.removePrefix("SPORTS_FRAME "))
 }
 

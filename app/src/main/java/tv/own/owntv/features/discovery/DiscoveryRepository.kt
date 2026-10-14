@@ -120,7 +120,34 @@ internal class DiscoveryRepository(private val db: OwnTVDatabase, private val se
             }
             if (count < 400) { ended = true; break }
         }
-        DiscoveryShelf(folderCollector.rows() + collector.rows(), stored?.fetchedAt, bounded = !ended)
+        val rows = folderCollector.rows() + collector.rows()
+        val featured = (rows.filter { it.kind == DiscoveryKind.TOP } + rows).flatMap { it.cards }
+            .distinctBy { it.stableKey }.take(6)
+        var hero: DiscoveryHero? = null
+        for (card in featured) {
+            if (!available(card, profile)) continue
+            val candidate = DiscoverySelection.candidate(card, candidates)
+            val id = card.tmdbId ?: candidate?.tmdbId
+            var overview: String? = null; var backdrop: String? = null; var cachedRating: Double? = null
+            if (metadataEnabled && id != null && id > 0) db.readCatalog(
+                "SELECT overview,backdropPath,rating FROM metadata_cache WHERE key=? AND tmdbId=? AND type=? LIMIT 1",
+                arrayOf<Any>("$cachePrefix$id", id, metadataType)) { cursor ->
+                if (cursor.moveToNext()) {
+                    overview = if (cursor.isNull(0)) null else cursor.getString(0)
+                    backdrop = if (cursor.isNull(1)) null else cursor.getString(1)
+                    cachedRating = if (cursor.isNull(2)) null else cursor.getDouble(2)
+                }
+            }
+            val tmdbRating = DiscoveryHeroSelection.rating(cachedRating ?: candidate?.rating)
+            val providerRating = DiscoveryHeroSelection.rating(card.rating)
+            val useTmdb = tmdbRating != null && (config.mode.tmdbWins || providerRating == null)
+            val resolved = DiscoveryHero(card, DiscoveryHeroSelection.backdrop(backdrop ?: candidate?.backdropPath),
+                DiscoveryHeroSelection.synopsis(overview ?: candidate?.overview?.takeIf { stored?.language == lang }),
+                if (useTmdb) tmdbRating else providerRating, useTmdb)
+            if (hero == null || resolved.backdrop != null) hero = resolved
+            if (resolved.backdrop != null) break
+        }
+        DiscoveryShelf(rows, stored?.fetchedAt, bounded = !ended, hero = hero)
     }
     suspend fun available(card: DiscoveryCard, profile: Long): Boolean = withContext(Dispatchers.IO) {
         val access = activeProfileSources(settings, db.sourceDao()).first()

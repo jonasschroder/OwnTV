@@ -83,4 +83,5 @@ internal object ShlTeams {
         return teams.filter { team -> team.any { it in words } }.singleOrNull()?.first()
     }
     fun identities(words: List<String>): Set<String> = teams.filter { team -> team.any { it in words } }.map { it.first() }.toSet()
+    fun aliases(name: String): List<String> = teams.firstOrNull { it.first() == identity(name) }.orEmpty()
 }

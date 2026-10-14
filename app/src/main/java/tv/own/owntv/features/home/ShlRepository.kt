@@ -49,6 +49,26 @@ internal class ShlRepository(context: Context, client: OkHttpClient) {
         withContext(parsingIo) { reader.standings(competition, season, now) }
     fun diagnostic(competition: Competition, table: Boolean = false) = reader.diagnostic(competition, table)
     fun lastResponse(competition: Competition) = reader.lastResponse(competition)
+    val diagnostics get() = reader.diagnostics
+    suspend fun failed(competition: Competition, issue: HockeyIssue) = withContext(parsingIo) {
+        val outcome = when (issue.kind) {
+            HockeyFailureKind.DISABLED -> HockeyOutcome.DISABLED
+            HockeyFailureKind.ACCESS -> HockeyOutcome.ACCESS_BLOCKED
+            HockeyFailureKind.NETWORK -> HockeyOutcome.NETWORK_ERROR
+            HockeyFailureKind.FORMAT -> if (issue.detail == HockeyFormatReason.SEASON) HockeyOutcome.SEASON_MISSING else HockeyOutcome.FORMAT_ERROR
+            HockeyFailureKind.HTTP -> HockeyOutcome.HTTP_RESPONSE
+            HockeyFailureKind.RATE_LIMITED -> HockeyOutcome.RATE_LIMITED
+            HockeyFailureKind.CACHE -> HockeyOutcome.CACHE_WRITE_FAILED
+            HockeyFailureKind.TIMEOUT -> HockeyOutcome.TIMEOUT
+        }
+        reader.trace(competition, issue.stage, outcome, issue.at, issue.httpCode, retry = issue.retryAt, detail = issue.detail)
+    }
+    suspend fun published(competition: Competition, count: Int, now: Long) = withContext(parsingIo) {
+        reader.trace(competition, HockeyStage.PUBLICATION, HockeyOutcome.PUBLISHED, now, count = count.coerceIn(0, 400))
+    }
+    suspend fun notScheduled(competition: Competition, enabled: Boolean, now: Long) = withContext(parsingIo) {
+        reader.trace(competition, HockeyStage.POLICY, if (enabled) HockeyOutcome.CANCELLED else HockeyOutcome.DISABLED, now)
+    }
 }
 
 internal class HockeyHttpPages(client: OkHttpClient) : HockeyPages {

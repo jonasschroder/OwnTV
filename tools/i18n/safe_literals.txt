@@ -907,9 +907,15 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	ultrahd
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	SVT Barn
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	SVT24
-1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	categories
-1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	channels
-1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	profiles
+2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	categories
+2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	channels
+1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	epg_channels
+1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	epg_programmes
+2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	profiles
+1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	sources
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt	(?,?,?)
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt	,
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt	WITH requested(slot,epgKey,at) AS (VALUES $values) SELECT r.slot,n.id,substr(n.title,1,240),n.startMs,n.stopMs, x.id,substr(x.title,1,240),x.startMs,x.stopMs FROM requested r LEFT JOIN epg_programmes n ON n.id=( SELECT id FROM epg_programmes WHERE epgChannelId=r.epgKey AND startMs<=r.at AND startMs>r.at-86400000 AND stopMs>r.at AND stopMs>startMs AND trim(title)!='' ORDER BY startMs DESC,id DESC LIMIT 1) LEFT JOIN epg_programmes x ON x.id=( SELECT id FROM epg_programmes WHERE epgChannelId=r.epgKey AND startMs>r.at AND startMs>=coalesce(n.stopMs,r.at) AND startMs<=r.at+86400000 AND stopMs>startMs AND trim(title)!='' ORDER BY startMs ASC,id ASC LIMIT 1)
 4	empty	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	(?i)[\\[(](?:4K|FHD|UHD|HD|SD|HDR|HDR10|HEVC|H264|H265|X264|X265|MULTI-SUB|DUAL-AUDIO|1080p|720p)[\\])]
 1	regex	app/src/main/java/tv/own/owntv/features/metadata/ConservativeTitles.kt	(?i)^\\s*(?:SE|EN|SV|NO|DK|FI|DE|FR|4K|FHD|UHD|HD)\\s*[|:]\\s*

@@ -141,6 +141,11 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.SwedishRowStorageTest', 'storedNowNextHonorsIndependentXmltvManualMappingOffsetsMidnightAndAuthorization'),
+              ('tv.own.owntv.home.SwedishRowStorageTest', 'largeGuideRemainsBoundedAndSynchronizationNeverReturnsBlankExpiredOrOtherChannelTitles'),
+              ('tv.own.owntv.home.SwedishLivePresentationTest', 'compactRowsShowRealSuppliedNowNextMissingStateAndExistingSelectedPane'),
+              ('tv.own.owntv.home.SwedishLivePresentationTest', 'remoteQualitySelectionKeepsManualUhdAndReturnsFocusWithoutPlayback'),
+              ('tv.own.owntv.home.SwedishLivePresentationTest', 'hundredsOfLazyRowsPreserveOffscreenChannelAfterOkBackAndRapidDpad'),
               ('tv.own.owntv.home.V07PresentationTest', 'ongoingHockeyFixtureStaysReachableAfterFaceoffAndExpiresAtProgrammeEnd'),
               ('tv.own.owntv.home.ChannelPickerNavigationTest', 'offscreenChannelRetainsSelectionAfterPlayerBackWithoutAutoplay'),
               ('tv.own.owntv.home.ChannelPickerNavigationTest', 'delayedPageFocusesFirstChannelAndEmptyPageKeepsRemoteRecovery'),

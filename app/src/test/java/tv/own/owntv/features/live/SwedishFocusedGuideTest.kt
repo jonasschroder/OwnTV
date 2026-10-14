@@ -23,7 +23,7 @@ class SwedishFocusedGuideTest {
         val revision = MutableStateFlow(0)
         val reads = mutableListOf<Long>(); val values = mutableListOf<SwedishGuideSnapshot?>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            swedishFocusedGuide(context, selected, revision) { ch, _, _ -> reads += ch.id; guide }.collect { values += it }
+            swedishFocusedGuide(context, selected, revision, {}) { ch, _, _ -> reads += ch.id; guide }.collect { values += it }
         }
         runCurrent(); advanceTimeBy(350); runCurrent()
         assertEquals(guide, values.last()!!.guide)
@@ -41,7 +41,7 @@ class SwedishFocusedGuideTest {
         val requests = mutableListOf<Pair<SwedishRowContext, Boolean>>()
         val values = mutableListOf<SwedishGuideSnapshot?>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            swedishFocusedGuide(context, selected, revision) { _, c, invalidate -> requests += c to invalidate; guide }.collect { values += it }
+            swedishFocusedGuide(context, selected, revision, {}) { _, c, invalidate -> requests += c to invalidate; guide }.collect { values += it }
         }
         runCurrent(); advanceTimeBy(350); runCurrent()
         selected.value = channel.copy(id = 2); runCurrent(); advanceTimeBy(350); runCurrent()
@@ -63,7 +63,7 @@ class SwedishFocusedGuideTest {
         val revision = MutableStateFlow(0)
         val values = mutableListOf<SwedishGuideSnapshot?>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            swedishFocusedGuide(context, selected, revision) { ch, _, _ ->
+            swedishFocusedGuide(context, selected, revision, {}) { ch, _, _ ->
                 if (ch.id == 1L) withContext(NonCancellable) { delay(500); guide } else throw IllegalStateException("Synthetic missing guide")
             }.collect { values += it }
         }
@@ -83,5 +83,28 @@ class SwedishFocusedGuideTest {
         assertNull(snapshot.forChannel(channel, owner.copy(offset = 1), 5_000))
         assertEquals("Next", snapshot.forChannel(channel, owner, 10_000)!!.now!!.title)
         assertNull(snapshot.forChannel(channel, owner, 20_000)!!.now)
+    }
+
+    @Test fun profileChangeClearsCachedGuidesForOtherChannelsRevisitedLater() = runTest {
+        val context = MutableStateFlow<SwedishRowContext?>(owner)
+        val selected = MutableStateFlow<ChannelEntity?>(channel)
+        val cachedById = mutableMapOf<Long, EpgNowNext>() // Core reader's channel-ID cache contract.
+        val values = mutableListOf<SwedishGuideSnapshot?>()
+        var resets = 0
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            swedishFocusedGuide(context, selected, MutableStateFlow(0), { cachedById.clear(); resets++ }) { ch, c, invalidate ->
+                if (invalidate) cachedById.remove(ch.id)
+                cachedById.getOrPut(ch.id) { guide.copy(now = guide.now!!.copy(title = "Profile ${c.profileId} channel ${ch.id}")) }
+            }.collect { values += it }
+        }
+        suspend fun settle() { runCurrent(); advanceTimeBy(350); runCurrent() }
+        settle()
+        selected.value = channel.copy(id = 2); settle()
+        assertEquals(setOf(1L, 2L), cachedById.keys); assertEquals(1, resets)
+        context.value = owner.copy(profileId = 2); settle()
+        assertEquals(setOf(2L), cachedById.keys); assertEquals(2, resets)
+        selected.value = channel; settle()
+        assertEquals("Profile 2 channel 1", values.last()!!.guide!!.now!!.title)
+        assertEquals(2, resets) // Ordinary channel navigation retains the current-context cache.
     }
 }

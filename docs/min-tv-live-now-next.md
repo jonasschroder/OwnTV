@@ -35,7 +35,9 @@ the existing `LiveStagePane`, with its existing single preview engine and full p
 
 The focused pane retains the existing Core reader, including its existing selected-channel
 short-guide fallback. It is debounced separately, immediately clears superseded metadata and
-checks full profile/source/customization/channel identity before displaying it. Compact rows
+checks full profile/source/customization/channel identity before displaying it. A context change
+clears the shared reader's previous profile/mapping/offset cache, including guides for other
+channels revisited afterwards. Compact rows
 never invoke that fallback. Rows contain brief Now/Next information; the pane retains the selected
 programme's full description. The compact row can show **Ingen programinformation** when only
 the provider's transient short guide is available in the selected pane; no titles are fabricated.

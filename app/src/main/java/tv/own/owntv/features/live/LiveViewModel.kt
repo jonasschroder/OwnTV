@@ -395,7 +395,7 @@ class LiveViewModel(
     /** Now/next for the focused channel, fetched (debounced) — each answer with the id of the channel it
      *  was looked up for, so [zapGuide] can tell a stale one. [nowNext] is the answer alone. */
     internal val swedishGuide: StateFlow<SwedishGuideSnapshot?> = swedishFocusedGuide(
-        swedishRowContext, _previewChannel, epgRefresh,
+        swedishRowContext, _previewChannel, epgRefresh, resetContext = epgReader::clearCache,
     ) { ch, context, invalidate ->
         if (!swedishContextCurrent(context)) null else {
             if (invalidate) epgReader.invalidate(ch.id)

@@ -30,6 +30,7 @@ private data class FocusedGuideRequest(val context: SwedishRowContext?, val chan
  * The row reader never calls this/provider fallback; the existing selected pane still can.
  */
 internal fun swedishFocusedGuide(context: Flow<SwedishRowContext?>, channel: Flow<ChannelEntity?>, revision: Flow<Int>,
+    resetContext: () -> Unit,
     read: suspend (ChannelEntity, SwedishRowContext, Boolean) -> EpgNowNext?): Flow<SwedishGuideSnapshot?> {
     var previous: FocusedGuideRequest? = null
     return combine(context, channel, revision) { c, ch, r -> FocusedGuideRequest(c, ch, r) }
@@ -38,6 +39,9 @@ internal fun swedishFocusedGuide(context: Flow<SwedishRowContext?>, channel: Flo
             val c = request.context ?: return@transformLatest
             val ch = request.channel?.takeIf { it.sourceId in c.sourceIds } ?: return@transformLatest
             delay(350)
+            // Core's shared reader caches by numeric channel ID, not profile/mapping/offset.
+            // Invalidate the whole previous context, including channels revisited later.
+            if (previous?.context != c) resetContext()
             val invalidate = previous?.context != c || previous?.revision != request.revision
             val data = try { read(ch, c, invalidate) }
                 catch (cancelled: CancellationException) { throw cancelled }

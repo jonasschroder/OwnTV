@@ -213,6 +213,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
     internal suspend fun resume() = lock.withLock { withContext(Dispatchers.IO) {
         if (!ready()) return@withContext
         val target = prefs.getLong("target", 0)
+        if (target == 0L && mutableState.value == State.Installed) return@withContext
         if (target > 0 && installedCode >= target) {
             prefs.edit().remove("session").remove("target").remove("confirmation").remove("result").apply()
             directory.deleteRecursively(); mutableState.value = State.Installed; return@withContext

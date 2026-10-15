@@ -50,7 +50,7 @@ internal fun HomeDashboardFrame(list: LazyListState, rows: List<HomeSection>, co
     LazyColumn(state = list,
         contentPadding = PaddingValues(start = contentStart, end = 56.mpx, top = 8.mpx, bottom = 60.mpx),
         verticalArrangement = Arrangement.spacedBy(26.mpx),
-        modifier = modifier.homeContentViewport(reservedTop).background(MinTvNavy).focusGroup()) {
+        modifier = modifier.background(MinTvNavy).homeContentViewport(reservedTop).focusGroup()) {
         item(key = Int.MIN_VALUE) { header() }
         rows.forEach { row -> item(key = row) { section(row) } }
     }
@@ -81,10 +81,30 @@ internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modif
         contentPadding = PaddingValues(horizontal = 18.mpx, vertical = 10.mpx),
         colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else MinTvPanel,
             contentColor = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White,
-            focusedContainerColor = androidx.compose.ui.graphics.Color(0xFF274555)),
+            focusedContainerColor = if (primary) androidx.compose.ui.graphics.Color(0xFFE7FFFF) else androidx.compose.ui.graphics.Color(0xFF274555)),
         border = androidx.tv.material3.ButtonDefaults.border(focusedBorder = androidx.tv.material3.Border(
             androidx.compose.foundation.BorderStroke(3.mpx, MinTvTeal))),
         scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1f)) {
         TvText(label, size = 20, lines = 1, bold = primary, color = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White)
+    }
+}
+
+/** Real stored Now/Next only; the tile remains playable when its guide is missing. */
+@Composable
+internal fun HomeNowChannelCard(name: String, logo: String?, quality: ChannelQuality?, info: SwedishRowInfo?,
+    at: Long, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+    val guide = info?.at(at)
+    TvCard(onPlay, modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+            logo?.let { coil3.compose.AsyncImage(it, null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.size(42.mpx)) }
+            TvText(name, Modifier.weight(1f), size = 24, bold = true, lines = 1)
+            quality?.takeIf { it != ChannelQuality.UNKNOWN }?.let { TvText(it.name, size = 15, color = MinTvMuted, lines = 1) }
+        }
+        TvText(guide?.now?.title ?: stringResource(R.string.mintv_v08_empty_now), size = 22, lines = 2)
+        guide?.now?.let { programme ->
+            TvText(homeProgrammeTime(programme.startMs, programme.stopMs), size = 17, color = MinTvMuted, lines = 1)
+            ProgrammeProgress(programme.progress(at))
+        }
+        guide?.next?.let { TvText(stringResource(R.string.mintv_next, it.title), size = 17, color = MinTvMuted, lines = 1) }
     }
 }

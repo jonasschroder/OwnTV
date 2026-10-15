@@ -26,4 +26,6 @@
     <string name="mintv_v08_channel_unconfirmed">Kanal ännu inte bekräftad</string>
     <string name="mintv_v08_time_range">%1$s – %2$s</string>
     <string name="mintv_v08_variant">%1$s · %2$s</string>
+    <string name="mintv_v08_no_fixture">Ingen kommande match bekräftad</string>
+    <string name="mintv_v08_viewers">%1$s tittare</string>
 </resources>

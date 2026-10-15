@@ -77,3 +77,14 @@ internal fun HomeSportsCard(hasTeams: Boolean, onOpen: () -> Unit, modifier: Mod
         else TvText(androidx.compose.ui.res.stringResource(tv.own.owntv.R.string.mintv_choose_favorite_teams), color = MinTvMuted)
     }
 }
+
+/** Dynamic rows can disappear during sync/profile changes. Never steal focus behind the player/modal. */
+@Composable
+internal fun ReconcileHomeNavigation(navigation: HomeDpadNavigation, list: LazyListState, indices: List<Int>, active: Boolean) {
+    LaunchedEffect(indices, active) {
+        if (indices.getOrNull(navigation.selected) == -1) {
+            navigation.selected = 0
+            if (active) focusPickerItem(list, indices[0], navigation.focus[0], navigation.focus[9])
+        }
+    }
+}

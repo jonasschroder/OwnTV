@@ -141,6 +141,7 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'frozenMainHeroProvidesQualifiedBeforeComparisonWithoutPlayback'),
               ('tv.own.owntv.home.HomeDashboardStorageTest', 'legacyLayoutAndProfileOwnershipSurviveReorderHideAndRestart'),
               ('tv.own.owntv.home.HomeDashboardStorageTest', 'watchedHistoryIsTimestampOrderedProfileScopedAndHighlightDoesNotRecord'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'completeDashboardShowsWatchedEpgAndHonestMissingStatesWithoutAutoplay'),

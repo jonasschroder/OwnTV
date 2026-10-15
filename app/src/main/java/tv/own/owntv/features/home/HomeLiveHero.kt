@@ -1,6 +1,8 @@
 package tv.own.owntv.features.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -25,7 +27,7 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
     onSettings: () -> Unit, modifier: Modifier = Modifier, firstAction: Modifier = Modifier,
     onVariants: (() -> Unit)? = null, video: @Composable BoxScope.() -> Unit) {
     val current = programme?.takeIf { now in it.startMs until it.stopMs }
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(22.mpx))
+    Row(modifier.fillMaxWidth().focusGroup().clip(RoundedCornerShape(22.mpx))
         .background(Brush.horizontalGradient(listOf(Color(0xFF172C3D), MinTvPanel))),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(.95f).padding(28.mpx), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
@@ -68,6 +70,6 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
 
 @Composable
 internal fun homeProgrammeTime(start: Long, stop: Long): String {
-    val format = DateFormat.getTimeInstance(DateFormat.SHORT)
+    val format = DateFormat.getTimeInstance(DateFormat.SHORT, LocalConfiguration.current.locales[0])
     return stringResource(R.string.mintv_v08_time_range, format.format(Date(start)), format.format(Date(stop)))
 }

@@ -68,6 +68,7 @@ class SportsLoadingNavigationTest {
             key(KeyEvent.KEYCODE_DPAD_CENTER)
             compose.waitUntil(5000) { starts.get() == visit + 1 }
             compose.onNodeWithTag("sports-tab-MATCHES").assertIsFocused()
+            compose.onAllNodesWithTag("sports-tab-TABLE").assertCountEquals(0)
             repeat(3) {
                 listOf(MatchcenterSection.FARJESTAD).forEach { tab ->
                     key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)

@@ -14,6 +14,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,12 +69,13 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
 @Composable
 internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, automatic: Boolean, checked: Long?,
     onDismiss: () -> Unit, onAutomatic: () -> Unit, onAction: () -> Unit) {
+    val resources = LocalResources.current
     val first = remember { FocusRequester() }
     val busy = state == MinTvUpdater.State.Checking || state is MinTvUpdater.State.Downloading ||
         state == MinTvUpdater.State.Verifying || state == MinTvUpdater.State.Installing
     StagePopup(onDismiss = onDismiss, title = stringResource(R.string.mintv_update_about), width = 1080.mpx,
         modifier = Modifier.focusProperties { onEnter = { first.requestFocus() } }.focusGroup(),
-        buttons = {
+        buttons = { CompositionLocalProvider(LocalResources provides resources) {
             LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestFocus() }
             StageButton(stringResource(R.string.settings_close), onClick = onDismiss,
                 modifier = Modifier.focusRequester(first), height = 56.mpx, textSize = 18)
@@ -83,7 +85,7 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
                 MinTvUpdater.State.Confirmation -> R.string.mintv_update_confirm
                 else -> R.string.settings_check_updates
             }), onClick = onAction, height = 56.mpx, textSize = 18, tinted = true)
-        }) {
+        } }) { CompositionLocalProvider(LocalResources provides resources) {
         Text(stringResource(R.string.app_name), style = stageText(25, 700), color = StageColors.Text)
         Text(stringResource(R.string.mintv_v08_version_current, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString()),
             style = stageText(19, 600), color = StageColors.Text)
@@ -138,7 +140,7 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
         Spacer(Modifier.height(12.mpx))
         StageButton(stringResource(R.string.mintv_update_automatic, stringResource(if (automatic) R.string.common_on else R.string.common_off)),
             onClick = onAutomatic, height = 48.mpx, textSize = 16)
-    }
+    } }
 }
 
 /**

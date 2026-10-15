@@ -117,8 +117,8 @@ internal fun MinTvContentHome(
     var heroFocused by remember { mutableStateOf(false) }
     val modal = preferencesOpen || updateOpen || variantsOpen || chooseTeams || missingApp != null || launchFailed
     val usable = foreground && preferencesLoaded && !modal && !matchcenterOpen
-    val favorites = state.favoriteLive.takeIf { state.profileId == activeProfileId && library.profileId == activeProfileId }.orEmpty()
-        .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false }
+    val favorites = remember(state.favoriteLive, state.profileId, activeProfileId, library) { state.favoriteLive.takeIf { state.profileId == activeProfileId && library.profileId == activeProfileId }.orEmpty()
+        .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false } }
     val continuations = remember(state.continueMovies, state.continueSeries, state.profileId, activeProfileId) { homeContinuations(state, activeProfileId) }
     val discovery: DiscoveryRepository = koinInject()
     val moviesVisible by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.any { it.key == HomeSection.MOVIES } } }
@@ -167,14 +167,18 @@ internal fun MinTvContentHome(
     LaunchedEffect(activeProfileId, sportsRevision) { activeProfileId?.let { sportsSelection = sports.read(it) } }
     LaunchedEffect(library) { if (library.profileId == activeProfileId && library.status != HomeLibraryStatus.LOADING) vm.refresh(activeProfileId) }
     // Refresh only a small channel index after actual catalog/access invalidations. Never a VOD catalog read.
-    LaunchedEffect(activeProfileId, state.recentLive, favorites, libraryContext, metadata, choices) {
+    val summariesActive = foreground && preferencesLoaded && !matchcenterOpen
+    LaunchedEffect(activeProfileId, state.recentLive, favorites, libraryContext, metadata, choices, summariesActive) {
+        if (!summariesActive) return@LaunchedEffect
         hero = null; heroAlternatives = emptyList(); quick = emptyList()
         val profile = activeProfileId ?: return@LaunchedEffect
         val expected = metadata?.takeIf { it.profileId == profile && libraryContext.first == profile && it.sourceIds == libraryContext.second } ?: return@LaunchedEffect
         try {
-            val groups = channelStore.library(profile, expected.sourceIds, choices).groups
             val candidate = homeHistoryCandidate(state, profile, expected.sourceIds)
             val watched = candidate?.let { liveVm.homeChannel(it.id, profile) }?.takeIf { it.homeEpgKey() == candidate.homeEpgKey() }
+            // A valid watch does not wait for the optional channel index when no override exists.
+            if (choices.preferred.isEmpty() && liveVm.swedishContextCurrent(expected)) hero = watched
+            val groups = channelStore.library(profile, expected.sourceIds, choices).groups
             val group = groups.firstOrNull { g -> g.variants.any { it.id == watched?.id } }
             val manual = group?.variants?.firstOrNull { it.stableKey == choices.preferred[group.identity] }
             val selected = if (manual != null) liveVm.homeChannel(manual.id, profile) else watched
@@ -207,12 +211,7 @@ internal fun MinTvContentHome(
     fun restoreEntry(): Boolean = if (currentMatchcenter) matchcenterEntry?.invoke() == true else
         navigation.focus[navigation.selected.takeIf { currentSectionItems.getOrNull(it) != -1 } ?: 0].requestSafely()
     DisposableEffect(firstRowFocusRequester) { onEntryHook { restoreEntry() }; onDispose { onEntryHook(null) } }
-    LaunchedEffect(sectionItems) {
-        if (sectionItems.getOrNull(navigation.selected) == -1) {
-            navigation.selected = 0
-            if (usable) { list.scrollToItem(1); withFrameNanos { }; navigation.focus[0].requestSafely() }
-        }
-    }
+    ReconcileHomeNavigation(navigation, list, sectionItems, usable)
     LaunchedEffect(restoreFocus, restoreModalFocus, usable) {
         if (usable && (restoreFocus || restoreModalFocus)) {
             val focusChannel = when (navigation.selected) { 1 -> quickFocused; 8 -> nowFocused; else -> null }
@@ -250,7 +249,7 @@ internal fun MinTvContentHome(
                     event.key in listOf(Key.DirectionLeft, Key.DirectionRight)) controller.onRemoteNavigation()
                 false
             }.then(homeDpadModifier(navigation, list, sectionItems)).onFocusChanged { if (it.hasFocus) onChildFocused() },
-            header = { Box(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = 9 }) { HomeDashboardHeader(profileName, updateState, { stop(); updateOpen = true },
+            header = { Box(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = 9 }.focusGroup()) { HomeDashboardHeader(profileName, updateState, { stop(); updateOpen = true },
                 { stop(); preferencesOpen = true }, navigation.section(9)) } }) { section ->
             when (section) {
                 HomeSection.LIVE -> {
@@ -277,7 +276,7 @@ internal fun MinTvContentHome(
                 }
                 HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
                     if (showSport) Box(Modifier.weight(1.15f)) { hockeyCard() }
-                    if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true) }
+                    if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }.focusGroup()) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true) }
                 }
                 HomeSection.TWITCH -> Unit
                 HomeSection.FAVORITES, HomeSection.NOW -> {
@@ -286,7 +285,7 @@ internal fun MinTvContentHome(
                     val index = if (nowRow) 8 else 1
                     val storedFocus = if (nowRow) nowFocused else quickFocused
                     val entryId = storedFocus?.takeIf { id -> quick.any { it.second.id == id } } ?: quick.firstOrNull()?.second?.id
-                    Column(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = index }, verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                    Column(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = index }.focusGroup(), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             TvText(stringResource(if (nowRow) R.string.mintv_v08_now else R.string.mintv_v08_quick_channels), size = 27, bold = true, lines = 1)
                             DashboardAction(stringResource(R.string.mintv_home_live), { stop(); onLiveTv() })
@@ -294,11 +293,13 @@ internal fun MinTvContentHome(
                         LazyRow(state = rail, contentPadding = PaddingValues(5.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx), modifier = Modifier.focusGroup()) {
                             itemsIndexed(quick, key = { _, item -> item.second.homeEpgKey() }) { i, (label, channel) ->
                                 val info = guide.rows[channel.homeEpgKey()]?.at(guide.at)
-                                ChannelCard(label, channel.displayLogoUrl, if (nowRow) info?.now?.title ?: stringResource(R.string.mintv_v08_empty_now) else null,
-                                    { play(channel, quick.map { it.second }) }, Modifier.width(if (nowRow) 330.mpx else 230.mpx)
-                                        .then(if (channel.id == entryId) navigation.section(index) else Modifier)
-                                        .onFocusChanged { if (it.hasFocus) { navigation.selected = index; if (nowRow) nowFocused = channel.id else quickFocused = channel.id } },
-                                    progress = if (nowRow) info?.now?.progress(guide.at) else null)
+                                val cardModifier = Modifier.width(if (nowRow) 330.mpx else 230.mpx)
+                                    .then(if (channel.id == entryId) navigation.section(index) else Modifier)
+                                    .onFocusChanged { if (it.hasFocus) { navigation.selected = index; if (nowRow) nowFocused = channel.id else quickFocused = channel.id } }
+                                val watch = { play(channel, quick.map { it.second }) }
+                                if (nowRow) HomeNowChannelCard(label, channel.displayLogoUrl, SwedishChannels.recognize(channel.name)?.quality,
+                                    info, guide.at, watch, cardModifier)
+                                else ChannelCard(label, channel.displayLogoUrl, null, watch, cardModifier)
                             }
                         }
                     }

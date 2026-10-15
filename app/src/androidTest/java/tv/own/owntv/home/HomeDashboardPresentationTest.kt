@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.*
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.semantics.SemanticsActions
@@ -83,9 +84,9 @@ class HomeDashboardPresentationTest {
             val native = LocalConfiguration.current
             val configuration = Configuration(native).apply { setLocale(Locale.forLanguageTag("sv")) }
             val context = compose.activity.createConfigurationContext(configuration)
-            val width = native.screenWidthDp * native.densityDpi / 160f
+            val width = LocalWindowInfo.current.containerSize.width.toFloat().coerceAtLeast(1f)
             CompositionLocalProvider(LocalContext provides context, LocalConfiguration provides configuration,
-                LocalDensity provides Density(1.8f * width / 1920f, 1f)) {
+                LocalDensity provides Density(1.8f * width / 1920f, 1f), LocalResources provides context.resources) {
                 MaterialTheme {
                     val list = rememberLazyListState()
                     val scope = rememberCoroutineScope()
@@ -94,9 +95,11 @@ class HomeDashboardPresentationTest {
                     var fullscreen by remember { mutableStateOf(false) }
                     var showUpdate by remember { mutableStateOf(false) }
                     val indices = dashboardIndices(rows, true, true)
+                    ReconcileHomeNavigation(nav, list, indices, !fullscreen && !showUpdate)
                     SideEffect { scroll = { index -> scope.launch { list.scrollToItem(index) } } }
                     fun restore() { scope.launch { list.scrollToItem(indices[nav.selected]); withFrameNanos { }; withFrameNanos { }; nav.focus[nav.selected].requestSafely() } }
                     BackHandler(fullscreen) { fullscreen = false; restore() }
+                    Box(Modifier.fillMaxSize().background(MinTvNavy)) {
                     if (fullscreen) Box(Modifier.fillMaxSize().background(MinTvNavy).testTag("dashboard-fullscreen")) { TvText("Syntetisk uppspelningskontroll") }
                     else HomeDashboardFrame(list, rows, 150.mpx, 110.mpx,
                         Modifier.fillMaxSize().testTag("dashboard").then(homeDpadModifier(nav, list, indices)),
@@ -128,8 +131,14 @@ class HomeDashboardPresentationTest {
                                     TvText(context.getString(if (section == HomeSection.NOW) R.string.mintv_v08_now else R.string.mintv_v08_quick_channels), size = 27, bold = true)
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.mpx), contentPadding = PaddingValues(5.mpx)) {
                                         itemsIndexed(listOf("SVT1", "SVT2", "TV3", "TV4", "Kanal 5", "TV6")) { i, name ->
-                                            ChannelCard(name, null, if (section == HomeSection.NOW) "Syntetiskt program $i" else null,
-                                                { watched++; fullscreen = true }, Modifier.width(300.mpx).then(if (i == 0) nav.section(index) else Modifier), progress = if (section == HomeSection.NOW) .4f else null)
+                                            if (section == HomeSection.NOW) HomeNowChannelCard(name, null,
+                                                tv.own.owntv.features.live.ChannelQuality.HD,
+                                                tv.own.owntv.features.live.SwedishRowInfo(null,
+                                                    tv.own.owntv.features.live.SwedishProgramme(i.toLong(), "Syntetiskt program $i", now - 600_000, now + 1_200_000),
+                                                    tv.own.owntv.features.live.SwedishProgramme(i + 100L, "Syntetiskt nästa $i", now + 1_200_000, now + 2_400_000)),
+                                                now, { watched++; fullscreen = true }, Modifier.width(330.mpx).then(if (i == 0) nav.section(index) else Modifier))
+                                            else ChannelCard(name, null, null, { watched++; fullscreen = true },
+                                                Modifier.width(300.mpx).then(if (i == 0) nav.section(index) else Modifier))
                                         }
                                     }
                                 }
@@ -146,6 +155,10 @@ class HomeDashboardPresentationTest {
                             else -> Unit
                         }
                     }
+                    if (!fullscreen) tv.own.owntv.features.shell.components.StageStatusCluster(
+                        null, null, "Syntetisk IPTV-källa", false, {}, false, null, false,
+                        tv.own.owntv.core.settings.ClockColors(), Modifier.align(Alignment.TopEnd))
+                    }
                     if (showUpdate) UpdatePresentation(update, context.getString(R.string.mintv_update_channel_stable), false, null,
                         { showUpdate = false; closeUpdate++; restore() }, {}, { updates++ })
                     LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestSafely() }
@@ -154,15 +167,18 @@ class HomeDashboardPresentationTest {
         }
         compose.waitForIdle()
     }
+    @Test fun frozenMainHeroProvidesQualifiedBeforeComparisonWithoutPlayback() {
+        before = true; mount()
+        compose.onNodeWithTag("dashboard-watch").assertIsFocused()
+        screenshot("v08-before-hero-main-09273507-synthetic.png")
+        assertEquals(0, watched); assertEquals(0, opened)
+    }
     @Test fun completeDashboardShowsWatchedEpgAndHonestMissingStatesWithoutAutoplay() {
         mount()
         compose.onNodeWithTag("dashboard-watch").assertIsFocused()
         compose.onNodeWithText("Syntetiska Nyheterna").assertIsDisplayed()
         assertEquals(0, watched)
         screenshot("v08-home-1080p-synthetic.png")
-        compose.runOnIdle { before = true }
-        screenshot("v08-before-hero-main-09273507-synthetic.png")
-        compose.runOnIdle { before = false }
         screenshot("v08-home-last-watched-epg-synthetic.png")
         compose.runOnIdle { hasGuide = false }
         compose.onNodeWithText("Syntetiska Nyheterna").assertDoesNotExist()
@@ -180,7 +196,6 @@ class HomeDashboardPresentationTest {
         compose.runOnIdle { hockeyKnown = false; twitch = TwitchState.Live("Syntetisk direktsändning", 1234, "Counter-Strike 2") }
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         screenshot("v08-hockey-unknown-and-twitch-live-synthetic.png")
-        compose.onAllNodesWithTag("sports-tab-TABLE").assertCountEquals(0)
         key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithTag("dashboard-twitch").assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -199,12 +214,25 @@ class HomeDashboardPresentationTest {
         screenshot("v08-discovery-series-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_DOWN)
         screenshot("v08-discovery-movies-synthetic.png")
+        compose.runOnIdle { rows = listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.MOVIES, HomeSection.NOW, HomeSection.CONTINUE) }
+        key(KeyEvent.KEYCODE_DPAD_DOWN) // movies now precedes Now, regardless of stable section ID
+        compose.onNodeWithText("Syntetiskt program 0").assertIsDisplayed()
+        screenshot("v08-on-tv-now-synthetic.png")
+        compose.runOnIdle { rows = rows - HomeSection.NOW }
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("dashboard-watch").assertIsFocused(); true }.getOrDefault(false) }
         assertEquals(1, watched)
     }
     @Test fun updateDialogShowsRealInstalledVersionAndDistinctProgressFailureAndConfirmationStates() {
         mount(); key(KeyEvent.KEYCODE_DPAD_UP)
         compose.onNodeWithTag("dashboard-version").assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER)
+        try {
+            compose.waitUntil(5000) { runCatching { compose.onNodeWithText("Stäng").assertIsFocused(); true }.getOrDefault(false) }
+        } catch (error: Throwable) {
+            screenshot("v08-about-failure-synthetic.png")
+            compose.onAllNodes(isRoot()).printToLog("V08_SYNTHETIC_UPDATE")
+            throw error
+        }
         compose.onNodeWithText("Installerad: ${BuildConfig.VERSION_NAME} · Bygge ${BuildConfig.VERSION_CODE}").assertExists()
         screenshot("v08-about-current-version-synthetic.png")
         key(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("dashboard-version").assertIsFocused()
@@ -239,6 +267,7 @@ class HomeDashboardPresentationTest {
         try {
             command("wm size 1280x720")
             compose.waitUntil(5000) { compose.activity.resources.configuration.screenWidthDp < 800 }
+            remoteMode() // resize may recreate the disposable activity/window
             mount()
             compose.onNodeWithTag("dashboard-watch").assertIsFocused()
             compose.onNodeWithText("Syntetiska Nyheterna").assertIsDisplayed()
@@ -246,6 +275,6 @@ class HomeDashboardPresentationTest {
             assertEquals(1280, shot.width); assertEquals(720, shot.height)
             screenshot("v08-home-720p-synthetic.png")
             key(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
-        } finally { command("wm size reset") }
+        } finally { command("wm size reset"); compose.waitUntil(5000) { compose.activity.resources.configuration.screenWidthDp >= 800 } }
     }
 }

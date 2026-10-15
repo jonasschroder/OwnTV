@@ -1,6 +1,8 @@
 package tv.own.owntv.features.home
 
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -37,7 +39,11 @@ internal fun HomeContinuationRow(items: List<LauncherContinuationItem>, first: M
                     width = 310.mpx, height = 174.mpx, titleSize = 22, lineSize = 18,
                     progress = item.durationMs.takeIf { it > 0 }?.let { item.positionMs.toFloat() / it },
                     modifier = (if (item.stableKey == entryKey) first else Modifier).onFocusChanged { if (it.hasFocus) focusedKey = item.stableKey }) {
-                    AsyncImage(model = item.posterUrl, contentDescription = null, contentScale = ContentScale.Crop,
+                    if (item.posterUrl.isNullOrBlank()) Box(Modifier.fillMaxSize().background(MinTvPanel), contentAlignment = Alignment.Center) {
+                        tv.own.owntv.ui.components.OwnTVIcon(if (item.kind == LauncherContinuationKind.EPISODE)
+                            tv.own.owntv.ui.components.OwnTVIcon.SERIES else tv.own.owntv.ui.components.OwnTVIcon.MOVIES,
+                            MinTvMuted, Modifier.size(64.mpx))
+                    } else AsyncImage(model = item.posterUrl, contentDescription = null, contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize())
                 }
             }

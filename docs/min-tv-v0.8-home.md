@@ -52,14 +52,16 @@ is explicit and affects Home layout only.
 ## Reused domain owners
 
 - `HomeViewModel` / Core `HomeFeedReader`: actual profile-scoped, timestamp-ordered Live
-  history, favorites and real movie/episode continuation. History observation refreshes
-  the feed on returning from playback. No focus action writes watch history.
+  history, favorites and real movie/episode continuation. The existing shell refreshes the
+  feed on Home entry and fullscreen return; no duplicate history-driven feed load is added. No focus action writes watch history.
 - `SwedishChannelStore`: existing lightweight logical groups, ordering and explicit
   source/quality settings; HD → SD → FHD → Unknown → UHD policy is unchanged.
 - `LiveViewModel.homeChannel`: revalidates access before display and again before playback.
 - PR #10 `SwedishRowCache` + `swedishStoredRows`: max 16 requested keys and 32 tiny summaries,
   local indexed Now/Next, full source/stable-key/profile/mapping/offset context; no guide-wide
-  load or per-card provider HTTP. Current titles expire at programme boundaries. Empty data
+  load or per-card provider HTTP. A single visible hero synopsis reuses Core’s indexed
+  `GuideReader.description` on programme changes, capped to 800 characters, with timeout,
+  cancellation and fresh channel/profile authorization on both sides of the read. Current titles expire at programme boundaries. Empty data
   displays honest placeholders. Home requests visible cards + two nearby cards only.
 - `HomeLivePreviewController` and existing singleton Live engine: hero only; deliberate
   hero interaction, debounced muted preview, no preview starts by scrolling rails. Paused
@@ -123,7 +125,12 @@ instantiate production `HomeViewModel` or resolve live provider sessions. The `b
 screenshot substitutes only the exact hero composable copied from merged main `09273507`
 inside the same test frame; it is a **hero component comparison**, not a screenshot of the
 whole previous Home. Other state screenshots are the current production UI with fixtures.
-The 720p capture temporarily changes **only the disposable CI emulator** display size and
+The clock uses the emulator’s actual time; synthetic programmes are relative to that time.
+Hockey faceoff rendering explicitly uses Europe/Stockholm, independently of emulator timezone.
+Synthetic poster files are generated only in the disposable test app cache; Coil renders them
+in the real cards, with missing-artwork examples retained. Both the runner and the fixture
+require the actual emulator property (`ro.kernel.qemu=1`), in addition to the explicit
+instrumentation argument. The 720p capture temporarily changes **only that emulator** display size and
 restores it in `finally`; it never changes a physical Chromecast setting.
 
 ## Proposed release notes (not published)

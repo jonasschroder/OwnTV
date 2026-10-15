@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Disposable CI emulator only. Preserve screenshots on failures without masking test status.
 set -euo pipefail
+# The 720p fixture changes display size temporarily. Refuse every physical device even if the
+# instrumentation argument is supplied accidentally; no installed owner app may be touched.
+if [ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" != "1" ]; then
+  echo '::error::TV regression runner requires a disposable Android emulator; physical devices are refused.'
+  exit 1
+fi
 capture_screenshots() {
   test_status=$?
   trap - EXIT

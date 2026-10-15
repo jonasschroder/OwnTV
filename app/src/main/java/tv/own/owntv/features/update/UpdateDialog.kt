@@ -1,6 +1,9 @@
 package tv.own.owntv.features.update
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.border
 import androidx.compose.ui.focus.onFocusChanged
@@ -76,6 +79,10 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
 internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, automatic: Boolean, checked: Long?,
     onDismiss: () -> Unit, onAutomatic: () -> Unit, onAction: () -> Unit) {
     val resources = LocalResources.current
+    val scope = rememberCoroutineScope()
+    val notesFocus = remember { FocusRequester() }
+    val automaticFocus = remember { FocusRequester() }
+    val notes = (state as? MinTvUpdater.State.Available)?.candidate?.notes?.takeIf { it.isNotBlank() }
     val first = remember { FocusRequester() }
     val busy = state == MinTvUpdater.State.Checking || state is MinTvUpdater.State.Downloading ||
         state == MinTvUpdater.State.Verifying || state == MinTvUpdater.State.Installing
@@ -84,7 +91,7 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
         buttons = { CompositionLocalProvider(LocalResources provides resources) {
             LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestFocus() }
             StageButton(stringResource(R.string.settings_close), onClick = onDismiss,
-                modifier = Modifier.focusRequester(first), height = 56.mpx, textSize = 18)
+                modifier = Modifier.focusRequester(first).focusProperties { if (notes != null) up = notesFocus }, height = 56.mpx, textSize = 18)
             if (!busy) StageButton(stringResource(when (state) {
                 is MinTvUpdater.State.Available -> R.string.update_now
                 MinTvUpdater.State.Permission -> R.string.mintv_update_permission_action
@@ -132,20 +139,34 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
         }
         if (state is MinTvUpdater.State.Available || state is MinTvUpdater.State.Downloading || state == MinTvUpdater.State.Verifying)
             Text(stringResource(R.string.mintv_v08_progress_hint), style = stageText(17, 400), color = StageColors.Muted)
-        (state as? MinTvUpdater.State.Available)?.candidate?.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+        notes?.let { notes ->
             Spacer(Modifier.height(16.mpx))
             Text(stringResource(R.string.mintv_v08_notes), style = stageText(23, 700), color = StageColors.Text)
             // Remote-focusable notes scroll with Up/Down, never fake an action.
             var focused by remember { mutableStateOf(false) }
+            val notesScroll = rememberScrollState()
+            val scrollStep = with(LocalDensity.current) { 80.mpx.toPx() }
             Text(renderReleaseNotes(notes, StageColors.Text), style = stageText(18, 400), color = StageColors.Muted,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 230.mpx)
-                    .onFocusChanged { focused = it.isFocused }
+                modifier = Modifier.fillMaxWidth().heightIn(max = 230.mpx).focusRequester(notesFocus)
+                    .focusProperties { up = first; down = automaticFocus }
+                    .onPreviewKeyEvent { event ->
+                        val delta = when (event.key) {
+                            Key.DirectionDown -> scrollStep.takeIf { notesScroll.canScrollForward }
+                            Key.DirectionUp -> (-scrollStep).takeIf { notesScroll.canScrollBackward }
+                            else -> null
+                        }
+                        if (delta == null) false else {
+                            if (event.type == KeyEventType.KeyDown) scope.launch { notesScroll.scrollBy(delta) }
+                            true
+                        }
+                    }
+                    .onFocusChanged { focused = it.hasFocus }
                     .border(2.mpx, if (focused) StageSurfaces.Cyan else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(8.mpx))
-                    .verticalScroll(rememberScrollState()).focusable().padding(8.mpx))
+                    .focusable().verticalScroll(notesScroll).padding(8.mpx))
         }
         Spacer(Modifier.height(12.mpx))
         StageButton(stringResource(R.string.mintv_update_automatic, stringResource(if (automatic) R.string.common_on else R.string.common_off)),
-            onClick = onAutomatic, height = 48.mpx, textSize = 16)
+            onClick = onAutomatic, modifier = Modifier.focusRequester(automaticFocus).focusProperties { up = if (notes != null) notesFocus else first; down = first }, height = 48.mpx, textSize = 16)
     } }
 }
 

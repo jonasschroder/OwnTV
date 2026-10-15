@@ -44,7 +44,7 @@ import tv.own.owntv.ui.theme.mpx
  */
 class HomeDashboardPresentationTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-    private val now = 1_791_720_000_000L
+    private val now = System.currentTimeMillis()
     private var before by mutableStateOf(false)
     private var hasHistory by mutableStateOf(true)
     private var hasGuide by mutableStateOf(true)
@@ -58,13 +58,54 @@ class HomeDashboardPresentationTest {
     private var updates = 0
     private var closeUpdate = 0
     private var scroll: ((Int) -> Unit)? = null
+    private val posterUrls = mutableMapOf<String, String>()
     @Before fun remoteMode() {
         assertEquals("true", InstrumentationRegistry.getArguments().getString("disposableEmulator"))
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val qemu = automation.executeShellCommand("getprop ro.kernel.qemu").use { fd ->
+            java.io.FileInputStream(fd.fileDescriptor).readBytes().toString(Charsets.UTF_8).trim()
+        }
+        assertEquals("Display fixtures are emulator-only", "1", qemu)
+        if (posterUrls.isEmpty()) for (kind in listOf("MOVIE", "TV", "CONTINUE")) for (id in 1L..6L)
+            posterUrls["$kind:$id"] = syntheticPoster(kind, id)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         compose.runOnUiThread {
             WindowCompat.setDecorFitsSystemWindows(compose.activity.window, false)
             WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView).hide(WindowInsetsCompat.Type.systemBars())
         }
+    }
+    /** Local artwork is synthetic test content, rendered by the real Coil/card path, never HTTP. */
+    private fun syntheticPoster(kind: String, id: Long): String {
+        val dir = File(compose.activity.cacheDir, "v08-synthetic-art").apply { mkdirs() }
+        val target = File(dir, "$kind-$id.png")
+        if (!target.isFile) {
+            val landscape = kind == "CONTINUE"
+            val width = if (landscape) 640 else 384
+            val height = if (landscape) 360 else 576
+            val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            val colors = intArrayOf(0xFF356C80.toInt(), 0xFF4A6269.toInt(), 0xFF715A49.toInt(), 0xFF31596B.toInt())
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+            paint.shader = android.graphics.LinearGradient(0f, 0f, width.toFloat(), height.toFloat(),
+                colors[(id.toInt() - 1) % colors.size], 0xFF0D172A.toInt(), android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+            paint.shader = null; paint.color = 0x405BDACB
+            canvas.drawCircle(width * .7f, height * .32f, width * .36f, paint)
+            paint.color = 0xFF102D42.toInt()
+            val shape = android.graphics.Path().apply {
+                moveTo(0f, height * .8f); lineTo(width * .45f, height * .32f)
+                lineTo(width.toFloat(), height.toFloat()); lineTo(0f, height.toFloat()); close()
+            }
+            canvas.drawPath(shape, paint)
+            paint.color = android.graphics.Color.WHITE; paint.textSize = if (landscape) 48f else 36f
+            paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+            canvas.drawText((if (kind == "TV") "TESTSERIE " else "TESTFILM ") + id, 26f, height * .79f, paint)
+            paint.textSize = 20f; paint.color = 0xFFB5DAD8.toInt()
+            canvas.drawText("SYNTETISKT TESTMATERIAL", 26f, height * .9f, paint)
+            target.outputStream().use { check(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+            bitmap.recycle()
+        }
+        return Uri.fromFile(target).toString()
     }
     private fun key(code: Int) { InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code); compose.waitForIdle() }
     private fun focus(tag: String) {
@@ -72,6 +113,7 @@ class HomeDashboardPresentationTest {
         compose.onNodeWithTag(tag).assertIsFocused()
     }
     private fun screenshot(name: String) {
+        compose.waitForIdle()
         val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
         File(dir, name).outputStream().use { assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             .compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
@@ -109,7 +151,7 @@ class HomeDashboardPresentationTest {
                                 XtEpgEntry("Syntetiska Nyheterna", null, now - 600_000, now + 1_200_000),
                                 "Syntetiskt nästa program", now, null, {}, {}, {}, {}, firstAction = nav.section(0).testTag("dashboard-watch")) { TvText("TV4", size = 80, color = MinTvTeal) }
                             else HomeLiveHero(if (hasHistory) "TV4 HD" else null, null,
-                                if (hasGuide && hasHistory) XtEpgEntry("Syntetiska Nyheterna", null, now - 600_000, now + 1_200_000) else null,
+                                if (hasGuide && hasHistory) XtEpgEntry("Syntetiska Nyheterna", "Syntetiska nyheter och reportage från vår testtablå.", now - 600_000, now + 1_200_000) else null,
                                 if (hasGuide && hasHistory) "Syntetiskt nästa program" else null, now,
                                 context.getString(R.string.mintv_preview_disabled),
                                 { if (hasHistory) { watched++; fullscreen = true } else opened++ }, { opened++ }, {}, {},
@@ -144,12 +186,12 @@ class HomeDashboardPresentationTest {
                                 }
                             }
                             HomeSection.CONTINUE -> HomeContinuationRow((1L..6L).map { id -> LauncherContinuationItem(
-                                LauncherContinuationKind.MOVIE, id, id, "synthetic:$id", "Syntetisk film $id", "Film · 42 minuter kvar", null,
+                                LauncherContinuationKind.MOVIE, id, id, "synthetic:$id", "Syntetisk film $id", "Film · 42 minuter kvar", posterUrls["CONTINUE:$id"].takeIf { id != 6L },
                                 Uri.EMPTY, now, 100_000, 45_000, LauncherWatchNextType.CONTINUE) }, nav.section(2).testTag("dashboard-resume")) { watched++; fullscreen = true }
                             HomeSection.SERIES, HomeSection.MOVIES -> {
                                 val type = if (section == HomeSection.MOVIES) MetadataType.MOVIE else MetadataType.TV
                                 DiscoveryPosterRow(DiscoveryRow(DiscoveryKind.TOP, (1L..6L).map { id -> DiscoveryCard(id, 101, "synthetic:$id", type,
-                                    if (type == MetadataType.MOVIE) "Syntetisk film $id" else "Syntetisk serie $id", null, 2026, 1, 8.2, setOf("Drama"), id.toInt()) }), type, null,
+                                    if (type == MetadataType.MOVIE) "Syntetisk film $id" else "Syntetisk serie $id", posterUrls["${type.name}:$id"].takeIf { id != 6L }, 2026, 1, 8.2, setOf("Drama"), id.toInt()) }), type, null,
                                     { opened++ }, first = nav.section(if (type == MetadataType.MOVIE) 4 else 5).testTag(if (type == MetadataType.MOVIE) "dashboard-movies" else "dashboard-series"))
                             }
                             else -> Unit
@@ -218,6 +260,9 @@ class HomeDashboardPresentationTest {
         compose.onNodeWithTag("dashboard-movies").assertIsFocused()
         screenshot("v08-discovery-movies-synthetic.png")
         compose.runOnIdle { rows = listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.MOVIES, HomeSection.NOW, HomeSection.CONTINUE) }
+        // runOnIdle waits BEFORE its mutation, not for the resulting new frame. Assert the
+        // committed reordered screen before dispatching a key meant for that new layout.
+        compose.onNodeWithTag("dashboard-movies").assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_DOWN) // movies now precedes Now, regardless of stable section ID
         compose.onNodeWithText("Syntetiskt program 0").assertIsDisplayed()
         compose.onNodeWithTag("dashboard-now").assertIsFocused()
@@ -251,7 +296,14 @@ class HomeDashboardPresentationTest {
         screenshot("v08-header-update-available-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_CENTER)
         screenshot("v08-update-available-synthetic.png")
-        compose.onNodeWithText("Syntetiska testnyheter", substring = true).assertExists()
+        val releaseNotes = compose.onNodeWithText("Syntetiska testnyheter", substring = true)
+        releaseNotes.assertExists()
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        releaseNotes.assertIsFocused()
+        val beforeScroll = releaseNotes.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
+        key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN)
+        val afterScroll = releaseNotes.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
+        assertTrue("Remote must scroll authenticated notes", afterScroll > beforeScroll)
         val variants = listOf(
             MinTvUpdater.State.Downloading(42) to "downloading",
             MinTvUpdater.State.Verifying to "verifying",

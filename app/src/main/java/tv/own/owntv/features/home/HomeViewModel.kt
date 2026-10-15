@@ -179,8 +179,7 @@ class HomeViewModel(
             settings.activeProfileId.collectLatest { pid ->
                 _uiState.value = HomeUiState()
                 if (pid >= 0) {
-                    combine(channelDao.favoritesListAlpha(pid), historyDao.observeMostRecent(pid)) { _, _ -> Unit }
-                        .collect { reloadRequests.emit(pid) }
+                    channelDao.favoritesListAlpha(pid).collect { reloadRequests.emit(pid) }
                 }
             }
         }

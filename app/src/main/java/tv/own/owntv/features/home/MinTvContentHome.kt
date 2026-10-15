@@ -158,7 +158,7 @@ internal fun MinTvContentHome(
         }
         visible.distinct().take(SWEDISH_EPG_WINDOW)
     } }
-    val guide = rememberHomeDashboardGuide(liveVm, activeProfileId, usable, visibleChannelKeys)
+    val guide = rememberHomeDashboardGuide(liveVm, activeProfileId, usable, visibleChannelKeys, hero)
     val heroGuide = hero?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
     val previewAllowed = usable && previewsOn && heroVisible && heroFocused && HomeSection.LIVE !in hidden
     LaunchedEffect(activeProfileId) {
@@ -264,7 +264,7 @@ internal fun MinTvContentHome(
                     }
                     if (HomeSection.LIVE in hidden) DashboardAction(stringResource(R.string.mintv_home_live), { stop(); onLiveTv() }, navigation.section(0))
                     else HomeLiveHero(selected?.name, selected?.displayLogoUrl,
-                        heroGuide?.now?.let { XtEpgEntry(it.title, null, it.startMs, it.stopMs) }, heroGuide?.next?.title, guide.at,
+                        heroGuide?.now?.let { XtEpgEntry(it.title, guide.synopsis, it.startMs, it.stopMs) }, heroGuide?.next?.title, guide.at,
                         stringResource(message), { selected?.let { play(it, listOf(it) + quick.map { row -> row.second }) } ?: run { stop(); onLiveTv() } },
                         { stop(); onLiveTv() }, { stop(); onGuide() }, { preferencesOpen = true },
                         Modifier.onFocusChanged { heroFocused = it.hasFocus; if (it.hasFocus) navigation.selected = 0 }, navigation.section(0),
@@ -347,6 +347,7 @@ internal fun MinTvContentHome(
         { activeProfileId?.let { profile -> scope.launch { sectionStore.save(profile, emptySet()); sectionStore.saveOrder(profile, defaultHomeOrder); hidden = emptySet(); order = defaultHomeOrder } } },
         { controller.setActive(false); scope.launch { settings.setLivePreviewEnabled(!previewsOn) } }, { chooseTeams = true },
         { preferencesOpen = false; stop(); if (library.status == HomeLibraryStatus.NO_SOURCE) onSources() else onManageSources() },
+        { preferencesOpen = false; openExternal(MinTvIntents.settings()) },
         { preferencesOpen = false; restoreModalFocus = true })
     if (chooseTeams && activeProfileId != null) SportsTeamPicker(activeProfileId) { chooseTeams = false }
     if (launchFailed || missingApp != null) Dialog(onDismissRequest = { launchFailed = false; missingApp = null; restoreModalFocus = true }) {
@@ -373,7 +374,7 @@ private fun HomeVariantDialog(channels: List<ChannelEntity>, sources: Map<Long, 
 @Composable
 private fun HomeLayoutDialog(hidden: Set<HomeSection>, order: List<HomeSection>, previews: Boolean,
     toggle: (HomeSection) -> Unit, reorder: (List<HomeSection>) -> Unit, reset: () -> Unit,
-    togglePreview: () -> Unit, teams: () -> Unit, sources: () -> Unit, dismiss: () -> Unit) {
+    togglePreview: () -> Unit, teams: () -> Unit, sources: () -> Unit, systemSettings: () -> Unit, dismiss: () -> Unit) {
     val first = remember { FocusRequester() }
     Dialog(onDismissRequest = dismiss) {
         LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestSafely() }
@@ -391,6 +392,7 @@ private fun HomeLayoutDialog(hidden: Set<HomeSection>, order: List<HomeSection>,
             }
             HomeButton(stringResource(R.string.mintv_v08_default_layout), reset)
             HomeButton(stringResource(R.string.mintv_manage_source), sources)
+            HomeButton(stringResource(R.string.mintv_home_settings), systemSettings)
             HomeButton(stringResource(R.string.mintv_close), dismiss)
         }
     }

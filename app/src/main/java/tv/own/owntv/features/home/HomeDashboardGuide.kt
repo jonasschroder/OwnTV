@@ -10,12 +10,23 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import tv.own.owntv.core.database.entity.ChannelEntity
+import tv.own.owntv.core.live.GuideReader
 import kotlinx.coroutines.flow.debounce
 import org.koin.compose.koinInject
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.features.live.*
 
-internal data class HomeGuideState(val at: Long, val rows: Map<SwedishRowKey, SwedishRowInfo>)
+internal data class HomeGuideState(val at: Long, val rows: Map<SwedishRowKey, SwedishRowInfo>, val synopsis: String? = null)
+
+/** A single on-demand synopsis, never a bulk description projection or a provider request. */
+internal suspend fun homeProgrammeSynopsis(accessible: suspend () -> Boolean, read: suspend () -> String?): String? {
+    if (!accessible()) return null
+    val text = read()?.take(800)?.takeIf { it.isNotBlank() }
+    currentCoroutineContext().ensureActive()
+    return text?.takeIf { accessible() }
+}
 
 /** PR #10 cache + stored reader, at most 16 keys and 32 summaries. No provider HTTP fallback.
  * The caller supplies only a visible hero/rail plus small prefetch; context changes clear immediately.
@@ -23,8 +34,9 @@ internal data class HomeGuideState(val at: Long, val rows: Map<SwedishRowKey, Sw
 @OptIn(FlowPreview::class)
 @Composable
 internal fun rememberHomeDashboardGuide(vm: LiveViewModel, profile: Long?, enabled: Boolean,
-    keys: List<SwedishRowKey>): HomeGuideState {
+    keys: List<SwedishRowKey>, hero: ChannelEntity? = null): HomeGuideState {
     val db: OwnTVDatabase = koinInject()
+    val reader: GuideReader = koinInject()
     val library by vm.homeLibraryContext.collectAsStateWithLifecycle()
     val observed by vm.swedishRowContext.collectAsStateWithLifecycle()
     val context = observed?.takeIf { it.profileId == profile && library.first == profile && it.sourceIds == library.second }
@@ -52,5 +64,19 @@ internal fun rememberHomeDashboardGuide(vm: LiveViewModel, profile: Long?, enabl
             delay(minOf(5_000L, boundary - System.currentTimeMillis()).coerceAtLeast(100))
         }
     }
-    return HomeGuideState(at, if (active) rows else emptyMap())
+    val heroKey = hero?.homeEpgKey()?.takeIf { it in keys }
+    val programme = heroKey?.let { rows[it]?.at(at)?.now }
+    var synopsis by remember(context, heroKey, programme) { mutableStateOf<String?>(null) }
+    LaunchedEffect(active, context, heroKey, programme) {
+        if (!active || context == null || heroKey == null || programme == null) return@LaunchedEffect
+        synopsis = try {
+            withTimeoutOrNull(2_500) {
+                homeProgrammeSynopsis(accessible = {
+                    vm.swedishContextCurrent(context) && vm.homeChannel(heroKey.id, context.profileId)?.homeEpgKey() == heroKey
+                }, read = { reader.description(programme.id) })
+            }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { null }
+    }
+    return HomeGuideState(at, if (active) rows else emptyMap(), synopsis.takeIf { active && programme != null })
 }

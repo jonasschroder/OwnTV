@@ -296,6 +296,13 @@ class LiveViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, Ctx(-1L, emptyList(), emptyMap()))
 
+    /** Explicit profile metadata avoids using the preceding profile's asynchronously shared custom state. */
+    internal val swedishRowContext: StateFlow<SwedishRowContext?> = ctx.flatMapLatest { c ->
+        if (c.profileId < 0) flowOf(null) else combine(customize.observe(c.profileId, MediaType.LIVE), settings.epgOffsetMinutes) { cust, offset ->
+            SwedishRowContext(c.profileId, c.sourceIds, cust, offset)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     /** Empty for zero/one active Live source so single-playlist layouts stay unchanged. */
     val providerNames: StateFlow<Map<Long, String>> = ctx
         .map { c -> c.sourceNames.takeIf { it.size > 1 } ?: emptyMap() }
@@ -387,22 +394,26 @@ class LiveViewModel(
 
     /** Now/next for the focused channel, fetched (debounced) — each answer with the id of the channel it
      *  was looked up for, so [zapGuide] can tell a stale one. [nowNext] is the answer alone. */
-    private val keyedNowNext: StateFlow<Pair<Long?, EpgNowNext?>> = combine(_previewChannel, epgRefresh) { ch, tick -> ch to tick }
-        .debounce(350)
-        .distinctUntilChanged { a, b -> a.first?.id == b.first?.id && a.second == b.second }
-        .mapLatest { (ch, _) -> ch?.id to ch?.let { epgReader.nowNext(it, custom.value, epgOffset.value) } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null to null)
+    internal val swedishGuide: StateFlow<SwedishGuideSnapshot?> = swedishFocusedGuide(
+        swedishRowContext, _previewChannel, epgRefresh, resetContext = epgReader::clearCache,
+    ) { ch, context, invalidate ->
+        if (!swedishContextCurrent(context)) null else {
+            if (invalidate) epgReader.invalidate(ch.id)
+            var guide = epgReader.nowNext(ch, context.custom, context.offset)
+            if (guide?.now?.stopMs?.let { it <= System.currentTimeMillis() } == true ||
+                guide?.next?.startMs?.let { it <= System.currentTimeMillis() } == true) {
+                epgReader.invalidate(ch.id); guide = epgReader.nowNext(ch, context.custom, context.offset)
+            }
+            guide.takeIf { swedishContextCurrent(context) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val nowNext: StateFlow<EpgNowNext?> = keyedNowNext.map { it.second }
+    val nowNext: StateFlow<EpgNowNext?> = swedishGuide.map { it?.guide }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /**
-     * N3 — now/next for the channel-change banner. Null until the answer is for the channel actually on
-     * screen: [nowNext] is debounced, so for a moment after a zap it still holds the previous channel's
-     * programme, and the banner would otherwise name the new channel over the old one's show.
-     */
-    val zapGuide: StateFlow<EpgNowNext?> = combine(keyedNowNext, _previewChannel) { (id, epg), ch ->
-        epg.takeIf { id != null && id == ch?.id }
+    /** Never attach another channel/profile's delayed guide to the current preview/banner. */
+    val zapGuide: StateFlow<EpgNowNext?> = combine(swedishGuide, _previewChannel, swedishRowContext) { data, ch, context ->
+        data?.forChannel(ch, context, System.currentTimeMillis())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /**
@@ -998,6 +1009,36 @@ class LiveViewModel(
         }
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.features.home.HomeLibraryState())
+
+    internal suspend fun swedishContextCurrent(expected: SwedishRowContext): Boolean =
+        ctx.value.profileId == expected.profileId && ctx.value.sourceIds == expected.sourceIds &&
+            settings.activeProfileIdNow() == expected.profileId &&
+            customize.observe(expected.profileId, MediaType.LIVE).first() == expected.custom &&
+            settings.epgOffsetMinutes.first() == expected.offset
+
+    /** Fixed-size title/logo projection from existing stored EPG. No provider calls or playback work. */
+    internal suspend fun swedishStoredRows(keys: List<SwedishRowKey>, expected: SwedishRowContext, at: Long,
+        db: tv.own.owntv.core.database.OwnTVDatabase): Map<SwedishRowKey, SwedishRowInfo> = withContext(Dispatchers.IO) {
+        kotlinx.coroutines.withTimeout(2_500) {
+            if (!swedishContextCurrent(expected)) return@withTimeout emptyMap()
+            val snapshot = ctx.value
+            val rows = keys.distinct().take(SWEDISH_EPG_WINDOW).mapNotNull { key ->
+                channelDao.getById(key.id)?.takeIf { it.sourceId == key.sourceId && CustomizeKeys.channel(it) == key.stableKey &&
+                    isVisibleInContext(it, snapshot) }
+            }
+            storedSwedishRows(db, rows, expected, at) {
+                swedishContextCurrent(expected) && rows.all { isVisibleInContext(it, snapshot) }
+            }
+        }
+    }
+
+    /** Only the current pane is refreshed after sync/transition; list rows never ask the provider. */
+    internal fun refreshSwedishGuide(channel: ChannelEntity?, profileId: Long): Int {
+        if (channel != null && ctx.value.profileId == profileId && _previewChannel.value?.id == channel.id) {
+            epgReader.invalidate(channel.id); epgRefresh.value++
+        }
+        return epgRefresh.value
+    }
 
     /** Local library changes refresh the SHL empty state after adding/importing a source. */
     val homeLibraryContext = ctx.map { it.profileId to it.sourceIds }

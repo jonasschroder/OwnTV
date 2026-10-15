@@ -51,7 +51,13 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
     }
     // Closing presentation must not reset verified state or cancel an in-app download.
     UpdatePresentation(state, manager.channelLabel, automatic, checked,
-        onDismiss = onDismiss,
+        onDismiss = {
+            // Keep active/verified work when merely closing the window. Acknowledged terminal
+            // installer outcomes still use the original cleanup so a later retry can recover.
+            val current = manager.state.value
+            if (current is MinTvUpdater.State.Failed || current == MinTvUpdater.State.Cancelled) manager.dismiss()
+            onDismiss()
+        },
         onAutomatic = { scope.launch { settings.setUpdateCheckOnStart(!automatic) } },
         onAction = {
             when (state) {

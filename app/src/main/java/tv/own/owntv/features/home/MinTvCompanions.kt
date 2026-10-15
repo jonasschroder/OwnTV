@@ -477,7 +477,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator)),
                 openCard, ::browseChannels, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt }.takeIf { enabled },
-                manual = manualChannel != null)
+                manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true)
             else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {

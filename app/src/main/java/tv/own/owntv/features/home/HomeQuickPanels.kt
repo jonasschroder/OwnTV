@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 /** Small static summaries; all evidence and actions are supplied by existing companions. */
 @Composable
 internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, watch: Boolean,
-    teams: String, onOpen: () -> Unit, onBrowse: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false) {
+    teams: String, onOpen: () -> Unit, onBrowse: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false) {
     Column(Modifier.fillMaxWidth().background(MinTvPanel, RoundedCornerShape(18.mpx)).padding(20.mpx),
         verticalArrangement = Arrangement.spacedBy(10.mpx)) {
         TvText(stringResource(R.string.mintv_my_hockey), size = 18, color = MinTvTeal, bold = true, lines = 1)
@@ -22,6 +22,7 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
         TvText(game?.let { fixtureWhen(it, now) } ?: stringResource(R.string.mintv_v08_no_fixture), size = 18, color = MinTvMuted, lines = 1)
         TvText(channel ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 19,
             color = if (channel == null) MinTvMuted else MinTvTeal, lines = 1)
+        if (epgTime) TvText(stringResource(R.string.mintv_hockey_epg_time), size = 16, color = MinTvMuted, lines = 1)
         if (manual && channel != null) TvText(stringResource(R.string.mintv_hockey_manual_evidence), size = 16, color = MinTvMuted, lines = 1)
         cachedAt?.let { TvText(stringResource(R.string.mintv_cached_updated, updateLabel(it, now)), size = 16, color = MinTvMuted, lines = 1) }
         Row(horizontalArrangement = Arrangement.spacedBy(10.mpx)) {

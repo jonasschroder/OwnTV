@@ -78,11 +78,18 @@ internal fun HomeSportsCard(hasTeams: Boolean, onOpen: () -> Unit, modifier: Mod
     }
 }
 
-/** Dynamic rows can disappear during sync/profile changes. Never steal focus behind the player/modal. */
+private class CommittedHomeFocus(var indices: List<Int>, var selected: Int)
+
+/** Compare the last committed layout, before native focus can jump off a removed lazy item. */
 @Composable
 internal fun ReconcileHomeNavigation(navigation: HomeDpadNavigation, list: LazyListState, indices: List<Int>, active: Boolean) {
+    val selected = navigation.selected // subscribe in composition, not only in the deferred effect
+    val previous = remember(navigation) { CommittedHomeFocus(indices, selected) }
+    val removed = previous.indices.getOrNull(previous.selected)?.let { it >= 0 } == true &&
+        indices.getOrNull(previous.selected) == -1
+    SideEffect { previous.indices = indices; previous.selected = selected }
     LaunchedEffect(indices, active) {
-        if (indices.getOrNull(navigation.selected) == -1) {
+        if (removed || indices.getOrNull(navigation.selected) == -1) {
             navigation.selected = 0
             if (active) focusPickerItem(list, indices[0], navigation.focus[0], navigation.focus[9])
         }

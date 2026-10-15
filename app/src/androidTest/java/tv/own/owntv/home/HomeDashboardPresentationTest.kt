@@ -112,7 +112,7 @@ class HomeDashboardPresentationTest {
                                 if (hasGuide && hasHistory) XtEpgEntry("Syntetiska Nyheterna", null, now - 600_000, now + 1_200_000) else null,
                                 if (hasGuide && hasHistory) "Syntetiskt nästa program" else null, now,
                                 context.getString(R.string.mintv_preview_disabled),
-                                { watched++; fullscreen = true }, { opened++ }, {}, {},
+                                { if (hasHistory) { watched++; fullscreen = true } else opened++ }, { opened++ }, {}, {},
                                 Modifier.testTag("dashboard-hero"), nav.section(0).testTag("dashboard-watch"), onVariants = {}) {
                                     TvText("TV4", size = 80, color = MinTvTeal, bold = true)
                                 }
@@ -136,7 +136,7 @@ class HomeDashboardPresentationTest {
                                                 tv.own.owntv.features.live.SwedishRowInfo(null,
                                                     tv.own.owntv.features.live.SwedishProgramme(i.toLong(), "Syntetiskt program $i", now - 600_000, now + 1_200_000),
                                                     tv.own.owntv.features.live.SwedishProgramme(i + 100L, "Syntetiskt nästa $i", now + 1_200_000, now + 2_400_000)),
-                                                now, { watched++; fullscreen = true }, Modifier.width(330.mpx).then(if (i == 0) nav.section(index) else Modifier))
+                                                now, { watched++; fullscreen = true }, Modifier.width(330.mpx).then(if (i == 0) nav.section(index).testTag("dashboard-now") else Modifier))
                                             else ChannelCard(name, null, null, { watched++; fullscreen = true },
                                                 Modifier.width(300.mpx).then(if (i == 0) nav.section(index) else Modifier))
                                         }
@@ -150,7 +150,7 @@ class HomeDashboardPresentationTest {
                                 val type = if (section == HomeSection.MOVIES) MetadataType.MOVIE else MetadataType.TV
                                 DiscoveryPosterRow(DiscoveryRow(DiscoveryKind.TOP, (1L..6L).map { id -> DiscoveryCard(id, 101, "synthetic:$id", type,
                                     if (type == MetadataType.MOVIE) "Syntetisk film $id" else "Syntetisk serie $id", null, 2026, 1, 8.2, setOf("Drama"), id.toInt()) }), type, null,
-                                    { opened++ }, first = nav.section(if (type == MetadataType.MOVIE) 4 else 5))
+                                    { opened++ }, first = nav.section(if (type == MetadataType.MOVIE) 4 else 5).testTag(if (type == MetadataType.MOVIE) "dashboard-movies" else "dashboard-series"))
                             }
                             else -> Unit
                         }
@@ -188,6 +188,7 @@ class HomeDashboardPresentationTest {
         screenshot("v08-home-no-history-synthetic.png")
         compose.onNodeWithTag("dashboard-watch").assertIsFocused()
         assertEquals(0, watched)
+        key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, opened); assertEquals(0, watched)
     }
     @Test fun companionChangesDoNotStealFocusAndRemoteCanReachKnownAndUnknownHockeyAndLiveTwitch() {
         mount(); key(KeyEvent.KEYCODE_DPAD_DOWN)
@@ -211,15 +212,25 @@ class HomeDashboardPresentationTest {
         key(KeyEvent.KEYCODE_BACK)
         compose.onNodeWithTag("dashboard-resume").assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("dashboard-series").assertIsFocused()
         screenshot("v08-discovery-series-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("dashboard-movies").assertIsFocused()
         screenshot("v08-discovery-movies-synthetic.png")
         compose.runOnIdle { rows = listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.MOVIES, HomeSection.NOW, HomeSection.CONTINUE) }
         key(KeyEvent.KEYCODE_DPAD_DOWN) // movies now precedes Now, regardless of stable section ID
         compose.onNodeWithText("Syntetiskt program 0").assertIsDisplayed()
+        compose.onNodeWithTag("dashboard-now").assertIsFocused()
         screenshot("v08-on-tv-now-synthetic.png")
         compose.runOnIdle { rows = rows - HomeSection.NOW }
-        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("dashboard-watch").assertIsFocused(); true }.getOrDefault(false) }
+        try {
+            compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("dashboard-watch").assertIsFocused(); true }.getOrDefault(false) }
+        } catch (error: Throwable) {
+            screenshot("v08-dynamic-focus-failure-synthetic.png")
+            compose.onAllNodes(isRoot()).printToLog("V08_SYNTHETIC_FOCUS")
+            val focused = compose.onAllNodes(isFocused()).fetchSemanticsNodes().joinToString { it.config.toString() }
+            throw AssertionError("Hero focus not restored after removing Now. Focused synthetic UI: $focused", error)
+        }
         assertEquals(1, watched)
     }
     @Test fun updateDialogShowsRealInstalledVersionAndDistinctProgressFailureAndConfirmationStates() {

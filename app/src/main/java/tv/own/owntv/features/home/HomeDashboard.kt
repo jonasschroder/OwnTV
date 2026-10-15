@@ -94,7 +94,7 @@ internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modif
 internal fun HomeNowChannelCard(name: String, logo: String?, quality: ChannelQuality?, info: SwedishRowInfo?,
     at: Long, onPlay: () -> Unit, modifier: Modifier = Modifier) {
     val guide = info?.at(at)
-    TvCard(onPlay, modifier) {
+    TvCard(onPlay, modifier.heightIn(min = 220.mpx)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
             logo?.let { coil3.compose.AsyncImage(it, null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.size(42.mpx)) }
             TvText(name, Modifier.weight(1f), size = 24, bold = true, lines = 1)

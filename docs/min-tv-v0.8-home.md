@@ -3,7 +3,7 @@
 Base: merged PR #10, `09273507830bcb58ba6275e9c992d7bf23d45156`.
 Development version: `0.8.0-beta.1` (environment override still supported). No version-code sequence,
 package ID, permanent key, distribution workflow, launcher declaration or database schema changes.
-Published QA at investigation: `qa-1000007`. This PR does not publish a successor.
+Published QA at investigation: `qa-1000007`, version `0.7.0-beta.1`. This PR does not publish a successor.
 
 ## Composition and focus
 
@@ -37,7 +37,8 @@ The initial viewport prioritizes the header, hero and companion summaries, with 
 next rail indicating further content. The same layout scales at 720p.
 
 Up/Down follows **actual lazy item positions**, including reordered/hidden rails, not
-enum order. Companions share a physical row; Left/Right moves between their actions.
+enum order. Removal is compared with the last committed focused section before Android
+can redirect native focus; the missing section restores the hero only while Home is active. Companions share a physical row; Left/Right moves between their actions.
 Hero OK continues the accessible watched channel; it never chooses a merely highlighted
 favorite. Header version opens the same About/Update dialog used by Settings. Back closes
 modals and restores the originating section; fullscreen callbacks retain existing shell
@@ -131,3 +132,19 @@ restores it in `finally`; it never changes a physical Chromecast setting.
 - Clearer version, authenticated update availability and download/install feedback.
 - Profile Home visibility/order retained; no clean reinstall or data reset.
 - Hockey standings removed; local EPG and manual channel lookup remain.
+
+## About/Update modal
+
+The existing TV popup is 1080 mockup pixels wide. Installed identity/version/build and update
+channel appear first, followed by the verified candidate and last successful check time.
+Only authenticated notes are shown, in a bounded 230-pixel focusable scroll area. Close is
+the conservative default focus; Right reaches the applicable Check/Update/Permission/Confirm
+action. Download percentage, actual APK verification and post-install version confirmation
+have distinct truthful labels. Closing the window retains active/verified work; acknowledged
+terminal failures/cancellations retain the original cleanup and retry behavior. Routine
+checks never open another focus-stealing overlay. The dialog retains the caller's resource
+locale, including a per-app language override, across its Android window boundary.
+
+The presentation fixture includes the production clock/source status cluster and reserves
+the existing sidebar inset; it does not instantiate the full shell/sidebar or HomeViewModel.
+Sidebar/profile integration and provider playback remain on the physical-device checklist.

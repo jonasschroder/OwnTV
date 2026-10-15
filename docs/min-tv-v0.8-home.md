@@ -53,13 +53,18 @@ is explicit and affects Home layout only.
 
 - `HomeViewModel` / Core `HomeFeedReader`: actual profile-scoped, timestamp-ordered Live
   history, favorites and real movie/episode continuation. The existing shell refreshes the
-  feed on Home entry and fullscreen return; no duplicate history-driven feed load is added. No focus action writes watch history.
+  feed on Home entry and fullscreen return; the foreground lifecycle also refreshes on return
+  from an external player. No duplicate history-driven feed observer is added. No focus action writes watch history.
+- The hero keeps the actually watched source/quality, independently of older automatic
+  preferences. Its explicit source/quality picker overrides only that watch and still saves
+  the shared preference for automatic rails. A new history item resets the local override.
 - `SwedishChannelStore`: existing lightweight logical groups, ordering and explicit
   source/quality settings; HD → SD → FHD → Unknown → UHD policy is unchanged.
 - `LiveViewModel.homeChannel`: revalidates access before display and again before playback.
 - PR #10 `SwedishRowCache` + `swedishStoredRows`: max 16 requested keys and 32 tiny summaries,
   local indexed Now/Next, full source/stable-key/profile/mapping/offset context; no guide-wide
-  load or per-card provider HTTP. A single visible hero synopsis reuses Core’s indexed
+  load or per-card provider HTTP. These bounds cover the new row cache; the unchanged Core
+  Home feed also retains its existing configured six-hour favorite-guide slice. A single visible hero synopsis reuses Core’s indexed
   `GuideReader.description` on programme changes, capped to 800 characters, with timeout,
   cancellation and fresh channel/profile authorization on both sides of the read. Current titles expire at programme boundaries. Empty data
   displays honest placeholders. Home requests visible cards + two nearby cards only.

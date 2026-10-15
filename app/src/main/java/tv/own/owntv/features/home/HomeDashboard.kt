@@ -21,6 +21,9 @@ import tv.own.owntv.ui.theme.mpx
 /** No selection/focus state is allowed to manufacture a playback-history item. */
 internal fun homeHistoryCandidate(state: HomeUiState, profile: Long?, sources: List<Long>): ChannelEntity? =
     state.recentLive.firstOrNull { state.profileId == profile && it.sourceId in sources && it.streamUrl.isNotBlank() }
+/** A Home picker override is scoped to this actual watch; global automatic preferences cannot replace history. */
+internal fun homeHeroChannel(watched: ChannelEntity?, alternatives: List<ChannelEntity>, explicitKey: String?): ChannelEntity? =
+    watched?.let { alternatives.firstOrNull { explicitKey != null && it.homeEpgKey().stableKey == explicitKey } ?: it }
 internal fun ChannelEntity.homeEpgKey() = SwedishRowKey(id, sourceId, CustomizeKeys.channel(this))
 
 internal fun dashboardIndices(rows: List<HomeSection>, showSport: Boolean, showTwitch: Boolean): List<Int> {

@@ -119,6 +119,8 @@ internal fun MinTvContentHome(
     val usable = foreground && preferencesLoaded && !modal && !matchcenterOpen
     val favorites = remember(state.favoriteLive, state.profileId, activeProfileId, library) { state.favoriteLive.takeIf { state.profileId == activeProfileId && library.profileId == activeProfileId }.orEmpty()
         .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false } }
+    val watchedKey = homeHistoryCandidate(state, activeProfileId, libraryContext.second)?.homeEpgKey()
+    var heroChoice by rememberSaveable(activeProfileId, watchedKey) { mutableStateOf<String?>(null) }
     val continuations = remember(state.continueMovies, state.continueSeries, state.profileId, activeProfileId) { homeContinuations(state, activeProfileId) }
     val discovery: DiscoveryRepository = koinInject()
     val moviesVisible by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.any { it.key == HomeSection.MOVIES } } }
@@ -165,10 +167,10 @@ internal fun MinTvContentHome(
         activeProfileId?.let { hidden = sectionStore.hidden(it); order = sectionStore.order(it); choices = channelStore.choices(it); profileName = db.profileDao().getById(it)?.name; preferencesLoaded = true }
     }
     LaunchedEffect(activeProfileId, sportsRevision) { activeProfileId?.let { sportsSelection = sports.read(it) } }
-    LaunchedEffect(library) { if (library.profileId == activeProfileId && library.status != HomeLibraryStatus.LOADING) vm.refresh(activeProfileId) }
+    LaunchedEffect(library, foreground) { if (foreground && library.profileId == activeProfileId && library.status != HomeLibraryStatus.LOADING) vm.refresh(activeProfileId) }
     // Refresh only a small channel index after actual catalog/access invalidations. Never a VOD catalog read.
     val summariesActive = foreground && preferencesLoaded && !matchcenterOpen
-    LaunchedEffect(activeProfileId, state.recentLive, favorites, libraryContext, metadata, choices, summariesActive) {
+    LaunchedEffect(activeProfileId, state.recentLive, favorites, libraryContext, metadata, choices, heroChoice, summariesActive) {
         if (!summariesActive) return@LaunchedEffect
         hero = null; heroAlternatives = emptyList(); quick = emptyList()
         val profile = activeProfileId ?: return@LaunchedEffect
@@ -177,11 +179,9 @@ internal fun MinTvContentHome(
             val candidate = homeHistoryCandidate(state, profile, expected.sourceIds)
             val watched = candidate?.let { liveVm.homeChannel(it.id, profile) }?.takeIf { it.homeEpgKey() == candidate.homeEpgKey() }
             // A valid watch does not wait for the optional channel index when no override exists.
-            if (choices.preferred.isEmpty() && liveVm.swedishContextCurrent(expected)) hero = watched
+            if (liveVm.swedishContextCurrent(expected)) hero = watched
             val groups = channelStore.library(profile, expected.sourceIds, choices).groups
             val group = groups.firstOrNull { g -> g.variants.any { it.id == watched?.id } }
-            val manual = group?.variants?.firstOrNull { it.stableKey == choices.preferred[group.identity] }
-            val selected = if (manual != null) liveVm.homeChannel(manual.id, profile) else watched
             val alternatives = group?.variants.orEmpty().take(12).mapNotNull { liveVm.homeChannel(it.id, profile) }
             val prioritized = (state.recentLive + favorites).mapNotNull { channel -> groups.firstOrNull { g -> g.variants.any { it.id == channel.id } } }
             val wanted = (prioritized + groups.filter { it.variants.firstOrNull()?.name?.collection == SwedishCollection.GENERAL })
@@ -189,7 +189,7 @@ internal fun MinTvContentHome(
             val resolved = wanted.mapNotNull { g -> g.preferred(choices.preferred[g.identity], choices.showUhd)?.let { variant ->
                 liveVm.homeChannel(variant.id, profile)?.let { g.label to it }
             } }
-            if (liveVm.swedishContextCurrent(expected)) { hero = selected; heroAlternatives = alternatives; quick = resolved }
+            if (liveVm.swedishContextCurrent(expected)) { hero = homeHeroChannel(watched, alternatives, heroChoice); heroAlternatives = alternatives; quick = resolved }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* An optional summary must never block opening Live TV. */ }
     }
@@ -330,6 +330,7 @@ internal fun MinTvContentHome(
     }
     if (updateOpen) UpdateDialog({ updateOpen = false; restoreModalFocus = true })
     if (variantsOpen) HomeVariantDialog(heroAlternatives, providerNames, { channel ->
+        heroChoice = channel.homeEpgKey().stableKey
         activeProfileId?.let { profile -> scope.launch {
             val name = SwedishChannels.recognize(channel.name)
             val groups = channelStore.library(profile, libraryContext.second, choices).groups

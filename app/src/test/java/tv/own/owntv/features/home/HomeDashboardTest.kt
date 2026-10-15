@@ -11,6 +11,13 @@ class HomeDashboardTest {
         assertEquals(watched, homeHistoryCandidate(HomeUiState(profileId = 7, recentLive = listOf(watched), favoriteLive = listOf(favorite)), 7, listOf(101)))
         assertNull(homeHistoryCandidate(HomeUiState(profileId = 7, favoriteLive = listOf(favorite)), 7, listOf(101)))
     }
+    @Test fun heroKeepsActualWatchUnlessItsOwnPickerChoosesAnAccessibleAlternative() {
+        val other = watched.copy(id = 3, sourceId = 102, name = "TV4 SD")
+        assertEquals(watched, homeHeroChannel(watched, listOf(other), null))
+        assertEquals(other, homeHeroChannel(watched, listOf(other), other.homeEpgKey().stableKey))
+        assertEquals(watched, homeHeroChannel(watched, emptyList(), other.homeEpgKey().stableKey))
+        assertNull(homeHeroChannel(null, listOf(other), other.homeEpgKey().stableKey))
+    }
     @Test fun historyFailsClosedForOtherProfileSourceAndEmptyStream() {
         val state = HomeUiState(profileId = 7, recentLive = listOf(watched))
         assertNull(homeHistoryCandidate(state, 8, listOf(101)))

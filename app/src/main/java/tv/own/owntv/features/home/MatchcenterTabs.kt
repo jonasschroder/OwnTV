@@ -19,7 +19,7 @@ import tv.own.owntv.ui.theme.mpx
 internal fun MatchcenterTabs(section: MatchcenterSection, firstFocus: FocusRequester,
     onSelect: (MatchcenterSection) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.focusRestorer().focusGroup()) {
-        MatchcenterSection.entries.forEachIndexed { index, tab ->
+        MatchcenterSection.entries.filter { it != MatchcenterSection.TABLE }.forEachIndexed { index, tab ->
             TvCard({ onSelect(tab) }, Modifier.width(if (tab == MatchcenterSection.SETTINGS) 230.mpx else 200.mpx)
                 .testTag("sports-tab-${tab.name}")
                 .then(if (index == 0) Modifier.focusRequester(firstFocus) else Modifier), selected = tab == section) {

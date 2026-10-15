@@ -69,18 +69,18 @@ class SportsLoadingNavigationTest {
             compose.waitUntil(5000) { starts.get() == visit + 1 }
             compose.onNodeWithTag("sports-tab-MATCHES").assertIsFocused()
             repeat(3) {
-                listOf(MatchcenterSection.TABLE, MatchcenterSection.FARJESTAD).forEach { tab ->
+                listOf(MatchcenterSection.FARJESTAD).forEach { tab ->
                     key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
                     compose.onNodeWithTag("sports-tab-${tab.name}").assertIsFocused()
                     compose.onNodeWithTag("selected-tab").assertTextEquals(tab.name)
                     compose.onNodeWithTag("fetch-state").assertTextEquals("Fetching")
                 }
-                repeat(2) { key(KeyEvent.KEYCODE_DPAD_LEFT) }
+                repeat(1) { key(KeyEvent.KEYCODE_DPAD_LEFT) }
                 key(KeyEvent.KEYCODE_DPAD_CENTER)
                 compose.onNodeWithTag("selected-tab").assertTextEquals("MATCHES")
             }
             assertEquals(visit + 1, starts.get()) // Tabs do not restart the same request.
-            repeat(3) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }
+            repeat(2) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }
             key(KeyEvent.KEYCODE_DPAD_CENTER)
             compose.waitUntil(5000) { cancels.get() == visit + 1 }
             compose.onNodeWithTag("fetch-state").assertTextEquals("Finished")
@@ -116,6 +116,6 @@ class SportsLoadingNavigationTest {
         } }
         compose.onNodeWithTag("fetch-state").assertTextEquals("TIMEOUT")
         key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNodeWithTag("sports-tab-TABLE").assertIsFocused()
+        compose.onNodeWithTag("sports-tab-FARJESTAD").assertIsFocused()
     }
 }

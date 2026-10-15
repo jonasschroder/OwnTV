@@ -26,13 +26,13 @@ import tv.own.owntv.R
 import tv.own.owntv.ui.theme.mpx
 
 @Composable
-internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier) {
+internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier, compact: Boolean = false) {
     val repository = koinInject<TwitchStatus>()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mintv-companion", 0) }
     val playback = remember(context) { TwitchPlayback(context) }
     TwitchCompanionUi(visible, active, prefs, BuildConfig.TWITCH_CLIENT_ID,
-        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open)
+        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open, compact)
 }
 
 /** Presentation adapter; token storage and Twitch protocol remain in TwitchStatus. */
@@ -42,7 +42,7 @@ internal fun TwitchCompanionUi(
     readConnection: suspend () -> Boolean, readStatus: suspend (Long) -> TwitchState,
     authorize: suspend (String, (TwitchActivation) -> Unit) -> Unit, disconnectAccount: suspend () -> Unit,
     modifier: Modifier = Modifier, listPlayers: () -> List<TwitchPlayer> = { emptyList() },
-    openPlayer: (TwitchPlayer) -> Boolean = { false },
+    openPlayer: (TwitchPlayer) -> Boolean = { false }, compact: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     var playbackOpen by remember { mutableStateOf(false) }
@@ -95,6 +95,18 @@ internal fun TwitchCompanionUi(
         else if (restore) { entryFocus.requestSafely(); restore = false }
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
+    val openSettings = {
+        setup = true; failure = if (connected) statusFailure else null; editClientId = clientId.isBlank()
+        connecting = !connected && clientId.isNotBlank()
+    }
+    val watch = {
+        scope.launch {
+            players = withContext(Dispatchers.IO) { runCatching { listPlayers() }.getOrDefault(emptyList()) }
+            launchFailed = false; playbackOpen = true
+        }; Unit
+    }
+    if (compact) TwitchQuickCard(fresh, connected, openSettings, watch, modifier)
+    else {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
     TvCard({
         setup = true; failure = if (connected) statusFailure else null; editClientId = clientId.isBlank()
@@ -119,6 +131,7 @@ internal fun TwitchCompanionUi(
             launchFailed = false; playbackOpen = true
         }
     }, Modifier.testTag("twitch-watch"))
+    }
     }
     if (playbackOpen) TwitchPlayerPicker(players, launchFailed, { player ->
         if (active && visible && fresh is TwitchState.Live && System.currentTimeMillis() - checkedAt in 0..90_000 && openPlayer(player)) { playbackOpen = false; restore = true }

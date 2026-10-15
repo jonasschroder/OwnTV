@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_v08_customize">Customize Home</string>
+    <string name="mintv_v08_version">%1$s · v%2$s</string>
+    <string name="mintv_v08_update_available">New version available</string>
+    <string name="mintv_v08_last_watched">LAST WATCHED</string>
+    <string name="mintv_v08_no_history">Your Live TV starts here</string>
+    <string name="mintv_v08_start_live">Choose a channel to start watching</string>
+    <string name="mintv_v08_live">LIVE</string>
+    <string name="mintv_v08_continue_live">Continue watching</string>
+    <string name="mintv_v08_source_quality">Source / quality</string>
+    <string name="mintv_v08_quick_channels">Your channels</string>
+    <string name="mintv_v08_now">On TV now</string>
+    <string name="mintv_v08_default_layout">Restore default layout</string>
+    <string name="mintv_v08_move_up">Move %1$s up</string>
+    <string name="mintv_v08_notes">What’s new?</string>
+    <string name="mintv_v08_version_current">Installed: %1$s · Build %2$s</string>
+    <string name="mintv_v08_version_target">Available: %1$s · Build %2$s</string>
+    <string name="mintv_v08_checking_hint">Checking trusted update information</string>
+    <string name="mintv_v08_not_checked">No verified update check in this session</string>
+    <string name="mintv_v08_verifying">Verifying the downloaded package</string>
+    <string name="mintv_v08_installed">Update installed. Installed version verified.</string>
+    <string name="mintv_v08_progress_hint">Android will ask you to confirm installation after verification.</string>
+    <string name="mintv_v08_background_download">You can close this screen. Leaving the app pauses the download.</string>
+    <string name="mintv_v08_empty_now">No programme information</string>
+    <string name="mintv_v08_channel_unconfirmed">Channel not yet confirmed</string>
+    <string name="mintv_v08_time_range">%1$s – %2$s</string>
+    <string name="mintv_v08_variant">%1$s · %2$s</string>
+</resources>

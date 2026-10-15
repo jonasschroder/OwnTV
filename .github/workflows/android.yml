@@ -141,6 +141,13 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.HomeDashboardStorageTest', 'legacyLayoutAndProfileOwnershipSurviveReorderHideAndRestart'),
+              ('tv.own.owntv.home.HomeDashboardStorageTest', 'watchedHistoryIsTimestampOrderedProfileScopedAndHighlightDoesNotRecord'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'completeDashboardShowsWatchedEpgAndHonestMissingStatesWithoutAutoplay'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'companionChangesDoNotStealFocusAndRemoteCanReachKnownAndUnknownHockeyAndLiveTwitch'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'continuationAndReorderedRowsRestoreFocusAfterFullscreenAndDynamicRemoval'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'updateDialogShowsRealInstalledVersionAndDistinctProgressFailureAndConfirmationStates'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'real720pEmulatorLayoutRetainsReadableHeroAndRemoteNavigation'),
               ('tv.own.owntv.home.SwedishRowStorageTest', 'storedNowNextHonorsIndependentXmltvManualMappingOffsetsMidnightAndAuthorization'),
               ('tv.own.owntv.home.SwedishRowStorageTest', 'largeGuideRemainsBoundedAndSynchronizationNeverReturnsBlankExpiredOrOtherChannelTitles'),
               ('tv.own.owntv.home.SwedishLivePresentationTest', 'compactRowsShowRealSuppliedNowNextMissingStateAndExistingSelectedPane'),

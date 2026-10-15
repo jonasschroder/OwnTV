@@ -20,18 +20,21 @@ internal class HomeDpadNavigation(val focus: List<FocusRequester>) {
 }
 
 @Composable
-internal fun rememberHomeDpadNavigation(firstFavorite: FocusRequester, sectionCount: Int = 5, profileKey: Long? = null): HomeDpadNavigation {
-    val focus = remember(firstFavorite, sectionCount) { List(sectionCount) { if (it == 1) firstFavorite else FocusRequester() } }
-    return rememberSaveable(firstFavorite, sectionCount, profileKey,
-        saver = Saver(save = { it.selected }, restore = { HomeDpadNavigation(focus).apply { selected = it.coerceIn(focus.indices) } })) { HomeDpadNavigation(focus) }
+internal fun rememberHomeDpadNavigation(firstFavorite: FocusRequester, sectionCount: Int = 5, profileKey: Long? = null, firstSection: Int = 1): HomeDpadNavigation {
+    val focus = remember(firstFavorite, sectionCount, firstSection) { List(sectionCount) { if (it == firstSection) firstFavorite else FocusRequester() } }
+    return rememberSaveable(firstFavorite, sectionCount, profileKey, firstSection,
+        saver = Saver(save = { it.selected }, restore = { HomeDpadNavigation(focus).apply { selected = it.coerceIn(focus.indices) } })) { HomeDpadNavigation(focus).apply { selected = firstSection } }
 }
 
 /** -1 marks a genuinely absent conditional section, e.g. no real resume history yet. */
 internal fun nextHomeSection(selected: Int, delta: Int, itemIndices: List<Int>): Int? {
     if (delta !in listOf(-1, 1)) return null
-    var target = selected + delta
-    while (target in itemIndices.indices && itemIndices[target] < 0) target += delta
-    return target.takeIf { it in itemIndices.indices }
+    val current = itemIndices.getOrNull(selected)?.takeIf { it >= 0 } ?: return null
+    val candidates = itemIndices.indices.filter { itemIndices[it] >= 0 &&
+        if (delta > 0) itemIndices[it] > current else itemIndices[it] < current }
+    val row = (if (delta > 0) candidates.minOfOrNull { itemIndices[it] }
+        else candidates.maxOfOrNull { itemIndices[it] }) ?: return null
+    return candidates.first { itemIndices[it] == row }
 }
 
 @Composable

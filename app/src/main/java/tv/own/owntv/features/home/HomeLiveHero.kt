@@ -15,44 +15,59 @@ import coil3.compose.AsyncImage
 import tv.own.owntv.R
 import tv.own.owntv.core.parser.XtEpgEntry
 import tv.own.owntv.ui.theme.mpx
+import java.text.DateFormat
+import java.util.Date
 
-/** Presentation only. The supplied video slot mounts the ONE existing Core preview surface. */
+/** Two-column presentation; the right slot mounts only the existing preview surface. */
 @Composable
 internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgEntry?, nextTitle: String?,
     now: Long, status: String?, onWatch: () -> Unit, onLive: () -> Unit, onGuide: () -> Unit,
     onSettings: () -> Unit, modifier: Modifier = Modifier, firstAction: Modifier = Modifier,
-    video: @Composable BoxScope.() -> Unit) {
+    onVariants: (() -> Unit)? = null, video: @Composable BoxScope.() -> Unit) {
     val current = programme?.takeIf { now in it.startMs until it.stopMs }
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(22.mpx))
-        .background(Brush.horizontalGradient(listOf(Color(0xFF1C2B35), MinTvPanel))).padding(24.mpx),
-        verticalArrangement = Arrangement.spacedBy(18.mpx)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(30.mpx), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).aspectRatio(16f / 9f).clip(RoundedCornerShape(16.mpx))
-                .background(Brush.verticalGradient(listOf(MinTvPanel, MinTvNavy))),
-                contentAlignment = Alignment.Center) {
-                video()
-                status?.let { TvText(it, Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                    .background(MinTvNavy.copy(alpha = 0.88f)).padding(16.mpx), size = 18, lines = 3) }
+    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(22.mpx))
+        .background(Brush.horizontalGradient(listOf(Color(0xFF172C3D), MinTvPanel))),
+        verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(.95f).padding(28.mpx), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+            TvText(stringResource(R.string.mintv_v08_last_watched), size = 17, color = MinTvTeal, bold = true, lines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
+                logo?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(46.mpx)) }
+                TvText(channelName ?: stringResource(R.string.mintv_v08_no_history), size = 28, bold = true, lines = 1)
+                if (channelName != null) TvText(stringResource(R.string.mintv_v08_live), size = 15, color = MinTvTeal, bold = true, lines = 1)
             }
-            Column(Modifier.weight(1.15f), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
-                    logo?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(52.mpx)) }
-                    TvText(channelName ?: stringResource(R.string.mintv_just_now), size = 27, color = MinTvTeal, bold = true, lines = 1)
-                }
-                TvText(current?.title ?: stringResource(R.string.mintv_epg_unavailable), size = 34, bold = true, lines = 2)
-                current?.let { ProgrammeProgress(((now - it.startMs).toFloat() / (it.stopMs - it.startMs).coerceAtLeast(1))) }
-                current?.description?.takeIf(String::isNotBlank)?.let { HomeProgrammeDescription(it) }
-                TvText(stringResource(R.string.mintv_next, nextTitle ?: stringResource(R.string.mintv_epg_unavailable)),
-                    size = 20, color = MinTvMuted, lines = 2)
+            TvText(current?.title ?: stringResource(if (channelName == null) R.string.mintv_v08_start_live else R.string.mintv_epg_unavailable),
+                size = 36, bold = true, lines = 2)
+            current?.let {
+                TvText(homeProgrammeTime(it.startMs, it.stopMs), size = 18, color = MinTvMuted, lines = 1)
+                ProgrammeProgress(((now.toDouble() - it.startMs) / (it.stopMs.toDouble() - it.startMs)).toFloat())
+                it.description?.takeIf(String::isNotBlank)?.let { description -> HomeProgrammeDescription(description) }
+            }
+            nextTitle?.let { TvText(stringResource(R.string.mintv_next, it), size = 18, color = MinTvMuted, lines = 1) }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                DashboardAction(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_continue_live),
+                    onWatch, firstAction, primary = true)
+                DashboardAction(stringResource(R.string.mintv_home_live), onLive)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                DashboardAction(stringResource(R.string.mintv_guide), onGuide)
+                onVariants?.let { DashboardAction(stringResource(R.string.mintv_v08_source_quality), it) }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
-            HomeButton(stringResource(if (channelName != null) R.string.mintv_watch_channel else R.string.mintv_home_live), onWatch, firstAction, primary = true)
-            if (channelName != null) HomeButton(stringResource(R.string.mintv_home_live), onLive)
-            HomeButton(stringResource(R.string.mintv_guide), onGuide)
-            HomeButton(stringResource(R.string.mintv_companion_settings), onSettings)
-            if (channelName != null) TvText(stringResource(R.string.mintv_ok_hint), Modifier.weight(1f), size = 17, color = MinTvMuted, lines = 2)
+        Box(Modifier.weight(1f).padding(16.mpx).aspectRatio(16f / 9f).clip(RoundedCornerShape(16.mpx))
+            .background(MinTvNavy), contentAlignment = Alignment.Center) {
+            video()
+            status?.let {
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, MinTvNavy))).padding(16.mpx)) {
+                    TvText(it, size = 17, color = MinTvMuted, lines = 2)
+                }
+            }
         }
     }
+}
+
+@Composable
+internal fun homeProgrammeTime(start: Long, stop: Long): String {
+    val format = DateFormat.getTimeInstance(DateFormat.SHORT)
+    return stringResource(R.string.mintv_v08_time_range, format.format(Date(start)), format.format(Date(stop)))
 }

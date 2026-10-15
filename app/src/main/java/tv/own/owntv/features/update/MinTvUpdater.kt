@@ -16,6 +16,7 @@ import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -33,6 +34,8 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         data object UpToDate : State
         data class Available(val candidate: UpdatePolicy.Candidate) : State
         data class Downloading(val percent: Int) : State
+        data object Verifying : State
+        data object Installed : State
         data object Permission : State
         data object Installing : State
         data object Confirmation : State
@@ -44,6 +47,10 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
     private val mutableState = MutableStateFlow<State>(State.Idle)
     internal val state = mutableState.asStateFlow()
     private val lock = Mutex()
+    // Presentation may close while a foreground download continues. The transport cancels on pause.
+    private val actions = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate)
+    internal fun requestCheck() { actions.launch { check(force = true) } }
+    internal fun requestDownloadOrInstall() { actions.launch { if (hasDownload()) continueInstall() else download() } }
     private val prefs = context.getSharedPreferences(STORE, Context.MODE_PRIVATE)
     private val receiverChanges = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "confirmation" && prefs.contains("confirmation")) mutableState.value = State.Confirmation
@@ -153,6 +160,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
                     } }
                     require(received == info.bytes && UpdatePolicy.hex(digest.digest()) == info.hash)
                 }
+                mutableState.value = State.Verifying
                 verifyApk(partial, info)
                 apk.delete(); require(partial.renameTo(apk))
                 prefs.edit().putLong("download_code", info.code).apply()
@@ -207,7 +215,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         val target = prefs.getLong("target", 0)
         if (target > 0 && installedCode >= target) {
             prefs.edit().remove("session").remove("target").remove("confirmation").remove("result").apply()
-            directory.deleteRecursively(); mutableState.value = State.UpToDate; return@withContext
+            directory.deleteRecursively(); mutableState.value = State.Installed; return@withContext
         }
         candidate = runCatching { UpdatePolicy.authenticate(manifest.readBytes(), channel, pin, prefs.getString("tag", "")!!) }.getOrNull()
         val result = prefs.getInt("result", Int.MIN_VALUE)

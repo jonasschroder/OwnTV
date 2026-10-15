@@ -4,7 +4,9 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -25,6 +27,8 @@ internal fun homeContinuations(state: HomeUiState, profileId: Long?): List<Launc
 internal fun HomeContinuationRow(items: List<LauncherContinuationItem>, first: Modifier, heading: String? = null,
     onPlay: (LauncherContinuationItem) -> Unit) {
     if (items.isEmpty()) return
+    var focusedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val entryKey = focusedKey?.takeIf { key -> items.any { it.stableKey == key } } ?: items.firstOrNull()?.stableKey
     Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
         TvText(heading ?: stringResource(R.string.search_continue), size = 26, bold = true, lines = 1)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(6.mpx), modifier = Modifier.focusGroup()) {
@@ -32,7 +36,7 @@ internal fun HomeContinuationRow(items: List<LauncherContinuationItem>, first: M
                 StageStill(title = item.title, line = item.subtitle, onClick = { onPlay(item) },
                     width = 310.mpx, height = 174.mpx, titleSize = 22, lineSize = 18,
                     progress = item.durationMs.takeIf { it > 0 }?.let { item.positionMs.toFloat() / it },
-                    modifier = if (index == 0) first else Modifier) {
+                    modifier = (if (item.stableKey == entryKey) first else Modifier).onFocusChanged { if (it.hasFocus) focusedKey = item.stableKey }) {
                     AsyncImage(model = item.posterUrl, contentDescription = null, contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize())
                 }

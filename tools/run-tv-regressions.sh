@@ -18,5 +18,6 @@ capture_screenshots() {
 }
 trap capture_screenshots EXIT
 ./gradlew :app:connectedX86_64DebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.disposableEmulator=true \
   -Pandroid.testInstrumentationRunnerArguments.class=tv.own.owntv.home.HomeRegressionSuite \
   -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true --max-workers=4 --stacktrace

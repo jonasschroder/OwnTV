@@ -50,6 +50,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     onSources: () -> Unit,
     reservedTop: Dp = 144.mpx,
     homeCardModifier: Modifier = Modifier,
+    compact: Boolean = false,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
@@ -78,6 +79,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var enabled by remember { mutableStateOf(repository.preferences.getBoolean("shl-enabled", false)) }
     var screen by rememberSaveable(profileId) { mutableStateOf(false) }
     var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.FARJESTAD) }
+    // Keep the old enum value readable for saved-state compatibility, never render/fetch its table.
+    LaunchedEffect(section) { if (section == MatchcenterSection.TABLE) section = MatchcenterSection.FARJESTAD }
     var selectedId by rememberSaveable(profileId) { mutableStateOf<String?>(null) }
     var picker by rememberSaveable(profileId) { mutableStateOf(false) }
     var searchOpen by rememberSaveable(profileId) { mutableStateOf(false) }
@@ -100,10 +103,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var localFailed by remember(profileId) { mutableStateOf(false) }
     val loadStates = remember(profileId) { mutableStateMapOf<String, SportsLoadState>() }
     var retryRevision by remember(profileId) { mutableIntStateOf(0) }
-    var table by remember(profileId, selectedCompetition.id) { mutableStateOf<HockeyTable?>(null) }
-    val standings = table?.takeIf { it.seasonId == data[selectedCompetition.id]?.seasonId }?.rows.orEmpty()
-    val standingsAt = table?.takeIf { it.seasonId == data[selectedCompetition.id]?.seasonId }?.fetchedAt ?: 0L
-    var tableState by remember(profileId, selectedCompetition.id) { mutableStateOf(SportsLoadState()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var query by rememberSaveable(profileId) { mutableStateOf("") }
     var channels by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
@@ -144,7 +143,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
 
     val gameFocus = remember(profileId) { mutableMapOf<String, FocusRequester>() }
     val matchList = rememberLazyListState()
-    val tableList = rememberLazyListState()
     val today = stockholmDay(now)
     val currentData = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
     val currentSnapshotData by rememberUpdatedState(currentData)
@@ -236,19 +234,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }, { value -> data = data + (competition.id to value); repository.published(competition, value.fixtures.size, System.currentTimeMillis()); value.fetchedAt < started },
                 { loadStates[competition.id] = it }, onIssue = { repository.failed(competition, it) })
         }
-    }
-
-    val tableRequest = data[selectedCompetition.id]?.seasonId?.takeIf {
-        available && screen && !teamsOpen && selectedId == null &&
-            section == MatchcenterSection.TABLE
-    }?.let { selectedCompetition to it }
-    LaunchedEffect(profileId, tableRequest, enabled, retryRevision) {
-        val (competition, season) = tableRequest ?: return@LaunchedEffect
-        val started = System.currentTimeMillis()
-        fetchSports(started, HockeyStage.TABLE, { table != null }, {
-            sports.cachedStandings(competition, season)?.let { table = it }
-            if (enabled) sports.standings(competition, season, started) else null
-        }, { value -> table = value; value.fetchedAt < started }, { tableState = it }, onIssue = { repository.failed(competition, it) })
     }
 
     val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
@@ -481,6 +466,19 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
 
     Box(Modifier.fillMaxSize()) {
         homeContent({
+            val shown = manualChannel ?: reliableChannels.firstOrNull()
+            val openCard = {
+                if (directChannel != null) play(directChannel, reliableChannels.ifEmpty { listOf(directChannel) })
+                else if (reliableChannels.isNotEmpty()) browseChannels()
+                else if (selectedTeams.teamIds.isEmpty()) teamsOpen = true else open()
+            }
+            if (compact) HockeyQuickCard(gameToMatch?.takeIf { scheduleFresh || localEvidence != null }, now, shown?.name,
+                directChannel != null || reliableChannels.isNotEmpty(),
+                selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator)),
+                openCard, ::browseChannels, homeCardModifier.focusRequester(entryFocus),
+                currentData.values.minOfOrNull { it.fetchedAt }.takeIf { enabled },
+                manual = manualChannel != null)
+            else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {
                 if (directChannel != null) play(directChannel, reliableChannels.ifEmpty { listOf(directChannel) })
@@ -500,6 +498,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }
             HomeButton(stringResource(R.string.mintv_hockey_other_channels), ::browseChannels, Modifier.width(250.mpx))
             }
+            }
         }, screen)
         if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
@@ -513,10 +512,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         TvText(selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator))
                             .ifBlank { stringResource(R.string.mintv_my_teams) }, color = MinTvMuted, size = 20, lines = 1)
                     }
-                    val timestamp = if (section == MatchcenterSection.TABLE) standingsAt.takeIf { it > 0 } else fetchedAt
-                    val showingCache = if (section == MatchcenterSection.TABLE) tableState.cached || tableState.issue != null else selectedLoad.cached || selectedLoad.issue != null
+                    val timestamp = fetchedAt
+                    val showingCache = selectedLoad.cached || selectedLoad.issue != null
                     TvText(if (timestamp != null) stringResource(if (showingCache) R.string.mintv_cached_updated else R.string.mintv_updated, updateLabel(timestamp, now))
-                        else sportsStatusText(selectedCompetition, enabled, if (section == MatchcenterSection.TABLE && tableState.issue != null) tableState else selectedLoad),
+                        else sportsStatusText(selectedCompetition, enabled, selectedLoad),
                         modifier = Modifier.widthIn(max = 440.mpx), size = 18, color = MinTvMuted, lines = 2)
                     HomeButton(stringResource(R.string.mintv_back), ::back, Modifier.focusRequester(backFocus))
                 }
@@ -548,11 +547,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                 Box(Modifier.width(340.mpx)) {
                                     FocusPanel(highlighted = true) {
                                         SportsTeamLabel(team.name)
-                                        standings.singleOrNull { SportsCatalog.identity(it.team, selectedCompetition.sport)?.id == team.id }?.let { rank ->
-                                            TvText(stringResource(R.string.mintv_fbk_position, NumberFormat.getIntegerInstance().format(rank.rank),
-                                                NumberFormat.getIntegerInstance().format(rank.points)), size = 20, color = MinTvTeal)
-                                            if (standingsAt > 0) TvText(stringResource(R.string.mintv_cached_updated, updateLabel(standingsAt, now)), size = 16, color = MinTvMuted)
-                                        }
+
                                     }
                                 }
                             }
@@ -566,7 +561,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                                 HomeButton(stringResource(if (enabled) R.string.mintv_shl_disable else R.string.mintv_shl_enable), {
                                     enabled = !enabled; repository.preferences.edit { putBoolean("shl-enabled", enabled) }
-                                if (!enabled) { data = emptyMap(); table = null; selectedId = null; broadcast = null; loadStates.clear() }
+                                if (!enabled) { data = emptyMap(); selectedId = null; broadcast = null; loadStates.clear() }
                                 })
                             } }
                             item { data[selectedCompetition.id]?.let { TvText(stringResource(R.string.mintv_shl_snapshot, stockholmDate(it.fetchedAt) + " " + stockholmTime(it.fetchedAt),
@@ -597,27 +592,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                         if (issue != null) TvText(stringResource(R.string.mintv_sports_diagnostic_reason,
                                             issue.kind.name, issue.detail?.name ?: issue.stage.name), color = MinTvMuted, lines = 3)
                                     }
-                                }
-                            }
-                        }
-                        MatchcenterSection.TABLE -> if (standings.isEmpty()) Box(Modifier.fillMaxWidth()) {
-                            SportsStatusPanel(selectedCompetition, enabled, if (data[selectedCompetition.id] != null) tableState else selectedLoad,
-                                now, standingsAt.takeIf { it > 0 }, { retryRevision++ })
-                        } else LazyColumn(state = tableList, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
-                            if (!enabled || tableState.loading || tableState.issue != null) item {
-                                SportsStatusPanel(selectedCompetition, enabled, tableState, now, null, { retryRevision++ }, Modifier.fillMaxWidth())
-                            }
-                            val showPlayed = standings.isNotEmpty() && standings.all { it.played != null }
-                            val showDifference = standings.isNotEmpty() && standings.all { it.goalDifference != null }
-                            item { StandingRow(stringResource(R.string.mintv_position), stringResource(R.string.mintv_team),
-                                if (showPlayed) stringResource(R.string.mintv_games_played) else null,
-                                if (showDifference) stringResource(R.string.mintv_goal_difference) else null, stringResource(R.string.mintv_table_points)) }
-                            items(standings, key = { selectedCompetition.id + ":" + it.team }) { standing ->
-                                FocusPanel(highlighted = SportsCatalog.identity(standing.team, selectedCompetition.sport)?.id in selectedTeams.teamIds) {
-                                StandingRow(NumberFormat.getIntegerInstance().format(standing.rank), shortTeam(standing.team),
-                                    standing.played?.takeIf { showPlayed }?.let { NumberFormat.getIntegerInstance().format(it) },
-                                    standing.goalDifference?.takeIf { showDifference }?.let { NumberFormat.getIntegerInstance().format(it) },
-                                    NumberFormat.getIntegerInstance().format(standing.points))
                                 }
                             }
                         }
@@ -763,17 +737,6 @@ private fun SportsTeamLabel(name: String, modifier: Modifier = Modifier) {
             TvText(shortTeam(name).take(2).uppercase(java.util.Locale.ROOT), size = 19, color = MinTvTeal, bold = true, lines = 1)
         }
         TvText(shortTeam(name), Modifier.weight(1f), size = 27, bold = true, lines = 2)
-    }
-}
-
-@Composable
-private fun StandingRow(position: String, team: String, played: String?, difference: String?, points: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-        TvText(position, Modifier.width(60.mpx), size = 23, bold = true, lines = 1)
-        TvText(team, Modifier.weight(1f), size = 25, bold = true, lines = 1)
-        played?.let { TvText(it, Modifier.width(100.mpx), size = 23, lines = 1) }
-        difference?.let { TvText(it, Modifier.width(120.mpx), size = 23, lines = 1) }
-        TvText(points, Modifier.width(80.mpx), size = 25, color = MinTvTeal, bold = true, lines = 1)
     }
 }
 

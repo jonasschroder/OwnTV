@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_v08_customize">Anpassa startsidan</string>
+    <string name="mintv_v08_version">%1$s · v%2$s</string>
+    <string name="mintv_v08_update_available">Ny version tillgänglig</string>
+    <string name="mintv_v08_last_watched">SENAST TITTAT</string>
+    <string name="mintv_v08_no_history">Din TV börjar här</string>
+    <string name="mintv_v08_start_live">Välj en kanal och börja titta</string>
+    <string name="mintv_v08_live">LIVE</string>
+    <string name="mintv_v08_continue_live">Fortsätt titta</string>
+    <string name="mintv_v08_source_quality">Källa / kvalitet</string>
+    <string name="mintv_v08_quick_channels">Dina kanaler</string>
+    <string name="mintv_v08_now">På TV just nu</string>
+    <string name="mintv_v08_default_layout">Återställ standardlayout</string>
+    <string name="mintv_v08_move_up">Flytta upp %1$s</string>
+    <string name="mintv_v08_notes">Vad är nytt?</string>
+    <string name="mintv_v08_version_current">Installerad: %1$s · Bygge %2$s</string>
+    <string name="mintv_v08_version_target">Tillgänglig: %1$s · Bygge %2$s</string>
+    <string name="mintv_v08_checking_hint">Kontrollerar betrodd uppdateringsinformation</string>
+    <string name="mintv_v08_not_checked">Ingen verifierad uppdateringskontroll i denna session</string>
+    <string name="mintv_v08_verifying">Verifierar det hämtade paketet</string>
+    <string name="mintv_v08_installed">Uppdateringen är installerad. Installerad version har verifierats.</string>
+    <string name="mintv_v08_progress_hint">Android ber dig bekräfta installationen efter verifieringen.</string>
+    <string name="mintv_v08_background_download">Du kan stänga vyn. Hämtningen pausas om du lämnar appen.</string>
+    <string name="mintv_v08_empty_now">Ingen programinformation</string>
+    <string name="mintv_v08_channel_unconfirmed">Kanal ännu inte bekräftad</string>
+    <string name="mintv_v08_time_range">%1$s – %2$s</string>
+    <string name="mintv_v08_variant">%1$s · %2$s</string>
+</resources>

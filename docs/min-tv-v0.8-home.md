@@ -184,6 +184,9 @@ primary Continue action is followed by TV Channels and a focusable More button.
 More opens the existing TV popup style with Guide, Source/Quality when available,
 and Customize. The existing synopsis is available in that popup. Back restores the
 More control; actions continue through their existing callbacks. A real active
+menu keeps the existing bounded local EPG reader active while the preview stays
+paused; foreground and profile/source authorization still apply, with no network
+fallback or background reads. A real active
 preview alone allocates a 436 × 245.25 mpx, 16:9 video slot. Disabled, unavailable
 or failed preview allocates no video slot and never composes its content. The full
 programme surface then uses a restrained tonal gradient and the existing channel

@@ -162,7 +162,9 @@ internal fun MinTvContentHome(
         }
         visible.distinct().take(SWEDISH_EPG_WINDOW)
     } }
-    val guide = rememberHomeDashboardGuide(liveVm, activeProfileId, usable, visibleChannelKeys, hero)
+    // More displays real programme details: pause the player, not its visible local EPG data.
+    val guide = rememberHomeDashboardGuide(liveVm, activeProfileId,
+        usable || (heroMenuOpen && foreground && preferencesLoaded && !matchcenterOpen), visibleChannelKeys, hero)
     val heroGuide = hero?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
     val previewAllowed = usable && previewsOn && heroVisible && heroFocused && HomeSection.LIVE !in hidden
     LaunchedEffect(activeProfileId) {

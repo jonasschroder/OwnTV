@@ -92,7 +92,9 @@ internal fun HomeDashboardHeader(profile: String?, update: MinTvUpdater.State, o
 
 @Composable
 internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, compact: Boolean = false) {
-    androidx.tv.material3.Button(onClick = onClick, modifier = modifier.heightIn(min = if (compact) 42.mpx else 50.mpx),
+    // Explicit height overrides Material's larger default minimum; grow with the user's font scale.
+    val height = (if (compact) 42 else 50).mpx * maxOf(1f, LocalDensity.current.fontScale)
+    androidx.tv.material3.Button(onClick = onClick, modifier = modifier.height(height),
         contentPadding = PaddingValues(horizontal = if (compact) 14.mpx else 18.mpx, vertical = if (compact) 7.mpx else 10.mpx),
         shape = androidx.tv.material3.ButtonDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.mpx)),
         colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else MinTvPanel,

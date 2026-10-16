@@ -29,6 +29,7 @@
     <string name="mintv_v08_no_fixture">No upcoming fixture confirmed</string>
     <string name="mintv_v08_viewers">%1$s viewers</string>
     <string name="mintv_v08_more">More options</string>
+    <string name="mintv_v08_up_next">Up next</string>
     <string name="mintv_v08_customize_short">Customize</string>
     <string name="mintv_v08_version_chip">v%1$s</string>
     <string name="mintv_v08_separator">" · "</string>

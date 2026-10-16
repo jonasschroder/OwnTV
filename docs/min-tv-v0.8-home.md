@@ -178,7 +178,8 @@ No comparison image is synthesized or redrawn.
 The compact hero has a 254 mpx minimum content area and 20 mpx vertical padding:
 294 mpx normally, instead of the roughly 510 mpx first-iteration panel. Natural
 height may grow for large fonts; there is no hard clipping. Programme titles have
-two lines; next programme and channel/source labels use a bounded line. A single
+two lines; next programme uses up to three lines in the preview-off information area
+and one bounded line alongside an active preview. Channel/source labels are bounded. A single
 primary Continue action is followed by TV Channels and a focusable More button.
 More opens the existing TV popup style with Guide, Source/Quality when available,
 and Customize. The existing synopsis is available in that popup. Back restores the
@@ -186,7 +187,10 @@ More control; actions continue through their existing callbacks. A real active
 preview alone allocates a 436 × 245.25 mpx, 16:9 video slot. Disabled, unavailable
 or failed preview allocates no video slot and never composes its content. The full
 programme surface then uses a restrained tonal gradient and the existing channel
-logo, when available; no artwork or programme is invented.
+logo, when available. The right-hand information area shows the actual stored next
+programme instead of a disabled video frame. The progress line is capped at 460 mpx.
+Action heights are 50/42 mpx and grow with user font scale rather than inheriting
+Material’s larger minimum. No artwork or programme is invented.
 
 The supporting strip is normally about 112–120 mpx high. Hockey uses a warmer teal
 surface when a verified fixture is near, while unknown fixture/channel labels stay
@@ -205,7 +209,9 @@ while the list scrolls. Existing section indices retain a zero-height scroll anc
 18 mpx row spacing replaces 26 mpx. Thus the normal 1080p first viewport includes
 complete useful quick-channel tiles rather than only their heading. Exact bounds
 are asserted and reported by the native fixtures; long-text/wide-status and 720p
-captures check the constrained case without claiming all physical font scales.
+captures check the constrained case, including long titles and overflow in 720p,
+without claiming all physical font scales. Screenshot capture waits two real
+animation frames after Compose idle to avoid presenting the previous UI state.
 
 The new fixture renders the existing production `StageStatusCluster` and `StageRail`
 with the same measured-safe-area contract and synthetic navigation callbacks. It

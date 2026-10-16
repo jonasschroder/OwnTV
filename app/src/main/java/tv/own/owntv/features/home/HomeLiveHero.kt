@@ -2,6 +2,7 @@ package tv.own.owntv.features.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -57,7 +58,7 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
                 logo?.let { AsyncImage(it, null, contentScale = ContentScale.Fit, modifier = Modifier.size(32.mpx)) }
-                TvText(stringResource(R.string.mintv_v08_last_watched), size = 14, color = MinTvMuted, lines = 1)
+                TvText(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_last_watched), size = 14, color = MinTvMuted, lines = 1)
                 TvText(detailsLabel, Modifier.weight(1f, fill = false), size = 23, bold = true, lines = 1)
                 if (channelName != null) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)
             }
@@ -66,11 +67,11 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
             current?.let {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                     TvText(homeProgrammeTime(it.startMs, it.stopMs), size = 18, color = MinTvMuted, lines = 1)
-                    ProgrammeProgress(((now.toDouble() - it.startMs) / (it.stopMs.toDouble() - it.startMs)).toFloat(),
-                        Modifier.widthIn(max = 460.mpx).weight(1f))
+                    val progress = ((now.toDouble() - it.startMs) / (it.stopMs.toDouble() - it.startMs)).toFloat()
+                    ProgrammeProgress(progress, Modifier.weight(1f, fill = false).widthIn(max = 460.mpx).progressSemantics(progress))
                 }
             }
-            nextTitle?.let { TvText(stringResource(R.string.mintv_next, it), size = 18, color = MinTvMuted, lines = 1) }
+            if (showVideo) nextTitle?.let { TvText(stringResource(R.string.mintv_next, it), size = 18, color = MinTvMuted, lines = 1) }
             Row(Modifier.padding(top = 8.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
                 DashboardAction(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_continue_live),
                     onWatch, firstAction, primary = true)
@@ -86,6 +87,16 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
                 Box(Modifier.align(Alignment.BottomStart).fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color.Transparent, MinTvNavy))).padding(12.mpx)) {
                     TvText(it, size = 15, color = MinTvMuted, lines = 1)
+                }
+            }
+        }
+        else nextTitle?.let { next ->
+            // Actual stored programme metadata replaces the disabled player area. No new artwork read.
+            Row(Modifier.width(360.mpx), horizontalArrangement = Arrangement.spacedBy(24.mpx), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(1.mpx).height(112.mpx).background(MinTvMuted.copy(alpha = .18f)))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
+                    TvText(stringResource(R.string.mintv_v08_up_next), size = 16, color = MinTvMuted, lines = 1)
+                    TvText(next, size = 25, bold = true, lines = 3)
                 }
             }
         }

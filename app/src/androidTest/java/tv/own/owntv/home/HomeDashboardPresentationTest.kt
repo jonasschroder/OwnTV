@@ -33,6 +33,8 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import tv.own.owntv.BuildConfig
 import tv.own.owntv.R
 import tv.own.owntv.core.launcher.*
@@ -134,6 +136,15 @@ class HomeDashboardPresentationTest {
     }
     private fun screenshot(name: String) {
         compose.waitForIdle()
+        // Compose semantics/layout can be idle before SurfaceFlinger presents the new state.
+        val drawn = CountDownLatch(1)
+        compose.runOnUiThread {
+            compose.activity.window.decorView.postOnAnimation {
+                compose.activity.window.decorView.postOnAnimation { drawn.countDown() }
+            }
+        }
+        assertTrue("Wait for actual screenshot frames", drawn.await(3, TimeUnit.SECONDS))
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
         File(dir, name).outputStream().use { assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
             .compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
@@ -203,7 +214,10 @@ class HomeDashboardPresentationTest {
                             HomeSection.FAVORITES, HomeSection.NOW -> {
                                 val index = if (section == HomeSection.NOW) 8 else 1
                                 Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-                                    TvText(context.getString(if (section == HomeSection.NOW) R.string.mintv_v08_now else R.string.mintv_v08_quick_channels), size = 27, bold = true)
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        TvText(context.getString(if (section == HomeSection.NOW) R.string.mintv_v08_now else R.string.mintv_v08_quick_channels), size = 27, bold = true)
+                                        DashboardAction(context.getString(R.string.mintv_home_live), { opened++ })
+                                    }
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.mpx), contentPadding = PaddingValues(5.mpx)) {
                                         itemsIndexed(listOf("SVT1", "SVT2", "TV3", "TV4", "Kanal 5", "TV6")) { i, name ->
                                             if (section == HomeSection.NOW) HomeNowChannelCard(name, null,
@@ -377,13 +391,18 @@ class HomeDashboardPresentationTest {
         assertTrue("Compact hero, measured in mockup pixels: $hero", hero.height / scale in 270f..320f)
         assertTrue("Header remains above content", header.bottom <= hero.top)
         assertTrue("Header does not overlap status", header.right <= status.left || header.top >= status.bottom)
-        assertTrue("An entire useful quick tile must be in the initial viewport", tile.bottom <= screen.height && tile.top >= hero.bottom)
+        assertTrue("An entire useful quick tile must be in the initial viewport", tile.bottom <= screen.height && tile.top >= hero.bottom && tile.height >= 100 * scale)
+        val progress = compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo) and hasAnyAncestor(hasTestTag("dashboard-hero"))).fetchSemanticsNode().boundsInRoot
+        assertTrue("Hero progress must remain concise", progress.width <= 461 * scale)
         compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
         assertEquals("Disabled preview must never compose its video slot", 0, videoMounts)
         screenshot("v08-review-home-1080p-focused-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_UP)
         compose.onNodeWithTag("dashboard-version").assertIsFocused()
         screenshot("v08-review-home-1080p-unfocused-hero-synthetic.png")
+        compose.runOnIdle { twitch = TwitchState.Live("Syntetisk direktsändning", 1234, "Counter-Strike 2") }
+        compose.onNodeWithTag("dashboard-version").assertIsFocused()
+        screenshot("v08-review-home-twitch-live-synthetic.png")
     }
     @Test fun overflowUsesRemoteGuideAndQualityActionsAndBackRestoresItsOrigin() {
         mount()
@@ -445,6 +464,19 @@ class HomeDashboardPresentationTest {
             val tile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
             assertTrue("Quick tile remains visible at 720p", tile.bottom <= 720)
             assertEquals(0, videoMounts)
+            compose.runOnIdle {
+                programmeTitle = "Syntetisk lång programtitel med fördjupning, intervjuer och kvällens viktigaste händelser ".repeat(3)
+                nextProgramme = "Syntetiskt nästa program med en lång rubrik ".repeat(3)
+            }
+            compose.onNodeWithTag("dashboard-watch").assertIsFocused()
+            compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
+            val longTile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
+            assertTrue("Long text must retain a complete quick tile at 720p", longTile.bottom <= 720 && longTile.height >= 66)
+            screenshot("v08-review-home-720p-long-text-synthetic.png")
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFocused("TV-guide")
+            screenshot("v08-review-overflow-720p-synthetic.png")
+            key(KeyEvent.KEYCODE_BACK); waitFocused("Fler val")
             key(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         } finally { command("wm size reset"); compose.waitUntil(5000) { compose.activity.resources.configuration.screenWidthDp >= 800 } }
     }

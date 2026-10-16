@@ -26,13 +26,13 @@ import tv.own.owntv.R
 import tv.own.owntv.ui.theme.mpx
 
 @Composable
-internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier, compact: Boolean = false) {
+internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier, compact: Boolean = false, onLiveChanged: (Boolean) -> Unit = {}) {
     val repository = koinInject<TwitchStatus>()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mintv-companion", 0) }
     val playback = remember(context) { TwitchPlayback(context) }
     TwitchCompanionUi(visible, active, prefs, BuildConfig.TWITCH_CLIENT_ID,
-        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open, compact)
+        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open, compact, onLiveChanged)
 }
 
 /** Presentation adapter; token storage and Twitch protocol remain in TwitchStatus. */
@@ -42,7 +42,7 @@ internal fun TwitchCompanionUi(
     readConnection: suspend () -> Boolean, readStatus: suspend (Long) -> TwitchState,
     authorize: suspend (String, (TwitchActivation) -> Unit) -> Unit, disconnectAccount: suspend () -> Unit,
     modifier: Modifier = Modifier, listPlayers: () -> List<TwitchPlayer> = { emptyList() },
-    openPlayer: (TwitchPlayer) -> Boolean = { false }, compact: Boolean = false,
+    openPlayer: (TwitchPlayer) -> Boolean = { false }, compact: Boolean = false, onLiveChanged: (Boolean) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var playbackOpen by remember { mutableStateOf(false) }
@@ -95,6 +95,7 @@ internal fun TwitchCompanionUi(
         else if (restore) { entryFocus.requestSafely(); restore = false }
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
+    SideEffect { onLiveChanged(fresh is TwitchState.Live) }
     val openSettings = {
         setup = true; failure = if (connected) statusFailure else null; editClientId = clientId.isBlank()
         connecting = !connected && clientId.isNotBlank()

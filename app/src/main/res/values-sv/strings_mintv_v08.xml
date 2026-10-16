@@ -28,4 +28,8 @@
     <string name="mintv_v08_variant">%1$s · %2$s</string>
     <string name="mintv_v08_no_fixture">Ingen kommande match bekräftad</string>
     <string name="mintv_v08_viewers">%1$s tittare</string>
+    <string name="mintv_v08_more">Fler val</string>
+    <string name="mintv_v08_customize_short">Anpassa</string>
+    <string name="mintv_v08_version_chip">v%1$s</string>
+    <string name="mintv_v08_separator">" · "</string>
 </resources>

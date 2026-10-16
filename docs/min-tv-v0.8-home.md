@@ -28,13 +28,16 @@ Published QA at investigation: `qa-1000007`, version `0.7.0-beta.1`. This PR doe
 └──────────────────────┴────────────────────────────────────────────────────┘
 ```
 
-Existing shell safe areas and status controls remain. Content end inset 56, row gap 26,
-hero content padding 28, preview inset 16; header minimum 64. Hero splits approximately
-49% text and 51% 16:9 preview; its height follows content, never a fixed full viewport.
-Navy background, calm lighter surfaces, teal focus/accent; titles 31–36, section titles
-25–27, body 18–21, secondary text 16–18. Ellipsis/line limits bound verbose data.
-The initial viewport prioritizes the header, hero and companion summaries, with the
-next rail indicating further content. The same layout scales at 720p.
+The second-iteration header shares the measured shell status band where width permits.
+Content end inset is 56 mpx, row gap 18, hero horizontal/vertical padding 26/20,
+and header minimum 60. The usual hero is 294 mpx high. Only an active preview
+(including real loading, which needs a surface to prepare) allocates its 436 mpx
+wide 16:9 slot; disabled, blocked or failed preview uses the whole tonal programme
+surface. Continue is primary, TV Channels secondary; Guide/quality/customization
+remain in the focusable More menu. Programme titles use 34 mpx with two bounded
+lines, metadata 18, channel 23, eyebrow 14. Compact companions and visible quick
+channel tiles complete the first viewport. See the second-iteration section below
+for measured screenshot assertions and the first/second comparison provenance.
 
 Up/Down follows **actual lazy item positions**, including reordered/hidden rails, not
 enum order. Removal is compared with the last committed focused section before Android
@@ -157,6 +160,59 @@ terminal failures/cancellations retain the original cleanup and retry behavior. 
 checks never open another focus-stealing overlay. The dialog retains the caller's resource
 locale, including a per-app language override, across its Android window boundary.
 
-The presentation fixture includes the production clock/source status cluster and reserves
-the existing sidebar inset; it does not instantiate the full shell/sidebar or HomeViewModel.
+The presentation fixture includes the production clock/source status cluster and sidebar
+with synthetic callbacks; it does not instantiate the complete OwnTVShell or HomeViewModel.
 Sidebar/profile integration and provider playback remain on the physical-device checklist.
+
+## Second design iteration — owner review on 15 October 2026
+
+Review: https://github.com/jonasschroder/OwnTV/pull/11#issuecomment-6200839345.
+
+The owner-reviewed first-iteration capture is retained unchanged under
+`docs/images/v08/v08-iteration1-{1080p,720p}-synthetic.png` (source `5d1b5eb3`).
+It is a real first-viewport capture, unlike the separate older copied-hero fixture.
+The screenshot artifact includes `v08-review-compare.html`: extract the archive and
+open the file for a side-by-side comparison of actual captures at both resolutions.
+No comparison image is synthesized or redrawn.
+
+The compact hero has a 254 mpx minimum content area and 20 mpx vertical padding:
+294 mpx normally, instead of the roughly 510 mpx first-iteration panel. Natural
+height may grow for large fonts; there is no hard clipping. Programme titles have
+two lines; next programme and channel/source labels use a bounded line. A single
+primary Continue action is followed by TV Channels and a focusable More button.
+More opens the existing TV popup style with Guide, Source/Quality when available,
+and Customize. The existing synopsis is available in that popup. Back restores the
+More control; actions continue through their existing callbacks. A real active
+preview alone allocates a 436 × 245.25 mpx, 16:9 video slot. Disabled, unavailable
+or failed preview allocates no video slot and never composes its content. The full
+programme surface then uses a restrained tonal gradient and the existing channel
+logo, when available; no artwork or programme is invented.
+
+The supporting strip is normally about 112–120 mpx high. Hockey uses a warmer teal
+surface when a verified fixture is near, while unknown fixture/channel labels stay
+explicit. Manual/EPG evidence and cached-update labels remain available. Offline or
+unknown Twitch gets less width and a quiet status/settings tile. Live Twitch gets
+more width for its title, category/viewer count and Watch action. All card actions
+remain horizontal so the existing Up/Down section traversal cannot skip a nested
+button. No reader, polling or authorization policy changes.
+
+Header branding/profile, Customize and actual-version chip now occupy the same top
+band as the existing source/clock cluster when at least 640 mpx is available. The
+shell supplies its measured cluster width and height. With a large status cluster
+or a wide sidebar the header uses a second band; the content inset becomes the
+maximum of status and header bottoms plus spacing. The header stays accessible
+while the list scrolls. Existing section indices retain a zero-height scroll anchor;
+18 mpx row spacing replaces 26 mpx. Thus the normal 1080p first viewport includes
+complete useful quick-channel tiles rather than only their heading. Exact bounds
+are asserted and reported by the native fixtures; long-text/wide-status and 720p
+captures check the constrained case without claiming all physical font scales.
+
+The new fixture renders the existing production `StageStatusCluster` and `StageRail`
+with the same measured-safe-area contract and synthetic navigation callbacks. It
+asserts sidebar return, overflow/Back/guide/quality, no disabled-video allocation,
+quick-tile visibility, async companion focus and profile re-entry. This is still not
+the complete database-backed `OwnTVShell`/HomeViewModel or a real decoder session.
+Physical Chromecast playback, provider limits, actual font/display settings and
+full application integration remain on the hardware checklist above. Installer
+security, keys, identities, persisted preferences, data, launcher and updater logic
+are unchanged by this second iteration.

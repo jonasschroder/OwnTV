@@ -17,6 +17,11 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.key.*
+import tv.own.owntv.features.shell.components.*
+import tv.own.owntv.core.nav.MainSection
+import tv.own.owntv.core.settings.SettingsRepository
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
@@ -53,6 +58,17 @@ class HomeDashboardPresentationTest {
     private var update: MinTvUpdater.State by mutableStateOf(MinTvUpdater.State.Idle)
     private var rows by mutableStateOf(listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.FAVORITES,
         HomeSection.CONTINUE, HomeSection.NOW, HomeSection.SERIES, HomeSection.MOVIES))
+    private var profileKey by mutableLongStateOf(7L)
+    private var profile by mutableStateOf("Syntetisk profil")
+    private var programmeTitle by mutableStateOf("Syntetiska Nyheterna")
+    private var nextProgramme by mutableStateOf("Syntetiskt nästa program")
+    private var wideStatus by mutableStateOf(false)
+    private var menuVisible by mutableStateOf(false)
+    private var sidebarFocused by mutableStateOf(false)
+    private var watchFocused by mutableStateOf(false)
+    private var videoMounts = 0
+    private var guideOpens = 0
+    private var variantOpens = 0
     private var opened = 0
     private var watched = 0
     private var updates = 0
@@ -112,6 +128,10 @@ class HomeDashboardPresentationTest {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
         compose.onNodeWithTag(tag).assertIsFocused()
     }
+    private fun waitFocused(label: String) {
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithText(label).assertIsFocused(); true }.getOrDefault(false) }
+        compose.onNodeWithText(label).assertIsFocused()
+    }
     private fun screenshot(name: String) {
         compose.waitForIdle()
         val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
@@ -133,7 +153,11 @@ class HomeDashboardPresentationTest {
                     val list = rememberLazyListState()
                     val scope = rememberCoroutineScope()
                     val first = remember { FocusRequester() }
-                    val nav = rememberHomeDpadNavigation(first, 10, 7, firstSection = 0)
+                    val nav = rememberHomeDpadNavigation(first, 10, profileKey, firstSection = 0)
+                    val sidebar = remember { FocusRequester() }
+                    val density = LocalDensity.current
+                    var statusWidth by remember { mutableStateOf(760.mpx) }
+                    var statusHeight by remember { mutableStateOf(120.mpx) }
                     var fullscreen by remember { mutableStateOf(false) }
                     var showUpdate by remember { mutableStateOf(false) }
                     val indices = dashboardIndices(rows, true, true)
@@ -141,25 +165,34 @@ class HomeDashboardPresentationTest {
                     SideEffect { scroll = { index -> scope.launch { list.scrollToItem(index) } } }
                     fun restore() { scope.launch { list.scrollToItem(indices[nav.selected]); withFrameNanos { }; withFrameNanos { }; nav.focus[nav.selected].requestSafely() } }
                     BackHandler(fullscreen) { fullscreen = false; restore() }
-                    Box(Modifier.fillMaxSize().background(MinTvNavy)) {
+                    Box(Modifier.fillMaxSize().background(MinTvNavy).onPreviewKeyEvent {
+                        if (it.key == Key.DirectionLeft && watchFocused && !menuVisible && !fullscreen && !showUpdate) {
+                            if (it.type == KeyEventType.KeyDown) sidebar.requestSafely()
+                            true
+                        } else false
+                    }) {
                     if (fullscreen) Box(Modifier.fillMaxSize().background(MinTvNavy).testTag("dashboard-fullscreen")) { TvText("Syntetisk uppspelningskontroll") }
-                    else HomeDashboardFrame(list, rows, 150.mpx, 110.mpx,
+                    else HomeDashboardFrame(list, rows, if (sidebarFocused) 344.mpx else 150.mpx, statusHeight + 24.mpx,
                         Modifier.fillMaxSize().testTag("dashboard").then(homeDpadModifier(nav, list, indices)),
-                        header = { HomeDashboardHeader("Syntetisk profil", update, { showUpdate = true }, {}, nav.section(9).testTag("dashboard-version")) }) { section ->
+                        statusWidth = if (wideStatus) 1300.mpx else statusWidth,
+                        header = { Box(Modifier.testTag("dashboard-header")) { HomeDashboardHeader(profile, update, { showUpdate = true }, {}, nav.section(9).testTag("dashboard-version")) } }) { section ->
                         when (section) {
                             HomeSection.LIVE -> if (before) BeforeV08Hero("TV4 HD", null,
                                 XtEpgEntry("Syntetiska Nyheterna", null, now - 600_000, now + 1_200_000),
                                 "Syntetiskt nästa program", now, null, {}, {}, {}, {}, firstAction = nav.section(0).testTag("dashboard-watch")) { TvText("TV4", size = 80, color = MinTvTeal) }
                             else HomeLiveHero(if (hasHistory) "TV4 HD" else null, null,
-                                if (hasGuide && hasHistory) XtEpgEntry("Syntetiska Nyheterna", "Syntetiska nyheter och reportage från vår testtablå.", now - 600_000, now + 1_200_000) else null,
-                                if (hasGuide && hasHistory) "Syntetiskt nästa program" else null, now,
+                                if (hasGuide && hasHistory) XtEpgEntry(programmeTitle, "Syntetiska nyheter och reportage från vår testtablå.", now - 600_000, now + 1_200_000) else null,
+                                if (hasGuide && hasHistory) nextProgramme else null, now,
                                 context.getString(R.string.mintv_preview_disabled),
-                                { if (hasHistory) { watched++; fullscreen = true } else opened++ }, { opened++ }, {}, {},
-                                Modifier.testTag("dashboard-hero"), nav.section(0).testTag("dashboard-watch"), onVariants = {}) {
+                                { if (hasHistory) { watched++; fullscreen = true } else opened++ }, { opened++ }, { guideOpens++ }, {},
+                                Modifier.testTag("dashboard-hero"), nav.section(0).testTag("dashboard-watch").onFocusChanged { watchFocused = it.hasFocus },
+                                onVariants = { variantOpens++ }, showVideo = false, sourceName = "Syntetisk IPTV-källa",
+                                onMenuVisibility = { menuVisible = it }) {
+                                    SideEffect { videoMounts++ }
                                     TvText("TV4", size = 80, color = MinTvTeal, bold = true)
                                 }
                             HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                                Box(Modifier.weight(1.15f)) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
+                                Box(Modifier.weight(if (twitch is TwitchState.Live) 1.35f else 1.8f)) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
                                     ShlGame("synthetic", "Färjestad BK", "Luleå HF", now + 3_600_000, null)) else null,
                                     now, if (hockeyKnown) "TV4 Sport Live 2" else null, hockeyKnown, "Färjestad BK",
                                     { opened++ }, { opened++ }, nav.section(3).testTag("dashboard-hockey")) }
@@ -180,7 +213,7 @@ class HomeDashboardPresentationTest {
                                                     tv.own.owntv.features.live.SwedishProgramme(i + 100L, "Syntetiskt nästa $i", now + 1_200_000, now + 2_400_000)),
                                                 now, { watched++; fullscreen = true }, Modifier.width(330.mpx).then(if (i == 0) nav.section(index).testTag("dashboard-now") else Modifier))
                                             else ChannelCard(name, null, null, { watched++; fullscreen = true },
-                                                Modifier.width(300.mpx).then(if (i == 0) nav.section(index) else Modifier))
+                                                Modifier.width(230.mpx).then(if (i == 0) nav.section(index).testTag("dashboard-quick") else Modifier))
                                         }
                                     }
                                 }
@@ -199,11 +232,21 @@ class HomeDashboardPresentationTest {
                     }
                     if (!fullscreen) tv.own.owntv.features.shell.components.StageStatusCluster(
                         null, null, "Syntetisk IPTV-källa", false, {}, false, null, false,
-                        tv.own.owntv.core.settings.ClockColors(), Modifier.align(Alignment.TopEnd))
+                        tv.own.owntv.core.settings.ClockColors(), Modifier.align(Alignment.TopEnd).testTag("dashboard-status")
+                            .onSizeChanged { statusWidth = with(density) { it.width.toDp() }; statusHeight = with(density) { it.height.toDp() } })
+                    if (!fullscreen) StageRail(
+                        state = if (sidebarFocused) RailState.OPEN else RailState.CAPSULE,
+                        size = SettingsRepository.NavSize.NORMAL, length = SettingsRepository.NavLength.FULL,
+                        selected = MainSection.HOME, visibleSections = setOf(MainSection.HOME, MainSection.LIVE_TV, MainSection.EPG, MainSection.MOVIES, MainSection.SERIES),
+                        onSelect = { sidebarFocused = false; nav.focus[nav.selected].requestSafely() }, count = { null }, detail = { null },
+                        profileName = profile, profileLine = "Syntetisk IPTV-källa", onSwitchProfile = {}, onPickAvatar = {},
+                        selectedItemFocusRequester = sidebar, contentFocusRequester = first,
+                        enterContent = { sidebarFocused = false; nav.focus[nav.selected].requestSafely() },
+                        onFocused = { sidebarFocused = true }, nowPlaying = null, onNowPlaying = {})
                     }
                     if (showUpdate) UpdatePresentation(update, context.getString(R.string.mintv_update_channel_stable), false, null,
                         { showUpdate = false; closeUpdate++; restore() }, {}, { updates++ })
-                    LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestSafely() }
+                    LaunchedEffect(profileKey) { withFrameNanos { }; withFrameNanos { }; first.requestSafely() }
                 }
             }
         }
@@ -323,6 +366,66 @@ class HomeDashboardPresentationTest {
         key(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("dashboard-version").assertIsFocused()
         assertEquals(2, closeUpdate)
     }
+    @Test fun firstViewportShowsQuickTileInsideRealShellInsetsWithoutAllocatingVideo() {
+        mount()
+        val hero = compose.onNodeWithTag("dashboard-hero").fetchSemanticsNode().boundsInRoot
+        val header = compose.onNodeWithTag("dashboard-header").fetchSemanticsNode().boundsInRoot
+        val status = compose.onNodeWithTag("dashboard-status").fetchSemanticsNode().boundsInRoot
+        val tile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
+        val screen = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        val scale = screen.width / 1920f
+        assertTrue("Compact hero, measured in mockup pixels: $hero", hero.height / scale in 270f..320f)
+        assertTrue("Header remains above content", header.bottom <= hero.top)
+        assertTrue("Header does not overlap status", header.right <= status.left || header.top >= status.bottom)
+        assertTrue("An entire useful quick tile must be in the initial viewport", tile.bottom <= screen.height && tile.top >= hero.bottom)
+        compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
+        assertEquals("Disabled preview must never compose its video slot", 0, videoMounts)
+        screenshot("v08-review-home-1080p-focused-synthetic.png")
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithTag("dashboard-version").assertIsFocused()
+        screenshot("v08-review-home-1080p-unfocused-hero-synthetic.png")
+    }
+    @Test fun overflowUsesRemoteGuideAndQualityActionsAndBackRestoresItsOrigin() {
+        mount()
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        waitFocused("Fler val")
+        key(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFocused("TV-guide")
+        screenshot("v08-review-remote-overflow-synthetic.png")
+        key(KeyEvent.KEYCODE_BACK)
+        waitFocused("Fler val")
+        key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, guideOpens); assertEquals(0, watched)
+        focus("dashboard-watch")
+        key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
+        key(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithText("Källa / kvalitet").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, variantOpens); assertEquals(0, watched)
+    }
+    @Test fun sidebarLongTextAndProfileArrivalKeepControlsReachableWithoutPlayback() {
+        mount(); key(KeyEvent.KEYCODE_DPAD_LEFT)
+        compose.waitUntil(5000) { sidebarFocused }
+        screenshot("v08-review-sidebar-synthetic.png")
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNodeWithTag("dashboard-watch").assertIsFocused()
+        compose.runOnIdle {
+            programmeTitle = "Syntetisk lång programtitel med flera ord och en utförlig beskrivning av kvällens sändning ".repeat(4)
+            nextProgramme = "Syntetiskt nästa program med en mycket lång rubrik ".repeat(4)
+            wideStatus = true
+        }
+        compose.onNodeWithTag("dashboard-watch").assertIsFocused()
+        compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
+        val tile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
+        assertTrue(tile.bottom <= InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().height)
+        screenshot("v08-review-long-text-wide-status-synthetic.png")
+        compose.runOnIdle { profileKey = 8L; profile = "Syntetisk profil två" }
+        compose.onNodeWithText("Syntetisk profil två").assertIsDisplayed()
+        compose.onNodeWithTag("dashboard-watch").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
+        assertEquals(0, watched); assertEquals(0, videoMounts)
+    }
     @Test fun real720pEmulatorLayoutRetainsReadableHeroAndRemoteNavigation() {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         // Temporary display mode on the explicitly disposable emulator only; never a physical app.
@@ -337,6 +440,11 @@ class HomeDashboardPresentationTest {
             val shot = automation.takeScreenshot()
             assertEquals(1280, shot.width); assertEquals(720, shot.height)
             screenshot("v08-home-720p-synthetic.png")
+            screenshot("v08-review-home-720p-focused-synthetic.png")
+            compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
+            val tile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
+            assertTrue("Quick tile remains visible at 720p", tile.bottom <= 720)
+            assertEquals(0, videoMounts)
             key(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         } finally { command("wm size reset"); compose.waitUntil(5000) { compose.activity.resources.configuration.screenWidthDp >= 800 } }
     }

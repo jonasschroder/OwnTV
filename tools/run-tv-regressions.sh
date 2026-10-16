@@ -20,6 +20,10 @@ capture_screenshots() {
     echo '::error::Synthetic screenshots missing after successful tests.'
     test_status=1
   fi
+  if [ -d v04-device-screenshots ]; then
+    cp docs/images/v08/v08-iteration1-*-synthetic.png v04-device-screenshots/
+    cp docs/min-tv-v08-comparison.html v04-device-screenshots/v08-review-compare.html
+  fi
   exit "$test_status"
 }
 trap capture_screenshots EXIT

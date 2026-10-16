@@ -5,7 +5,9 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -49,29 +51,39 @@ internal fun dashboardIndices(rows: List<HomeSection>, showSport: Boolean, showT
 /** Real lazy dashboard frame shared by production and synthetic emulator fixtures. No data/player owner. */
 @Composable
 internal fun HomeDashboardFrame(list: LazyListState, rows: List<HomeSection>, contentStart: Dp, reservedTop: Dp,
-    modifier: Modifier = Modifier, header: @Composable () -> Unit, section: @Composable (HomeSection) -> Unit) {
-    LazyColumn(state = list,
-        contentPadding = PaddingValues(start = contentStart, end = 56.mpx, top = 8.mpx, bottom = 60.mpx),
-        verticalArrangement = Arrangement.spacedBy(26.mpx),
-        modifier = modifier.background(MinTvNavy).homeContentViewport(reservedTop).focusGroup()) {
-        item(key = Int.MIN_VALUE) { header() }
-        rows.forEach { row -> item(key = row) { section(row) } }
+    modifier: Modifier = Modifier, statusWidth: Dp = 760.mpx,
+    header: @Composable () -> Unit, section: @Composable (HomeSection) -> Unit) {
+    val density = LocalDensity.current
+    var headerHeight by remember { mutableStateOf(60.mpx) }
+    BoxWithConstraints(modifier.background(MinTvNavy).focusGroup()) {
+        val besideStatus = maxWidth - contentStart - statusWidth - 24.mpx >= 640.mpx
+        val headerTop = if (besideStatus) 34.mpx else reservedTop
+        val contentTop = maxOf(reservedTop, headerTop + headerHeight + 20.mpx)
+        LazyColumn(state = list,
+            contentPadding = PaddingValues(start = contentStart, end = 56.mpx, top = 8.mpx, bottom = 60.mpx),
+            verticalArrangement = Arrangement.spacedBy(18.mpx),
+            modifier = Modifier.fillMaxSize().homeContentViewport(contentTop)) {
+            // A zero-height scroll anchor preserves existing section indices for the fixed header.
+            item(key = Int.MIN_VALUE) { }
+            rows.forEach { row -> item(key = row) { section(row) } }
+        }
+        Box(Modifier.fillMaxWidth().padding(start = contentStart, end = if (besideStatus) statusWidth + 24.mpx else 56.mpx, top = headerTop)
+            .onSizeChanged { headerHeight = with(density) { it.height.toDp() } }) { header() }
     }
 }
 
 @Composable
 internal fun HomeDashboardHeader(profile: String?, update: MinTvUpdater.State, onUpdate: () -> Unit,
     onCustomize: () -> Unit, modifier: Modifier = Modifier) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 64.mpx), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 60.mpx), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
         Column(Modifier.weight(1f)) {
-            TvText(stringResource(R.string.app_name), size = 31, bold = true, lines = 1)
-            profile?.let { TvText(it, size = 17, color = MinTvMuted, lines = 1) }
+            TvText(stringResource(R.string.app_name), size = 28, bold = true, lines = 1)
+            profile?.let { TvText(it, size = 16, color = MinTvMuted, lines = 1) }
         }
-        DashboardAction(stringResource(R.string.mintv_v08_customize), onCustomize)
+        DashboardAction(stringResource(R.string.mintv_v08_customize_short), onCustomize, compact = true)
         Column(horizontalAlignment = Alignment.End) {
-            DashboardAction(stringResource(R.string.mintv_v08_version,
-                stringResource(R.string.app_name), BuildConfig.VERSION_NAME), onUpdate, modifier)
+            DashboardAction(stringResource(R.string.mintv_v08_version_chip, BuildConfig.VERSION_NAME), onUpdate, modifier, compact = true)
             if (update is MinTvUpdater.State.Available) TvText(stringResource(R.string.mintv_v08_update_available),
                 size = 17, color = MinTvTeal, lines = 1)
         }
@@ -79,16 +91,17 @@ internal fun HomeDashboardHeader(profile: String?, update: MinTvUpdater.State, o
 }
 
 @Composable
-internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false) {
-    androidx.tv.material3.Button(onClick = onClick, modifier = modifier.heightIn(min = 50.mpx),
-        contentPadding = PaddingValues(horizontal = 18.mpx, vertical = 10.mpx),
+internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, compact: Boolean = false) {
+    androidx.tv.material3.Button(onClick = onClick, modifier = modifier.heightIn(min = if (compact) 42.mpx else 50.mpx),
+        contentPadding = PaddingValues(horizontal = if (compact) 14.mpx else 18.mpx, vertical = if (compact) 7.mpx else 10.mpx),
+        shape = androidx.tv.material3.ButtonDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.mpx)),
         colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else MinTvPanel,
             contentColor = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White,
             focusedContainerColor = if (primary) androidx.compose.ui.graphics.Color(0xFFE7FFFF) else androidx.compose.ui.graphics.Color(0xFF274555)),
         border = androidx.tv.material3.ButtonDefaults.border(focusedBorder = androidx.tv.material3.Border(
-            androidx.compose.foundation.BorderStroke(3.mpx, MinTvTeal))),
+            androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
         scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1f)) {
-        TvText(label, size = 20, lines = 1, bold = primary, color = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White)
+        TvText(label, size = if (compact) 17 else 20, lines = 1, bold = primary, color = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White)
     }
 }
 

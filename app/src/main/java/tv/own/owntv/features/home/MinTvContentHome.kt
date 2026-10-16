@@ -66,7 +66,7 @@ internal fun MinTvContentHome(
     onOpenSeries: (Long) -> Unit, onSources: () -> Unit, onManageSources: () -> Unit,
     onChildFocused: () -> Unit, restoreFocus: Boolean, onRestored: () -> Unit,
     firstRowFocusRequester: FocusRequester, onEntryHook: ((() -> Boolean)?) -> Unit,
-    contentStart: Dp, reservedTop: Dp = 144.mpx, modifier: Modifier = Modifier,
+    contentStart: Dp, reservedTop: Dp = 144.mpx, statusWidth: Dp = 760.mpx, modifier: Modifier = Modifier,
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val library by liveVm.homeLibraryState.collectAsStateWithLifecycle()
@@ -98,6 +98,8 @@ internal fun MinTvContentHome(
     var preferencesOpen by remember { mutableStateOf(false) }
     var updateOpen by remember { mutableStateOf(false) }
     var variantsOpen by remember { mutableStateOf(false) }
+    var heroMenuOpen by remember { mutableStateOf(false) }
+    var twitchLive by remember(activeProfileId) { mutableStateOf(false) }
     var chooseTeams by remember { mutableStateOf(false) }
     var missingApp by remember { mutableStateOf<ExternalShortcut?>(null) }
     var launchFailed by remember { mutableStateOf(false) }
@@ -115,7 +117,7 @@ internal fun MinTvContentHome(
     var quickFocused by rememberSaveable(activeProfileId) { mutableStateOf<Long?>(null) }
     var nowFocused by rememberSaveable(activeProfileId) { mutableStateOf<Long?>(null) }
     var heroFocused by remember { mutableStateOf(false) }
-    val modal = preferencesOpen || updateOpen || variantsOpen || chooseTeams || missingApp != null || launchFailed
+    val modal = preferencesOpen || updateOpen || variantsOpen || heroMenuOpen || chooseTeams || missingApp != null || launchFailed
     val usable = foreground && preferencesLoaded && !modal && !matchcenterOpen
     val favorites = remember(state.favoriteLive, state.profileId, activeProfileId, library) { state.favoriteLive.takeIf { state.profileId == activeProfileId && library.profileId == activeProfileId }.orEmpty()
         .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false } }
@@ -249,12 +251,13 @@ internal fun MinTvContentHome(
                     event.key in listOf(Key.DirectionLeft, Key.DirectionRight)) controller.onRemoteNavigation()
                 false
             }.then(homeDpadModifier(navigation, list, sectionItems)).onFocusChanged { if (it.hasFocus) onChildFocused() },
+            statusWidth = statusWidth,
             header = { Box(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = 9 }.focusGroup()) { HomeDashboardHeader(profileName, updateState, { stop(); updateOpen = true },
                 { stop(); preferencesOpen = true }, navigation.section(9)) } }) { section ->
             when (section) {
                 HomeSection.LIVE -> {
                     val selected = hero
-                    val hasVideo = previewAllowed && selected != null && previewState !in listOf(LivePreviewEngine.State.IDLE, LivePreviewEngine.State.ERROR)
+                    val hasVideo = previewAllowed && !blocked && selected != null && previewState !in listOf(LivePreviewEngine.State.IDLE, LivePreviewEngine.State.ERROR)
                     val message = when {
                         !previewsOn -> R.string.mintv_preview_disabled
                         blocked -> R.string.content_preview_single_stream
@@ -268,15 +271,17 @@ internal fun MinTvContentHome(
                         stringResource(message), { selected?.let { play(it, listOf(it) + quick.map { row -> row.second }) } ?: run { stop(); onLiveTv() } },
                         { stop(); onLiveTv() }, { stop(); onGuide() }, { preferencesOpen = true },
                         Modifier.onFocusChanged { heroFocused = it.hasFocus; if (it.hasFocus) navigation.selected = 0 }, navigation.section(0),
-                        onVariants = { stop(); variantsOpen = true }.takeIf { heroAlternatives.size > 1 }) {
+                        onVariants = { stop(); variantsOpen = true }.takeIf { heroAlternatives.size > 1 },
+                        showVideo = hasVideo, sourceName = selected?.let { providerNames[it.sourceId] },
+                        onMenuVisibility = { heroMenuOpen = it }) {
                         if (hasVideo) ExoPreviewSurface(liveVm.previewEngine, Modifier.fillMaxSize(), useTextureView = selected.drmConfig == null)
                         else if (selected?.displayLogoUrl != null) AsyncImage(selected.displayLogoUrl, null, contentScale = ContentScale.Fit, modifier = Modifier.size(140.mpx))
                         else TvText(stringResource(R.string.app_name), size = 40, color = MinTvTeal, bold = true)
                     }
                 }
                 HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                    if (showSport) Box(Modifier.weight(1.15f)) { hockeyCard() }
-                    if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }.focusGroup()) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true) }
+                    if (showSport) Box(Modifier.weight(if (twitchLive) 1.35f else 1.8f)) { hockeyCard() }
+                    if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }.focusGroup()) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true, onLiveChanged = { twitchLive = it }) }
                 }
                 HomeSection.TWITCH -> Unit
                 HomeSection.FAVORITES, HomeSection.NOW -> {

@@ -202,6 +202,7 @@ fun OwnTVShell(
     val clockColors by settingsRepo.clockColors.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.ClockColors())
     val statusDensity = LocalDensity.current
     var homeStatusHeight by remember { mutableStateOf(120.mpx) }
+    var homeStatusWidth by remember { mutableStateOf(760.mpx) }
     val remoteShortcutBindings by settingsRepo.remoteShortcutBindings.collectAsStateWithLifecycle(
         initialValue = RemoteShortcutBindings.defaults,
     )
@@ -1189,6 +1190,7 @@ fun OwnTVShell(
                                 else -> 150.mpx
                             },
                             reservedTop = homeStatusHeight + 24.mpx,
+                            statusWidth = homeStatusWidth,
                             modifier = Modifier.fillMaxSize(),
                         ) }
 
@@ -1368,7 +1370,10 @@ fun OwnTVShell(
                 clockColors = clockColors,
                 playlistDownFocusRequester = homeFirstRowFocus.takeIf { selectedSection == MainSection.HOME },
                 onPlaylistPillBounds = { playlistPillBounds = it },
-                modifier = Modifier.align(Alignment.TopEnd).onSizeChanged { homeStatusHeight = with(statusDensity) { it.height.toDp() } }
+                modifier = Modifier.align(Alignment.TopEnd).onSizeChanged {
+                    homeStatusHeight = with(statusDensity) { it.height.toDp() }
+                    homeStatusWidth = with(statusDensity) { it.width.toDp() }
+                }
                     .onFocusChanged { clusterFocused = it.hasFocus }.focusGroup(),
             )
             tv.own.owntv.features.shell.components.StageRail(

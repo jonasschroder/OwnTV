@@ -26,6 +26,15 @@ class HomeDashboardTest {
         assertNotEquals(watched.homeEpgKey(), watched.copy(sourceId = 102).homeEpgKey())
         assertNotEquals(watched.homeEpgKey(), watched.copy(remoteId = "other").homeEpgKey())
     }
+    @Test fun lazyChannelKeysPreserveSourceRowAndStableIdentityWithoutStreamUrls() {
+        val channel = watched.copy(remoteId = "remote:17")
+        val key: String = channel.homeLazyItemKey()
+        assertEquals(key, channel.copy(name = "Renamed", logoUrl = "https://example.invalid/logo", streamUrl = "changed").homeLazyItemKey())
+        assertNotEquals(key, channel.copy(id = 2).homeLazyItemKey())
+        assertNotEquals(key, channel.copy(sourceId = 102).homeLazyItemKey())
+        assertNotEquals(key, channel.copy(remoteId = "remote:18").homeLazyItemKey())
+        assertFalse(key.contains(channel.streamUrl))
+    }
     @Test fun reorderedSectionsFollowActualLayoutAndSkipSharedCompanionRow() {
         val rows = listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.NOW, HomeSection.CONTINUE, HomeSection.FAVORITES)
         val indices = dashboardIndices(rows, true, true)

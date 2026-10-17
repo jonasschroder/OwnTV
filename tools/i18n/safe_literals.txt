@@ -276,6 +276,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	mintv-initial-live-favorite
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	profile:$profileId:${profile.createdAt}
 1	json	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	t
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeDashboard.kt	${it.sourceId}:${it.id}:${it.stableKey}
 1	room-schema	app/src/main/java/tv/own/owntv/features/home/HomeDashboardGuide.kt	categories
 1	room-schema	app/src/main/java/tv/own/owntv/features/home/HomeDashboardGuide.kt	channels
 1	room-schema	app/src/main/java/tv/own/owntv/features/home/HomeDashboardGuide.kt	epg_programmes

@@ -57,6 +57,7 @@ class HomeDashboardPresentationTest {
     private var hasGuide by mutableStateOf(true)
     private var hockeyKnown by mutableStateOf(true)
     private var hockeyWatches = 0
+    private var selectedSection = 0
     private var twitch: TwitchState by mutableStateOf(TwitchState.Offline)
     private var update: MinTvUpdater.State by mutableStateOf(MinTvUpdater.State.Idle)
     private var rows by mutableStateOf(listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.FAVORITES,
@@ -166,6 +167,7 @@ class HomeDashboardPresentationTest {
                     val scope = rememberCoroutineScope()
                     val first = remember { FocusRequester() }
                     val nav = rememberHomeDpadNavigation(first, 10, profileKey, firstSection = 0)
+                    SideEffect { selectedSection = nav.selected }
                     val sidebar = remember { FocusRequester() }
                     val density = LocalDensity.current
                     var statusWidth by remember { mutableStateOf(760.mpx) }
@@ -204,7 +206,7 @@ class HomeDashboardPresentationTest {
                                     TvText("TV4", size = 80, color = MinTvTeal, bold = true)
                                 }
                             HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                                Box(Modifier.weight(if (twitch is TwitchState.Live) 1.35f else 1.8f)) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
+                                Box(Modifier.weight(if (twitch is TwitchState.Live) 1.35f else 1.8f).onFocusChanged { if (it.hasFocus) nav.selected = 3 }.focusGroup()) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
                                     ShlGame("synthetic", "Färjestad BK", "Luleå HF", now + 3_600_000, null)) else null,
                                     now, if (hockeyKnown) "TV4 Sport Live 2" else null, hockeyKnown, "Färjestad BK",
                                     { hockeyWatches++ }, nav.section(3).testTag("dashboard-hockey"), onDetails = { opened++ }) }
@@ -298,6 +300,11 @@ class HomeDashboardPresentationTest {
         key(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithText(compose.activity.getString(R.string.mintv_watch_match)).assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, hockeyWatches); assertEquals(1, opened)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNodeWithTag("dashboard-twitch").assertIsFocused(); assertEquals(6, selectedSection)
+        key(KeyEvent.KEYCODE_DPAD_LEFT)
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_watch_match)).assertIsFocused()
+        assertEquals("Returning from Twitch to the hockey action must restore the hockey section", 3, selectedSection)
         key(KeyEvent.KEYCODE_DPAD_LEFT)
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         compose.runOnIdle { hockeyKnown = false; twitch = TwitchState.Live("Syntetisk direktsändning", 1234, "Counter-Strike 2") }

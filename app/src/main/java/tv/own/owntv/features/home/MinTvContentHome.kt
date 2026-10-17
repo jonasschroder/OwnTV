@@ -281,7 +281,7 @@ internal fun MinTvContentHome(
                     }
                 }
                 HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                    if (showSport) Box(Modifier.weight(if (twitchLive) 1.35f else 1.8f)) { hockeyCard() }
+                    if (showSport) Box(Modifier.weight(if (twitchLive) 1.35f else 1.8f).onFocusChanged { if (it.hasFocus) navigation.selected = 3 }.focusGroup()) { hockeyCard() }
                     if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }.focusGroup()) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true, onLiveChanged = { twitchLive = it },
                         onOpenSettings = { stop(); onOpenSettings(MinTvSettingsDestination.TWITCH) }) }
                 }

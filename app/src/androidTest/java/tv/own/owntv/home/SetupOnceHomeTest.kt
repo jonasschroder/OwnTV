@@ -108,6 +108,8 @@ class SetupOnceHomeTest {
         assertEquals(listOf("com.s0und.s0undtv"), installations)
         compose.runOnIdle { resume!!.invoke() }; compose.runOnIdle { resume!!.invoke() }
         compose.waitUntil(5000) { discoveries.get() == 2 }
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_setup_player_recheck)).performScrollTo())
+        compose.waitUntil(5000) { discoveries.get() == 3 }
         val choice = compose.activity.getString(R.string.mintv_twitch_open_manual, manual.name)
         activate(compose.onNodeWithText(choice).performScrollTo())
         assertEquals("fixture.manual", prefs.getString("twitch-player-package", null))

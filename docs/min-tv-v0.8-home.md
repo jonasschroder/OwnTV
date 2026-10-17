@@ -273,7 +273,7 @@ playback on the owner's installed client version.
 
 A verified handler enables direct channel opening. Otherwise S0undTV's normal exported TV launcher
 is a clearly disclosed manual-navigation fallback. **SmartTV Client for Twitch**
-(`com.fgl27.twitch`) is offered through Google Play and its exported TV launcher; no undocumented
+(`com.fgl27.twitch`; [public project/Play listing](https://github.com/fgl27/SmartTwitchTV)) is offered through Google Play and its exported TV launcher; no undocumented
 channel parameters are guessed. Existing specifically registered Twitch HTTPS TV handlers remain
 supported; generic browsers are excluded. Discovery is bounded and local; no WebView, stream
 extractor, player/decoder, third-party APK download or background service is added.
@@ -305,3 +305,13 @@ in PR #11 after the current runs finish. Physical Chromecast acceptance is still
 Play availability/install, actual S0undTV URI handling/playback, SmartTV manual navigation, Back from
 external clients, source/profile data preservation, and realistic 720p/1080p readability. No owner
 application is installed/updated/uninstalled, no permanent key is used, and no release is published.
+
+Local validation for the 17 October implementation: standard/QA app JVM tests **435 + 435**,
+pinned Core **939**, player **271**, all with zero failures/errors/skips; tools **45/45**;
+standard/QA debug lint **0 errors, 181 warnings each**; standard/QA/x86_64 Android-test compilation,
+i18n literal ratchet/number formatting/overflow and workflow actionlint passed. The first updated
+CI run `39030173143` passed all **60** mandatory TV cases at `92feb87b`; the small subsequent
+follow-up also waits for the layout controls to load before requesting initial Settings focus and
+adds explicit recheck/manual-launch assertions. The PR records final-head CI/packaging results and
+current artifact links. CI images are real synthetic emulator captures; availability of an artifact
+is not a claim that it has been visually inspected if the cloud artifact host is blocked.

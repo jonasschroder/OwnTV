@@ -47,6 +47,12 @@ class TwitchPlaybackIntentTest {
         }
         val manual = reader(null).players().single { it.component.packageName == fixturePackage }
         assertFalse(manual.direct)
+        assertTrue(reader(null).open(manual))
+        try {
+            instrumentation.waitForIdleSync()
+            val dump = shell("dumpsys activity activities")
+            assertTrue("Manual fallback must use the actual exported TV launcher", dump.contains("TwitchFixtureLauncher"))
+        } finally { instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) }
         assertFalse(reader().install("tv.own.mintv.fixture.absent"))
     }
 }

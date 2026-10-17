@@ -51,7 +51,7 @@ internal fun MinTvSettingsPage(destination: MinTvSettingsDestination, onBack: ()
         when (destination) {
             MinTvSettingsDestination.SPORT -> HockeySettings(profile, Modifier.focusRequester(first))
             MinTvSettingsDestination.TWITCH -> TwitchCompanion(true, active, Modifier.focusRequester(first), settingsMode = true)
-            MinTvSettingsDestination.HOME -> HomeLayoutSettings(profile, Modifier.focusRequester(first))
+            MinTvSettingsDestination.HOME -> HomeLayoutSettings(profile, Modifier.focusRequester(first), first)
         }
     }
 }
@@ -80,7 +80,7 @@ private fun HockeySettings(profile: Long?, modifier: Modifier) {
 }
 
 @Composable
-private fun HomeLayoutSettings(profile: Long?, modifier: Modifier) {
+private fun HomeLayoutSettings(profile: Long?, modifier: Modifier, entry: FocusRequester) {
     val store = koinInject<HomeSections>()
     val settings = koinInject<SettingsRepository>()
     val previews by settings.livePreviewEnabled.collectAsStateWithLifecycle(initialValue = false)
@@ -89,6 +89,9 @@ private fun HomeLayoutSettings(profile: Long?, modifier: Modifier) {
     var loaded by remember(profile) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(profile) { if (profile != null) { hidden = store.hidden(profile); order = store.order(profile); loaded = true } }
+    LaunchedEffect(profile, loaded) {
+        if (loaded) { withFrameNanos { }; withFrameNanos { }; entry.requestSafely() }
+    }
     if (!loaded) { TvText(stringResource(R.string.mintv_companion_loading)); return }
     HomeButton(stringResource(if (previews) R.string.mintv_preview_on else R.string.mintv_preview_off),
         { scope.launch { settings.setLivePreviewEnabled(!previews) } }, modifier)

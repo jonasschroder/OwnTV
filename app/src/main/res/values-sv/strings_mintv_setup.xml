@@ -14,4 +14,5 @@
     <string name="mintv_setup_store_unavailable">Google Play kunde inte öppnas. Öppna Google Play på TV:n och sök efter S0undTV eller SmartTV Client for Twitch. Utbudet varierar mellan enheter och regioner. Ingen app har installerats.</string>
     <string name="mintv_setup_soundtv">S0undTV</string>
     <string name="mintv_setup_smarttv">SmartTV Client for Twitch</string>
+    <string name="mintv_setup_account">Twitch-konto</string>
 </resources>

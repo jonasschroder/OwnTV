@@ -5,6 +5,9 @@ import android.content.Context
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -28,7 +31,14 @@ import tv.own.owntv.features.settings.StageFullPage
 class SetupOnceHomeTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
-    @Before fun remoteMode() { instrumentation.setInTouchMode(false) }
+    @Before fun remoteMode() {
+        assertEquals("true", InstrumentationRegistry.getArguments().getString("disposableEmulator"))
+        instrumentation.setInTouchMode(false)
+        compose.runOnUiThread {
+            WindowCompat.setDecorFitsSystemWindows(compose.activity.window, false)
+            WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView).hide(WindowInsetsCompat.Type.systemBars())
+        }
+    }
     private fun prefs() = compose.activity.getSharedPreferences("setup-once-test", Context.MODE_PRIVATE).also { it.edit().clear().commit() }
     private fun activate(node: SemanticsNodeInteraction) {
         node.performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
@@ -93,7 +103,8 @@ class SetupOnceHomeTest {
         var installed = false
         compose.setContent { MaterialTheme {
             var active by remember { mutableStateOf(true) }; resume = { active = !active }
-            StageFullPage(emptyList(), compose.activity.getString(R.string.mintv_setup_twitch), "", {}) {
+            StageFullPage(emptyList(), compose.activity.getString(R.string.mintv_setup_twitch), "", {},
+                modifier = Modifier.fillMaxSize().background(MinTvNavy)) {
                 TwitchCompanionUi(true, active, prefs, "builtInId", { true }, { reads.incrementAndGet(); TwitchState.Unavailable },
                     { _, _ -> error("Settings entry must not auto-authorize") }, {},
                     listPlayers = { discoveries.incrementAndGet(); if (installed) listOf(manual) else emptyList() },

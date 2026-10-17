@@ -128,6 +128,9 @@ class HomeDashboardPresentationTest {
         }
         return Uri.fromFile(target).toString()
     }
+    private fun fixtureText(id: Int): String = compose.activity.createConfigurationContext(
+        Configuration(compose.activity.resources.configuration).apply { setLocale(Locale.forLanguageTag("sv")) }
+    ).getString(id)
     private fun key(code: Int) { InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code); compose.waitForIdle() }
     private fun focus(tag: String) {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
@@ -300,12 +303,12 @@ class HomeDashboardPresentationTest {
         screenshot("v08-hockey-known-and-twitch-offline-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, opened); assertEquals(0, hockeyWatches)
         key(KeyEvent.KEYCODE_DPAD_RIGHT)
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_watch_match)).assertIsFocused()
+        compose.onNodeWithText(fixtureText(R.string.mintv_watch_match)).assertIsFocused()
         key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, hockeyWatches); assertEquals(1, opened)
         key(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithTag("dashboard-twitch").assertIsFocused(); assertEquals(6, selectedSection)
         key(KeyEvent.KEYCODE_DPAD_LEFT)
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_watch_match)).assertIsFocused()
+        compose.onNodeWithText(fixtureText(R.string.mintv_watch_match)).assertIsFocused()
         assertEquals("Returning from Twitch to the hockey action must restore the hockey section", 3, selectedSection)
         key(KeyEvent.KEYCODE_DPAD_LEFT)
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
@@ -314,8 +317,8 @@ class HomeDashboardPresentationTest {
         screenshot("v08-hockey-unknown-and-twitch-live-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithTag("dashboard-twitch").assertIsFocused()
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_hockey_other_channels)).assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_companion_settings)).assertDoesNotExist()
+        compose.onNodeWithText(fixtureText(R.string.mintv_hockey_other_channels)).assertDoesNotExist()
+        compose.onNodeWithText(fixtureText(R.string.mintv_companion_settings)).assertDoesNotExist()
         key(KeyEvent.KEYCODE_DPAD_CENTER)
         assertEquals(2, opened); assertEquals(0, watched); assertEquals(1, hockeyWatches)
     }

@@ -140,7 +140,7 @@ internal fun TwitchCompanionUi(
         } else statusOpen = true
     }
     if (settingsMode) {
-        HomeButton(stringResource(if (connected) R.string.mintv_companion_settings else R.string.mintv_twitch_connect),
+        HomeButton(stringResource(if (connected) R.string.mintv_setup_account else R.string.mintv_twitch_connect),
             openSettings, modifier.focusRequester(entryFocus))
         TwitchPlaybackSettings(playersProvider = listPlayers, selectedPackage = preferredPackage, active = active,
             onSelect = { preferredPackage = it; prefs.edit().putString("twitch-player-package", it).apply() }, onInstall = installPlayer)

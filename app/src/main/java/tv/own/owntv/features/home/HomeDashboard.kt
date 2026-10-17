@@ -27,6 +27,8 @@ internal fun homeHistoryCandidate(state: HomeUiState, profile: Long?, sources: L
 internal fun homeHeroChannel(watched: ChannelEntity?, alternatives: List<ChannelEntity>, explicitKey: String?): ChannelEntity? =
     watched?.let { alternatives.firstOrNull { explicitKey != null && it.homeEpgKey().stableKey == explicitKey } ?: it }
 internal fun ChannelEntity.homeEpgKey() = SwedishRowKey(id, sourceId, CustomizeKeys.channel(this))
+/** Lazy item state is persisted in a Bundle; the EPG cache's plain data-class key is not saveable. */
+internal fun ChannelEntity.homeLazyItemKey(): String = homeEpgKey().let { "${it.sourceId}:${it.id}:${it.stableKey}" }
 
 internal fun dashboardIndices(rows: List<HomeSection>, showSport: Boolean, showTwitch: Boolean): List<Int> {
     val result = MutableList(10) { -1 }

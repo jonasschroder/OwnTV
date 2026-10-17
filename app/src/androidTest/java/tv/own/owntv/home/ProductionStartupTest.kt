@@ -25,6 +25,10 @@ import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.settings.StartupMode
 import tv.own.owntv.core.settings.PlaylistAutoRefresh
 import tv.own.owntv.core.settings.PlaylistRefresh
+import tv.own.owntv.core.i18n.LocaleStore
+import tv.own.owntv.features.home.SportsPreferences
+import tv.own.owntv.features.home.SportPreferences
+import java.io.File
 
 /** Production Application/Koin/database/Activity/shell/Home. Never supplies setContent or fake VMs. */
 class ProductionStartupTest {
@@ -61,6 +65,7 @@ class ProductionStartupTest {
         db.favoriteDao().add(FavoriteEntity(profileId = 7, mediaType = MediaType.LIVE, itemId = 101001))
         db.historyDao().record(WatchHistoryEntity(profileId = 7, mediaType = MediaType.LIVE, itemId = 101001))
         db.historyDao().record(WatchHistoryEntity(profileId = 8, mediaType = MediaType.LIVE, itemId = 102001))
+        GlobalContext.get().get<SportsPreferences>().save(7, SportPreferences(listOf("hockey:karlskoga", "football:degerfors-if"), hideScores = true))
         settings.setActiveProfile(7)
         settings.setStartupMode(7, StartupMode.HOME)
         settings.setUpdateCheckOnStart(false)
@@ -72,17 +77,26 @@ class ProductionStartupTest {
         assertTrue(app.getSharedPreferences("startup-fixture", Context.MODE_PRIVATE).edit().putBoolean("seeded", true).commit())
     }
 
+    @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }
+
     @Test fun productionHomeSurvivesPersistedColdStartAndActivityRecreation(): Unit = runBlocking {
         assertTrue(app.getSharedPreferences("startup-fixture", Context.MODE_PRIVATE).getBoolean("seeded", false))
-        val intent = Intent(app, MainActivity::class.java).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+        val selectedProfile = InstrumentationRegistry.getArguments().getString("startupProfile", "7")!!.toLong()
+        val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
         ActivityScenario.launch<MainActivity>(intent).use { scenario ->
             // Choose the actual first profile through the production remote-driven gate.
             compose.waitUntil(20_000) { compose.onAllNodesWithText(profileName).fetchSemanticsNodes().isNotEmpty() }
+            if (selectedProfile == 8L) instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
             val homeLabel = app.getString(R.string.mintv_v08_last_watched)
             compose.waitUntil(30_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
             Thread.sleep(8_000) // Real elapsed survival beyond the reported one-second fatal window.
             compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            val bitmap = instrumentation.uiAutomation.takeScreenshot()
+            val pictures = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
+            File(pictures, "home-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
+                .outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+            bitmap.recycle()
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)
@@ -98,8 +112,9 @@ class ProductionStartupTest {
         assertNotNull(db.channelDao().getById(102300))
         assertTrue(db.favoriteDao().exists(7, MediaType.LIVE, 101001))
         assertTrue(db.historyDao().exists(8, MediaType.LIVE, 102001))
+        assertEquals(SportPreferences(listOf("hockey:karlskoga", "football:degerfors-if"), hideScores = true), GlobalContext.get().get<SportsPreferences>().read(7))
         assertEquals(60, settings.epgOffsetMinutes.first())
-        assertEquals(7L, settings.activeProfileId.first())
+        assertEquals(selectedProfile, settings.activeProfileId.first())
         assertTrue(app.getSharedPreferences("mintv-home-sections", Context.MODE_PRIVATE).getString("profile:7", "")!!.contains("MOVIES"))
     }
 }

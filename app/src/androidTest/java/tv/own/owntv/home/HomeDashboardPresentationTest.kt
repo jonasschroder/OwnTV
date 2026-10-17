@@ -56,6 +56,7 @@ class HomeDashboardPresentationTest {
     private var hasHistory by mutableStateOf(true)
     private var hasGuide by mutableStateOf(true)
     private var hockeyKnown by mutableStateOf(true)
+    private var hockeyWatches = 0
     private var twitch: TwitchState by mutableStateOf(TwitchState.Offline)
     private var update: MinTvUpdater.State by mutableStateOf(MinTvUpdater.State.Idle)
     private var rows by mutableStateOf(listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.FAVORITES,
@@ -206,7 +207,7 @@ class HomeDashboardPresentationTest {
                                 Box(Modifier.weight(if (twitch is TwitchState.Live) 1.35f else 1.8f)) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
                                     ShlGame("synthetic", "Färjestad BK", "Luleå HF", now + 3_600_000, null)) else null,
                                     now, if (hockeyKnown) "TV4 Sport Live 2" else null, hockeyKnown, "Färjestad BK",
-                                    { opened++ }, nav.section(3).testTag("dashboard-hockey")) }
+                                    { hockeyWatches++ }, nav.section(3).testTag("dashboard-hockey"), onDetails = { opened++ }) }
                                 Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) nav.selected = 6 }) {
                                     TwitchQuickCard(twitch, true, {}, { opened++ }, nav.section(6).testTag("dashboard-twitch"))
                                 }
@@ -293,6 +294,12 @@ class HomeDashboardPresentationTest {
         mount(); key(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         screenshot("v08-hockey-known-and-twitch-offline-synthetic.png")
+        key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, opened); assertEquals(0, hockeyWatches)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_watch_match)).assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, hockeyWatches); assertEquals(1, opened)
+        key(KeyEvent.KEYCODE_DPAD_LEFT)
+        compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         compose.runOnIdle { hockeyKnown = false; twitch = TwitchState.Live("Syntetisk direktsändning", 1234, "Counter-Strike 2") }
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         screenshot("v08-hockey-unknown-and-twitch-live-synthetic.png")
@@ -301,7 +308,7 @@ class HomeDashboardPresentationTest {
         compose.onNodeWithText(compose.activity.getString(R.string.mintv_hockey_other_channels)).assertDoesNotExist()
         compose.onNodeWithText(compose.activity.getString(R.string.mintv_companion_settings)).assertDoesNotExist()
         key(KeyEvent.KEYCODE_DPAD_CENTER)
-        assertEquals(1, opened); assertEquals(0, watched)
+        assertEquals(2, opened); assertEquals(0, watched); assertEquals(1, hockeyWatches)
     }
     @Test fun continuationAndReorderedRowsRestoreFocusAfterFullscreenAndDynamicRemoval() {
         mount()

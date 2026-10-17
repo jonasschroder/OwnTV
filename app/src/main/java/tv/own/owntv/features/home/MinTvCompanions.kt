@@ -480,7 +480,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator)),
                 openCard, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt },
-                manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true)
+                manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true,
+                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() })
             else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {

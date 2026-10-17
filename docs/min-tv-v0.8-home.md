@@ -228,10 +228,10 @@ are unchanged by this second iteration.
 
 ## Owner feedback, 17 October: configure once
 
-Home's compact hockey and Twitch cards now each have one remote focus target. Hockey shows the
+Home's compact hockey and Twitch cards now keep configuration off the daily screen. Hockey shows the
 next relevant validated fixture, its time, and only a locally matched/manual channel or an unexpired
 verified linear broadcast assignment. **Se matchen** appears only with an authorized playable local
-choice (or a picker of verified candidates). Otherwise OK opens Matchcenter; manual channel choice
+choice (or a picker of verified candidates). The card surface always opens Matchcenter; the separate compact watch action plays or opens verified choices. Manual channel choice
 remains there. Empty team selection leads to Settings. The permanent **Andra kanaler** Home button
 is removed. No new schedule/broadcast requests or matching assumptions were introduced.
 

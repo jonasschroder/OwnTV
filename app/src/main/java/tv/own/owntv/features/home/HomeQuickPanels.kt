@@ -16,9 +16,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 /** Supporting strips, not independent dashboard panels. Evidence/actions keep their existing owners. */
 @Composable
 internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, watch: Boolean,
-    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false) {
+    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false, onDetails: () -> Unit = onOpen) {
     val imminent = game != null && game.faceoff - now in -3 * 60 * 60_000L..12 * 60 * 60_000L
-    TvCard(onOpen, modifier.fillMaxWidth().heightIn(min = 112.mpx), selected = imminent) {
+    Row(Modifier.fillMaxWidth().background(if (imminent) Color(0xFF1B3034) else MinTvPanel, RoundedCornerShape(16.mpx))
+        .padding(end = if (watch) 14.mpx else 0.mpx),
+        horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
+    TvCard(onDetails, modifier.weight(1f).heightIn(min = 112.mpx), selected = imminent) {
     Row(Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(18.mpx), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.mpx)) {
@@ -36,8 +39,9 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
             }
             if (evidence.isNotEmpty()) TvText(evidence.joinToString(stringResource(R.string.mintv_v08_separator)), size = 14, color = MinTvMuted, lines = 1)
         }
-        if (watch) TvText(stringResource(R.string.mintv_watch_match), size = 18, color = MinTvTeal, bold = true, lines = 1)
     }
+    }
+    if (watch) DashboardAction(stringResource(R.string.mintv_watch_match), onOpen, compact = true)
     }
 }
 

@@ -2,12 +2,12 @@
 <resources>
     <string name="mintv_setup_twitch">Twitch &amp; playback</string>
     <string name="mintv_setup_sport_help">Followed teams, source preferences and local diagnostics.</string>
-    <string name="mintv_setup_twitch_help">Account connection, preferred TV player and Google Play installation.</string>
+    <string name="mintv_setup_twitch_help">Optional account connection and alternative TV clients. Home opens the official Twitch app.</string>
     <string name="mintv_setup_home_help">Profile-specific visibility, row order, app shortcuts and preview.</string>
-    <string name="mintv_setup_player_heading">External TV player</string>
-    <string name="mintv_setup_player_help">Connecting your Twitch account provides live status, not a video player. Install a separate TV client from Google Play, return here and recheck. A documented channel link opens ohnePixel when the installed client supports it; otherwise the client opens for manual navigation.</string>
-    <string name="mintv_setup_player_selected">Preferred player: %1$s</string>
-    <string name="mintv_setup_player_auto">Automatic player selection</string>
+    <string name="mintv_setup_player_heading">Optional alternative TV players</string>
+    <string name="mintv_setup_player_help">Home opens the official Twitch app, whether live status is available or not. Connecting your account is optional and provides stream status. Alternative TV clients below are optional; a channel link opens ohnePixel only when the installed client supports it.</string>
+    <string name="mintv_setup_player_selected">Saved alternative: %1$s</string>
+    <string name="mintv_setup_player_auto">No saved alternative</string>
     <string name="mintv_setup_player_missing">Saved player is unavailable — choose another or reinstall it</string>
     <string name="mintv_setup_player_recheck">Recheck installed TV players</string>
     <string name="mintv_setup_player_install">Find %1$s on Google Play</string>
@@ -17,4 +17,10 @@
     <string name="mintv_setup_account">Twitch account</string>
     <string name="mintv_setup_player_use_direct">Use %1$s (channel link)</string>
     <string name="mintv_setup_player_use_manual">Use %1$s (manual navigation)</string>
+    <string name="mintv_twitch_open_app">Open Twitch</string>
+    <string name="mintv_twitch_app_missing">Twitch could not be opened. Check that the official Twitch app is installed and enabled on your TV. No Twitch account connection in Min TV is needed to open it.</string>
+    <string name="mintv_twitch_app_find">Find Twitch on Google Play</string>
+    <string name="mintv_twitch_app_store_unavailable">Google Play could not be opened. Open Google Play on your TV and search for Twitch. No app has been installed.</string>
+    <string name="mintv_setup_player_open">Open %1$s</string>
+    <string name="mintv_setup_alternatives_missing">No optional alternative TV client was found. Home can still open the official Twitch app.</string>
 </resources>

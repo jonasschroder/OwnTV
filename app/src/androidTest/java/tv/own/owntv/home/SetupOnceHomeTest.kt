@@ -16,6 +16,9 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.tv.material3.MaterialTheme
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
+import androidx.lifecycle.Lifecycle
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -57,43 +60,80 @@ class SetupOnceHomeTest {
         File(dir, name).outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
         bitmap.recycle()
     }
-    @Test fun contextualConnectionIsShownOnceAndOfflineCardBackRestoresFocusWithoutAdministration() {
-        val prefs = prefs(); val setups = AtomicInteger(); var remount: (() -> Unit)? = null
+    @Test fun offlineAndUnavailableCardsOpenOfficialAppWithoutAuthorizationAndRestoreFocus() {
+        val prefs = prefs(); prefs.edit().putString("twitch-player-package", "keep.optional.client").commit()
+        val launches = AtomicInteger(); var resume: (() -> Unit)? = null; var offline: (() -> Unit)? = null
         compose.setContent { MaterialTheme {
-            var epoch by remember { mutableIntStateOf(0) }; remount = { epoch++ }
-            key(epoch) {
-                TwitchCompanionUi(true, true, prefs, "publicFixture", { false }, { TwitchState.Unavailable },
-                    { _, _ -> error("Home must route setup into Settings") }, {}, modifier = Modifier.testTag("home-twitch"), compact = true,
-                    onOpenSettings = { setups.incrementAndGet() })
+            var active by remember { mutableStateOf(true) }; resume = { active = !active }
+            var isOffline by remember { mutableStateOf(false) }; offline = { isOffline = true }
+            key(isOffline) {
+                TwitchCompanionUi(true, active, prefs, "publicFixture", { false },
+                    { if (isOffline) TwitchState.Offline else TwitchState.Unavailable },
+                    { _, _ -> error("Opening Twitch must never authorize") }, {}, modifier = Modifier.testTag("home-twitch"), compact = true,
+                    listPlayers = { error("Home must not discover alternative players") },
+                    onOpenSettings = { error("Opening Twitch must not require Settings") },
+                    openOfficialApp = { launches.incrementAndGet(); true })
             }
         } }
-        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))
-        assertEquals(1, setups.get()); assertTrue(prefs.getBoolean("twitch-setup-seen", false))
-        compose.runOnIdle { remount!!.invoke() }
         compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)).assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_companion_settings)).assertDoesNotExist()
         activate(compose.onNodeWithTag("home-twitch"))
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_setup_twitch)).assertIsDisplayed()
+        assertEquals(1, launches.get())
+        compose.runOnIdle { resume!!.invoke() }; compose.runOnIdle { resume!!.invoke() }
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("home-twitch").assertIsFocused(); true }.getOrDefault(false) }
+        compose.runOnIdle { offline!!.invoke() }
+        compose.waitUntil(5000) { compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_twitch_offline)).fetchSemanticsNodes().isNotEmpty() }
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_open_app)))
+        assertEquals(2, launches.get())
+        assertEquals("keep.optional.client", prefs.getString("twitch-player-package", null))
+        assertFalse(prefs.contains("twitch-setup-seen"))
+    }
+    @Test fun liveCardOpensOfficialAppInsteadOfSavedAlternativeClient() {
+        val prefs = prefs(); prefs.edit().putString("twitch-player-package", "fixture.second").commit()
+        val launches = AtomicInteger()
+        compose.setContent { MaterialTheme {
+            TwitchCompanionUi(true, true, prefs, "publicFixture", { true }, { TwitchState.Live("Synthetic live stream", 1234, "Counter-Strike 2") },
+                { _, _ -> error("Opening Twitch must not authorize") }, {}, modifier = Modifier.testTag("home-twitch"),
+                listPlayers = { error("Home must not open its old player picker") }, compact = true,
+                openOfficialApp = { launches.incrementAndGet(); true })
+        } }
+        compose.waitUntil(5000) { compose.onAllNodesWithText("Synthetic live stream").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_watch)).assertDoesNotExist()
+        activate(compose.onNodeWithTag("home-twitch"))
+        assertEquals(1, launches.get())
+        assertEquals("fixture.second", prefs.getString("twitch-player-package", null))
+    }
+    @Test fun missingOfficialAppShowsExplicitStoreActionAndBackRestoresFocus() {
+        val prefs = prefs(); val stores = AtomicInteger()
+        compose.setContent { MaterialTheme {
+            TwitchCompanionUi(true, true, prefs, "publicFixture", { false }, { TwitchState.Unavailable },
+                { _, _ -> error("Missing app must not start authorization") }, {}, modifier = Modifier.testTag("home-twitch"), compact = true,
+                openOfficialApp = { false }, installOfficialApp = { stores.incrementAndGet(); false })
+        } }
+        activate(compose.onNodeWithTag("home-twitch"))
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_app_missing)).assertIsDisplayed()
+        assertEquals(0, stores.get())
+        activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_app_find)))
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_app_store_unavailable)).assertIsDisplayed()
+        assertEquals(1, stores.get())
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("home-twitch").assertIsFocused(); true }.getOrDefault(false) }
     }
-    @Test fun liveCardUsesSavedDirectClientWithoutReauthorizationAndRestoresFocus() {
-        val prefs = prefs(); prefs.edit().putString("twitch-player-package", "fixture.second").commit()
-        val players = listOf(TwitchPlayer(ComponentName("fixture.first", "Player"), "First", true),
-            TwitchPlayer(ComponentName("fixture.second", "Player"), "Second", true))
-        val launches = java.util.concurrent.CopyOnWriteArrayList<TwitchPlayer>()
+    @Test fun realTvLauncherReturnsToHomeCardAfterBack() {
+        val prefs = prefs()
+        val playback = TwitchPlayback(compose.activity, officialPackage = instrumentation.context.packageName)
         compose.setContent { MaterialTheme {
-            TwitchCompanionUi(true, true, prefs, "publicFixture", { true }, { TwitchState.Live("Synthetic live stream", 1234, "Counter-Strike 2") },
-                { _, _ -> error("Watching must not authorize") }, {}, modifier = Modifier.testTag("home-twitch"),
-                listPlayers = { players }, openPlayer = { launches.add(it); true }, compact = true)
+            val lifecycle = LocalLifecycleOwner.current.lifecycle.currentStateAsState().value
+            TwitchCompanionUi(true, lifecycle.isAtLeast(Lifecycle.State.RESUMED), prefs, "publicFixture", { false }, { TwitchState.Offline },
+                { _, _ -> error("External launch must not authorize") }, {}, modifier = Modifier.testTag("home-twitch"), compact = true,
+                openOfficialApp = playback::openOfficialApp)
         } }
-        compose.waitUntil(5000) { compose.onAllNodesWithText("Synthetic live stream").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_companion_settings)).assertDoesNotExist()
         activate(compose.onNodeWithTag("home-twitch"))
-        compose.waitUntil(5000) { launches.size == 1 }
-        assertEquals(players[1], launches.single())
+        instrumentation.waitForIdleSync()
+        val dump = android.os.ParcelFileDescriptor.AutoCloseInputStream(
+            instrumentation.uiAutomation.executeShellCommand("dumpsys activity activities")).bufferedReader().use { it.readText() }
+        assertTrue("A real external TV activity must have opened", dump.contains("TwitchFixtureLauncher"))
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("home-twitch").assertIsFocused(); true }.getOrDefault(false) }
-        assertEquals("fixture.second", prefs.getString("twitch-player-package", null))
     }
     @Test fun settingsPreservesPublicIdAndNeverPollsStreamsWhileRecheckingPlayerInstallation() {
         val prefs = prefs(); prefs.edit().putString("twitch-client-id", "storedPublicId").commit()
@@ -112,7 +152,7 @@ class SetupOnceHomeTest {
             }
         } }
         compose.waitUntil(5000) { discoveries.get() == 1 }
-        compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_no_player)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_setup_alternatives_missing)).assertIsDisplayed()
         screenshot("v08-setup-twitch-no-client-1080p-synthetic.png")
         val install = compose.activity.getString(R.string.mintv_setup_player_install, compose.activity.getString(R.string.mintv_setup_soundtv))
         activate(compose.onNodeWithText(install).performScrollTo())

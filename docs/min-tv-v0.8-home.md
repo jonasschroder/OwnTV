@@ -78,8 +78,8 @@ is explicit and affects Home layout only.
 - `MinSportCompanion`: current evidence, opt-in external readers, manual channels and
   diagnostics retained. Standings are no longer rendered/requested. Legacy saved TABLE
   enum state is read compatibly and redirected. Cached fixtures retain update labels.
-- `TwitchCompanion`: same device grant, encrypted tokens, public Client ID and supported
-  external-player picker; compact presentation only. Unknown is distinct from offline.
+- `TwitchCompanion`: same device grant, encrypted tokens and public Client ID. Compact Home opens the
+  official installed Twitch app; optional alternative players remain in Settings. Unknown is distinct from offline.
 - `rememberDiscovery`: existing provider-first bounded shelves/metadata with visible-only
   network refresh. Existing detail, source-picker and playback callbacks remain.
 - `MinTvUpdater`: same authenticated metadata and APK/certificate verification, durable
@@ -98,7 +98,7 @@ Min TV continues to use its existing host adapter, not a second updater.
 Missing history, removed/inaccessible channel: honest no-history hero with Live TV entry.
 Missing EPG: channel remains playable. Missing artwork: logo/text fallback. Hockey source
 failure never blocks Home; local EPG/manual browsing remains available. Twitch offline and
-unknown are distinct; missing client uses the existing picker fallback. Empty rails hide.
+unknown are distinct; an unavailable official app offers concise guidance and an explicit Google Play action. Empty rails hide.
 
 No streams/credentials/tokens in fixtures. Measurements and final test evidence are recorded
 in the PR; emulator timings are not Chromecast memory/decoder benchmarks.
@@ -235,19 +235,18 @@ choice (or a picker of verified candidates). The card surface always opens Match
 remains there. Empty team selection leads to Settings. The permanent **Andra kanaler** Home button
 is removed. No new schedule/broadcast requests or matching assumptions were introduced.
 
-Twitch Home shows ohnePixel's reliable live/offline/unknown state. Only a fresh live state offers
-**Se stream**. Connected users have no permanent Settings button. The first unconfigured encounter
-can offer **Anslut Twitch**; after using that contextual entry it stays quiet across restarts. OK on
-an offline/unknown card opens a small status dialog, from which Settings remains reachable. The
-first viewport retains the hero, quick channels, real version/update entry and profile layout.
-Existing app shortcuts retain their installed visibility/order and can be hidden/moved in Settings.
+Twitch Home shows ohnePixel's reliable live/offline/unknown state and a single **Öppna Twitch**
+action in every state. It opens the official app's normal interface, not a promised stream.
+Authentication and live status never gate that launch; no first-use setup prompt or alternative-client
+picker replaces it. The first viewport retains the hero, quick channels, real version/update entry
+and profile layout. Existing app shortcuts retain their visibility/order and can be hidden/moved in Settings.
 
 Persistent controls live in **More → Settings → Content & metadata**:
 
 - **Min hockey**: the existing profile-bound followed-team picker, Home prominence/spoiler preferences,
   existing experimental source flags, access-block notices and local diagnostic/export panel.
 - **Twitch & playback**: existing device authorization, disconnect and advanced public Client ID override,
-  preferred TV client, installed-client recheck and explicit Google Play listings.
+  optional saved alternative TV client, explicit alternative launch, installed-client recheck and Google Play listings.
 - **Customize Home**: the actual Min TV dashboard's per-profile visibility/order, optional app shortcuts,
   preview toggle and explicit layout reset. This is distinct from upstream Home's legacy layout page.
 - Playlist/EPG source management stays in the existing **Sources** group.
@@ -256,72 +255,69 @@ The same Settings root/search and subpage focus restoration handle these destina
 Customize entry opens the canonical Settings subpage. Back through the Settings root returns to
 Home when entered there; existing More/EPG/source entry points keep their own behavior. No sidebar
 redesign or Settings group renumbering. Existing profile owner timestamps, stored keys, channel
-identities/quality, last-watched history and EPG are preserved. Only two new install-local, nonsecret
-preferences are added to `mintv-companion`: `twitch-player-package` and `twitch-setup-seen`. Account
+identities/quality, last-watched history and EPG are preserved. The install-local, nonsecret
+`twitch-player-package` preference is preserved for optional Settings alternatives. Any previously
+stored `twitch-setup-seen` is left untouched but is no longer read or written. Account
 storage and Client ID remain install-scoped as before; team/layout preferences remain profile-bound.
 QA/Production storage stays separate by the existing application IDs.
 
-### Supported external Twitch playback
+### Final owner decision: open the installed official Twitch app
 
-[S0undTV's official v1.5.10 release](https://github.com/S0und/S0undTV/releases/tag/v1.5.10)
-documents `s0undtv://stream/<channel>` (example lirik). Min TV uses only
-`s0undtv://stream/ohnepixel`, scoped to the installed `com.s0und.s0undtv` package. Runtime discovery
-requires an enabled app with target SDK ≥23, an enabled/exported TV launcher, an enabled/exported
-matching channel handler and any required activity permission. The exported stream filter is also
-present in the previously inspected official 1.5.10 manifest; this proves a public contract, not
-playback on the owner's installed client version.
+The [17 October final owner comment](https://github.com/jonasschroder/OwnTV/pull/11#issuecomment-6235025348)
+supersedes the special-client default. Twitch's own
+[Android package reference](https://github.com/twitchdev/deeplink-unity/blob/385e68f281db4a1867cfb850aeac12e503ff8dcd/Assets/Scripts/DeepLinkTest.cs#L49)
+identifies `tv.twitch.android.app`. The [official Play listing](https://play.google.com/store/apps/details?id=tv.twitch.android.app)
+and Twitch downloads/help pages were blocked by this cloud environment's HTTP CONNECT filter;
+the first-party GitHub reference was retrieved successfully. No third-party APK was downloaded.
 
-A verified handler enables direct channel opening. Otherwise S0undTV's normal exported TV launcher
-is a clearly disclosed manual-navigation fallback. **SmartTV Client for Twitch**
-(`com.fgl27.twitch`; [public project/Play listing](https://github.com/fgl27/SmartTwitchTV)) is offered through Google Play and its exported TV launcher; no undocumented
-channel parameters are guessed. Existing specifically registered Twitch HTTPS TV handlers remain
-supported; generic browsers are excluded. Discovery is bounded and local; no WebView, stream
-extractor, player/decoder, third-party APK download or background service is added.
+`TwitchPlayback.officialAppIntent` reuses `MinTvExternalApps.launch`, as SVT Play does: ask
+PackageManager for that exact package's Leanback launcher, then its ordinary launcher if necessary.
+No activity name is assumed. Re-resolve the actual installed activity and require the exact package,
+enabled application/activity, exported entry, target SDK ≥23 and any required permission. Opening is
+explicit, carries no URI/OAuth credentials/stream parameters, and catches removal/disable races.
+A package ID identifies the intended app, not proof that the owner's installed version was inspected.
+Only a physical-device check can confirm that version's behavior. There is no implicit browser or
+arbitrary handler fallback, automatic store opening or installation.
 
-Settings can open either known Google Play listing only after a remote click. Installation is always
-manual and availability depends on device/region; failed Play opening has actionable instructions.
-Returning to Settings or choosing Recheck repeats local discovery. Missing saved clients are shown
-honestly and do not silently replace the preference. Automatic mode opens a single direct client;
-multiple clients require selection. A saved direct client opens on **Se stream** without a repeated
-picker. Manual-only clients always disclose manual navigation before opening. Every launch resolves
-the installed handler again; disabled/uninstalled/protected/changed or forged choices fail safely.
-Public channel URIs carry no OAuth tokens, secrets, stream URLs or private extras. Backgrounding
-suppresses a pending Home launch; return restores the originating focus.
+If launching fails, the card opens a small explanation with Close focused and an optional explicit
+**Hitta Twitch på Google Play** button. This uses only `com.android.vending` and the official package
+listing, verifies the enabled/exported permitted handler and handles absent/blocked Play safely.
+Back dismisses guidance or returns from the external app to the originating Home card. Home remains
+independent of IPTV sources, saved alternative-client preference and Twitch authorization/status.
+
+Optional S0undTV (`com.s0und.s0undtv`) and SmartTV Client (`com.fgl27.twitch`) controls remain in
+Settings, with their existing preference and explicit Open action. S0undTV's documented
+[public v1.5.10 contract](https://github.com/S0und/S0undTV/releases/tag/v1.5.10) remains verified at
+runtime; otherwise clients use a disclosed manual TV launcher. No guessed URI is introduced.
+Their existence never changes Home's official-app target. Account authorization, advanced public
+Client ID, secure token storage and disconnect remain in Settings without stream-status polling.
+
+The APK verifier's exact visibility list adds only `tv.twitch.android.app` to the previously reviewed
+nine packages. It continues to reject broad `QUERY_ALL_PACKAGES`, unreviewed packages/providers and
+missing required client queries. Package IDs, permanent keys, counters, update trust, EPG/player,
+installed data and profile layout are unchanged. The translation debt baseline remains unchanged;
+only the new technical package constant and removal of an unused preference reference are classified.
 
 ### Validation and physical limits
 
-The TV suite now includes real Android PackageManager/intent tests against exported, unexported,
-disabled and permission-protected handlers in the **test APK only**. The fixture is not S0undTV or
-SmartTV Client and does not prove their playback. Separate Compose tests cover one-time setup,
-no persistent administration on Home, saved direct-player selection, Back/focus restoration,
-Settings recheck on resume and zero stream-status polling on the settings page. All previous
-mandatory cases remain. Current Home screenshots regenerate at 1920×1080 and 1280×720 with
-synthetic hockey, live/offline Twitch, missing EPG, long text and remote focus. Additional 1080p
-Settings screenshots show no-client guidance and a selected synthetic manual client.
+The mandatory emulator suite retains earlier auth, secure-storage, Home/focus, EPG and alternative
+public-handler cases. Added/updated tests cover real PackageManager official-style TV entry launch
+using the test APK, absent/disabled launchers, no URI/extras, actual external activity Back with
+lifecycle-driven focus restoration, offline/unknown and unauthenticated launch, saved alternative
+isolation, no Home client discovery, and explicit-store failure/guidance. Tests refuse physical devices.
+These fixtures do not masquerade as the actual Twitch package or prove Twitch video playback.
+Home 1080p/720p live/offline captures and Settings screenshots regenerate with synthetic data.
+Final-head test results and current screenshot artifact links are recorded in PR #11.
 
-The former head d0a9d92b's prototype CI passed 55 TV tests, but its i18n pseudo job **was cancelled**;
-it is not evidence that all checks passed. New source results and screenshot artifacts are recorded
-in PR #11 after the current runs finish. Physical Chromecast acceptance is still required for Google
-Play availability/install, actual S0undTV URI handling/playback, SmartTV manual navigation, Back from
-external clients, source/profile data preservation, and realistic 720p/1080p readability. No owner
-application is installed/updated/uninstalled, no permanent key is used, and no release is published.
+Before this final simplification, head `3ae80808` passed all eight checks, including 60 TV tests,
+standard/QA app JVM 435 + 435, Core 939, player 271 and tooling 48. Those results are historical,
+not evidence for the new change. Current tests/CI must pass again before review.
 
-Local validation for the 17 October implementation: standard/QA app JVM tests **435 + 435**,
-pinned Core **939**, player **271**, all with zero failures/errors/skips; tools **45/45**;
-standard/QA debug lint **0 errors, 181 warnings each**; standard/QA/x86_64 Android-test compilation,
-i18n literal ratchet/number formatting/overflow and workflow actionlint passed. The first updated
-CI run `39030173143` passed all **60** mandatory TV cases at `92feb87b`; the small subsequent
-follow-up also waits for the layout controls to load before requesting initial Settings focus and
-adds explicit recheck/manual-launch assertions. The PR records final-head CI/packaging results and
-current artifact links. CI images are real synthetic emulator captures; availability of an artifact
-is not a claim that it has been visually inspected if the cloud artifact host is blocked.
-
-The final i18n packaging run exposed an obsolete check that rejected S0undTV's package name outright
-because of a previously unsupported old APK. Visibility itself does not establish compatibility.
-The packaging verifier now requires an exact reviewed set of the existing TV shortcuts plus the
-two requested Twitch clients, rejects `QUERY_ALL_PACKAGES`, unknown package/provider visibility and
-missing public channel queries. Regression tests exercise positive and negative manifests; all
-standard/QA debug/release local manifests and ARM APK identity/peer-isolation checks pass. The
-installed-client SDK ≥23, enabled/exported activity, permission and TV-entry checks remain in
-`TwitchPlayback`; no installer, certificate, package, launcher or updater check is relaxed. Tooling
-now has **48** tests (the original 45 plus three visibility-policy regressions).
+Physical acceptance remains: confirm the official Twitch package on the owner's Chromecast,
+press **Öppna Twitch** while live/offline/status unavailable, confirm its usual TV interface opens,
+and press Back to return to the same Min TV card. Optional read-only Mac/ADB diagnostics, only if
+already connected: `adb shell pm path tv.twitch.android.app` and
+`adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER tv.twitch.android.app`.
+No physical device was connected or modified by this task. Google Play availability, actual external
+playback, remote behavior and existing IPTV/provider limits remain hardware acceptance items.
+No merge, protected signing, owner installation or publication is performed.

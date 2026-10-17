@@ -141,10 +141,13 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.TwitchPlaybackIntentTest', 'officialAppLaunchUsesInstalledTvEntryWithoutUriOrSecretsAndFailsClosedWhenDisabled'),
+              ('tv.own.owntv.home.SetupOnceHomeTest', 'missingOfficialAppShowsExplicitStoreActionAndBackRestoresFocus'),
               ('tv.own.owntv.home.TwitchPlaybackIntentTest', 'installedExportedPublicStreamContractOpensExactChannelWithoutSecrets'),
               ('tv.own.owntv.home.TwitchPlaybackIntentTest', 'absentPrivateDisabledAndPermissionProtectedHandlersNeverBecomeDirectPlayers'),
-              ('tv.own.owntv.home.SetupOnceHomeTest', 'contextualConnectionIsShownOnceAndOfflineCardBackRestoresFocusWithoutAdministration'),
-              ('tv.own.owntv.home.SetupOnceHomeTest', 'liveCardUsesSavedDirectClientWithoutReauthorizationAndRestoresFocus'),
+              ('tv.own.owntv.home.SetupOnceHomeTest', 'offlineAndUnavailableCardsOpenOfficialAppWithoutAuthorizationAndRestoreFocus'),
+              ('tv.own.owntv.home.SetupOnceHomeTest', 'liveCardOpensOfficialAppInsteadOfSavedAlternativeClient'),
+              ('tv.own.owntv.home.SetupOnceHomeTest', 'realTvLauncherReturnsToHomeCardAfterBack'),
               ('tv.own.owntv.home.SetupOnceHomeTest', 'settingsPreservesPublicIdAndNeverPollsStreamsWhileRecheckingPlayerInstallation'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'firstViewportShowsQuickTileInsideRealShellInsetsWithoutAllocatingVideo'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'overflowUsesRemoteGuideAndQualityActionsAndBackRestoresItsOrigin'),

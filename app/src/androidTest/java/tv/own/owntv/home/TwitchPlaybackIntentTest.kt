@@ -24,6 +24,27 @@ class TwitchPlaybackIntentTest {
     private fun reader(uri: String? = "s0undtv://stream/ohnepixel", pkg: String = fixturePackage) =
         TwitchPlayback(context, listOf(TwitchClient(pkg, R.string.mintv_setup_soundtv, uri)))
 
+    @Test fun officialAppLaunchUsesInstalledTvEntryWithoutUriOrSecretsAndFailsClosedWhenDisabled() {
+        val playback = TwitchPlayback(context, officialPackage = fixturePackage)
+        val intent = playback.officialAppIntent()!!
+        assertEquals(Intent.ACTION_MAIN, intent.action)
+        assertTrue(intent.categories.contains(Intent.CATEGORY_LEANBACK_LAUNCHER))
+        assertEquals(fixturePackage, intent.component!!.packageName)
+        assertNull(intent.data); assertTrue(intent.extras == null || intent.extras!!.isEmpty)
+        assertNull(TwitchPlayback(context, officialPackage = "tv.own.mintv.fixture.absent").officialAppIntent())
+        assertTrue(playback.openOfficialApp())
+        try {
+            instrumentation.waitForIdleSync()
+            assertTrue(shell("dumpsys activity activities").contains("TwitchFixtureLauncher"))
+        } finally { instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) }
+        val component = intent.component!!
+        try {
+            shell("pm disable-user --user 0 ${component.flattenToString()}")
+            assertNull(playback.officialAppIntent()); assertFalse(playback.openOfficialApp())
+        } finally {
+            shell("pm default-state --user 0 ${component.flattenToString()}")
+        }
+    }
     @Test fun installedExportedPublicStreamContractOpensExactChannelWithoutSecrets() {
         val playback = reader()
         val player = playback.players().single { it.component.packageName == fixturePackage }

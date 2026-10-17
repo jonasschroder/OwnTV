@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.Uri
 import tv.own.owntv.R
+import tv.own.owntv.home.MinTvExternalApps
 
 internal fun twitchDirectPlayerEligible(enabled: Boolean, exported: Boolean, targetSdk: Int,
     hasTvEntry: Boolean, authorities: Set<String>): Boolean = enabled && exported && targetSdk >= 23 && hasTvEntry &&
@@ -21,7 +22,8 @@ internal val supportedTwitchClients = listOf(
 )
 
 /** Only public channel contracts, resolved against the installed exported activity. Never OAuth data. */
-internal class TwitchPlayback(private val context: Context, private val clients: List<TwitchClient> = supportedTwitchClients) {
+internal class TwitchPlayback(private val context: Context, private val clients: List<TwitchClient> = supportedTwitchClients,
+    private val officialPackage: String = MinTvExternalApps.TWITCH) {
     private val pm get() = context.packageManager
     private fun channel(uri: String = "https://www.twitch.tv/ohnepixel") = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
         .addCategory(Intent.CATEGORY_BROWSABLE)
@@ -31,6 +33,20 @@ internal class TwitchPlayback(private val context: Context, private val clients:
             (it.permission == null || pm.checkPermission(it.permission, context.packageName) == PackageManager.PERMISSION_GRANTED)
     }
     private fun launchers(packageName: String) = pm.queryIntentActivities(tvActivity(packageName), 0).filter(::accessible)
+
+    /** Same app entry as SVT Play; no channel URI, account, OAuth extras or implicit fallback. */
+    fun officialAppIntent(): Intent? = runCatching {
+        val intent = MinTvExternalApps.launch(context, listOf(officialPackage)) ?: return null
+        val resolved = pm.resolveActivity(intent, 0) ?: return null
+        intent.takeIf { resolved.activityInfo.packageName == officialPackage && accessible(resolved) }
+    }.getOrNull()
+
+    fun openOfficialApp(): Boolean = runCatching {
+        val intent = officialAppIntent() ?: return false
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true
+    }.getOrDefault(false)
+
+    fun installOfficialApp(): Boolean = openStore(MinTvExternalApps.TWITCH)
 
     fun players(): List<TwitchPlayer> {
         // A browser with a generic VIEW filter is not a compatible TV client.
@@ -64,6 +80,10 @@ internal class TwitchPlayback(private val context: Context, private val clients:
 
     fun install(packageName: String): Boolean = runCatching {
         if (supportedTwitchClients.none { it.packageName == packageName }) return false
+        openStore(packageName)
+    }.getOrDefault(false)
+
+    private fun openStore(packageName: String): Boolean = runCatching {
         // User explicitly chooses a Google Play listing. No APK download or silent installation.
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")).setPackage("com.android.vending")
         if (pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY).none(::accessible)) return false

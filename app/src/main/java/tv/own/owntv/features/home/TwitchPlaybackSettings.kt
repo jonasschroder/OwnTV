@@ -12,7 +12,7 @@ import tv.own.owntv.ui.theme.mpx
 /** Local PackageManager discovery only; refreshes once on resume and on explicit recheck. */
 @Composable
 internal fun TwitchPlaybackSettings(playersProvider: () -> List<TwitchPlayer>, selectedPackage: String?, active: Boolean,
-    onSelect: (String?) -> Unit, onInstall: (String) -> Boolean) {
+    onSelect: (String?) -> Unit, onInstall: (String) -> Boolean, onOpen: (TwitchPlayer) -> Boolean = { false }) {
     var players by remember { mutableStateOf<List<TwitchPlayer>>(emptyList()) }
     var revision by remember { mutableIntStateOf(0) }
     var loaded by remember { mutableStateOf(false) }
@@ -30,13 +30,14 @@ internal fun TwitchPlaybackSettings(playersProvider: () -> List<TwitchPlayer>, s
     val selected = players.firstOrNull { it.component.packageName == selectedPackage }
     TvText(stringResource(R.string.mintv_setup_player_selected, selected?.name ?: stringResource(
         if (selectedPackage == null) R.string.mintv_setup_player_auto else R.string.mintv_setup_player_missing)), lines = 2)
-    if (loaded && players.isEmpty()) TvText(stringResource(R.string.mintv_twitch_no_player), color = MinTvMuted, lines = 4)
+    if (loaded && players.isEmpty()) TvText(stringResource(R.string.mintv_setup_alternatives_missing), color = MinTvMuted, lines = 4)
     if (failed) TvText(stringResource(R.string.mintv_twitch_launch_failed), color = MinTvMuted, lines = 3)
     HomeButton(stringResource(R.string.mintv_setup_player_auto), { onSelect(null) })
     players.forEach { player ->
         HomeButton(stringResource(if (player.direct) R.string.mintv_setup_player_use_direct else R.string.mintv_setup_player_use_manual, player.name),
             { onSelect(player.component.packageName) })
     }
+    if (selected != null) HomeButton(stringResource(R.string.mintv_setup_player_open, selected.name), { failed = !onOpen(selected) })
     if (players.any { !it.direct }) TvText(stringResource(R.string.mintv_twitch_manual_help), color = MinTvMuted, lines = 3)
     HomeButton(stringResource(R.string.mintv_setup_player_recheck), { revision++ })
     supportedTwitchClients.forEach { client ->

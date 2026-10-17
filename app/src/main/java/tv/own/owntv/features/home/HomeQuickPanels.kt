@@ -46,9 +46,8 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
 }
 
 @Composable
-internal fun TwitchQuickCard(state: TwitchState, connected: Boolean, onSettings: () -> Unit,
-    onWatch: () -> Unit, modifier: Modifier = Modifier, setupNeeded: Boolean = !connected) {
-    TvCard(if (state is TwitchState.Live) onWatch else onSettings, modifier.fillMaxWidth().heightIn(min = 112.mpx)) {
+internal fun TwitchQuickCard(state: TwitchState, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    TvCard(onOpen, modifier.fillMaxWidth().heightIn(min = 112.mpx)) {
     Row(Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.mpx)) {
@@ -67,8 +66,7 @@ internal fun TwitchQuickCard(state: TwitchState, connected: Boolean, onSettings:
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-            if (state is TwitchState.Live) TvText(stringResource(R.string.mintv_twitch_watch), size = 18, color = MinTvTeal, bold = true, lines = 1)
-            else if (setupNeeded) TvText(stringResource(R.string.mintv_twitch_connect), size = 17, color = MinTvTeal, lines = 1)
+            TvText(stringResource(R.string.mintv_twitch_open_app), size = 18, color = MinTvTeal, bold = true, lines = 1)
         }
     }
     }

@@ -216,7 +216,7 @@ class HomeDashboardPresentationTest {
                                     now, if (hockeyKnown) "TV4 Sport Live 2" else null, hockeyKnown, "Färjestad BK",
                                     { hockeyWatches++ }, nav.section(3).testTag("dashboard-hockey"), onDetails = { opened++ }) }
                                 Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) nav.selected = 6 }) {
-                                    TwitchQuickCard(twitch, true, {}, { opened++ }, nav.section(6).testTag("dashboard-twitch"))
+                                    TwitchQuickCard(twitch, { opened++ }, nav.section(6).testTag("dashboard-twitch"))
                                 }
                             }
                             HomeSection.FAVORITES, HomeSection.NOW -> {

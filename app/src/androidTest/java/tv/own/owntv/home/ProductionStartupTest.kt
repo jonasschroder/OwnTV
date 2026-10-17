@@ -88,7 +88,16 @@ class ProductionStartupTest {
             compose.waitUntil(20_000) { compose.onAllNodesWithText(profileName).fetchSemanticsNodes().isNotEmpty() }
             if (selectedProfile == 8L) instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
             instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
-            val homeLabel = app.getString(R.string.mintv_v08_last_watched)
+            // Instrumentation's target Context keeps the device locale; production Activity wraps
+            // its own resources with the persisted app locale. Assert against the latter.
+            var homeLabel = ""
+            scenario.onActivity { activity ->
+                homeLabel = activity.getString(R.string.mintv_v08_last_watched)
+                if (LocaleStore.from(activity).readBlocking() == "sv") {
+                    assertEquals("sv", activity.resources.configuration.locales[0].language)
+                }
+                println("Startup assertion locale=${activity.resources.configuration.locales[0].language}; instrumentation locale=${app.resources.configuration.locales[0].language}")
+            }
             compose.waitUntil(30_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
             Thread.sleep(8_000) // Real elapsed survival beyond the reported one-second fatal window.
             compose.onNodeWithText(homeLabel).assertIsDisplayed()

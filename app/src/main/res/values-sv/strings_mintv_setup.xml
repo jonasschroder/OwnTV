@@ -15,4 +15,6 @@
     <string name="mintv_setup_soundtv">S0undTV</string>
     <string name="mintv_setup_smarttv">SmartTV Client for Twitch</string>
     <string name="mintv_setup_account">Twitch-konto</string>
+    <string name="mintv_setup_player_use_direct">Använd %1$s (kanallänk)</string>
+    <string name="mintv_setup_player_use_manual">Använd %1$s (manuell navigering)</string>
 </resources>

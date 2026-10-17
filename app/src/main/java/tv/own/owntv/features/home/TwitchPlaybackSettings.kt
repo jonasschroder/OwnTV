@@ -34,7 +34,7 @@ internal fun TwitchPlaybackSettings(playersProvider: () -> List<TwitchPlayer>, s
     if (failed) TvText(stringResource(R.string.mintv_twitch_launch_failed), color = MinTvMuted, lines = 3)
     HomeButton(stringResource(R.string.mintv_setup_player_auto), { onSelect(null) })
     players.forEach { player ->
-        HomeButton(stringResource(if (player.direct) R.string.mintv_twitch_open_direct else R.string.mintv_twitch_open_manual, player.name),
+        HomeButton(stringResource(if (player.direct) R.string.mintv_setup_player_use_direct else R.string.mintv_setup_player_use_manual, player.name),
             { onSelect(player.component.packageName) })
     }
     if (players.any { !it.direct }) TvText(stringResource(R.string.mintv_twitch_manual_help), color = MinTvMuted, lines = 3)

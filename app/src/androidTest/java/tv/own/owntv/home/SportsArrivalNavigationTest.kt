@@ -60,10 +60,10 @@ class SportsArrivalNavigationTest {
             }
         }
         key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNodeWithTag("sports-tab-TABLE").assertIsFocused()
+        compose.onNodeWithTag("sports-tab-FARJESTAD").assertIsFocused()
         compose.runOnIdle { response.complete(listOf(fixture)) }
         compose.waitUntil(5000) { compose.onAllNodesWithTag("arrival-fixture").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithTag("sports-tab-TABLE").assertIsFocused()
+        compose.onNodeWithTag("sports-tab-FARJESTAD").assertIsFocused()
         compose.onNodeWithTag("arrival-state").assertTextEquals("Verified")
         key(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNode(isFocused() and hasAnyAncestor(hasTestTag("arrival-fixture"))).assertExists()

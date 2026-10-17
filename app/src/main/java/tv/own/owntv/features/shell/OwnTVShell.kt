@@ -202,6 +202,7 @@ fun OwnTVShell(
     val clockColors by settingsRepo.clockColors.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.ClockColors())
     val statusDensity = LocalDensity.current
     var homeStatusHeight by remember { mutableStateOf(120.mpx) }
+    var homeStatusWidth by remember { mutableStateOf(760.mpx) }
     val remoteShortcutBindings by settingsRepo.remoteShortcutBindings.collectAsStateWithLifecycle(
         initialValue = RemoteShortcutBindings.defaults,
     )
@@ -240,6 +241,11 @@ fun OwnTVShell(
     var downloadsEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var moreEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     // More › Settings opens today's Settings at a group, or with its search open (until P10 redraws it).
+    var minTvSettingsStart by remember { mutableStateOf<tv.own.owntv.features.home.MinTvSettingsDestination?>(null) }
+    var settingsFromHome by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(selectedSection) {
+        if (selectedSection !in listOf(MainSection.SETTINGS, MainSection.HOME)) settingsFromHome = false
+    }
     var settingsStart by remember { mutableStateOf<tv.own.owntv.features.shell.components.SettingsStart?>(null) }
     // The playlist pill's place on screen, where the playlist menu redraws it above its scrim.
     var playlistPillBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
@@ -830,7 +836,7 @@ fun OwnTVShell(
             // the first press: the fallback below simply moved focus to the rail and nothing else
             // happened. Handled here as well so the answer is the same whichever handler fires; a
             // sub-screen of Settings still wins, because its handler is composed deeper than this.
-            selectedSection == MainSection.SETTINGS -> { restoreFocus = true; onSelectSection(MainSection.MORE) }
+            selectedSection == MainSection.SETTINGS -> { restoreFocus = true; onSelectSection(if (settingsFromHome) MainSection.HOME else MainSection.MORE) }
             // Reached from a Search result: Back returns to Search once, its query, tab and row kept.
             searchReturn == selectedSection && focusedLayer != ShellLayer.SIDEBAR -> returnToSearch()
             focusedLayer == ShellLayer.SIDEBAR -> showExit = true
@@ -1094,6 +1100,7 @@ fun OwnTVShell(
                             onSwitchProfile = onSwitchProfile,
                             onPickAvatar = { showAvatarPicker = true },
                             onOpenSettings = { group, search ->
+                                settingsFromHome = false
                                 settingsStart = tv.own.owntv.features.shell.components.SettingsStart(group, search)
                                 onSelectSection(MainSection.SETTINGS)
                             },
@@ -1121,11 +1128,13 @@ fun OwnTVShell(
                             onOpenPlaylist = { /* Phase 6: open setup/playlist */ },
                             // Settings is reached through More now, so Back out of its root goes
                             // back there rather than to the rail — one level out, not two.
-                            onBack = { restoreFocus = true; onSelectSection(MainSection.MORE) },
+                            onBack = { restoreFocus = true; onSelectSection(if (settingsFromHome) MainSection.HOME else MainSection.MORE) },
                             openEpgAdd = openEpgAdd,
                             openSources = openHomeSources,
                             onSourcesConsumed = { openHomeSources = false },
                             onEpgAddConsumed = { openEpgAdd = false },
+                            minTvStart = minTvSettingsStart,
+                            onMinTvStartConsumed = { minTvSettingsStart = null },
                             start = settingsStart,
                             onStartConsumed = { settingsStart = null },
                             modifier = Modifier
@@ -1176,7 +1185,10 @@ fun OwnTVShell(
                             onSources = {
                                 homeSetupOpen = true
                             },
-                            onManageSources = { openHomeSources = true; onSelectSection(MainSection.SETTINGS) },
+                            onManageSources = { settingsFromHome = true; openHomeSources = true; onSelectSection(MainSection.SETTINGS) },
+                            onOpenSettings = { destination ->
+                                settingsFromHome = true; minTvSettingsStart = destination; onSelectSection(MainSection.SETTINGS)
+                            },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             restoreFocus = restoreFocus,
                             onRestored = { restoreFocus = false },
@@ -1189,6 +1201,7 @@ fun OwnTVShell(
                                 else -> 150.mpx
                             },
                             reservedTop = homeStatusHeight + 24.mpx,
+                            statusWidth = homeStatusWidth,
                             modifier = Modifier.fillMaxSize(),
                         ) }
 
@@ -1368,7 +1381,10 @@ fun OwnTVShell(
                 clockColors = clockColors,
                 playlistDownFocusRequester = homeFirstRowFocus.takeIf { selectedSection == MainSection.HOME },
                 onPlaylistPillBounds = { playlistPillBounds = it },
-                modifier = Modifier.align(Alignment.TopEnd).onSizeChanged { homeStatusHeight = with(statusDensity) { it.height.toDp() } }
+                modifier = Modifier.align(Alignment.TopEnd).onSizeChanged {
+                    homeStatusHeight = with(statusDensity) { it.height.toDp() }
+                    homeStatusWidth = with(statusDensity) { it.width.toDp() }
+                }
                     .onFocusChanged { clusterFocused = it.hasFocus }.focusGroup(),
             )
             tv.own.owntv.features.shell.components.StageRail(

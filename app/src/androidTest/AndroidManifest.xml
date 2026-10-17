@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Test APK ONLY: framework activities emulate public TV intent contracts, never real clients. -->
+    <application>
+        <activity android:name="android.app.Activity" android:exported="false" android:theme="@android:style/Theme.Material.NoActionBar" />
+        <activity-alias android:name=".TwitchFixtureLauncher" android:targetActivity="android.app.Activity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".TwitchFixtureStream" android:targetActivity="android.app.Activity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="s0undtv" android:host="stream" android:path="/ohnepixel" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".TwitchFixturePrivate" android:targetActivity="android.app.Activity" android:exported="false">
+            <intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="s0undtv" android:host="stream" android:path="/fixture-private" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".TwitchFixtureProtected" android:targetActivity="android.app.Activity" android:exported="true" android:permission="android.permission.MANAGE_USERS">
+            <intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="s0undtv" android:host="stream" android:path="/fixture-protected" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".TwitchFixtureDisabled" android:targetActivity="android.app.Activity" android:exported="true" android:enabled="false">
+            <intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="s0undtv" android:host="stream" android:path="/fixture-disabled" /></intent-filter>
+        </activity-alias>
+    </application>
+</manifest>

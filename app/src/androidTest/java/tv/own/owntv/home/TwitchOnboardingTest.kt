@@ -42,7 +42,7 @@ class TwitchOnboardingTest {
                     { id, show ->
                         assertEquals(publicId, id); attempts.incrementAndGet(); show(activation)
                         try { awaitCancellation() } finally { cancelled.incrementAndGet() }
-                    }, {})
+                    }, {}, settingsMode = true)
             }
         }
         activate(compose.onNodeWithText(compose.activity.getString(R.string.mintv_twitch_connect)))

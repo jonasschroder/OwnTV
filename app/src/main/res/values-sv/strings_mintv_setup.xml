@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_setup_twitch">Twitch &amp; uppspelning</string>
+    <string name="mintv_setup_sport_help">Följda lag, källinställningar och lokal diagnostik.</string>
+    <string name="mintv_setup_twitch_help">Valfri kontoanslutning och alternativa TV-klienter. Startsidan öppnar den officiella Twitch-appen.</string>
+    <string name="mintv_setup_home_help">Synlighet, radordning, appgenvägar och förhandsvisning för profilen.</string>
+    <string name="mintv_setup_player_heading">Valfria alternativa TV-spelare</string>
+    <string name="mintv_setup_player_help">Startsidan öppnar den officiella Twitch-appen även utan livestatus. Kontoanslutningen är valfri och visar streamstatus. Alternativa TV-klienter nedan är valfria; en kanallänk öppnar ohnePixel endast om den installerade klienten stöder det.</string>
+    <string name="mintv_setup_player_selected">Sparat alternativ: %1$s</string>
+    <string name="mintv_setup_player_auto">Inget sparat alternativ</string>
+    <string name="mintv_setup_player_missing">Sparad spelare är inte tillgänglig – välj en annan eller installera den igen</string>
+    <string name="mintv_setup_player_recheck">Sök efter installerade TV-spelare igen</string>
+    <string name="mintv_setup_player_install">Hitta %1$s på Google Play</string>
+    <string name="mintv_setup_store_unavailable">Google Play kunde inte öppnas. Öppna Google Play på TV:n och sök efter S0undTV eller SmartTV Client for Twitch. Utbudet varierar mellan enheter och regioner. Ingen app har installerats.</string>
+    <string name="mintv_setup_soundtv">S0undTV</string>
+    <string name="mintv_setup_smarttv">SmartTV Client for Twitch</string>
+    <string name="mintv_setup_account">Twitch-konto</string>
+    <string name="mintv_setup_player_use_direct">Använd %1$s (kanallänk)</string>
+    <string name="mintv_setup_player_use_manual">Använd %1$s (manuell navigering)</string>
+    <string name="mintv_twitch_open_app">Öppna Twitch</string>
+    <string name="mintv_twitch_app_missing">Twitch kunde inte öppnas. Kontrollera att den officiella Twitch-appen är installerad och aktiverad på din TV. Kontoanslutning i Min TV behövs inte för att öppna den.</string>
+    <string name="mintv_twitch_app_find">Hitta Twitch på Google Play</string>
+    <string name="mintv_twitch_app_store_unavailable">Google Play kunde inte öppnas. Öppna Google Play på din TV och sök efter Twitch. Ingen app har installerats.</string>
+    <string name="mintv_setup_player_open">Öppna %1$s</string>
+    <string name="mintv_setup_alternatives_missing">Ingen valfri alternativ TV-klient hittades. Startsidan kan fortfarande öppna den officiella Twitch-appen.</string>
+</resources>

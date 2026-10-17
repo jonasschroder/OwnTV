@@ -10,6 +10,8 @@ object MinTvExternalApps {
         "org.smarttube.stable", "org.smarttube.beta", "app.smarttube.fdroid",
         "com.teamsmart.videomanager.tv", "com.liskovsoft.smarttubetv.beta",
     )
+    // Twitch-maintained Android package reference: twitchdev/deeplink-unity, DeepLinkTest.cs.
+    const val TWITCH = "tv.twitch.android.app"
     const val SVT_PLAY = "se.svt.android.svtplay"
 
     fun launch(context: Context, packages: List<String>): Intent? = packages.firstNotNullOfOrNull { pkg ->

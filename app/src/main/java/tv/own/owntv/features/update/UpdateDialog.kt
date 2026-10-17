@@ -1,6 +1,12 @@
 package tv.own.owntv.features.update
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.border
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,6 +17,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,9 +42,8 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
     val automatic by settings.updateCheckOnStart.collectAsStateWithLifecycle(initialValue = false)
     val checked by settings.lastUpdateCheckAt.collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
-    val focus = remember { FocusRequester() }
     var requestedInstall by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { manager.resume(); if (checkOnOpen) manager.check(force = true) }
+    LaunchedEffect(Unit) { manager.resume(); if (checkOnOpen) manager.requestCheck() }
     LaunchedEffect(state) {
         // Only a live, explicit Update action can open the system prompt automatically.
         // After process recreation the durable Continue button requires another user action.
@@ -46,33 +52,72 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
             manager.openInstallerScreen(manager.confirmationIntent())
         }
     }
-    val close = { manager.dismiss(); onDismiss() }
-    StagePopup(onDismiss = close, title = stringResource(R.string.mintv_update_about), width = 950.mpx,
-        // Redirect the actual focus entry into this dialog, rather than racing window attachment.
-        modifier = Modifier.focusProperties { onEnter = { focus.requestFocus() } }.focusGroup(),
-        buttons = {
-            LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; focus.requestFocus() }
-            StageButton(stringResource(R.string.settings_close), onClick = close, modifier = Modifier.focusRequester(focus), height = 56.mpx, textSize = 18)
+    // Closing presentation must not reset verified state or cancel an in-app download.
+    UpdatePresentation(state, manager.channelLabel, automatic, checked,
+        onDismiss = {
+            // Keep active/verified work when merely closing the window. Acknowledged terminal
+            // installer outcomes still use the original cleanup so a later retry can recover.
+            val current = manager.state.value
+            if (current is MinTvUpdater.State.Failed || current == MinTvUpdater.State.Cancelled) manager.dismiss()
+            onDismiss()
+        },
+        onAutomatic = { scope.launch { settings.setUpdateCheckOnStart(!automatic) } },
+        onAction = {
             when (state) {
-                is MinTvUpdater.State.Available -> StageButton(stringResource(R.string.update_now), onClick = { requestedInstall = true; scope.launch { if (manager.hasDownload()) manager.continueInstall() else manager.download() } }, height = 56.mpx, textSize = 18, tinted = true)
-                MinTvUpdater.State.Permission -> StageButton(stringResource(R.string.mintv_update_permission_action), onClick = { manager.openInstallerScreen(manager.permissionIntent()) }, height = 56.mpx, textSize = 18, tinted = true)
-                MinTvUpdater.State.Confirmation -> StageButton(stringResource(R.string.mintv_update_confirm), onClick = { manager.openInstallerScreen(manager.confirmationIntent()) }, height = 56.mpx, textSize = 18, tinted = true)
-                MinTvUpdater.State.Checking, is MinTvUpdater.State.Downloading, MinTvUpdater.State.Installing -> Unit
-                else -> StageButton(stringResource(R.string.settings_check_updates), onClick = { scope.launch { manager.check(force = true) } }, height = 56.mpx, textSize = 18, tinted = true)
+                is MinTvUpdater.State.Available -> { requestedInstall = true; manager.requestDownloadOrInstall() }
+                MinTvUpdater.State.Permission -> manager.openInstallerScreen(manager.permissionIntent())
+                MinTvUpdater.State.Confirmation -> manager.openInstallerScreen(manager.confirmationIntent())
+                else -> manager.requestCheck()
             }
-        }) {
-        Text(stringResource(R.string.mintv_update_identity, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString(), manager.channelLabel), style = stageText(18, 600), color = StageColors.Text)
-        val date = checked?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) } ?: stringResource(R.string.mintv_update_never)
+        })
+}
+
+/** Same production dialog for verified manager state and explicit synthetic screenshot fixtures.
+ * Available notes can only be supplied by the manager after UpdatePolicy.authenticate succeeds.
+ */
+@Composable
+internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, automatic: Boolean, checked: Long?,
+    onDismiss: () -> Unit, onAutomatic: () -> Unit, onAction: () -> Unit) {
+    val resources = LocalResources.current
+    val scope = rememberCoroutineScope()
+    val notesFocus = remember { FocusRequester() }
+    val automaticFocus = remember { FocusRequester() }
+    val notes = (state as? MinTvUpdater.State.Available)?.candidate?.notes?.takeIf { it.isNotBlank() }
+    val first = remember { FocusRequester() }
+    val busy = state == MinTvUpdater.State.Checking || state is MinTvUpdater.State.Downloading ||
+        state == MinTvUpdater.State.Verifying || state == MinTvUpdater.State.Installing
+    StagePopup(onDismiss = onDismiss, title = stringResource(R.string.mintv_update_about), width = 1080.mpx,
+        modifier = Modifier.focusProperties { onEnter = { first.requestFocus() } }.focusGroup(),
+        buttons = { CompositionLocalProvider(LocalResources provides resources) {
+            LaunchedEffect(Unit) { withFrameNanos { }; withFrameNanos { }; first.requestFocus() }
+            StageButton(stringResource(R.string.settings_close), onClick = onDismiss,
+                modifier = Modifier.focusRequester(first).focusProperties { if (notes != null) up = notesFocus }, height = 56.mpx, textSize = 18)
+            if (!busy) StageButton(stringResource(when (state) {
+                is MinTvUpdater.State.Available -> R.string.update_now
+                MinTvUpdater.State.Permission -> R.string.mintv_update_permission_action
+                MinTvUpdater.State.Confirmation -> R.string.mintv_update_confirm
+                else -> R.string.settings_check_updates
+            }), onClick = onAction, height = 56.mpx, textSize = 18, tinted = true)
+        } }) { CompositionLocalProvider(LocalResources provides resources) {
+        Text(stringResource(R.string.app_name), style = stageText(25, 700), color = StageColors.Text)
+        Text(stringResource(R.string.mintv_v08_version_current, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString()),
+            style = stageText(19, 600), color = StageColors.Text)
+        Text(channel, style = stageText(17, 600), color = StageSurfaces.Cyan)
+        (state as? MinTvUpdater.State.Available)?.candidate?.let { candidate ->
+            Text(stringResource(R.string.mintv_v08_version_target, candidate.version, candidate.code.toString()), style = stageText(21, 600), color = StageColors.Text)
+        }
+        val date = checked?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
+            ?: stringResource(R.string.mintv_update_never)
         Text(stringResource(R.string.mintv_update_last_check, date), style = stageText(16, 400), color = StageColors.Muted)
-        StageButton(stringResource(R.string.mintv_update_automatic, stringResource(if (automatic) R.string.common_on else R.string.common_off)),
-            onClick = { scope.launch { settings.setUpdateCheckOnStart(!automatic) } }, height = 48.mpx, textSize = 16)
-        Spacer(Modifier.height(16.mpx))
+        Spacer(Modifier.height(18.mpx))
         val text = when (val current = state) {
-            MinTvUpdater.State.Idle -> stringResource(R.string.mintv_update_ready)
-            MinTvUpdater.State.Checking -> stringResource(R.string.update_checking)
+            MinTvUpdater.State.Idle -> stringResource(R.string.mintv_v08_not_checked)
+            MinTvUpdater.State.Checking -> stringResource(R.string.mintv_v08_checking_hint)
             MinTvUpdater.State.UpToDate -> stringResource(R.string.update_latest, BuildConfig.VERSION_NAME)
+            MinTvUpdater.State.Installed -> stringResource(R.string.mintv_v08_installed)
             is MinTvUpdater.State.Available -> stringResource(R.string.mintv_update_available, current.candidate.version)
             is MinTvUpdater.State.Downloading -> stringResource(R.string.update_downloading, current.percent)
+            MinTvUpdater.State.Verifying -> stringResource(R.string.mintv_v08_verifying)
             MinTvUpdater.State.Permission -> stringResource(R.string.mintv_update_permission)
             MinTvUpdater.State.Installing -> stringResource(R.string.update_installer)
             MinTvUpdater.State.Confirmation -> stringResource(R.string.mintv_update_confirm_explanation)
@@ -87,12 +132,42 @@ fun UpdateDialog(onDismiss: () -> Unit, checkOnOpen: Boolean = false) {
                 MinTvUpdater.Problem.INVALID -> R.string.mintv_update_invalid
             })
         }
-        Text(text, style = stageText(18, 400), color = StageColors.Muted)
-        (state as? MinTvUpdater.State.Available)?.candidate?.notes?.let { notes ->
-            Text(renderReleaseNotes(notes, StageColors.Text), style = stageText(17, 400), color = StageColors.Muted,
-                modifier = Modifier.heightIn(max = 220.mpx).verticalScroll(rememberScrollState()))
+        Text(text, style = stageText(23, 600), color = StageColors.Text)
+        if (state is MinTvUpdater.State.Downloading) {
+            tv.own.owntv.features.home.ProgrammeProgress(state.percent / 100f, Modifier.padding(vertical = 14.mpx))
+            Text(stringResource(R.string.mintv_v08_background_download), style = stageText(17, 400), color = StageColors.Muted)
         }
-    }
+        if (state is MinTvUpdater.State.Available || state is MinTvUpdater.State.Downloading || state == MinTvUpdater.State.Verifying)
+            Text(stringResource(R.string.mintv_v08_progress_hint), style = stageText(17, 400), color = StageColors.Muted)
+        notes?.let { notes ->
+            Spacer(Modifier.height(16.mpx))
+            Text(stringResource(R.string.mintv_v08_notes), style = stageText(23, 700), color = StageColors.Text)
+            // Remote-focusable notes scroll with Up/Down, never fake an action.
+            var focused by remember { mutableStateOf(false) }
+            val notesScroll = rememberScrollState()
+            val scrollStep = with(LocalDensity.current) { 80.mpx.toPx() }
+            Text(renderReleaseNotes(notes, StageColors.Text), style = stageText(18, 400), color = StageColors.Muted,
+                modifier = Modifier.fillMaxWidth().heightIn(max = 230.mpx).focusRequester(notesFocus)
+                    .focusProperties { up = first; down = automaticFocus }
+                    .onPreviewKeyEvent { event ->
+                        val delta = when (event.key) {
+                            Key.DirectionDown -> scrollStep.takeIf { notesScroll.canScrollForward }
+                            Key.DirectionUp -> (-scrollStep).takeIf { notesScroll.canScrollBackward }
+                            else -> null
+                        }
+                        if (delta == null) false else {
+                            if (event.type == KeyEventType.KeyDown) scope.launch { notesScroll.scrollBy(delta) }
+                            true
+                        }
+                    }
+                    .onFocusChanged { focused = it.hasFocus }
+                    .border(2.mpx, if (focused) StageSurfaces.Cyan else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(8.mpx))
+                    .focusable().verticalScroll(notesScroll).padding(8.mpx))
+        }
+        Spacer(Modifier.height(12.mpx))
+        StageButton(stringResource(R.string.mintv_update_automatic, stringResource(if (automatic) R.string.common_on else R.string.common_off)),
+            onClick = onAutomatic, modifier = Modifier.focusRequester(automaticFocus).focusProperties { up = if (notes != null) notesFocus else first; down = first }, height = 48.mpx, textSize = 16)
+    } }
 }
 
 /**

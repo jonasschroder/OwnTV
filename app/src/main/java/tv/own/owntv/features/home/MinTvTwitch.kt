@@ -26,13 +26,14 @@ import tv.own.owntv.R
 import tv.own.owntv.ui.theme.mpx
 
 @Composable
-internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier) {
+internal fun TwitchCompanion(visible: Boolean, active: Boolean, modifier: Modifier = Modifier, compact: Boolean = false, onLiveChanged: (Boolean) -> Unit = {},
+    settingsMode: Boolean = false, onOpenSettings: (() -> Unit)? = null) {
     val repository = koinInject<TwitchStatus>()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mintv-companion", 0) }
     val playback = remember(context) { TwitchPlayback(context) }
     TwitchCompanionUi(visible, active, prefs, BuildConfig.TWITCH_CLIENT_ID,
-        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open)
+        repository::connected, repository::status, repository::login, repository::disconnect, modifier, playback::players, playback::open, compact, onLiveChanged, settingsMode, onOpenSettings, playback::install, playback::openOfficialApp, playback::installOfficialApp)
 }
 
 /** Presentation adapter; token storage and Twitch protocol remain in TwitchStatus. */
@@ -42,9 +43,14 @@ internal fun TwitchCompanionUi(
     readConnection: suspend () -> Boolean, readStatus: suspend (Long) -> TwitchState,
     authorize: suspend (String, (TwitchActivation) -> Unit) -> Unit, disconnectAccount: suspend () -> Unit,
     modifier: Modifier = Modifier, listPlayers: () -> List<TwitchPlayer> = { emptyList() },
-    openPlayer: (TwitchPlayer) -> Boolean = { false },
+    openPlayer: (TwitchPlayer) -> Boolean = { false }, compact: Boolean = false, onLiveChanged: (Boolean) -> Unit = {},
+    settingsMode: Boolean = false, onOpenSettings: (() -> Unit)? = null, installPlayer: (String) -> Boolean = { false },
+    openOfficialApp: () -> Boolean = { false }, installOfficialApp: () -> Boolean = { false },
 ) {
     val scope = rememberCoroutineScope()
+    var appUnavailable by remember { mutableStateOf(false) }
+    var storeUnavailable by remember { mutableStateOf(false) }
+    var preferredPackage by remember { mutableStateOf(prefs.getString("twitch-player-package", null)) }
     var playbackOpen by remember { mutableStateOf(false) }
     var players by remember { mutableStateOf<List<TwitchPlayer>>(emptyList()) }
     var launchFailed by remember { mutableStateOf(false) }
@@ -64,9 +70,13 @@ internal fun TwitchCompanionUi(
     val entryFocus = remember { FocusRequester() }
     val connectFocus = remember { FocusRequester() }
     var restore by remember { mutableStateOf(false) }
+    var externalReturnPending by remember { mutableStateOf(false) }
+    LaunchedEffect(active) {
+        if (active && externalReturnPending) { restore = true; externalReturnPending = false }
+    }
     LaunchedEffect(generation) { connected = readConnection() }
-    LaunchedEffect(active, visible, setup, generation) {
-        if (!active || !visible || setup) return@LaunchedEffect
+    LaunchedEffect(active, visible, setup, generation, settingsMode) {
+        if (!active || !visible || setup || settingsMode) return@LaunchedEffect
         while (true) {
             now = System.currentTimeMillis()
             state = try { readStatus(now).also { statusFailure = null } } catch (cancelled: CancellationException) { throw cancelled }
@@ -89,12 +99,42 @@ internal fun TwitchCompanionUi(
     LaunchedEffect(disconnect) {
         if (disconnect) { disconnectAccount(); state = TwitchState.Unavailable; generation++; disconnect = false }
     }
-    LaunchedEffect(setup, restore, connecting) {
+    LaunchedEffect(setup, restore, connecting, active) {
         withFrameNanos { }
         if (setup) connectFocus.requestSafely()
-        else if (restore) { entryFocus.requestSafely(); restore = false }
+        else if (restore && active) { entryFocus.requestSafely(); restore = false }
     }
     val fresh = if (active && now - checkedAt <= 90_000) state else TwitchState.Unavailable
+    SideEffect { onLiveChanged(fresh is TwitchState.Live) }
+    val openSettings = {
+        setup = true; failure = if (connected) statusFailure else null; editClientId = clientId.isBlank()
+        connecting = !connected && clientId.isNotBlank()
+    }
+    val currentActive by rememberUpdatedState(active && visible)
+    val currentFresh by rememberUpdatedState(fresh)
+    val selectPlayer: (TwitchPlayer) -> Unit = { player ->
+        if (currentActive && currentFresh is TwitchState.Live && System.currentTimeMillis() - checkedAt in 0..90_000 && openPlayer(player)) {
+            prefs.edit().putString("twitch-player-package", player.component.packageName).apply()
+            preferredPackage = player.component.packageName; playbackOpen = false; externalReturnPending = true; restore = true
+        } else { launchFailed = true; playbackOpen = true }
+    }
+    val openApp = {
+        if (currentActive && !externalReturnPending) {
+            if (openOfficialApp()) { externalReturnPending = true; restore = true }
+            else { appUnavailable = true; storeUnavailable = false }
+        }
+    }
+    if (settingsMode) {
+        HomeButton(stringResource(if (connected) R.string.mintv_setup_account else R.string.mintv_twitch_connect),
+            openSettings, modifier.focusRequester(entryFocus))
+        TwitchPlaybackSettings(playersProvider = listPlayers, selectedPackage = preferredPackage, active = active,
+            onSelect = { preferredPackage = it; prefs.edit().putString("twitch-player-package", it).apply() }, onInstall = installPlayer,
+            onOpen = { player ->
+                (currentActive && openPlayer(player)).also { opened -> if (opened) { externalReturnPending = true; restore = true } }
+            })
+    }
+    else if (compact) TwitchQuickCard(fresh, openApp, modifier.focusRequester(entryFocus))
+    else {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
     TvCard({
         setup = true; failure = if (connected) statusFailure else null; editClientId = clientId.isBlank()
@@ -120,10 +160,23 @@ internal fun TwitchCompanionUi(
         }
     }, Modifier.testTag("twitch-watch"))
     }
-    if (playbackOpen) TwitchPlayerPicker(players, launchFailed, { player ->
-        if (active && visible && fresh is TwitchState.Live && System.currentTimeMillis() - checkedAt in 0..90_000 && openPlayer(player)) { playbackOpen = false; restore = true }
-        else launchFailed = true
-    }, { playbackOpen = false; restore = true })
+    }
+    if (appUnavailable) Dialog(onDismissRequest = { appUnavailable = false; restore = true }) {
+        val close = remember { FocusRequester() }
+        LaunchedEffect(Unit) { withFrameNanos { }; close.requestSafely() }
+        Column(Modifier.width(660.mpx).background(MinTvNavy, RoundedCornerShape(16.mpx)).padding(28.mpx), verticalArrangement = Arrangement.spacedBy(18.mpx)) {
+            TvText(stringResource(R.string.mintv_twitch_open_app), size = 28, bold = true)
+            TvText(stringResource(if (storeUnavailable) R.string.mintv_twitch_app_store_unavailable else R.string.mintv_twitch_app_missing), color = MinTvMuted)
+            HomeButton(stringResource(R.string.mintv_twitch_app_find), {
+                if (currentActive && installOfficialApp()) {
+                    appUnavailable = false; externalReturnPending = true; restore = true
+                } else storeUnavailable = true
+            })
+            HomeButton(stringResource(R.string.mintv_close), { appUnavailable = false; restore = true }, Modifier.focusRequester(close))
+        }
+    }
+    if (playbackOpen) TwitchPlayerPicker(players, launchFailed, selectPlayer,
+        { playbackOpen = false; restore = true }, onOpenSettings?.let { { playbackOpen = false; it() } })
     if (setup) Dialog(onDismissRequest = { setup = false; connecting = false; code = null; restore = true }) {
         Column(Modifier.width(760.mpx).background(MinTvNavy, RoundedCornerShape(14.mpx)).padding(32.mpx), verticalArrangement = Arrangement.spacedBy(22.mpx)) {
             TvText(stringResource(R.string.mintv_twitch_connect), size = 30, bold = true)
@@ -190,7 +243,7 @@ internal fun twitchFailureText(kind: TwitchFailureKind) = when (kind) {
 }
 
 @Composable
-internal fun TwitchPlayerPicker(players: List<TwitchPlayer>, failed: Boolean, onSelect: (TwitchPlayer) -> Unit, onDismiss: () -> Unit) {
+internal fun TwitchPlayerPicker(players: List<TwitchPlayer>, failed: Boolean, onSelect: (TwitchPlayer) -> Unit, onDismiss: () -> Unit, onSettings: (() -> Unit)? = null) {
     val first = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss) {
         LaunchedEffect(Unit) { withFrameNanos { }; first.requestSafely() }
@@ -203,6 +256,7 @@ internal fun TwitchPlayerPicker(players: List<TwitchPlayer>, failed: Boolean, on
             }
             if (players.any { !it.direct }) TvText(stringResource(R.string.mintv_twitch_manual_help), size = 21, color = MinTvMuted, lines = 3)
             if (failed) TvText(stringResource(R.string.mintv_twitch_launch_failed), size = 21, color = MinTvMuted, lines = 3)
+            onSettings?.let { HomeButton(stringResource(R.string.mintv_setup_twitch), it) }
             HomeButton(stringResource(R.string.mintv_close), onDismiss, if (players.isEmpty()) Modifier.focusRequester(first) else Modifier)
         }
     }

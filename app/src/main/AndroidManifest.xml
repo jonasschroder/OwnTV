@@ -47,6 +47,8 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="s0undtv" android:host="stream" />
         </intent>
+        <package android:name="com.s0und.s0undtv" />
+        <package android:name="com.fgl27.twitch" />
         <package android:name="org.smarttube.stable" />
         <package android:name="org.smarttube.beta" />
         <package android:name="app.smarttube.fdroid" />

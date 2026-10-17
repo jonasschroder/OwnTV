@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_setup_twitch">Twitch &amp; uppspelning</string>
+    <string name="mintv_setup_sport_help">Följda lag, källinställningar och lokal diagnostik.</string>
+    <string name="mintv_setup_twitch_help">Kontoanslutning, föredragen TV-spelare och installation från Google Play.</string>
+    <string name="mintv_setup_home_help">Synlighet, radordning, appgenvägar och förhandsvisning för profilen.</string>
+    <string name="mintv_setup_player_heading">Extern TV-spelare</string>
+    <string name="mintv_setup_player_help">Twitch-kontot ger livestatus, inte en videospelare. Installera en separat TV-klient från Google Play, återvänd hit och sök igen. En dokumenterad kanallänk öppnar ohnePixel när den installerade klienten stöder den; annars öppnas klienten för manuell navigering.</string>
+    <string name="mintv_setup_player_selected">Föredragen spelare: %1$s</string>
+    <string name="mintv_setup_player_auto">Automatiskt spelarval</string>
+    <string name="mintv_setup_player_missing">Sparad spelare är inte tillgänglig – välj en annan eller installera den igen</string>
+    <string name="mintv_setup_player_recheck">Sök efter installerade TV-spelare igen</string>
+    <string name="mintv_setup_player_install">Hitta %1$s på Google Play</string>
+    <string name="mintv_setup_store_unavailable">Google Play kunde inte öppnas. Öppna Google Play på TV:n och sök efter S0undTV eller SmartTV Client for Twitch. Utbudet varierar mellan enheter och regioner. Ingen app har installerats.</string>
+    <string name="mintv_setup_soundtv">S0undTV</string>
+    <string name="mintv_setup_smarttv">SmartTV Client for Twitch</string>
+</resources>

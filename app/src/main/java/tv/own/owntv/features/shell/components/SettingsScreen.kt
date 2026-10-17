@@ -158,7 +158,7 @@ internal val LocalSettingsRowTone = staticCompositionLocalOf { TileTone.PRIMARY 
 private fun Toned(tone: TileTone, content: @Composable () -> Unit) =
     CompositionLocalProvider(LocalSettingsRowTone provides tone, content = content)
 
-private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE }
+private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, MINTV_SPORT, MINTV_TWITCH, MINTV_HOME }
 
 @Composable
 internal fun surroundModeLabel(mode: SurroundMode): String = stringResource(
@@ -217,6 +217,8 @@ fun SettingsScreen(
     /** More › Settings (until P10 redraws this screen): open at a root group, or with search open. */
     start: SettingsStart? = null,
     onStartConsumed: () -> Unit = {},
+    minTvStart: tv.own.owntv.features.home.MinTvSettingsDestination? = null,
+    onMinTvStartConsumed: () -> Unit = {},
 ) {
     // A cross-script language change recreates the Activity so Android can apply the new script's
     // shaping and font fallback. Keep the open settings sub-screen across that configuration change
@@ -445,6 +447,16 @@ fun SettingsScreen(
     // Opening a sub-screen the ordinary way cancels any pending Quick-shortcut return, or the Back
     // from it would aim at the shortcut instead of the row just used.
     val open: (SettingsTab) -> Unit = { lastTab = it; deepReturnKey = null; videoRowKey = null; tab = it }
+    LaunchedEffect(minTvStart) {
+        minTvStart?.let {
+            open(when (it) {
+                tv.own.owntv.features.home.MinTvSettingsDestination.SPORT -> SettingsTab.MINTV_SPORT
+                tv.own.owntv.features.home.MinTvSettingsDestination.TWITCH -> SettingsTab.MINTV_TWITCH
+                tv.own.owntv.features.home.MinTvSettingsDestination.HOME -> SettingsTab.MINTV_HOME
+            })
+            onMinTvStartConsumed()
+        }
+    }
     LaunchedEffect(openSources) {
         if (openSources) { open(SettingsTab.SOURCES); onSourcesConsumed() }
     }
@@ -483,7 +495,10 @@ fun SettingsScreen(
                 current = fontCustomization, onSet = onSetFontCustomization, familyLabel = { fontFamilyLabel(it) },
                 onBack = { tab = SettingsTab.ROOT }, modifier = modifier,
             )
-            SettingsTab.ROOT -> Unit
+            SettingsTab.MINTV_SPORT -> tv.own.owntv.features.home.MinTvSettingsPage(tv.own.owntv.features.home.MinTvSettingsDestination.SPORT, { tab = SettingsTab.ROOT }, modifier)
+        SettingsTab.MINTV_TWITCH -> tv.own.owntv.features.home.MinTvSettingsPage(tv.own.owntv.features.home.MinTvSettingsDestination.TWITCH, { tab = SettingsTab.ROOT }, modifier)
+        SettingsTab.MINTV_HOME -> tv.own.owntv.features.home.MinTvSettingsPage(tv.own.owntv.features.home.MinTvSettingsDestination.HOME, { tab = SettingsTab.ROOT }, modifier)
+        SettingsTab.ROOT -> Unit
     }
     }
     return
@@ -753,6 +768,15 @@ fun SettingsScreen(
             onClick = { open(SettingsTab.CH_NAV) },
         ),
         RootGroup("group_content_metadata", stringResource(R.string.settings_group_content_metadata), OwnTVIcon.IMAGE, stringResource(R.string.settings_group_summary_content_metadata)),
+        RootRow(tabRowKey(SettingsTab.MINTV_SPORT), TileTone.PRIMARY, OwnTVIcon.LIVE_TV,
+            title = stringResource(R.string.mintv_my_hockey), desc = stringResource(R.string.mintv_setup_sport_help),
+            focus = rowFocus.getValue(SettingsTab.MINTV_SPORT), onClick = { open(SettingsTab.MINTV_SPORT) }),
+        RootRow(tabRowKey(SettingsTab.MINTV_TWITCH), TileTone.PRIMARY, OwnTVIcon.PLAY,
+            title = stringResource(R.string.mintv_setup_twitch), desc = stringResource(R.string.mintv_setup_twitch_help),
+            focus = rowFocus.getValue(SettingsTab.MINTV_TWITCH), onClick = { open(SettingsTab.MINTV_TWITCH) }),
+        RootRow(tabRowKey(SettingsTab.MINTV_HOME), TileTone.PRIMARY, OwnTVIcon.SORT,
+            title = stringResource(R.string.mintv_v08_customize), desc = stringResource(R.string.mintv_setup_home_help),
+            focus = rowFocus.getValue(SettingsTab.MINTV_HOME), onClick = { open(SettingsTab.MINTV_HOME) }),
         RootRow(
             tabRowKey(SettingsTab.CUSTOMIZE), TileTone.PRIMARY, OwnTVIcon.SORT,
             title = stringResource(R.string.settings_customize), desc = stringResource(R.string.settings_customize_nav_description),
@@ -995,6 +1019,9 @@ fun SettingsScreen(
         // haystack, so typing "video player" finds everything on that screen.
     val searchResults: List<SettingsSearchEntry> = if (searchQuery.isBlank()) emptyList() else {
         val entries = listOfNotNull(
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.mintv_my_hockey), stringResource(R.string.mintv_setup_sport_help), OwnTVIcon.LIVE_TV, TileTone.PRIMARY) { open(SettingsTab.MINTV_SPORT) },
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.mintv_setup_twitch), stringResource(R.string.mintv_setup_twitch_help), OwnTVIcon.PLAY, TileTone.PRIMARY) { open(SettingsTab.MINTV_TWITCH) },
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.mintv_v08_customize), stringResource(R.string.mintv_setup_home_help), OwnTVIcon.SORT, TileTone.PRIMARY) { open(SettingsTab.MINTV_HOME) },
             SettingsSearchEntry(stringResource(R.string.settings_app_group), stringResource(R.string.settings_language), stringResource(R.string.settings_search_keywords_language), OwnTVIcon.LANGUAGE, TileTone.PRIMARY,
                 chip = languageChip, chipTone = TileTone.PRIMARY) { open(SettingsTab.LANGUAGE) },
             SettingsSearchEntry(stringResource(R.string.settings_group_profile), stringResource(R.string.profiles_title), stringResource(R.string.settings_search_keywords_profiles), OwnTVIcon.PERSON, TileTone.SECONDARY) { searchQuery = ""; selectedGroup = SettingsGroup.PROFILE.ordinal },

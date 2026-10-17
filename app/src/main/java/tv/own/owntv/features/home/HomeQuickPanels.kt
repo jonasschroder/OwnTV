@@ -16,10 +16,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 /** Supporting strips, not independent dashboard panels. Evidence/actions keep their existing owners. */
 @Composable
 internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, watch: Boolean,
-    teams: String, onOpen: () -> Unit, onBrowse: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false) {
+    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false) {
     val imminent = game != null && game.faceoff - now in -3 * 60 * 60_000L..12 * 60 * 60_000L
-    Row(Modifier.fillMaxWidth().heightIn(min = 112.mpx)
-        .background(if (imminent) Color(0xFF193037) else Color(0xFF17252D), RoundedCornerShape(16.mpx)).padding(14.mpx),
+    TvCard(onOpen, modifier.fillMaxWidth().heightIn(min = 112.mpx), selected = imminent) {
+    Row(Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(18.mpx), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.mpx)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
@@ -36,17 +36,16 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
             }
             if (evidence.isNotEmpty()) TvText(evidence.joinToString(stringResource(R.string.mintv_v08_separator)), size = 14, color = MinTvMuted, lines = 1)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-            DashboardAction(stringResource(if (watch) R.string.mintv_watch_match else R.string.mintv_my_hockey), onOpen, modifier, compact = true)
-            DashboardAction(stringResource(R.string.mintv_hockey_other_channels), onBrowse, compact = true)
-        }
+        if (watch) TvText(stringResource(R.string.mintv_watch_match), size = 18, color = MinTvTeal, bold = true, lines = 1)
+    }
     }
 }
 
 @Composable
 internal fun TwitchQuickCard(state: TwitchState, connected: Boolean, onSettings: () -> Unit,
-    onWatch: () -> Unit, modifier: Modifier = Modifier) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 112.mpx).background(Color(0xFF151E2C), RoundedCornerShape(16.mpx)).padding(14.mpx),
+    onWatch: () -> Unit, modifier: Modifier = Modifier, setupNeeded: Boolean = !connected) {
+    TvCard(if (state is TwitchState.Live) onWatch else onSettings, modifier.fillMaxWidth().heightIn(min = 112.mpx)) {
+    Row(Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.mpx)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -64,8 +63,9 @@ internal fun TwitchQuickCard(state: TwitchState, connected: Boolean, onSettings:
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-            DashboardAction(stringResource(if (connected) R.string.mintv_companion_settings else R.string.mintv_twitch_connect), onSettings, modifier, compact = true)
-            if (state is TwitchState.Live) DashboardAction(stringResource(R.string.mintv_twitch_watch), onWatch, compact = true)
+            if (state is TwitchState.Live) TvText(stringResource(R.string.mintv_twitch_watch), size = 18, color = MinTvTeal, bold = true, lines = 1)
+            else if (setupNeeded) TvText(stringResource(R.string.mintv_twitch_connect), size = 17, color = MinTvTeal, lines = 1)
         }
+    }
     }
 }

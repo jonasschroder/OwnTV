@@ -225,3 +225,83 @@ Physical Chromecast playback, provider limits, actual font/display settings and
 full application integration remain on the hardware checklist above. Installer
 security, keys, identities, persisted preferences, data, launcher and updater logic
 are unchanged by this second iteration.
+
+## Owner feedback, 17 October: configure once
+
+Home's compact hockey and Twitch cards now each have one remote focus target. Hockey shows the
+next relevant validated fixture, its time, and only a locally matched/manual channel or an unexpired
+verified linear broadcast assignment. **Se matchen** appears only with an authorized playable local
+choice (or a picker of verified candidates). Otherwise OK opens Matchcenter; manual channel choice
+remains there. Empty team selection leads to Settings. The permanent **Andra kanaler** Home button
+is removed. No new schedule/broadcast requests or matching assumptions were introduced.
+
+Twitch Home shows ohnePixel's reliable live/offline/unknown state. Only a fresh live state offers
+**Se stream**. Connected users have no permanent Settings button. The first unconfigured encounter
+can offer **Anslut Twitch**; after using that contextual entry it stays quiet across restarts. OK on
+an offline/unknown card opens a small status dialog, from which Settings remains reachable. The
+first viewport retains the hero, quick channels, real version/update entry and profile layout.
+Existing app shortcuts retain their installed visibility/order and can be hidden/moved in Settings.
+
+Persistent controls live in **More → Settings → Content & metadata**:
+
+- **Min hockey**: the existing profile-bound followed-team picker, Home prominence/spoiler preferences,
+  existing experimental source flags, access-block notices and local diagnostic/export panel.
+- **Twitch & playback**: existing device authorization, disconnect and advanced public Client ID override,
+  preferred TV client, installed-client recheck and explicit Google Play listings.
+- **Customize Home**: the actual Min TV dashboard's per-profile visibility/order, optional app shortcuts,
+  preview toggle and explicit layout reset. This is distinct from upstream Home's legacy layout page.
+- Playlist/EPG source management stays in the existing **Sources** group.
+
+The same Settings root/search and subpage focus restoration handle these destinations. Home's
+Customize entry opens the canonical Settings subpage. Back through the Settings root returns to
+Home when entered there; existing More/EPG/source entry points keep their own behavior. No sidebar
+redesign or Settings group renumbering. Existing profile owner timestamps, stored keys, channel
+identities/quality, last-watched history and EPG are preserved. Only two new install-local, nonsecret
+preferences are added to `mintv-companion`: `twitch-player-package` and `twitch-setup-seen`. Account
+storage and Client ID remain install-scoped as before; team/layout preferences remain profile-bound.
+QA/Production storage stays separate by the existing application IDs.
+
+### Supported external Twitch playback
+
+[S0undTV's official v1.5.10 release](https://github.com/S0und/S0undTV/releases/tag/v1.5.10)
+documents `s0undtv://stream/<channel>` (example lirik). Min TV uses only
+`s0undtv://stream/ohnepixel`, scoped to the installed `com.s0und.s0undtv` package. Runtime discovery
+requires an enabled app with target SDK ≥23, an enabled/exported TV launcher, an enabled/exported
+matching channel handler and any required activity permission. The exported stream filter is also
+present in the previously inspected official 1.5.10 manifest; this proves a public contract, not
+playback on the owner's installed client version.
+
+A verified handler enables direct channel opening. Otherwise S0undTV's normal exported TV launcher
+is a clearly disclosed manual-navigation fallback. **SmartTV Client for Twitch**
+(`com.fgl27.twitch`) is offered through Google Play and its exported TV launcher; no undocumented
+channel parameters are guessed. Existing specifically registered Twitch HTTPS TV handlers remain
+supported; generic browsers are excluded. Discovery is bounded and local; no WebView, stream
+extractor, player/decoder, third-party APK download or background service is added.
+
+Settings can open either known Google Play listing only after a remote click. Installation is always
+manual and availability depends on device/region; failed Play opening has actionable instructions.
+Returning to Settings or choosing Recheck repeats local discovery. Missing saved clients are shown
+honestly and do not silently replace the preference. Automatic mode opens a single direct client;
+multiple clients require selection. A saved direct client opens on **Se stream** without a repeated
+picker. Manual-only clients always disclose manual navigation before opening. Every launch resolves
+the installed handler again; disabled/uninstalled/protected/changed or forged choices fail safely.
+Public channel URIs carry no OAuth tokens, secrets, stream URLs or private extras. Backgrounding
+suppresses a pending Home launch; return restores the originating focus.
+
+### Validation and physical limits
+
+The TV suite now includes real Android PackageManager/intent tests against exported, unexported,
+disabled and permission-protected handlers in the **test APK only**. The fixture is not S0undTV or
+SmartTV Client and does not prove their playback. Separate Compose tests cover one-time setup,
+no persistent administration on Home, saved direct-player selection, Back/focus restoration,
+Settings recheck on resume and zero stream-status polling on the settings page. All previous
+mandatory cases remain. Current Home screenshots regenerate at 1920×1080 and 1280×720 with
+synthetic hockey, live/offline Twitch, missing EPG, long text and remote focus. Additional 1080p
+Settings screenshots show no-client guidance and a selected synthetic manual client.
+
+The former head d0a9d92b's prototype CI passed 55 TV tests, but its i18n pseudo job **was cancelled**;
+it is not evidence that all checks passed. New source results and screenshot artifacts are recorded
+in PR #11 after the current runs finish. Physical Chromecast acceptance is still required for Google
+Play availability/install, actual S0undTV URI handling/playback, SmartTV manual navigation, Back from
+external clients, source/profile data preservation, and realistic 720p/1080p readability. No owner
+application is installed/updated/uninstalled, no permanent key is used, and no release is published.

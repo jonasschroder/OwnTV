@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_setup_twitch">Twitch &amp; playback</string>
+    <string name="mintv_setup_sport_help">Followed teams, source preferences and local diagnostics.</string>
+    <string name="mintv_setup_twitch_help">Account connection, preferred TV player and Google Play installation.</string>
+    <string name="mintv_setup_home_help">Profile-specific visibility, row order, app shortcuts and preview.</string>
+    <string name="mintv_setup_player_heading">External TV player</string>
+    <string name="mintv_setup_player_help">Connecting your Twitch account provides live status, not a video player. Install a separate TV client from Google Play, return here and recheck. A documented channel link opens ohnePixel when the installed client supports it; otherwise the client opens for manual navigation.</string>
+    <string name="mintv_setup_player_selected">Preferred player: %1$s</string>
+    <string name="mintv_setup_player_auto">Automatic player selection</string>
+    <string name="mintv_setup_player_missing">Saved player is unavailable — choose another or reinstall it</string>
+    <string name="mintv_setup_player_recheck">Recheck installed TV players</string>
+    <string name="mintv_setup_player_install">Find %1$s on Google Play</string>
+    <string name="mintv_setup_store_unavailable">Google Play could not be opened. Open Google Play on your TV and search for S0undTV or SmartTV Client for Twitch. Availability varies by device and region. No app has been installed.</string>
+    <string name="mintv_setup_soundtv">S0undTV</string>
+    <string name="mintv_setup_smarttv">SmartTV Client for Twitch</string>
+</resources>

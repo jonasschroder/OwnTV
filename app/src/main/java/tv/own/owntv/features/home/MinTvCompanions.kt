@@ -51,6 +51,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     reservedTop: Dp = 144.mpx,
     homeCardModifier: Modifier = Modifier,
     compact: Boolean = false,
+    onSettings: () -> Unit = {},
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
@@ -75,8 +76,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val libraryCount by liveVm.homeChannelCount.collectAsStateWithLifecycle()
     val keyboard = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
-    var broadcastEnabled by remember { mutableStateOf(repository.preferences.getBoolean("broadcast-enabled", false)) }
-    var enabled by remember { mutableStateOf(repository.preferences.getBoolean("shl-enabled", false)) }
+    val (enabled, broadcastEnabled) = rememberCompanionFlags(repository.preferences)
     var screen by rememberSaveable(profileId) { mutableStateOf(false) }
     var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.FARJESTAD) }
     // Keep the old enum value readable for saved-state compatibility, never render/fetch its table.
@@ -121,6 +121,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var choiceVersion by remember(profileId) { mutableIntStateOf(0) }
     var candidatesComplete by remember(profileId) { mutableStateOf(false) }
     var guideChoices by remember(profileId) { mutableStateOf(tv.own.owntv.features.live.SwedishChoices()) }
+    LaunchedEffect(enabled, broadcastEnabled) {
+        if (!enabled || !broadcastEnabled) { broadcast = null; knownBroadcasts.clear(); resolvedCards.clear(); directCards.clear() }
+    }
     val entryFocus = remember { FocusRequester() }
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
@@ -470,12 +473,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             val openCard = {
                 if (directChannel != null) play(directChannel, reliableChannels.ifEmpty { listOf(directChannel) })
                 else if (reliableChannels.isNotEmpty()) browseChannels()
-                else if (selectedTeams.teamIds.isEmpty()) teamsOpen = true else open()
+                else if (selectedTeams.teamIds.isEmpty()) onSettings() else open()
             }
-            if (compact) HockeyQuickCard(gameToMatch?.takeIf { scheduleFresh || localEvidence != null }, now, shown?.name,
+            if (compact) HockeyQuickCard(gameToMatch?.takeIf { scheduleFresh || localEvidence != null }, now, shown?.name ?: validBroadcast?.channels?.filter { it.linear }?.joinToString { it.name }?.takeIf { it.isNotBlank() },
                 directChannel != null || reliableChannels.isNotEmpty(),
                 selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator)),
-                openCard, ::browseChannels, homeCardModifier.focusRequester(entryFocus),
+                openCard, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt },
                 manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true)
             else {
@@ -483,7 +486,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {
                 if (directChannel != null) play(directChannel, reliableChannels.ifEmpty { listOf(directChannel) })
                 else if (reliableChannels.isNotEmpty()) browseChannels()
-                else if (selectedTeams.teamIds.isEmpty()) teamsOpen = true else open()
+                else if (selectedTeams.teamIds.isEmpty()) onSettings() else open()
             }, Modifier.weight(1f).then(homeCardModifier).focusRequester(entryFocus), watch = directChannel != null || reliableChannels.isNotEmpty()) {
                 if (selectedTeams.prominent) {
                     val shown = manualChannel ?: reliableChannels.firstOrNull()
@@ -525,7 +528,6 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                             HomeButton(if (competition == SportsCatalog.football) stringResource(R.string.mintv_swedish_football) else competition.name,
                                 { competitionId = competition.id; page = 0 })
                         }
-                        HomeButton(stringResource(R.string.mintv_choose_teams), { teamsOpen = true })
                     }
                     MatchcenterTabs(section, tabFocus) { section = it; page = 0 }
                     if (section == MatchcenterSection.FARJESTAD || section == MatchcenterSection.MATCHES) {
@@ -554,46 +556,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         }
                     }
                     when (section) {
-                        MatchcenterSection.SETTINGS -> LazyColumn(verticalArrangement = Arrangement.spacedBy(20.mpx)) {
-                            item { HockeyDiagnosticPanel(repository) }
-                            item { TvText(stringResource(R.string.mintv_shl_source_heading), size = 28, bold = true) }
-                            item { FocusPanel { TvText(stringResource(R.string.mintv_shl_source_notice), color = MinTvMuted, lines = 6) } }
-                            item { Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                                HomeButton(stringResource(if (enabled) R.string.mintv_shl_disable else R.string.mintv_shl_enable), {
-                                    enabled = !enabled; repository.preferences.edit { putBoolean("shl-enabled", enabled) }
-                                if (!enabled) { data = emptyMap(); selectedId = null; broadcast = null; loadStates.clear() }
-                                })
-                            } }
-                            item { data[selectedCompetition.id]?.let { TvText(stringResource(R.string.mintv_shl_snapshot, stockholmDate(it.fetchedAt) + " " + stockholmTime(it.fetchedAt),
-                                it.sourceUpdatedAt?.let { at -> stockholmDate(at) + " " + stockholmTime(at) } ?: stringResource(R.string.mintv_companion_unavailable)), color = MinTvMuted, lines = 4) } }
-                            if (repository.preferences.getBoolean("shl-access-blocked", false)) item { TvText(stringResource(R.string.mintv_shl_access_blocked), color = MinTvMuted, lines = 4) }
-                            item { FocusPanel { TvText(stringResource(R.string.mintv_broadcast_source_notice), color = MinTvMuted, lines = 4) } }
-                            item { HomeButton(stringResource(if (broadcastEnabled) R.string.mintv_broadcast_disable else R.string.mintv_broadcast_enable), {
-                                broadcastEnabled = !broadcastEnabled
-                                repository.preferences.edit { putBoolean("broadcast-enabled", broadcastEnabled) }
-                                if (!broadcastEnabled) { broadcast = null; knownBroadcasts.clear(); resolvedCards.clear(); directCards.clear() }
-                            }) }
-                            if (broadcasts.blocked) item { FocusPanel { TvText(stringResource(R.string.mintv_broadcast_blocked), color = MinTvMuted, lines = 4) } }
-                            item { TvText(stringResource(R.string.mintv_sports_diagnostics), size = 28, bold = true) }
-                            item { TvText(stringResource(R.string.mintv_sports_budget, repository.preferences.getInt("hockey-window-count", 0)), color = MinTvMuted, lines = 3) }
-                            requiredCompetitions.filter { it.scheduleAvailable }.forEach { competition ->
-                                item {
-                                    TvText(competition.name, bold = true)
-                                    repository.lastResponse(competition)?.let { response ->
-                                        TvText(stringResource(R.string.mintv_sports_diagnostic, competition.name, response.stage.name,
-                                            NumberFormat.getIntegerInstance().format(response.httpCode), stockholmDate(response.at) + " " + stockholmTime(response.at)), color = MinTvMuted, lines = 3)
-                                    }
-                                    for (isTable in listOf(false, true)) {
-                                        val issue = repository.diagnostic(competition, isTable)
-                                        TvText(if (issue == null) stringResource(R.string.mintv_sports_no_error)
-                                            else stringResource(R.string.mintv_sports_diagnostic, competition.name, issue.stage.name,
-                                                issue.httpCode?.let { NumberFormat.getIntegerInstance().format(it) } ?: stringResource(R.string.mintv_companion_unavailable),
-                                                stockholmDate(issue.at) + " " + stockholmTime(issue.at)), color = MinTvMuted, lines = 3)
-                                        if (issue != null) TvText(stringResource(R.string.mintv_sports_diagnostic_reason,
-                                            issue.kind.name, issue.detail?.name ?: issue.stage.name), color = MinTvMuted, lines = 3)
-                                    }
-                                }
-                            }
+                        MatchcenterSection.SETTINGS -> {
+                            LaunchedEffect(Unit) { section = MatchcenterSection.FARJESTAD; onSettings() }
                         }
                         else -> {
                             val future = allGames.filter { it.competition == selectedCompetition }.filter { it.faceoff >= now }.filter { section != MatchcenterSection.FARJESTAD || it.follows(selectedTeams) }

@@ -39,7 +39,7 @@ class TwitchPlaybackIntentTest {
         } finally { instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) }
         val component = intent.component!!
         try {
-            shell("pm disable-user --user 0 ${component.flattenToString()}")
+            assertTrue(shell("pm disable --user 0 ${component.flattenToString()}").contains("new state: disabled"))
             assertNull(playback.officialAppIntent()); assertFalse(playback.openOfficialApp())
         } finally {
             shell("pm default-state --user 0 ${component.flattenToString()}")

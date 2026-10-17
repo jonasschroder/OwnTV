@@ -167,7 +167,8 @@ class HomeDashboardPresentationTest {
                     val scope = rememberCoroutineScope()
                     val first = remember { FocusRequester() }
                     val nav = rememberHomeDpadNavigation(first, 10, profileKey, firstSection = 0)
-                    SideEffect { selectedSection = nav.selected }
+                    val currentSection = nav.selected
+                    SideEffect { selectedSection = currentSection }
                     val sidebar = remember { FocusRequester() }
                     val density = LocalDensity.current
                     var statusWidth by remember { mutableStateOf(760.mpx) }

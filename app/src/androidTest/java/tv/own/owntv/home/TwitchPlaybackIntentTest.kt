@@ -37,12 +37,17 @@ class TwitchPlaybackIntentTest {
             instrumentation.waitForIdleSync()
             assertTrue(shell("dumpsys activity activities").contains("TwitchFixtureLauncher"))
         } finally { instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK) }
-        val component = intent.component!!
-        try {
-            assertTrue(shell("pm disable --user 0 ${component.flattenToString()}").contains("new state: disabled"))
-            assertNull(playback.officialAppIntent()); assertFalse(playback.openOfficialApp())
-        } finally {
-            shell("pm default-state --user 0 ${component.flattenToString()}")
+        // A launcher can disappear/become inaccessible between discovery and resolution.
+        // Use real statically disabled/private/protected test aliases, not mutable instrumentation state.
+        for (suffix in listOf("Disabled", "Private", "Protected")) {
+            val component = android.content.ComponentName(fixturePackage, intent.component!!.className.removeSuffix("Launcher") + suffix)
+            val info = context.packageManager.getActivityInfo(component, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+            if (suffix == "Disabled") assertFalse(info.enabled)
+            if (suffix == "Private") assertFalse(info.exported)
+            if (suffix == "Protected") assertEquals("android.permission.MANAGE_USERS", info.permission)
+            val stale = Intent(intent).setComponent(component)
+            val inaccessible = TwitchPlayback(context, officialPackage = fixturePackage, findOfficialApp = { _, _ -> stale })
+            assertNull(suffix, inaccessible.officialAppIntent()); assertFalse(suffix, inaccessible.openOfficialApp())
         }
     }
     @Test fun installedExportedPublicStreamContractOpensExactChannelWithoutSecrets() {

@@ -23,7 +23,8 @@ internal val supportedTwitchClients = listOf(
 
 /** Only public channel contracts, resolved against the installed exported activity. Never OAuth data. */
 internal class TwitchPlayback(private val context: Context, private val clients: List<TwitchClient> = supportedTwitchClients,
-    private val officialPackage: String = MinTvExternalApps.TWITCH) {
+    private val officialPackage: String = MinTvExternalApps.TWITCH,
+    private val findOfficialApp: (Context, List<String>) -> Intent? = MinTvExternalApps::launch) {
     private val pm get() = context.packageManager
     private fun channel(uri: String = "https://www.twitch.tv/ohnepixel") = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
         .addCategory(Intent.CATEGORY_BROWSABLE)
@@ -36,7 +37,7 @@ internal class TwitchPlayback(private val context: Context, private val clients:
 
     /** Same app entry as SVT Play; no channel URI, account, OAuth extras or implicit fallback. */
     fun officialAppIntent(): Intent? = runCatching {
-        val intent = MinTvExternalApps.launch(context, listOf(officialPackage)) ?: return null
+        val intent = findOfficialApp(context, listOf(officialPackage)) ?: return null
         val resolved = pm.resolveActivity(intent, 0) ?: return null
         intent.takeIf { resolved.activityInfo.packageName == officialPackage && accessible(resolved) }
     }.getOrNull()

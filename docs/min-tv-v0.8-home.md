@@ -315,3 +315,13 @@ follow-up also waits for the layout controls to load before requesting initial S
 adds explicit recheck/manual-launch assertions. The PR records final-head CI/packaging results and
 current artifact links. CI images are real synthetic emulator captures; availability of an artifact
 is not a claim that it has been visually inspected if the cloud artifact host is blocked.
+
+The final i18n packaging run exposed an obsolete check that rejected S0undTV's package name outright
+because of a previously unsupported old APK. Visibility itself does not establish compatibility.
+The packaging verifier now requires an exact reviewed set of the existing TV shortcuts plus the
+two requested Twitch clients, rejects `QUERY_ALL_PACKAGES`, unknown package/provider visibility and
+missing public channel queries. Regression tests exercise positive and negative manifests; all
+standard/QA debug/release local manifests and ARM APK identity/peer-isolation checks pass. The
+installed-client SDK ≥23, enabled/exported activity, permission and TV-entry checks remain in
+`TwitchPlayback`; no installer, certificate, package, launcher or updater check is relaxed. Tooling
+now has **48** tests (the original 45 plus three visibility-policy regressions).

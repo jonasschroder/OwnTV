@@ -53,7 +53,7 @@ internal fun HomeChannelTile(name: String, logo: String?, onPlay: () -> Unit, mo
     HomeSurface(onPlay, modifier) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
             HomeChannelLogo(name, logo, Modifier.size(54.mpx))
-            TvText(name, Modifier.weight(1f), size = 22, bold = true, lines = 1)
+            TvText(name, Modifier.weight(1f), size = 22, bold = true, lines = 2)
         }
     }
 }

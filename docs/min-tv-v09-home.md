@@ -19,7 +19,9 @@ permanent update infrastructure.
   verified/manual/cached evidence remains intact. Twitch still opens the installed
   official app through the existing `openOfficialApp` path, without a new player
   chooser, sign-in step or persistent setup on Home.
-- Quick channels use smaller logo plates and a single readable channel label.
+- Quick channels use smaller logo plates and readable channel labels. Long names
+  use two lines within the logo height so identifying numbers such as TV4 Sport
+  Live 2 remain visible.
   Now/Next cards share the same surface, with real stored programme data and
   progress. The duplicate TV-kanaler buttons above both rails are removed;
   the hero retains TV-kanaler and its remote-accessible TV-guide/quality menu.

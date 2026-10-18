@@ -466,6 +466,27 @@ class HomeDashboardPresentationTest {
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         assertEquals(0, watched); assertEquals(0, videoMounts)
     }
+    @Test fun compactChannelTilePreservesBroadcastNumberWithoutEllipsisOrExtraHeight() {
+        var plays = 0
+        compose.setContent {
+            MaterialTheme {
+                HomeChannelTile("TV4 Sport Live 2", null, { plays++ }, Modifier.width(230.mpx).testTag("numbered-channel"))
+            }
+        }
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        compose.onNodeWithText("TV4 Sport Live 2", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val text = layouts.single()
+        assertEquals("Long broadcaster names use the existing logo's height", 2, text.lineCount)
+        assertFalse("The identifying channel number must remain visible", text.isLineEllipsized(1))
+        assertFalse(text.hasVisualOverflow)
+        val card = compose.onNodeWithTag("numbered-channel").fetchSemanticsNode().boundsInRoot
+        val pixelsPerMpx = compose.activity.resources.displayMetrics.density / 1.8f
+        assertTrue("A two-line channel name must remain compact", card.height / pixelsPerMpx <= 100)
+        assertEquals(0, plays)
+        focus("numbered-channel"); key(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, plays)
+    }
     @Test fun premiumDefaultRowsExposeNowEarlyAndKeepChannelFocusAfterPlaybackReturn() {
         rows = defaultHomeOrder.filter { it != HomeSection.TWITCH }
         mount()

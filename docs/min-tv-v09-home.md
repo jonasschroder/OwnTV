@@ -43,9 +43,9 @@ The **Min TV prototype → mintv-v09-home-comparison** artifact contains an offl
 and `evidence.json` with source commits and image SHA256 values. Download/extract
 the artifact and open `index.html`; click an image for its full resolution.
 
-Before: `cf7b64d1`, identical production UI to main `5326c641`, with only the
-additional persisted synthetic screenshot fixture. Baseline workflow run:
-https://github.com/jonasschroder/OwnTV/actions/runs/39149222472
+Before: `d0640010`, identical production UI to main `5326c641`, with only the
+additional persisted synthetic screenshot fixture and screenshot frame synchronization. Baseline workflow run:
+https://github.com/jonasschroder/OwnTV/actions/runs/39150622187
 
 After: the tested candidate commit recorded in the artifact. Both use the actual
 QA Application, Koin, Room database, MainActivity, profile gate, shell and Home:
@@ -53,6 +53,10 @@ two profiles, two sources, 600 channels, favorites, history, local synthetic log
 Now/Next EPG and the existing +60 minute global EPG offset. One channel deliberately
 has no guide/logo. All stream URLs are loopback test placeholders; previews are off.
 The fixture never accesses an owner's installation, account or IPTV service.
+
+The rich comparison uses 320 dpi at 1080p and 213 dpi at 720p (standard TV scaling).
+The original 720p/320 dpi dense cold-start stress test remains mandatory as well.
+Only disposable emulator display settings are changed and reset on exit.
 
 The device-test screenshot artifact additionally covers missing EPG, no history,
 long Swedish titles, live/offline Twitch, hockey without a channel, overflow menus,
@@ -76,6 +80,10 @@ The presentation suite checks long text, header/status separation, initially vis
 quick channels, Now/Next visibility at 1080p, D-pad movement, explicit OK callbacks,
 fullscreen-return focus, dynamic row changes, menu Back, 720p layout and no preview
 allocation while disabled. Existing official-Twitch external-return tests remain.
+All existing instrumentation classes are now selected: routing, sandbox/backup,
+locale/resources and bounded channel queries join the Home suite, with a Python
+inventory check preventing silent omissions. Dedicated startup and upgrade runners
+retain their separate real-process fixtures.
 JVM tests retain the String/Bundle-saveable LazyRow key regression and verify
 explicit legacy orders are preserved. Existing bounded EPG/cache tests remain.
 
@@ -88,8 +96,9 @@ by existing CI; no approved installer is uploaded.
 Final CI results and artifact links are recorded in the PR description after the
 latest commit completes. Local Python/i18n checks run separately. This environment
 has no Android SDK/KVM; Android compilation and actual TV emulator tests run in CI.
-GitHub artifact storage may be blocked by the cloud network filter locally; that
-must not be confused with a failed screenshot capture or a physical-device test.
+The reviewed baseline PNGs are committed under `docs/images/v09/before`, so CI
+can generate future comparisons without depending on an expiring workflow artifact.
+Screenshot artifacts contain synthetic data only and require no signing permissions.
 
 ## Owner approval still required
 

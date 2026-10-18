@@ -141,6 +141,15 @@ class ProductionStartupTest {
                     compose.onAllNodesWithText("Syntetiska Nyheterna", substring = true).fetchSemanticsNodes().isNotEmpty()
                 }
             }
+            compose.waitForIdle()
+            val drawn = java.util.concurrent.CountDownLatch(1)
+            scenario.onActivity { activity ->
+                activity.window.decorView.postOnAnimation {
+                    activity.window.decorView.postOnAnimation { drawn.countDown() }
+                }
+            }
+            assertTrue("Wait for actual production screenshot frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
+            instrumentation.waitForIdleSync()
             val bitmap = instrumentation.uiAutomation.takeScreenshot()
             val pictures = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
             File(pictures, "${if (premium) "premium" else "home"}-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
@@ -161,9 +170,19 @@ class ProductionStartupTest {
                 press(KeyEvent.KEYCODE_BACK)
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(moreLabel).assertIsFocused(); true }.getOrDefault(false) }
                 press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
-                compose.onAllNodes(hasText("SVT1", substring = false) and isFocused()).assertCountEquals(1)
+                compose.waitUntil(5_000) { compose.onAllNodes(hasText("SVT1") and isFocused()).fetchSemanticsNodes().size == 1 }
                 press(KeyEvent.KEYCODE_DPAD_RIGHT)
-                compose.onAllNodes(hasText("SVT2", substring = false) and isFocused()).assertCountEquals(1)
+                // Existing favorite/history ordering is intentionally not changed by this PR.
+                val channelLabels = setOf("SVT2", "TV3", "TV4", "Kanal 5", "TV6", "TV4 Sport Live 2")
+                fun focusedChannel(): String? = compose.onAllNodes(isFocused()).fetchSemanticsNodes()
+                    .flatMap { it.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() } }
+                    .firstOrNull { it.text in channelLabels }?.text
+                compose.waitUntil(5_000) { focusedChannel() != null }
+                val selectedChannel = focusedChannel()
+                press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithText(homeLabel).assertIsDisplayed()
+                press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { focusedChannel() == selectedChannel }
                 press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
                 compose.onNodeWithText(homeLabel).assertIsDisplayed()
             }

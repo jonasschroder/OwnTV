@@ -32,7 +32,7 @@ class HomeComparisonTest(unittest.TestCase):
             self.assertIn('href="after-1280x720.png"', (root / "review/index.html").read_text())
 
     def test_rejects_missing_duplicate_wrong_resolution_and_unverified_revision(self):
-        for problem in ("missing", "duplicate", "wrong", "revision"):
+        for problem in ("missing", "duplicate", "wrong", "revision", "provenance", "integrity"):
             with self.subTest(problem=problem), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 self.fixture(root / "baseline", missing=problem == "missing", wrong=problem == "wrong")
@@ -40,6 +40,8 @@ class HomeComparisonTest(unittest.TestCase):
                 if problem == "duplicate":
                     source = root / "candidate/screenshots/premium-1920x1080-en-profile-7.png"
                     source.with_name(source.name.replace("-en-", "-sv-")).write_bytes(source.read_bytes())
+                if problem in ("provenance", "integrity"):
+                    (root / "baseline/provenance.json").write_text(json.dumps({"sourceCommit": "b" * 40 if problem == "provenance" else "a" * 40, "files": {}}))
                 with self.assertRaises(ValueError):
                     module.collect(root / "baseline", root / "candidate", root / "review", "moving-main" if problem == "revision" else "a" * 40, "b" * 40)
                 self.assertFalse((root / "review/index.html").exists())

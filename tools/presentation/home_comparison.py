@@ -16,6 +16,10 @@ def collect(before: Path, after: Path, output: Path, baseline_sha: str, candidat
     for revision in (baseline_sha, candidate_sha):
         if not re.fullmatch(r"[0-9a-f]{40}", revision):
             raise ValueError("Screenshot source revisions must be full Git commit hashes")
+    provenance_path = before / "provenance.json"
+    provenance = json.loads(provenance_path.read_text()) if provenance_path.is_file() else None
+    if provenance is not None and provenance.get("sourceCommit") != baseline_sha:
+        raise ValueError("Baseline PNG provenance does not match the declared source commit")
     selected = []
     for width, height in ((1920, 1080), (1280, 720)):
         for label, root, revision in (("before", before, baseline_sha), ("after", after, candidate_sha)):
@@ -25,6 +29,8 @@ def collect(before: Path, after: Path, output: Path, baseline_sha: str, candidat
             data = files[0].read_bytes()
             if len(data) < 33 or data[:16] != b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" or struct.unpack(">II", data[16:24]) != (width, height):
                 raise ValueError(f"Incorrect PNG dimensions/header for {label} {width}x{height}")
+            if label == "before" and provenance is not None and provenance.get("files", {}).get(files[0].name) != hashlib.sha256(data).hexdigest():
+                raise ValueError(f"Baseline PNG integrity mismatch for {width}x{height}")
             selected.append((files[0], {"file": f"{label}-{width}x{height}.png", "sourceCommit": revision,
                 "width": width, "height": height, "sha256": hashlib.sha256(data).hexdigest()}))
     # Validate every input first: incomplete evidence must never produce a successful comparison.

@@ -12,6 +12,7 @@ capture() {
   trap - EXIT
   adb pull "/sdcard/Android/data/$qa/files/startup-screenshots" startup-evidence/screenshots >/dev/null 2>&1 || true
   adb shell wm size reset >/dev/null 2>&1 || true
+  adb shell wm density reset >/dev/null 2>&1 || true
   adb logcat -d -b crash > startup-evidence/crash-logcat.txt || true
   adb shell dumpsys activity activities > startup-evidence/activities.txt || true
   python3 - <<'PYCRASH'
@@ -61,11 +62,13 @@ adb shell am force-stop "$qa"
 run_case productionHomeSurvivesPersistedColdStartAndActivityRecreation premium-sv-1080p 7 true
 adb shell am force-stop "$qa"
 adb shell wm size 1280x720
+# Native 720p TV scale (213 dpi). The original 720p/320 dpi stress cold start above stays mandatory.
+adb shell wm density 213
 run_case productionHomeSurvivesPersistedColdStartAndActivityRecreation premium-sv-720p 7 true
 python3 - <<'PYREQUIRED'
 from pathlib import Path
 required=['seedPersistedQaData','cold-en-1080p-profile7','cold-en-720p-profile8','selectSwedishLocale','cold-sv-1080p-profile7','populatePremiumHomeFixture','premium-sv-1080p','premium-sv-720p']
 for name in required:
     assert 'OK (1 test)' in Path('startup-evidence',name+'.txt').read_text(), name
-print('PASS: 8 real QA instrumentation executions; three cold starts, two profiles, 1080p/720p, English/Swedish; persistent data verified; no owner device.')
+print('PASS: 8 real QA instrumentation executions; five cold starts, two profiles, 1080p/720p, English/Swedish; persistent data verified; no owner device.')
 PYREQUIRED

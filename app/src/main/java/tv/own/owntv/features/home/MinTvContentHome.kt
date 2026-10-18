@@ -298,7 +298,7 @@ internal fun MinTvContentHome(
                             DashboardAction(stringResource(R.string.mintv_home_live), { stop(); onLiveTv() })
                         }
                         LazyRow(state = rail, contentPadding = PaddingValues(5.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx), modifier = Modifier.focusGroup()) {
-                            itemsIndexed(quick, key = { _, item -> item.second.homeEpgKey() }) { i, (label, channel) ->
+                            itemsIndexed(quick, key = { _, item -> item.second.homeLazyItemKey() }) { i, (label, channel) ->
                                 val info = guide.rows[channel.homeEpgKey()]?.at(guide.at)
                                 val cardModifier = Modifier.width(if (nowRow) 330.mpx else 230.mpx)
                                     .then(if (channel.id == entryId) navigation.section(index) else Modifier)

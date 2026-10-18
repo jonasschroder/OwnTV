@@ -65,7 +65,7 @@ internal fun homeSectionIndices(visible: List<Boolean>): List<Int> {
 
 /** Stable names preserve legacy visibility; the live hero and companion pair have fixed anchors. */
 internal val defaultHomeOrder = listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.TWITCH,
-    HomeSection.FAVORITES, HomeSection.CONTINUE, HomeSection.NOW, HomeSection.SERIES, HomeSection.MOVIES, HomeSection.APPS)
+    HomeSection.FAVORITES, HomeSection.NOW, HomeSection.CONTINUE, HomeSection.SERIES, HomeSection.MOVIES, HomeSection.APPS)
 internal fun normalizedHomeOrder(saved: List<HomeSection>): List<HomeSection> =
     listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.TWITCH) +
         (saved + defaultHomeOrder).distinct().filter { it !in setOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.TWITCH) }

@@ -105,6 +105,9 @@ jobs:
           if-no-files-found: warn
 
   production-startup-regressions:
+    permissions:
+      contents: read
+      actions: read # Read the immutable before-screenshot artifact; no repository writes.
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -136,6 +139,34 @@ jobs:
         with:
           name: mintv-production-startup-evidence
           path: startup-evidence/
+          if-no-files-found: error
+      - name: Wait for unchanged-UI baseline screenshot evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYBASELINE'
+          import json, subprocess, time
+          for attempt in range(60):
+              result = subprocess.run(['gh','api','repos/jonasschroder/OwnTV/actions/runs/39149222472/artifacts'], check=True, capture_output=True, text=True)
+              if any(item['name'] == 'mintv-production-startup-evidence' and not item['expired'] for item in json.loads(result.stdout)['artifacts']):
+                  break
+              time.sleep(10)
+          else:
+              raise SystemExit('Unchanged-UI screenshot evidence unavailable: inspect baseline run 39149222472; no comparison can be claimed.')
+          PYBASELINE
+      - name: Download unchanged v0.8.1 production Home screenshots
+        uses: actions/download-artifact@v7
+        with:
+          name: mintv-production-startup-evidence
+          run-id: 39149222472
+          github-token: ${{ github.token }}
+          path: startup-baseline/
+      - name: Build source-labelled offline visual comparison
+        run: python3 tools/presentation/home_comparison.py --before startup-baseline --after startup-evidence --output home-comparison --baseline-sha cf7b64d1655a950cae29ca53f5ed5c980cba3109 --candidate-sha "${{ github.sha }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mintv-v09-home-comparison
+          path: home-comparison/
           if-no-files-found: error
 
   home-device-regressions:
@@ -194,6 +225,7 @@ jobs:
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'continuationAndReorderedRowsRestoreFocusAfterFullscreenAndDynamicRemoval'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'updateDialogShowsRealInstalledVersionAndDistinctProgressFailureAndConfirmationStates'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'real720pEmulatorLayoutRetainsReadableHeroAndRemoteNavigation'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'premiumDefaultRowsExposeNowEarlyAndKeepChannelFocusAfterPlaybackReturn'),
               ('tv.own.owntv.home.SwedishRowStorageTest', 'storedNowNextHonorsIndependentXmltvManualMappingOffsetsMidnightAndAuthorization'),
               ('tv.own.owntv.home.SwedishRowStorageTest', 'largeGuideRemainsBoundedAndSynchronizationNeverReturnsBlankExpiredOrOtherChannelTitles'),
               ('tv.own.owntv.home.SwedishLivePresentationTest', 'compactRowsShowRealSuppliedNowNextMissingStateAndExistingSelectedPane'),

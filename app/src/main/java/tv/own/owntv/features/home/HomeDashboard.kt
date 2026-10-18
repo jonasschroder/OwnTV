@@ -63,7 +63,7 @@ internal fun HomeDashboardFrame(list: LazyListState, rows: List<HomeSection>, co
         val contentTop = maxOf(reservedTop, headerTop + headerHeight + 20.mpx)
         LazyColumn(state = list,
             contentPadding = PaddingValues(start = contentStart, end = 56.mpx, top = 8.mpx, bottom = 60.mpx),
-            verticalArrangement = Arrangement.spacedBy(18.mpx),
+            verticalArrangement = Arrangement.spacedBy(14.mpx),
             modifier = Modifier.fillMaxSize().homeContentViewport(contentTop)) {
             // A zero-height scroll anchor preserves existing section indices for the fixed header.
             item(key = Int.MIN_VALUE) { }
@@ -85,7 +85,7 @@ internal fun HomeDashboardHeader(profile: String?, update: MinTvUpdater.State, o
         }
         DashboardAction(stringResource(R.string.mintv_v08_customize_short), onCustomize, compact = true)
         Column(horizontalAlignment = Alignment.End) {
-            DashboardAction(stringResource(R.string.mintv_v08_version_chip, BuildConfig.VERSION_NAME), onUpdate, modifier, compact = true)
+            DashboardAction(stringResource(R.string.mintv_v08_version_chip, BuildConfig.VERSION_NAME), onUpdate, modifier, compact = true, quiet = true)
             if (update is MinTvUpdater.State.Available) TvText(stringResource(R.string.mintv_v08_update_available),
                 size = 17, color = MinTvTeal, lines = 1)
         }
@@ -93,18 +93,18 @@ internal fun HomeDashboardHeader(profile: String?, update: MinTvUpdater.State, o
 }
 
 @Composable
-internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, compact: Boolean = false) {
+internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, compact: Boolean = false, quiet: Boolean = false) {
     // Explicit height overrides Material's larger default minimum; grow with the user's font scale.
     val height = (if (compact) 42 else 50).mpx * maxOf(1f, LocalDensity.current.fontScale)
     androidx.tv.material3.Button(onClick = onClick, modifier = modifier.height(height),
         contentPadding = PaddingValues(horizontal = if (compact) 14.mpx else 18.mpx, vertical = if (compact) 7.mpx else 10.mpx),
         shape = androidx.tv.material3.ButtonDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.mpx)),
-        colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else MinTvPanel,
+        colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else if (quiet) androidx.compose.ui.graphics.Color.Transparent else HomeSurfaceColor,
             contentColor = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White,
             focusedContainerColor = if (primary) androidx.compose.ui.graphics.Color(0xFFE7FFFF) else androidx.compose.ui.graphics.Color(0xFF274555)),
         border = androidx.tv.material3.ButtonDefaults.border(focusedBorder = androidx.tv.material3.Border(
             androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
-        scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1f)) {
+        scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.025f)) {
         TvText(label, size = if (compact) 17 else 20, lines = 1, bold = primary, color = if (primary) MinTvNavy else androidx.compose.ui.graphics.Color.White)
     }
 }
@@ -114,13 +114,13 @@ internal fun DashboardAction(label: String, onClick: () -> Unit, modifier: Modif
 internal fun HomeNowChannelCard(name: String, logo: String?, quality: ChannelQuality?, info: SwedishRowInfo?,
     at: Long, onPlay: () -> Unit, modifier: Modifier = Modifier) {
     val guide = info?.at(at)
-    TvCard(onPlay, modifier.heightIn(min = 220.mpx)) {
+    HomeSurface(onPlay, modifier.heightIn(min = 186.mpx)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
-            logo?.let { coil3.compose.AsyncImage(it, null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.size(42.mpx)) }
-            TvText(name, Modifier.weight(1f), size = 24, bold = true, lines = 1)
+            HomeChannelLogo(name, logo, Modifier.size(34.mpx))
+            TvText(name, Modifier.weight(1f), size = 22, bold = true, lines = 1)
             quality?.takeIf { it != ChannelQuality.UNKNOWN }?.let { TvText(it.name, size = 15, color = MinTvMuted, lines = 1) }
         }
-        TvText(guide?.now?.title ?: stringResource(R.string.mintv_v08_empty_now), size = 22, lines = 2)
+        TvText(guide?.now?.title ?: stringResource(R.string.mintv_v08_empty_now), size = 20, lines = 2)
         guide?.now?.let { programme ->
             TvText(homeProgrammeTime(programme.startMs, programme.stopMs), size = 17, color = MinTvMuted, lines = 1)
             ProgrammeProgress(programme.progress(at))

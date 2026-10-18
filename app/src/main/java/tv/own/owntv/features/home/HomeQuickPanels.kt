@@ -18,10 +18,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, watch: Boolean,
     teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false, onDetails: () -> Unit = onOpen) {
     val imminent = game != null && game.faceoff - now in -3 * 60 * 60_000L..12 * 60 * 60_000L
-    Row(Modifier.fillMaxWidth().background(if (imminent) Color(0xFF1B3034) else MinTvPanel, RoundedCornerShape(16.mpx))
+    Row(Modifier.fillMaxWidth().background(if (imminent) Color(0xFF1B3034) else HomeSurfaceColor, RoundedCornerShape(HomeRadius))
         .padding(end = if (watch) 14.mpx else 0.mpx),
         horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-    TvCard(onDetails, modifier.weight(1f).heightIn(min = 112.mpx), selected = imminent) {
+    HomeSurface(onDetails, modifier.weight(1f).heightIn(min = 128.mpx), highlighted = imminent) {
     Row(Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(18.mpx), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.mpx)) {
@@ -29,7 +29,7 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
                 TvText(stringResource(R.string.mintv_my_hockey), Modifier.weight(1f), size = 15, color = MinTvTeal, bold = true, lines = 1)
                 game?.let { TvText(fixtureWhen(it, now), size = 15, color = MinTvMuted, lines = 1) }
             }
-            TvText(game?.let { pairLabel(it) } ?: teams.ifBlank { stringResource(R.string.mintv_choose_teams) }, size = 23, bold = true, lines = 1)
+            TvText(game?.let { pairLabel(it) } ?: teams.ifBlank { stringResource(R.string.mintv_choose_teams) }, size = 22, bold = true, lines = 1)
             TvText(channel ?: stringResource(if (game == null) R.string.mintv_v08_no_fixture else R.string.mintv_v08_channel_unconfirmed),
                 size = 18, color = if (channel == null) MinTvMuted else MinTvTeal, lines = 1)
             val evidence = buildList {
@@ -47,10 +47,8 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
 
 @Composable
 internal fun TwitchQuickCard(state: TwitchState, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    TvCard(onOpen, modifier.fillMaxWidth().heightIn(min = 112.mpx)) {
-    Row(Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.mpx)) {
+    HomeSurface(onOpen, modifier.fillMaxWidth().heightIn(min = 128.mpx)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.mpx)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 TvText(stringResource(R.string.mintv_ohnepixel), Modifier.weight(1f), size = 22, bold = true, lines = 1)
                 if (state is TwitchState.Live) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)
@@ -65,9 +63,6 @@ internal fun TwitchQuickCard(state: TwitchState, onOpen: () -> Unit, modifier: M
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-            TvText(stringResource(R.string.mintv_twitch_open_app), size = 18, color = MinTvTeal, bold = true, lines = 1)
-        }
-    }
+        TvText(stringResource(R.string.mintv_twitch_open_app), size = 16, color = MinTvTeal, bold = true, lines = 1)
     }
 }

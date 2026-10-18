@@ -99,7 +99,6 @@ internal fun MinTvContentHome(
     var updateOpen by remember { mutableStateOf(false) }
     var variantsOpen by remember { mutableStateOf(false) }
     var heroMenuOpen by remember { mutableStateOf(false) }
-    var twitchLive by remember(activeProfileId) { mutableStateOf(false) }
     var missingApp by remember { mutableStateOf<ExternalShortcut?>(null) }
     var launchFailed by remember { mutableStateOf(false) }
     var restoreModalFocus by remember { mutableStateOf(false) }
@@ -281,8 +280,8 @@ internal fun MinTvContentHome(
                     }
                 }
                 HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                    if (showSport) Box(Modifier.weight(if (twitchLive) 1.35f else 1.8f).onFocusChanged { if (it.hasFocus) navigation.selected = 3 }.focusGroup()) { hockeyCard() }
-                    if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }.focusGroup()) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true, onLiveChanged = { twitchLive = it },
+                    if (showSport) Box(Modifier.weight(1.25f).onFocusChanged { if (it.hasFocus) navigation.selected = 3 }.focusGroup()) { hockeyCard() }
+                    if (showTwitch) Box(Modifier.weight(1f).onFocusChanged { if (it.hasFocus) navigation.selected = 6 }.focusGroup()) { TwitchCompanion(companionsVisible, usable, navigation.section(6), compact = true,
                         onOpenSettings = { stop(); onOpenSettings(MinTvSettingsDestination.TWITCH) }) }
                 }
                 HomeSection.TWITCH -> Unit
@@ -292,10 +291,9 @@ internal fun MinTvContentHome(
                     val index = if (nowRow) 8 else 1
                     val storedFocus = if (nowRow) nowFocused else quickFocused
                     val entryId = storedFocus?.takeIf { id -> quick.any { it.second.id == id } } ?: quick.firstOrNull()?.second?.id
-                    Column(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = index }.focusGroup(), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                    Column(Modifier.onFocusChanged { if (it.hasFocus) navigation.selected = index }.focusGroup(), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             TvText(stringResource(if (nowRow) R.string.mintv_v08_now else R.string.mintv_v08_quick_channels), size = 27, bold = true, lines = 1)
-                            DashboardAction(stringResource(R.string.mintv_home_live), { stop(); onLiveTv() })
                         }
                         LazyRow(state = rail, contentPadding = PaddingValues(5.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx), modifier = Modifier.focusGroup()) {
                             itemsIndexed(quick, key = { _, item -> item.second.homeLazyItemKey() }) { i, (label, channel) ->
@@ -306,7 +304,7 @@ internal fun MinTvContentHome(
                                 val watch = { play(channel, quick.map { it.second }) }
                                 if (nowRow) HomeNowChannelCard(label, channel.displayLogoUrl, SwedishChannels.recognize(channel.name)?.quality,
                                     info, guide.at, watch, cardModifier)
-                                else ChannelCard(label, channel.displayLogoUrl, null, watch, cardModifier)
+                                else HomeChannelTile(label, channel.displayLogoUrl, watch, cardModifier)
                             }
                         }
                     }

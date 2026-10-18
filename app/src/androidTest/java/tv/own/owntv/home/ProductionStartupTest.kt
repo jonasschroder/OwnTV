@@ -146,6 +146,27 @@ class ProductionStartupTest {
             File(pictures, "${if (premium) "premium" else "home"}-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
                 .outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             bitmap.recycle()
+            if (premium) {
+                var moreLabel = ""
+                var guideLabel = ""
+                scenario.onActivity { activity ->
+                    moreLabel = activity.getString(R.string.mintv_v08_more)
+                    guideLabel = activity.getString(R.string.mintv_guide)
+                }
+                fun press(code: Int) { instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+                press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithText(moreLabel).assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(guideLabel).assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(moreLabel).assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.onAllNodes(hasText("SVT1", substring = false) and isFocused()).assertCountEquals(1)
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onAllNodes(hasText("SVT2", substring = false) and isFocused()).assertCountEquals(1)
+                press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            }
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)

@@ -62,7 +62,7 @@ run_case productionHomeSurvivesPersistedColdStartAndActivityRecreation premium-s
 adb shell am force-stop "$qa"
 adb shell wm size 1280x720
 run_case productionHomeSurvivesPersistedColdStartAndActivityRecreation premium-sv-720p 7 true
-python3 - <<'PYREQUIRED' 
+python3 - <<'PYREQUIRED'
 from pathlib import Path
 required=['seedPersistedQaData','cold-en-1080p-profile7','cold-en-720p-profile8','selectSwedishLocale','cold-sv-1080p-profile7','populatePremiumHomeFixture','premium-sv-1080p','premium-sv-720p']
 for name in required:

@@ -97,7 +97,7 @@ class ProductionStartupTest {
             for (source in listOf(101L, 102L)) {
                 val id = source * 1000 + index + 1
                 val original = db.channelDao().getById(id)!!
-                db.channelDao().insertAll(listOf(original.copy(name = name,
+                db.channelDao().updateAll(listOf(original.copy(name = name,
                     logoUrl = if (index == 5) null else android.net.Uri.fromFile(file).toString())))
                 if (source == 101L) db.favoriteDao().add(FavoriteEntity(profileId = 7, mediaType = MediaType.LIVE, itemId = id))
             }

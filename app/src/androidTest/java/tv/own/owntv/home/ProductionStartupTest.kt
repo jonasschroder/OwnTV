@@ -141,6 +141,15 @@ class ProductionStartupTest {
                     compose.onAllNodesWithText("Syntetiska Nyheterna", substring = true).fetchSemanticsNodes().isNotEmpty()
                 }
             }
+            compose.waitForIdle()
+            val drawn = java.util.concurrent.CountDownLatch(1)
+            scenario.onActivity { activity ->
+                activity.window.decorView.postOnAnimation {
+                    activity.window.decorView.postOnAnimation { drawn.countDown() }
+                }
+            }
+            assertTrue("Wait for actual production screenshot frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
+            instrumentation.waitForIdleSync()
             val bitmap = instrumentation.uiAutomation.takeScreenshot()
             val pictures = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
             File(pictures, "${if (premium) "premium" else "home"}-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")

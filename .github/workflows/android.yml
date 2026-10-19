@@ -137,6 +137,15 @@ jobs:
           name: mintv-production-startup-evidence
           path: startup-evidence/
           if-no-files-found: error
+      - name: Build source-labelled offline visual comparison
+        run: python3 tools/presentation/home_comparison.py --before docs/images/v09/before --after startup-evidence --output home-comparison --baseline-sha d064001009f13cefb5b1da04c51c20f3521d533b --candidate-sha "${{ github.sha }}"
+      # The reviewed baseline PNGs are committed, so future startup checks never depend
+      # on an expiring or cross-run artifact. No additional token permissions are needed.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mintv-v09-home-comparison
+          path: home-comparison/
+          if-no-files-found: error
 
   home-device-regressions:
     runs-on: ubuntu-latest
@@ -175,6 +184,32 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.MinTvRoutingTest', 'normalAppNeverRegistersAsAndroidHome'),
+              ('tv.own.owntv.home.MinTvRoutingTest', 'liveEntryTargetsThisAppAndKeepsCoreOnboardingRouting'),
+              ('tv.own.owntv.home.MinTvRoutingTest', 'externalSchemePreservesPlaybackParametersWithoutClaimingUpstreamLinks'),
+              ('tv.own.owntv.home.MinTvRoutingTest', 'externalPlaybackCannotFallBackToOrdinaryYoutube'),
+              ('tv.own.owntv.home.MinTvIdentityBackupTest', 'providersAndPermissionsBelongToThisInstallation'),
+              ('tv.own.owntv.home.MinTvIdentityBackupTest', 'privateDatabaseAndFilesUseThisPackagesSandbox'),
+              ('tv.own.owntv.home.MinTvIdentityBackupTest', 'existingEncryptedBackupFormatCanBeInspectedAndPreviewedWithoutImporting'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'findByNumber_returnsAllMatchingChannels_acrossSources'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'findByNumber_returnsEmptyForUnknownNumber'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'findByNumber_duplicateNumber_returnsInDeterministicOrder'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'findByNumber_crossSource_currentSourceWins'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsAfterCategory_excludesTunedChannel_andStopsAtLimit'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsBeforeCategory_returnsInReverse_andExcludesTunedChannel'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsAfterCategory_handlesSortOrderTie_viaIdTiebreaker'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsBeforeCategory_handlesSortOrderTie_viaIdTiebreaker'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsAfterSource_spansAcrossCategories'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsAfterSource_isolatesBySource'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'channelsBeforeSource_handlesSortOrderTie'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'resolveDirectTune_integration_withDaoCandidates'),
+              ('tv.own.owntv.core.database.ChannelDaoBoundedWindowTest', 'resolveDirectTune_crossSource_fallbackPicksUniqueMatch'),
+              ('tv.own.owntv.core.i18n.LocalizedContentContextTest', 'localizedComposeContextStillUnwrapsToHostActivity'),
+              ('tv.own.owntv.core.i18n.LocalizedContentContextTest', 'likely_subtags_supply_scripts_for_system_style_region_tags'),
+              ('tv.own.owntv.core.i18n.LocalizedContentContextTest', 'locale_store_write_path_updates_process_defaults'),
+              ('tv.own.owntv.core.i18n.PluralResourceBoundaryTest', 'english_zero_one_two_use_plural_resources'),
+              ('tv.own.owntv.core.i18n.PluralResourceBoundaryTest', 'compact_counts_keep_the_pill_short'),
+              ('tv.own.owntv.core.i18n.PluralResourceBoundaryTest', 'arabic_polish_and_russian_quantity_requests_have_a_valid_fallback'),
               ('tv.own.owntv.home.TwitchPlaybackIntentTest', 'officialAppLaunchUsesInstalledTvEntryWithoutUriOrSecretsAndFailsClosedWhenDisabled'),
               ('tv.own.owntv.home.SetupOnceHomeTest', 'missingOfficialAppShowsExplicitStoreActionAndBackRestoresFocus'),
               ('tv.own.owntv.home.TwitchPlaybackIntentTest', 'installedExportedPublicStreamContractOpensExactChannelWithoutSecrets'),
@@ -194,6 +229,8 @@ jobs:
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'continuationAndReorderedRowsRestoreFocusAfterFullscreenAndDynamicRemoval'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'updateDialogShowsRealInstalledVersionAndDistinctProgressFailureAndConfirmationStates'),
               ('tv.own.owntv.home.HomeDashboardPresentationTest', 'real720pEmulatorLayoutRetainsReadableHeroAndRemoteNavigation'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'premiumDefaultRowsExposeNowEarlyAndKeepChannelFocusAfterPlaybackReturn'),
+              ('tv.own.owntv.home.HomeDashboardPresentationTest', 'compactChannelTilePreservesBroadcastNumberWithoutEllipsisOrExtraHeight'),
               ('tv.own.owntv.home.SwedishRowStorageTest', 'storedNowNextHonorsIndependentXmltvManualMappingOffsetsMidnightAndAuthorization'),
               ('tv.own.owntv.home.SwedishRowStorageTest', 'largeGuideRemainsBoundedAndSynchronizationNeverReturnsBlankExpiredOrOtherChannelTitles'),
               ('tv.own.owntv.home.SwedishLivePresentationTest', 'compactRowsShowRealSuppliedNowNextMissingStateAndExistingSelectedPane'),

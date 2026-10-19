@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "d064001009f13cefb5b1da04c51c20f3521d533b",
+  "productionUiCommit": "5326c641adf7ee80796df905cc78fbc9f82d387a",
+  "workflowRun": 39150622187,
+  "syntheticOnly": true,
+  "densityDpi": {
+    "1920x1080": 320,
+    "1280x720": 213
+  },
+  "files": {
+    "premium-1920x1080-sv-profile-7.png": "930681ea2c4045c144063d041abb4ae2af44912deff0c2149670cddd7b35458b",
+    "premium-1280x720-sv-profile-7.png": "b03325a44397c6186feed2645d0060ad5a2ef89918149a51bb8cf25053c4a0d4"
+  }
+}

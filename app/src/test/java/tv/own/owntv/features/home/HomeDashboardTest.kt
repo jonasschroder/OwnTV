@@ -47,6 +47,12 @@ class HomeDashboardTest {
         assertNull(nextHomeSection(1, 1, indices))
         assertEquals(6, nextHomeSection(0, 1, dashboardIndices(rows, false, true)))
     }
+    @Test fun premiumDefaultKeepsNowEarlyWithoutOverwritingAnExplicitLegacyOrder() {
+        assertEquals(listOf(HomeSection.FAVORITES, HomeSection.NOW), defaultHomeOrder.drop(3).take(2))
+        val saved = listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.TWITCH, HomeSection.FAVORITES,
+            HomeSection.CONTINUE, HomeSection.NOW, HomeSection.SERIES, HomeSection.MOVIES, HomeSection.APPS)
+        assertEquals(saved, normalizedHomeOrder(saved))
+    }
     @Test fun legacyOrderAddsNewSectionsWithoutResettingExistingOrder() {
         val order = normalizedHomeOrder(listOf(HomeSection.MOVIES, HomeSection.CONTINUE, HomeSection.MOVIES))
         assertEquals(listOf(HomeSection.LIVE, HomeSection.SPORT, HomeSection.TWITCH), order.take(3))

@@ -77,6 +77,40 @@ class ProductionStartupTest {
         assertTrue(app.getSharedPreferences("startup-fixture", Context.MODE_PRIVATE).edit().putBoolean("seeded", true).commit())
     }
 
+    /** Additional fixture, after the original cold-start regression. All records stay local. */
+    @Test fun populatePremiumHomeFixture(): Unit = runBlocking {
+        assertTrue(app.getSharedPreferences("startup-fixture", Context.MODE_PRIVATE).getBoolean("seeded", false))
+        val now = System.currentTimeMillis()
+        val names = listOf("SVT1 HD", "SVT2 SD", "TV3 HD", "TV4 HD", "Kanal 5 HD", "TV6 HD", "TV4 FHD", "TV4 Sport Live 2 HD")
+        val pictures = File(app.filesDir, "synthetic-logos").apply { mkdirs() }
+        for ((index, name) in names.withIndex()) {
+            val file = File(pictures, "$index.png")
+            val bitmap = android.graphics.Bitmap.createBitmap(160, 100, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = android.graphics.Color.WHITE; textSize = 35f
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+            }
+            canvas.drawText(name.substringBefore(" HD").substringBefore(" SD").substringBefore(" FHD").take(6), 8f, 65f, paint)
+            file.outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+            bitmap.recycle()
+            for (source in listOf(101L, 102L)) {
+                val id = source * 1000 + index + 1
+                val original = db.channelDao().getById(id)!!
+                db.channelDao().updateAll(listOf(original.copy(name = name,
+                    logoUrl = if (index == 5) null else android.net.Uri.fromFile(file).toString())))
+                if (source == 101L) db.favoriteDao().add(FavoriteEntity(profileId = 7, mediaType = MediaType.LIVE, itemId = id))
+            }
+            // The persisted global +60 minute offset is deliberately retained and exercised.
+            if (index != 5) db.epgDao().upsertProgrammes(listOf(
+                EpgProgrammeEntity(sourceId = 101, epgChannelId = "missing-guide-${index + 1}",
+                    startMs = now - 75 * 60_000, stopMs = now - 15 * 60_000,
+                    title = if (index == 0) "Syntetiska Nyheterna – fördjupning och intervjuer från hela Sverige" else "Syntetiskt program ${index + 1}"),
+                EpgProgrammeEntity(sourceId = 101, epgChannelId = "missing-guide-${index + 1}",
+                    startMs = now - 15 * 60_000, stopMs = now + 45 * 60_000, title = "Syntetiskt nästa program ${index + 1}")))
+        }
+    }
+
     @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }
 
     @Test fun productionHomeSurvivesPersistedColdStartAndActivityRecreation(): Unit = runBlocking {
@@ -101,11 +135,57 @@ class ProductionStartupTest {
             compose.waitUntil(30_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
             Thread.sleep(8_000) // Real elapsed survival beyond the reported one-second fatal window.
             compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            val premium = InstrumentationRegistry.getArguments().getString("premiumHome") == "true"
+            if (premium) {
+                compose.waitUntil(15_000) {
+                    compose.onAllNodesWithText("Syntetiska Nyheterna", substring = true).fetchSemanticsNodes().isNotEmpty()
+                }
+            }
+            compose.waitForIdle()
+            val drawn = java.util.concurrent.CountDownLatch(1)
+            scenario.onActivity { activity ->
+                activity.window.decorView.postOnAnimation {
+                    activity.window.decorView.postOnAnimation { drawn.countDown() }
+                }
+            }
+            assertTrue("Wait for actual production screenshot frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
+            instrumentation.waitForIdleSync()
             val bitmap = instrumentation.uiAutomation.takeScreenshot()
             val pictures = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
-            File(pictures, "home-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
+            File(pictures, "${if (premium) "premium" else "home"}-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
                 .outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             bitmap.recycle()
+            if (premium) {
+                var moreLabel = ""
+                var guideLabel = ""
+                scenario.onActivity { activity ->
+                    moreLabel = activity.getString(R.string.mintv_v08_more)
+                    guideLabel = activity.getString(R.string.mintv_guide)
+                }
+                fun press(code: Int) { instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+                press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithText(moreLabel).assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(guideLabel).assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(moreLabel).assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { compose.onAllNodes(hasText("SVT1") and isFocused()).fetchSemanticsNodes().size == 1 }
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                // Existing favorite/history ordering is intentionally not changed by this PR.
+                val channelLabels = setOf("SVT2", "TV3", "TV4", "Kanal 5", "TV6", "TV4 Sport Live 2")
+                fun focusedChannel(): String? = compose.onAllNodes(isFocused()).fetchSemanticsNodes()
+                    .flatMap { it.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() } }
+                    .firstOrNull { it.text in channelLabels }?.text
+                compose.waitUntil(5_000) { focusedChannel() != null }
+                val selectedChannel = focusedChannel()
+                press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithText(homeLabel).assertIsDisplayed()
+                press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { focusedChannel() == selectedChannel }
+                press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            }
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)

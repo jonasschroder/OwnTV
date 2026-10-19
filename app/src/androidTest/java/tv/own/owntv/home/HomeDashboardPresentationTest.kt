@@ -211,7 +211,7 @@ class HomeDashboardPresentationTest {
                                     TvText("TV4", size = 80, color = MinTvTeal, bold = true)
                                 }
                             HomeSection.SPORT -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                                Box(Modifier.weight(if (twitch is TwitchState.Live) 1.35f else 1.8f).onFocusChanged { if (it.hasFocus) nav.selected = 3 }.focusGroup()) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
+                                Box(Modifier.weight(1.25f).onFocusChanged { if (it.hasFocus) nav.selected = 3 }.focusGroup()) { HockeyQuickCard(if (hockeyKnown) SportsCatalog.fixture(SportsCatalog.shl,
                                     ShlGame("synthetic", "Färjestad BK", "Luleå HF", now + 3_600_000, null)) else null,
                                     now, if (hockeyKnown) "TV4 Sport Live 2" else null, hockeyKnown, "Färjestad BK",
                                     { hockeyWatches++ }, nav.section(3).testTag("dashboard-hockey"), onDetails = { opened++ }) }
@@ -221,10 +221,9 @@ class HomeDashboardPresentationTest {
                             }
                             HomeSection.FAVORITES, HomeSection.NOW -> {
                                 val index = if (section == HomeSection.NOW) 8 else 1
-                                Column(verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.mpx)) {
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                         TvText(context.getString(if (section == HomeSection.NOW) R.string.mintv_v08_now else R.string.mintv_v08_quick_channels), size = 27, bold = true)
-                                        DashboardAction(context.getString(R.string.mintv_home_live), { opened++ })
                                     }
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.mpx), contentPadding = PaddingValues(5.mpx)) {
                                         itemsIndexed(listOf("SVT1", "SVT2", "TV3", "TV4", "Kanal 5", "TV6")) { i, name ->
@@ -234,7 +233,7 @@ class HomeDashboardPresentationTest {
                                                     tv.own.owntv.features.live.SwedishProgramme(i.toLong(), "Syntetiskt program $i", now - 600_000, now + 1_200_000),
                                                     tv.own.owntv.features.live.SwedishProgramme(i + 100L, "Syntetiskt nästa $i", now + 1_200_000, now + 2_400_000)),
                                                 now, { watched++; fullscreen = true }, Modifier.width(330.mpx).then(if (i == 0) nav.section(index).testTag("dashboard-now") else Modifier))
-                                            else ChannelCard(name, null, null, { watched++; fullscreen = true },
+                                            else HomeChannelTile(name, null, { watched++; fullscreen = true },
                                                 Modifier.width(230.mpx).then(if (i == 0) nav.section(index).testTag("dashboard-quick") else Modifier))
                                         }
                                     }
@@ -409,15 +408,16 @@ class HomeDashboardPresentationTest {
         val tile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
         val screen = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         val scale = screen.width / 1920f
-        assertTrue("Compact hero, measured in mockup pixels: $hero", hero.height / scale in 270f..320f)
+        assertTrue("Compact hero, measured in mockup pixels: $hero", hero.height / scale in 170f..260f)
         assertTrue("Header remains above content", header.bottom <= hero.top)
         assertTrue("Header does not overlap status", header.right <= status.left || header.top >= status.bottom)
-        assertTrue("An entire useful quick tile must be in the initial viewport", tile.bottom <= screen.height && tile.top >= hero.bottom && tile.height >= 100 * scale)
+        assertTrue("An entire useful quick tile must be in the initial viewport", tile.bottom <= screen.height && tile.top >= hero.bottom && tile.height >= 80 * scale)
         val progress = compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo) and hasAnyAncestor(hasTestTag("dashboard-hero"))).fetchSemanticsNode().boundsInRoot
         assertTrue("Hero progress must remain concise", progress.width <= 461 * scale)
         compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
         assertEquals("Disabled preview must never compose its video slot", 0, videoMounts)
         screenshot("v08-review-home-1080p-focused-synthetic.png")
+        screenshot("v09-home-focused-1080p-synthetic.png")
         key(KeyEvent.KEYCODE_DPAD_UP)
         compose.onNodeWithTag("dashboard-version").assertIsFocused()
         screenshot("v08-review-home-1080p-unfocused-hero-synthetic.png")
@@ -466,6 +466,48 @@ class HomeDashboardPresentationTest {
         compose.onNodeWithTag("dashboard-hockey").assertIsFocused()
         assertEquals(0, watched); assertEquals(0, videoMounts)
     }
+    @Test fun compactChannelTilePreservesBroadcastNumberWithoutEllipsisOrExtraHeight() {
+        var plays = 0
+        compose.setContent {
+            MaterialTheme {
+                HomeChannelTile("TV4 Sport Live 2", null, { plays++ }, Modifier.width(230.mpx).testTag("numbered-channel"))
+            }
+        }
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        compose.onNodeWithText("TV4 Sport Live 2", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val text = layouts.single()
+        assertEquals("Long broadcaster names use the existing logo's height", 2, text.lineCount)
+        assertFalse("The identifying channel number must remain visible", text.isLineEllipsized(1))
+        assertFalse(text.hasVisualOverflow)
+        val card = compose.onNodeWithTag("numbered-channel").fetchSemanticsNode().boundsInRoot
+        val pixelsPerMpx = compose.activity.resources.displayMetrics.density / 1.8f
+        assertTrue("A two-line channel name must remain compact", card.height / pixelsPerMpx <= 100)
+        assertEquals(0, plays)
+        focus("numbered-channel"); key(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, plays)
+    }
+    @Test fun premiumDefaultRowsExposeNowEarlyAndKeepChannelFocusAfterPlaybackReturn() {
+        rows = defaultHomeOrder.filter { it != HomeSection.TWITCH }
+        mount()
+        val screen = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        val nowTile = compose.onNodeWithTag("dashboard-now").fetchSemanticsNode().boundsInRoot
+        assertTrue("A useful Now card must be visible before scrolling at 1080p: $nowTile", nowTile.top < screen.height && nowTile.bottom <= screen.height)
+        compose.onNodeWithTag("dashboard-watch").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("dashboard-quick").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.onNodeWithTag("dashboard-fullscreen").assertIsDisplayed()
+        key(KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithTag("dashboard-quick").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("dashboard-now").assertIsFocused()
+        key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithTag("dashboard-now").assertIsFocused()
+        assertEquals(2, watched)
+        assertEquals("Only explicit OK may play", 0, videoMounts)
+        screenshot("v09-now-focused-1080p-synthetic.png")
+    }
     @Test fun real720pEmulatorLayoutRetainsReadableHeroAndRemoteNavigation() {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         // Temporary display mode on the explicitly disposable emulator only; never a physical app.
@@ -481,6 +523,7 @@ class HomeDashboardPresentationTest {
             assertEquals(1280, shot.width); assertEquals(720, shot.height)
             screenshot("v08-home-720p-synthetic.png")
             screenshot("v08-review-home-720p-focused-synthetic.png")
+            screenshot("v09-home-focused-720p-synthetic.png")
             compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
             val tile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
             assertTrue("Quick tile remains visible at 720p", tile.bottom <= 720)
@@ -492,7 +535,7 @@ class HomeDashboardPresentationTest {
             compose.onNodeWithTag("dashboard-watch").assertIsFocused()
             compose.onNodeWithTag("dashboard-quick").assertIsDisplayed()
             val longTile = compose.onNodeWithTag("dashboard-quick").fetchSemanticsNode().boundsInRoot
-            assertTrue("Long text must retain a complete quick tile at 720p", longTile.bottom <= 720 && longTile.height >= 66)
+            assertTrue("Long text must retain a complete quick tile at 720p", longTile.bottom <= 720 && longTile.height >= 53)
             screenshot("v08-review-home-720p-long-text-synthetic.png")
             key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFocused("TV-guide")

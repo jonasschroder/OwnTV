@@ -13,6 +13,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -51,52 +52,50 @@ internal fun HomeLiveHero(channelName: String?, logo: String?, programme: XtEpgE
     val moreLabel = stringResource(R.string.mintv_v08_more)
     val closeLabel = stringResource(R.string.mintv_close)
     val detailsLabel = channelName ?: stringResource(R.string.mintv_v08_no_history)
-    Row(modifier.fillMaxWidth().focusGroup().clip(RoundedCornerShape(20.mpx))
-        .background(Brush.horizontalGradient(listOf(Color(0xFF203743), Color(0xFF16252F))))
-        .padding(horizontal = 26.mpx, vertical = 20.mpx).heightIn(min = 254.mpx),
-        horizontalArrangement = Arrangement.spacedBy(28.mpx), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
-                logo?.let { AsyncImage(it, null, contentScale = ContentScale.Fit, modifier = Modifier.size(32.mpx)) }
-                TvText(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_last_watched), size = 14, color = MinTvMuted, lines = 1)
-                TvText(detailsLabel, Modifier.weight(1f, fill = false), size = 23, bold = true, lines = 1)
-                if (channelName != null) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)
-            }
-            TvText(current?.title ?: stringResource(if (channelName == null) R.string.mintv_v08_start_live else R.string.mintv_v08_empty_now),
-                size = 34, bold = true, lines = 2)
-            current?.let {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
-                    TvText(homeProgrammeTime(it.startMs, it.stopMs), size = 18, color = MinTvMuted, lines = 1)
-                    val progress = ((now.toDouble() - it.startMs) / (it.stopMs.toDouble() - it.startMs)).toFloat()
-                    ProgrammeProgress(progress, Modifier.weight(1f, fill = false).widthIn(max = 460.mpx).progressSemantics(progress))
+    BoxWithConstraints(modifier.fillMaxWidth().focusGroup().clip(RoundedCornerShape(HomeRadius))
+        .background(Brush.horizontalGradient(listOf(Color(0xFF172C3D), Color(0xFF101B2A), MinTvNavy)))) {
+        val compact = maxWidth < 1200.mpx
+        // Reuse the channel's existing artwork. No programme artwork exists in the stored EPG
+        // projection; do not manufacture a poster or fetch a new image source for the hero.
+        if (!showVideo && logo != null) AsyncImage(logo, null, contentScale = ContentScale.Fit,
+            modifier = Modifier.align(Alignment.CenterEnd).width(if (compact) 220.mpx else 340.mpx)
+                .height(180.mpx).padding(24.mpx).graphicsLayer { alpha = .12f })
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.mpx, vertical = if (compact) 16.mpx else 22.mpx),
+            horizontalArrangement = Arrangement.spacedBy(26.mpx), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.mpx)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                    if (logo != null) AsyncImage(logo, null, contentScale = ContentScale.Fit, modifier = Modifier.size(32.mpx))
+                    TvText(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_last_watched), size = 14, color = MinTvMuted, lines = 1)
+                    TvText(detailsLabel, Modifier.weight(1f, fill = false), size = 22, bold = true, lines = 1)
+                    if (channelName != null) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)
+                }
+                TvText(current?.title ?: stringResource(if (channelName == null) R.string.mintv_v08_start_live else R.string.mintv_v08_empty_now),
+                    size = if (compact) 29 else 36, bold = true, lines = 2)
+                current?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+                        TvText(homeProgrammeTime(it.startMs, it.stopMs), size = 17, color = MinTvMuted, lines = 1)
+                        val progress = ((now.toDouble() - it.startMs) / (it.stopMs.toDouble() - it.startMs)).toFloat().coerceIn(0f, 1f)
+                        ProgrammeProgress(progress, Modifier.weight(1f, fill = false).widthIn(max = 360.mpx).progressSemantics(progress))
+                    }
+                }
+                nextTitle?.let { TvText(stringResource(R.string.mintv_next, it), size = 17, color = MinTvMuted, lines = 1) }
+                Row(Modifier.padding(top = 5.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    DashboardAction(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_continue_live),
+                        onWatch, firstAction, primary = true, compact = compact)
+                    DashboardAction(if (channelName == null) guideLabel else stringResource(R.string.mintv_home_live),
+                        if (channelName == null) onGuide else onLive, compact = true)
+                    DashboardAction(moreLabel, { menu = true }, Modifier.focusRequester(more), compact = true)
                 }
             }
-            if (showVideo) nextTitle?.let { TvText(stringResource(R.string.mintv_next, it), size = 18, color = MinTvMuted, lines = 1) }
-            Row(Modifier.padding(top = 8.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
-                DashboardAction(stringResource(if (channelName == null) R.string.mintv_home_live else R.string.mintv_v08_continue_live),
-                    onWatch, firstAction, primary = true)
-                DashboardAction(if (channelName == null) guideLabel else stringResource(R.string.mintv_home_live),
-                    if (channelName == null) onGuide else onLive, compact = true)
-                DashboardAction(moreLabel, { menu = true }, Modifier.focusRequester(more), compact = true)
-            }
-        }
-        if (showVideo) Box(Modifier.width(436.mpx).aspectRatio(16f / 9f).clip(RoundedCornerShape(14.mpx))
-            .background(MinTvNavy), contentAlignment = Alignment.Center) {
-            video()
-            status?.let {
-                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, MinTvNavy))).padding(12.mpx)) {
-                    TvText(it, size = 15, color = MinTvMuted, lines = 1)
-                }
-            }
-        }
-        else nextTitle?.let { next ->
-            // Actual stored programme metadata replaces the disabled player area. No new artwork read.
-            Row(Modifier.width(360.mpx), horizontalArrangement = Arrangement.spacedBy(24.mpx), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(1.mpx).height(112.mpx).background(MinTvMuted.copy(alpha = .18f)))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
-                    TvText(stringResource(R.string.mintv_v08_up_next), size = 16, color = MinTvMuted, lines = 1)
-                    TvText(next, size = 25, bold = true, lines = 3)
+            // Only the existing, active preview engine may populate this slot.
+            if (showVideo) Box(Modifier.width(if (compact) 320.mpx else 400.mpx).aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(12.mpx)).background(MinTvNavy), contentAlignment = Alignment.Center) {
+                video()
+                status?.let {
+                    Box(Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, MinTvNavy))).padding(12.mpx)) {
+                        TvText(it, size = 15, color = MinTvMuted, lines = 1)
+                    }
                 }
             }
         }

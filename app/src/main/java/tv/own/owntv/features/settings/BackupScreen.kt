@@ -218,7 +218,7 @@ fun BackupScreen(
                     )
                     Text(
                         listOfNotNull(
-                            tv.own.owntv.ui.format.formatBestDateTime(context, "dMMMyyyyjm", last.at),
+                            tv.own.owntv.ui.format.formatBestDateTime(context, "dMMMyyyy", last.at),
                             android.text.format.Formatter.formatShortFileSize(context, last.bytes),
                             if (last.encrypted) stringResource(R.string.more_pane_encrypted) else null,
                             last.path.takeIf { it.isNotBlank() },

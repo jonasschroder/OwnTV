@@ -616,7 +616,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
                             stringResource(if (e.live) R.string.settings_live else R.string.settings_vod),
                             e.mediaSpec()?.displayText() ?: e.spec,
                         ).joinToString(sep),
-                        trailing = { Text(formatBestDateTime(context, "dMMMjm", e.atMs), style = stageText(17, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailing = { Text(formatBestDateTime(context, "dMMM", e.atMs), style = stageText(17, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         extra = { focused ->
                             if (focused) {
                                 e.raw?.let { Text(it, style = stageText(15, 500), color = StageColors.Dim, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.mpx)) }

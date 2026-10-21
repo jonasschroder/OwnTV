@@ -1,0 +1,120 @@
+{
+  "renderer": "Codex in-app browser screenshot API",
+  "data": "synthetic design only; no owner IPTV data",
+  "images": [
+    {
+      "file": "home-cinema-active-series.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "2f46217d6c181d02296ef417d5b912dbcdd2bca39b3f058145f48ae7ce9e44ec"
+    },
+    {
+      "file": "home-cinema-no-epg.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "3deee8274e9cd952ca5c4a5b1b214ef3a587c32370720d05ac556ade93d1dc4e"
+    },
+    {
+      "file": "home-cinema-no-history.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "413a6e6f0c5414b632d9c9331eede39be7aba12d31beeba2d8eefb3ee36f3b20"
+    },
+    {
+      "file": "home-cinema-no-progress.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "5258f38d8f37013144c8260635ef721c621bf5c677e3e765d2aae99a51e034de"
+    },
+    {
+      "file": "home-cinema-six-cards.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "4c4e26965de42b2358453ebe5439bba46228cb1e44b1139a44e6fbb05cb1ead3"
+    },
+    {
+      "file": "home-cinema.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "4ad3aecb50f59e37e5922c6667ffbf5c51726c9df452e2d3793cd7bc180ca980"
+    },
+    {
+      "file": "home-compare.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "265ae3b55b1c46c363bd756e5691d25ed1e011194e8004c90ec10baa20ca0a85"
+    },
+    {
+      "file": "home-split.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e17d7a29cc00bb6fe605c54cdcb309bf33b4324e882f491ff899dd94e063ee24"
+    },
+    {
+      "file": "library.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "46afb2b0ca85325291336e7f96361fc1a5515a2f24a292777f24fff983732213"
+    },
+    {
+      "file": "previous/home-cinema.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "ad5e972cb1af597b875b5830367ea219e94f567aa121e9844cee8dfdb90ae403"
+    },
+    {
+      "file": "previous/home-split.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "19e4028f593ef4974d103957e5e95732c55a13ba529fba4ad03bf0b343f2fe58"
+    },
+    {
+      "file": "profile.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "38b86651997fbe1123fdb39247c7df077193562eb3fa2382248cd8b37f635150"
+    },
+    {
+      "file": "quality-picker.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "808858bf2bf94148bb04fb767b54e5039ca4a3cfa681f9be7132820d6fbec1c4"
+    },
+    {
+      "file": "sport-offline.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "d2233379dbad1d43c6bc87d6dcf6763309b5721bb0891e30304d8ba5135545b0"
+    },
+    {
+      "file": "sport.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "3f5296f4932e02b60021c12ba2a1c39a378e82b20ce2260fa1a5f632a388438a"
+    },
+    {
+      "file": "tv-empty.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "1a39ffd3d040796dc9478e8591396834666ae0c4814ac025cd9c0332244958de"
+    },
+    {
+      "file": "tv-guide.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e243fbdad46b18d744b08364680d4d4ea35c82ff78fe11e8c7e706a44fbc2df6"
+    },
+    {
+      "file": "tv-no-epg.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "205866b5137bfbaf8a01b403f350abf02e610f563e4c6628af541a54c9aa8020"
+    },
+    {
+      "file": "tv.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "86ad8a95c5b8d7af148afaaa6e4bace7dc150c846b4a8f647a86960efde7209e"
+    }
+  ]
+}

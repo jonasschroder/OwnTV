@@ -24,6 +24,7 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -269,8 +270,9 @@ fun EpgScreen(
     fun rowFocus(i: Int): FocusRequester = rowRequesters.getOrPut(i) { FocusRequester() }
     var focusedRow by remember { mutableIntStateOf(0) }
     var focusedChannelId by remember { mutableStateOf<Long?>(null) }
-    val focusedIndex = remember(state.channels, focusedChannelId, focusedRow) {
-        guideRowIndex(state.channels, focusedChannelId, focusedRow)
+    // Entry hooks and popup-return callbacks must read the latest index, not capture an old value.
+    val focusedIndex by remember {
+        derivedStateOf { guideRowIndex(state.channels, focusedChannelId, focusedRow) }
     }
     var gridHasFocus by remember { mutableStateOf(false) }
     val cursorTime = guideTime.cursor

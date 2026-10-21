@@ -1415,6 +1415,10 @@
 12	empty	app/src/main/java/tv/own/owntv/features/setup/SetupViewModel.kt	\0
 5	empty	app/src/main/java/tv/own/owntv/features/setup/SetupWizard.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/setup/SetupWizard.kt	+
+1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeContentNavigation.kt	${profileId}:${section.name}:${presentation?.name.orEmpty()}
+1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	nav-context-search
+1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	sub-${route.name}
+1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	top-${destination.name}
 4	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	\0
 2	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	Action
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	All Channels

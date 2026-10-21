@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_nav_home">Hem</string>
+    <string name="mintv_nav_tv">TV</string>
+    <string name="mintv_nav_sport">Sport</string>
+    <string name="mintv_nav_vod">Film &amp; serier</string>
+    <string name="mintv_nav_profile">Profil &amp; inställningar</string>
+    <string name="mintv_nav_unavailable">Den här sidan är dold eller saknar tillgängligt innehåll. Dina sparade inställningar är oförändrade.</string>
+    <string name="mintv_nav_top">Toppnavigation</string>
+    <string name="mintv_nav_library">Bibliotek &amp; profil</string>
+</resources>

@@ -455,7 +455,7 @@ open class MainActivity : ComponentActivity() {
                             shellReady -> OwnTVShell(
                                 selectedSection = selectedSection,
                                 visibleSections = visibleSections,
-                                onSelectSection = viewModel::selectSection,
+                                onSelectLegacySection = viewModel::selectSection,
                                 themeMode = themeMode,
                                 uiZoomPercent = uiZoomPercent,
                                 onSetZoom = viewModel::setUiZoom,

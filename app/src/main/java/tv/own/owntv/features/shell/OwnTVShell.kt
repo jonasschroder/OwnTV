@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -123,7 +127,7 @@ private enum class PlayerMode { NONE, FULLSCREEN, MINI, AUDIO }
 fun OwnTVShell(
     selectedSection: MainSection,
     visibleSections: Set<MainSection>,
-    onSelectSection: (MainSection) -> Unit,
+    onSelectLegacySection: (MainSection) -> Unit,
     themeMode: ThemeMode,
     uiZoomPercent: Int,
     onSetZoom: (Int) -> Unit,
@@ -152,6 +156,16 @@ fun OwnTVShell(
     onSwitchProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var presentation by rememberSaveable(activeProfileId) { mutableStateOf<TopDestination?>(null) }
+    var lastVod by rememberSaveable(activeProfileId) { mutableStateOf(MainSection.MOVIES) }
+    var searchParent by rememberSaveable(activeProfileId) { mutableStateOf(TopDestination.TV) }
+    val primary = presentation ?: if (selectedSection == MainSection.SEARCH) searchParent else topDestination(selectedSection)
+    val onSelectSection: (MainSection) -> Unit = { section ->
+        if (section == MainSection.SEARCH && selectedSection != MainSection.SEARCH) searchParent = primary
+        if (section == MainSection.MOVIES || section == MainSection.SERIES) lastVod = section
+        presentation = null
+        onSelectLegacySection(section)
+    }
     val colors = OwnTVTheme.colors
     val noSourceLabel = stringResource(R.string.shell_no_source)
     val homeChannelUnavailable = stringResource(R.string.mintv_channel_unavailable)
@@ -166,9 +180,8 @@ fun OwnTVShell(
     val scope = rememberCoroutineScope()
     val sidebarFocus = remember { FocusRequester() }
     val contentFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val contentLtr = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Ltr
     val homeFirstRowFocus = remember { FocusRequester() }
-    val homeStateHolder = rememberSaveableStateHolder()
+    val pageStateHolder = rememberSaveableStateHolder()
     var homeTuneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var focusedLayer by remember { mutableStateOf(ShellLayer.SIDEBAR) }
     var showExit by remember { mutableStateOf(false) }
@@ -198,10 +211,14 @@ fun OwnTVShell(
     // Docked mini-player size (% of screen width) + position, configurable in Settings and from the
     // mini-player's own controls. Read straight from settings so both entry points stay in sync.
     val settingsRepo = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+    val nativeMenuMode by settingsRepo.navMenuMode.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavMenuMode.STATIC)
+    val nativeHidden by settingsRepo.navMenuHidden.collectAsStateWithLifecycle(initialValue = emptySet())
+    val nativeVisible = visibleSections - if (nativeMenuMode == tv.own.owntv.core.settings.SettingsRepository.NavMenuMode.STATIC)
+        MainSection.entries.filter { it.name in nativeHidden }.toSet() else emptySet()
     val remoteShortcutsEnabled by settingsRepo.chNavEnabled.collectAsStateWithLifecycle(initialValue = true)
     val clockColors by settingsRepo.clockColors.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.ClockColors())
     val statusDensity = LocalDensity.current
-    var homeStatusHeight by remember { mutableStateOf(120.mpx) }
+    var homeStatusHeight by remember(activeProfileId) { mutableStateOf(120.mpx) }
     var homeStatusWidth by remember { mutableStateOf(760.mpx) }
     val remoteShortcutBindings by settingsRepo.remoteShortcutBindings.collectAsStateWithLifecycle(
         initialValue = RemoteShortcutBindings.defaults,
@@ -220,26 +237,16 @@ fun OwnTVShell(
     // The browse UI is one focus group with a restorer, so handing focus back to it after the mini
     // player returns to the exact control the user left rather than to the top of the screen.
     val shellContentFocus = remember { FocusRequester() }
-    // Stage navigation (P1, P1b): where the rail sits, what it shows, its length, the floating hide delay.
-    val navStyle by settingsRepo.navStyle.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED)
-    val navSize by settingsRepo.navSize.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT)
-    val navWiden by settingsRepo.navWiden.collectAsStateWithLifecycle(initialValue = null)
-    val navLength by settingsRepo.navLength.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavLength.FIT)
-    val navHideAfterMs by settingsRepo.navHideAfterMs.collectAsStateWithLifecycle(
-        initialValue = tv.own.owntv.core.settings.SettingsRepository.NavHideAfter.DEFAULT_MS,
-    )
-    val railVm = org.koin.androidx.compose.koinViewModel<RailCountsViewModel>()
-    val railCounts by railVm.counts.collectAsStateWithLifecycle()
-    val railDetails by railVm.details.collectAsStateWithLifecycle()
     // Where ▶ out of the Stage rail returns to: the content, exactly as it was left.
     val contentAreaFocus = remember { FocusRequester() }
-    var homeEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    var sportEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    var homeEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
     var homeSetupOpen by rememberSaveable(activeProfileId) { mutableStateOf(false) }
     // The guide's entry hook: the TV Guide, or Live TV in Guide view (null while Live TV shows its list).
-    var guideEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
-    var vodEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
-    var downloadsEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
-    var moreEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    var guideEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    var vodEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    var downloadsEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    var moreEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
     // More › Settings opens today's Settings at a group, or with its search open (until P10 redraws it).
     var minTvSettingsStart by remember { mutableStateOf<tv.own.owntv.features.home.MinTvSettingsDestination?>(null) }
     var settingsFromHome by rememberSaveable { mutableStateOf(false) }
@@ -601,41 +608,7 @@ fun OwnTVShell(
     // keys act on while the window is docked.
     val dockedEngine = if (liveOnExo) liveVm.previewEngine else mpvEngine
     val dockedPlaying by dockedEngine.isPlaying.collectAsStateWithLifecycle()
-    val nowPlayingRail = when (playerMode) {
-        PlayerMode.MINI, PlayerMode.AUDIO -> tv.own.owntv.features.shell.components.NowPlayingRail(
-            // Only a live channel has a logo to show; a movie or an episode falls back to the play mark.
-            logoUrl = if (zapSource == MainSection.LIVE_TV) previewChannel?.displayLogoUrl else null,
-            audioMode = playerMode == PlayerMode.AUDIO,
-            playing = dockedPlaying,
-        )
-        else -> null
-    }
-    // Auto-hide: once focus has been in the content for the chosen delay, the capsule slides away.
-    var railIdleHidden by remember { mutableStateOf(false) }
-    // Focus on a top-right pill (reached from the rail) is not "in the rail": the rail closes, so its
-    // scrim never covers the pill that holds focus.
     var clusterFocused by remember { mutableStateOf(false) }
-    val railFocused = focusedLayer == ShellLayer.SIDEBAR && !clusterFocused
-    LaunchedEffect(railFocused, navStyle, navHideAfterMs) {
-        railIdleHidden = false
-        if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.FLOATING && !railFocused) {
-            kotlinx.coroutines.delay(navHideAfterMs.toLong())
-            railIdleHidden = true
-        }
-    }
-    // Docked always shows its Size; Floating rests as the capsule, opens at its Size while it holds
-    // focus and hides once focus has been in the content for the delay. Compact stays the capsule —
-    // except Docked + Compact with Widen on focus, which opens at that size over the content (the content
-    // keeps the compact room, so nothing behind it moves).
-    val widenDocked = navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED && navSize == tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT && navWiden != null && railFocused
-    val railSize = if (widenDocked) navWiden ?: navSize else navSize
-    val railState = when {
-        widenDocked -> tv.own.owntv.features.shell.components.RailState.OPEN
-        navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED -> tv.own.owntv.features.shell.components.RailState.PINNED
-        railFocused -> tv.own.owntv.features.shell.components.RailState.OPEN
-        railIdleHidden -> tv.own.owntv.features.shell.components.RailState.HIDDEN
-        else -> tv.own.owntv.features.shell.components.RailState.CAPSULE
-    }
     // The playlist chip reflects the active filter: "All playlists" when none is chosen (id <= 0), the
     // chosen playlist's name otherwise. With a single playlist there's nothing to switch, so just its name.
     val playlistLabel = when {
@@ -735,7 +708,7 @@ fun OwnTVShell(
         )
     }
 
-    LaunchedEffect(sidebarFocus) {
+    LaunchedEffect(sidebarFocus, activeProfileId) {
         tv.own.owntv.core.util.Perf.stamp("shell-composed")
         withFrameNanos { }
         runCatching { sidebarFocus.requestFocus() }
@@ -798,13 +771,13 @@ fun OwnTVShell(
     // too (but never while fullscreen/mini plays).
     // The preview runs on the ExoPlayer live engine, not mpv: stopping only mpv here (as when the preview
     // was mpv) left it decoding and holding a provider connection after a shortcut or deep link out.
-    LaunchedEffect(selectedSection, playerMode) {
-        if (selectedSection != MainSection.HOME && selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopPreview()
-        if (selectedSection != MainSection.HOME || playerMode != PlayerMode.NONE) homeVm.stopPreview()
+    LaunchedEffect(selectedSection, presentation, playerMode) {
+        if ((selectedSection != MainSection.HOME || presentation != null) && selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopPreview()
+        if (selectedSection != MainSection.HOME || presentation != null || playerMode != PlayerMode.NONE) homeVm.stopPreview()
     }
 
-    LaunchedEffect(selectedSection, playerMode, activeProfileId, activePlaylistId) {
-        if (selectedSection == MainSection.HOME && playerMode == PlayerMode.NONE && (activeProfileId?.let { it >= 0 } == true)) {
+    LaunchedEffect(selectedSection, presentation, playerMode, activeProfileId, activePlaylistId) {
+        if (selectedSection == MainSection.HOME && presentation == null && playerMode == PlayerMode.NONE && (activeProfileId?.let { it >= 0 } == true)) {
             homeVm.refresh(activeProfileId)
         }
     }
@@ -839,6 +812,10 @@ fun OwnTVShell(
             selectedSection == MainSection.SETTINGS -> { restoreFocus = true; onSelectSection(if (settingsFromHome) MainSection.HOME else MainSection.MORE) }
             // Reached from a Search result: Back returns to Search once, its query, tab and row kept.
             searchReturn == selectedSection && focusedLayer != ShellLayer.SIDEBAR -> returnToSearch()
+            nativeBack(focusedLayer == ShellLayer.SIDEBAR, primary) == NativeBack.HOME -> {
+                onSelectSection(MainSection.HOME)
+                scope.launch { withFrameNanos { }; sidebarFocus.requestFocus() }
+            }
             focusedLayer == ShellLayer.SIDEBAR -> showExit = true
             else -> runCatching { sidebarFocus.requestFocus() }
         }
@@ -871,6 +848,7 @@ fun OwnTVShell(
     }
 
     CompositionLocalProvider(
+        LocalNativeTopNavigation provides true,
         LocalContentScrolled provides contentScrolled,
         LocalRemoteShortcuts provides remoteShortcutEnvironment,
         tv.own.owntv.features.shell.components.LocalClockWeather provides (weatherInfo to weatherFahrenheit),
@@ -1017,6 +995,35 @@ fun OwnTVShell(
                   )
               }
           } else null
+          val enterNativeContent: () -> Unit = {
+              restoreFocus = true
+              val hook = if (presentation == TopDestination.SPORT) sportEntry else when (selectedSection) {
+                  MainSection.HOME -> homeEntry
+                  MainSection.EPG, MainSection.LIVE_TV -> guideEntry
+                  MainSection.MOVIES, MainSection.SERIES -> vodEntry
+                  MainSection.DOWNLOADS -> downloadsEntry
+                  MainSection.MORE -> moreEntry
+                  else -> null
+              }
+              if (hook?.invoke() != true && !runCatching { contentAreaFocus.requestFocus() }.getOrDefault(false)) {
+                  restoreFocus = false
+                  runCatching { sidebarFocus.requestFocus() }
+              }
+          }
+          NativeTopNavigation(primary, sidebarFocus, { destination ->
+              val target = nativeEntry(destination, nativeVisible, lastVod)
+              selectFromNav(target ?: MainSection.MORE)
+              presentation = destination.takeIf { it == TopDestination.SPORT || target == null }
+          }, enterNativeContent, { focusedLayer = ShellLayer.SIDEBAR }, Modifier)
+          if (primary in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) {
+              NativeSubNavigation(nativeRoutes(primary, nativeVisible), selectedSection, { selectFromNav(it) },
+                  if (primary == TopDestination.PROFILE) null else ({ selectFromNav(MainSection.SEARCH) }),
+                  { runCatching { sidebarFocus.requestFocus() } }, enterNativeContent,
+                  { focusedLayer = ShellLayer.SIDEBAR }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO })
+          } else androidx.compose.foundation.layout.Row(Modifier.height(64.mpx).padding(horizontal = 40.mpx)) {
+              if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
+                  tv.own.owntv.ui.stage.StagePill(stringResource(R.string.shell_now_playing), enterNowPlaying)
+          }
           // Screens already redrawn for Stage own the whole canvas.
           val stageScreen = selectedSection in StageSections
           Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -1065,32 +1072,35 @@ fun OwnTVShell(
                             // yet redrawn for Stage keep this top inset until their phase gives them the full canvas.
                             Modifier
                                 .padding(
-                                    start = when {
-                                        navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED ->
-                                            tv.own.owntv.features.shell.components.railDockedReserve(navSize)
-                                        stageScreen -> 0.dp
-                                        else -> 6.dp
-                                    },
+                                    start = 0.dp,
                                     top = if (stageScreen) 0.dp else tv.own.owntv.features.shell.components.StageContentTop,
                                 )
-                                // ◀ with nothing further left in the content goes back to the rail, however the
-                                // content was entered. The D-pad search alone missed it whenever the open rail
-                                // overlapped the content's left edge, which left Back as the only way out.
-                                .onKeyEvent { e ->
-                                    val back = if (contentLtr) Key.DirectionLeft else Key.DirectionRight
-                                    if (e.key != back || e.type != KeyEventType.KeyDown) return@onKeyEvent false
-                                    if (!contentFocusManager.moveFocus(if (contentLtr) androidx.compose.ui.focus.FocusDirection.Left else androidx.compose.ui.focus.FocusDirection.Right)) {
-                                        runCatching { sidebarFocus.requestFocus() }
-                                    }
-                                    true
-                                }
+                                .nativeContentNavigation(sidebarFocus, contentFocusManager)
                                 .focusRequester(contentAreaFocus)
                                 .focusRestorer()
                                 .focusGroup(),
                         )
                         .then(if (stageScreen) Modifier else Modifier.padding(end = 6.dp, bottom = 6.dp)),
                 ) {
+                    pageStateHolder.SaveableStateProvider(nativePageKey(activeProfileId, selectedSection, presentation)) {
                     when {
+                        presentation == TopDestination.SPORT -> tv.own.owntv.features.home.NativeSportScreen(
+                            liveVm, activeProfileId, playerMode == PlayerMode.NONE,
+                            emptyList(), // companion resolves profile-owned channels through its existing bounded readers
+                            { channel, favorites -> scope.launch {
+                                when (liveVm.playHomeChannel(channel.id, favorites)) {
+                                    LiveViewModel.HomePlayback.IN_APP -> openFullscreen(MainSection.LIVE_TV)
+                                    LiveViewModel.HomePlayback.EXTERNAL -> Unit
+                                    LiveViewModel.HomePlayback.UNAVAILABLE -> localSubToast.show(homeChannelUnavailable)
+                                }
+                            } },
+                            { openHomeSources = true; onSelectSection(MainSection.SETTINGS) },
+                            { settingsFromHome = false; minTvSettingsStart = it; onSelectSection(MainSection.SETTINGS) },
+                            { sportEntry = it }, { focusedLayer = ShellLayer.CONTENT }, Modifier.fillMaxSize())
+                        presentation != null -> Column(Modifier.padding(64.mpx)) {
+                            Text(stringResource(R.string.mintv_nav_unavailable), style = tv.own.owntv.ui.theme.stageText(28, 600))
+                            tv.own.owntv.ui.stage.StagePill(stringResource(R.string.settings_title), { onSelectSection(MainSection.SETTINGS) })
+                        }
                         // Plan Z — the hub the rail's last item now opens. Settings is a row in it.
                         selectedSection == MainSection.MORE -> tv.own.owntv.features.more.MoreScreen(
                             profileName = profileName.ifBlank { stringResource(R.string.common_own_tv_user) },
@@ -1143,7 +1153,7 @@ fun OwnTVShell(
                                 .focusGroup(),
                         )
 
-                        selectedSection == MainSection.HOME -> homeStateHolder.SaveableStateProvider(MainSection.HOME) {
+                        selectedSection == MainSection.HOME -> {
                             if (homeSetupOpen && activeProfileId != null) tv.own.owntv.features.setup.Onboarding(
                                 firstRun = false, minTvProfileId = activeProfileId,
                                 onDone = { id ->
@@ -1194,12 +1204,7 @@ fun OwnTVShell(
                             onRestored = { restoreFocus = false },
                             firstRowFocusRequester = homeFirstRowFocus,
                             onEntryHook = { homeEntry = it },
-                            contentStart = when {
-                                widenDocked -> 64.mpx + tv.own.owntv.features.shell.components.railDockedReserve(railSize) - tv.own.owntv.features.shell.components.railDockedReserve(navSize)
-                                navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED -> 64.mpx
-                                railFocused -> tv.own.owntv.features.shell.components.railDockedReserve(railSize) + 24.mpx
-                                else -> 150.mpx
-                            },
+                            contentStart = 64.mpx,
                             reservedTop = homeStatusHeight + 24.mpx,
                             statusWidth = homeStatusWidth,
                             modifier = Modifier.fillMaxSize(),
@@ -1297,7 +1302,7 @@ fun OwnTVShell(
                             restoreFocus = restoreFocus,
                             onRestored = { restoreFocus = false },
                             onEntryHook = { downloadsEntry = it },
-                            contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED) 64.mpx else 150.mpx,
+                            contentStart = 64.mpx,
                             modifier = Modifier.fillMaxSize(),
                         )
 
@@ -1349,6 +1354,7 @@ fun OwnTVShell(
                             }
                         }
                     }
+                    }
                 }
             }
           }
@@ -1387,35 +1393,7 @@ fun OwnTVShell(
                 }
                     .onFocusChanged { clusterFocused = it.hasFocus }.focusGroup(),
             )
-            tv.own.owntv.features.shell.components.StageRail(
-                state = railState,
-                size = railSize,
-                length = navLength,
-                selected = selectedSection,
-                visibleSections = visibleSections,
-                onSelect = selectFromNav,
-                count = { section -> railCounts[section]?.takeIf { it > 0 } },
-                detail = { section -> railDetail(section, railDetails) },
-                profileName = profileName.ifBlank { stringResource(R.string.common_own_tv_user) },
-                profileLine = stringResource(R.string.shell_rail_profile_line, playlistLabel),
-                onSwitchProfile = onSwitchProfile,
-                onPickAvatar = { showAvatarPicker = true },
-                avatarId = avatarId,
-                avatarPath = avatarPath,
-                selectedItemFocusRequester = sidebarFocus,
-                contentFocusRequester = contentAreaFocus,
-                enterContent = when (selectedSection) {
-                    MainSection.HOME -> homeEntry
-                    MainSection.EPG, MainSection.LIVE_TV -> guideEntry
-                    MainSection.MOVIES, MainSection.SERIES -> vodEntry
-                    MainSection.DOWNLOADS -> downloadsEntry
-                    MainSection.MORE -> moreEntry
-                    else -> null
-                },
-                onFocused = { focusedLayer = ShellLayer.SIDEBAR },
-                nowPlaying = nowPlayingRail,
-                onNowPlaying = enterNowPlaying,
-            )
+
           }
         }
         // The solid-mode wizard aura is deliberately drawn after the opaque browse surfaces so it

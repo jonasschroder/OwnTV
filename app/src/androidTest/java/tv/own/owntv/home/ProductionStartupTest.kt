@@ -186,6 +186,44 @@ class ProductionStartupTest {
                 press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
                 compose.onNodeWithText(homeLabel).assertIsDisplayed()
             }
+            if (premium) {
+                // Real application owners and persisted data, not a replacement setContent fixture.
+                fun nativeCapture(name: String) {
+                    compose.waitForIdle(); instrumentation.waitForIdleSync()
+                    val native = instrumentation.uiAutomation.takeScreenshot()
+                    File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
+                        assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
+                    }
+                    native.recycle()
+                }
+                compose.onNodeWithTag("top-HOME").assertExists()
+                nativeCapture("home")
+                compose.onNodeWithTag("top-TV").performClick()
+                compose.onNodeWithTag("top-TV").assertIsSelected()
+                compose.onNodeWithTag("sub-LIVE_TV").assertExists()
+                nativeCapture("tv")
+                compose.onNodeWithTag("sub-EPG").performClick()
+                compose.onNodeWithTag("sub-EPG").assertIsSelected()
+                nativeCapture("guide")
+                compose.onNodeWithTag("top-SPORT").performClick()
+                compose.onNodeWithTag("top-SPORT").assertIsSelected()
+                nativeCapture("sport")
+                compose.onNodeWithTag("top-VOD").performClick()
+                compose.onNodeWithTag("sub-MOVIES").assertExists()
+                compose.onNodeWithTag("sub-SERIES").performClick()
+                compose.onNodeWithTag("sub-SERIES").assertIsSelected()
+                nativeCapture("series")
+                compose.onNodeWithTag("top-PROFILE").performClick()
+                compose.onNodeWithTag("sub-MORE").assertExists()
+                nativeCapture("profile")
+                compose.onNodeWithTag("sub-DOWNLOADS").performClick()
+                compose.onNodeWithTag("sub-DOWNLOADS").assertIsSelected()
+                nativeCapture("downloads")
+                compose.onNodeWithTag("sub-SETTINGS").performClick()
+                compose.onNodeWithTag("sub-SETTINGS").assertIsSelected()
+                nativeCapture("settings")
+                compose.onNodeWithTag("top-HOME").performClick()
+            }
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)

@@ -184,6 +184,11 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.NativeNavigationDeviceTest', 'scrollingReentryPreservesSavedRowAndProfileDoesNotReuseIt'),
+              ('tv.own.owntv.home.NativeNavigationDeviceTest', 'focusDoesNotActivateAndAllFiveDestinationsUseOk'),
+              ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downRestoresLastRowAcrossPageVisitsAndUpTargetsActiveHeader'),
+              ('tv.own.owntv.home.NativeNavigationDeviceTest', 'guideHorizontalInputStaysLocalAndFullscreenHidesHeader'),
+              ('tv.own.owntv.home.NativeNavigationDeviceTest', 'profileSwitchInvalidatesBookmarkAndEmptyDataKeepsHeaderReachable'),
               ('tv.own.owntv.home.MinTvRoutingTest', 'normalAppNeverRegistersAsAndroidHome'),
               ('tv.own.owntv.home.MinTvRoutingTest', 'liveEntryTargetsThisAppAndKeepsCoreOnboardingRouting'),
               ('tv.own.owntv.home.MinTvRoutingTest', 'externalSchemePreservesPlaybackParametersWithoutClaimingUpstreamLinks'),

@@ -55,6 +55,7 @@ fun NavigationSettingsPopup(
     onSectionHidden: (MainSection, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val nativeTop = tv.own.owntv.features.shell.LocalNativeTopNavigation.current
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     BackHandler { onDismiss() }
@@ -70,6 +71,7 @@ fun NavigationSettingsPopup(
     )
 
     StagePopup(onDismiss = onDismiss, title = stringResource(R.string.settings_navigation), eyebrow = eyebrow) {
+        if (!nativeTop) {
         styles.forEachIndexed { i, (value, text) ->
             StagePopupOption(
                 title = stringResource(text.first),
@@ -105,8 +107,10 @@ fun NavigationSettingsPopup(
                 leading = { OwnTVIcon(OwnTVIcon.EXPAND, StageColors.Text, Modifier.size(21.mpx)) },
             )
         }
+        }
         val static = menuMode == NavMenuMode.STATIC
         StagePopupOption(
+            modifier = if (nativeTop) Modifier.focusRequester(first) else Modifier,
             title = stringResource(R.string.settings_nav_menu_items),
             subtitle = stringResource(R.string.settings_nav_menu_items_desc),
             value = stringResource(if (static) R.string.settings_static else R.string.settings_dynamic),
@@ -132,7 +136,7 @@ fun NavigationSettingsPopup(
                 }
             }
         }
-        if (style == NavStyle.FLOATING) {
+        if (!nativeTop && style == NavStyle.FLOATING) {
             StagePopupOption(
                 title = stringResource(R.string.settings_nav_hide_after),
                 subtitle = stringResource(R.string.settings_nav_hide_after_desc),

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_nav_home">Home</string>
+    <string name="mintv_nav_tv">TV</string>
+    <string name="mintv_nav_sport">Sport</string>
+    <string name="mintv_nav_vod">Movies &amp; series</string>
+    <string name="mintv_nav_profile">Profile &amp; settings</string>
+    <string name="mintv_nav_unavailable">This page is hidden or has no available content. Your saved settings are unchanged.</string>
+    <string name="mintv_nav_top">Top navigation</string>
+    <string name="mintv_nav_library">Library &amp; profile</string>
+</resources>

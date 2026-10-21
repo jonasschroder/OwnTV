@@ -236,6 +236,10 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("sub-DOWNLOADS").performClick()
                 compose.onNodeWithTag("sub-DOWNLOADS").assertIsSelected()
                 nativeCapture("downloads")
+                var recordingsLabel = ""
+                scenario.onActivity { recordingsLabel = it.getString(R.string.recording_title) }
+                compose.onNodeWithText(recordingsLabel).performClick()
+                nativeCapture("recordings")
                 compose.onNodeWithTag("sub-SETTINGS").performClick()
                 compose.onNodeWithTag("sub-SETTINGS").assertIsSelected()
                 nativeCapture("settings")

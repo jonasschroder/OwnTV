@@ -86,6 +86,7 @@ internal object SportsDiagnostics {
             }
             val runtime = Runtime.getRuntime()
             appendLine("current-memory: heapBytes=${runtime.totalMemory() - runtime.freeMemory()} heapLimitBytes=${runtime.maxMemory()} nativeHeapBytes=${android.os.Debug.getNativeHeapAllocatedSize()}")
+            appendLine(tv.own.owntv.player.LivePlaybackDiagnostics.report())
             appendLine("Current sports context:")
             appendLine(snapshot())
             appendLine("Hockey fetch lifecycle (sanitized public source/league identifiers):")

@@ -945,7 +945,7 @@ class LiveViewModel(
     private val live = tv.own.owntv.player.LiveTuneController(
         scope = viewModelScope,
         engines = tv.own.owntv.player.EnginePair(previewEngine, player),
-        host = tv.own.owntv.player.LiveTuneController.CoreHost(
+        host = tv.own.owntv.player.DiagnosticLiveHost(tv.own.owntv.player.LiveTuneController.CoreHost(
             context = appContext,
             settings = settings,
             sourceDao = sourceDao,
@@ -956,7 +956,7 @@ class LiveViewModel(
             sourceLookup = { id -> sourceById[id] },
             // A handover re-opens the channel at its live edge: the rewind is over.
             backToLiveEdge = { clearTimeshift() },
-        ),
+        )),
     )
 
     // True while the in-pane preview is suppressed because the provider allows one stream at a time and

@@ -188,6 +188,8 @@ jobs:
               ('tv.own.owntv.home.MinTvRoutingTest', 'liveEntryTargetsThisAppAndKeepsCoreOnboardingRouting'),
               ('tv.own.owntv.home.MinTvRoutingTest', 'externalSchemePreservesPlaybackParametersWithoutClaimingUpstreamLinks'),
               ('tv.own.owntv.home.MinTvRoutingTest', 'externalPlaybackCannotFallBackToOrdinaryYoutube'),
+              ('tv.own.owntv.home.GuideSelectionTest', 'midnightResumeAndNowRefreshDetailsWithoutRowFocus'),
+              ('tv.own.owntv.home.GuideSelectionTest', 'refreshedProgrammeAndChannelNeverRetainOldDetails'),
               ('tv.own.owntv.home.PlaybackErrorLogDateTest', 'swedish12HourPlaybackTimestamp'),
               ('tv.own.owntv.home.PlaybackErrorLogDateTest', 'swedish24HourPlaybackTimestamp'),
               ('tv.own.owntv.home.PlaybackErrorLogDateTest', 'english12HourPlaybackTimestamp'),

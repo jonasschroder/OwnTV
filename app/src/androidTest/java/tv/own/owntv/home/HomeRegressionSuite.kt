@@ -11,7 +11,7 @@ import org.junit.runners.Suite
     HomePresentationTest::class, TwitchOnboardingTest::class, TwitchPlaybackIntentTest::class, SetupOnceHomeTest::class, DiscoveryStorageIntegrationTest::class, DiscoveryPresentationTest::class, TwitchTokenStorageTest::class, HockeyLocalStorageTest::class, V07PresentationTest::class,
     SwedishRowStorageTest::class, SwedishLivePresentationTest::class,
     HomeDashboardStorageTest::class, HomeDashboardPresentationTest::class,
-    MinTvIdentityBackupTest::class, MinTvRoutingTest::class, BackupScreenDateTest::class, PlaybackErrorLogDateTest::class,
+    MinTvIdentityBackupTest::class, MinTvRoutingTest::class, BackupScreenDateTest::class, PlaybackErrorLogDateTest::class, GuideSelectionTest::class,
     tv.own.owntv.core.database.ChannelDaoBoundedWindowTest::class,
     tv.own.owntv.core.i18n.LocalizedContentContextTest::class,
     tv.own.owntv.core.i18n.PluralResourceBoundaryTest::class)

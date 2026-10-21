@@ -30,19 +30,23 @@ suspend fun runSemiAutoEpgSync(
         // Show up in Settings → EPG like any other feed (so the user can re-sync / delete it there).
         // Two feeds of one playlist share its name and are told apart by the URL shown beneath it.
         val epgSource = store.getAll().firstOrNull { it.url == url } ?: store.add(source.name, url, source.userAgent)
-        val now = System.currentTimeMillis()
         try {
-            val written = epgRepository.refreshUrl(epgSource.id, epgSource.url, epgSource.userAgent) { _, count ->
-                setState(EpgSyncUi.Syncing(total + count))
-            }
-            store.setSynced(epgSource.id, now, null)
+            val written = refreshEpgFeed(
+                refresh = {
+                    epgRepository.refreshUrl(epgSource.id, epgSource.url, epgSource.userAgent) { _, count ->
+                        setState(EpgSyncUi.Syncing(total + count))
+                    }
+                },
+                markSuccess = { at -> store.setSynced(epgSource.id, at, null) },
+                markFailure = { error -> store.markError(epgSource.id, error) },
+                now = System::currentTimeMillis,
+            )
             total += written
             anySucceeded = true
         } catch (c: CancellationException) {
             throw c
         } catch (e: Exception) {
             // One dead feed must not cost the user the ones that do work — remember it and carry on.
-            store.setSynced(epgSource.id, now, e.message)
             failure = e
         }
     }
@@ -50,4 +54,23 @@ suspend fun runSemiAutoEpgSync(
     // already visible as that feed's error line in Settings → EPG.
     val e = failure
     setState(if (e != null && !anySucceeded) EpgSyncUi.Failed(classifySyncFailure(e.message, online = true)) else EpgSyncUi.Done)
+}
+
+/** Only a completed download advances freshness; failures and cancellation preserve the last success. */
+internal suspend fun refreshEpgFeed(
+    refresh: suspend () -> Int,
+    markSuccess: suspend (Long) -> Unit,
+    markFailure: suspend (String?) -> Unit,
+    now: () -> Long,
+): Int {
+    val written = try {
+        refresh()
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        markFailure(error.message)
+        throw error
+    }
+    markSuccess(now())
+    return written
 }

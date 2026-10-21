@@ -1,3 +1,5 @@
+> Final iteration: [iteration-2.md](iteration-2.md) supersedes conflicting Home layouts, library ownership and picker OK behavior below. The source audit and destination coverage remain valid.
+
 # Source selection and Swedish subtitle assessment
 
 ## Current channel/source behavior — reuse, not rebuild

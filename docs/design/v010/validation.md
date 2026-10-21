@@ -60,3 +60,23 @@ release, change production keys, install QA or operate either existing Chromecas
 The next separately authorized work should be M1: native navigation adapter and focus/route gates,
 with existing content/data/player screens unchanged. Keep Stable 0.9.0 and the current Test app
 untouched; use disposable fixtures for new tests until an owner-approved QA upgrade.
+
+## Final design iteration (21 October 2026)
+
+- Updated existing PR #16, same design branch; Android/Kotlin/resources/signing/workflows unchanged.
+- Fifteen screen/state exports plus picker and guide captured with the actual Codex in-app browser.
+  All current JPEGs are 1920×1080; SHA-256 and dimensions are regenerated in mockups/manifest.json.
+  The two original Home captures remain in mockups/previous for direct comparison.
+- All fifteen rendered states passed visible-button safe-area checks (52..1868 x, 30..1040 y).
+  Hidden comparison controls are excluded. Evidence: mockups/iteration-2-checks.json.
+- Browser interaction checks passed: held OK opens one picker; variant OK saves FHD and opens
+  simulated playback; save-only selects 4K and restores caller without playback; changing highlight
+  then Back leaves saved 4K unchanged; reopening focuses the saved choice.
+- Eight Right presses from first Now card reveal the ninth logical channel; Back focuses Home
+  navigation; Down restores ninth channel. Ordinary browser console error log was empty.
+- Node syntax checks for preview.js/render.cjs and git diff --check passed.
+- render.cjs updated for new scenarios/contracts; headless runner remains unexecuted because of the
+  previously documented macOS sandbox restriction. Do not equate the manual browser checks with
+  Android instrumentation tests. No Gradle/APK task was run for this design revision.
+- Scenarios are synthetic fixtures. Seven-day promotion, 90% completion and production save failure
+  behavior are specifications requiring native regression tests after owner design approval.

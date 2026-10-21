@@ -22,38 +22,39 @@ remembered content focus and a source picker. Use the review controls above the 
 Home alternatives and empty/offline/missing-EPG states. Everything is synthetic. It never reads a
 playlist, plays video, signs in, fetches sport/EPG or changes installed-app data.
 
-## Recommendation for approval
+## Final iteration — recommended for review
 
-Choose **Lugn start**: a restrained hero, eight grouped Swedish channels in a single row, followed
-by genuine resume items. Choose four top destinations, explicit OK/Down activation, and Profile as
-an always-reachable upper-right hub. Preserve a constant header layout footprint while reducing its
-emphasis in content focus. Do not automatically activate destinations on a focus dwell.
+Choose **Din kväll**, the refined Lugn start. A compact current/next programme composition replaces
+empty decorative artwork. Eight logical Swedish channels and three genuine resume items fit on one
+1080p screen. An active episode can lead when its actual history merits it; empty sections disappear.
 
-First implementation milestone after approval: **v0.10 M1 — navigation contract and native Compose
-shell adapter**, preserving all current destination IDs and existing content screens. Add the complete
-migration/focus restoration tests before hiding More. No Home data rewrite, decoder change, VOD
-cross-provider merging, schema migration or device upgrade belongs in M1. Then implement the selected
-Home layout and shared source resolver in small separately reviewable steps.
+**[Read the final rules, comparison, remote contract and open decisions](iteration-2.md).**
+This iteration supersedes conflicting Home, library and picker behavior in the initial proposal.
+Implementation still requires owner approval; the first native milestone remains the shell adapter.
 
-## Two Home directions
+![Recommended Home](mockups/home-cinema.jpg)
 
-### Lugn start — recommended
+### A different direction: Kanalbordet
 
-![Lugn start: wide hero and eight-channel row](mockups/home-cinema.jpg)
+![Channel-led alternative](mockups/home-split.jpg)
 
-A single stable Play action is prominent. Eight current-channel cards fit across 1080p without a
-second row of nearly identical favorites. Generic Swedish order is independent of favorites. The
-optional resume strip shows only actual positions; sport/Twitch are absent. Original user choices
-for hidden rows/order must be adapted, not silently discarded.
+### Six versus eight, at identical scale
 
-### Kanaler först — alternative
+![Six versus eight](mockups/home-compare.jpg)
 
-![Kanaler först: split hero and channel matrix](mockups/home-split.jpg)
+### Smart Home states
 
-A narrower, tall hero leaves eight larger channel tiles in a 4×2 matrix. This deliberately challenges
-the horizontal-row assumption: easier title reading, but more vertical focus crossings, greater
-channel dominance and weaker cinematic balance. Do not ship both layouts as a new configuration
-matrix initially. Use this alternative to validate the eight-card density before committing to A.
+| Active series | No viewing history |
+| --- | --- |
+| ![Active series](mockups/home-cinema-active-series.jpg) | ![No history](mockups/home-cinema-no-history.jpg) |
+
+[Missing EPG](mockups/home-cinema-no-epg.jpg) · [No progress](mockups/home-cinema-no-progress.jpg) ·
+[Six-card Home](mockups/home-cinema-six-cards.jpg) ·
+[Previous Lugn start](mockups/previous/home-cinema.jpg) · [Previous alternative](mockups/previous/home-split.jpg)
+
+### Save and play, with a separate save-only action
+
+![Updated source picker](mockups/quality-picker.jpg)
 
 ## Destination previews
 
@@ -69,8 +70,8 @@ matrix initially. Use this alternative to validate the eight-card density before
 [No history](mockups/home-cinema-no-history.jpg) · [No EPG](mockups/tv-no-epg.jpg) ·
 [Empty TV profile](mockups/tv-empty.jpg) · [Offline Sport](mockups/sport-offline.jpg)
 
-All twelve previews are **1920×1080**. Channel wordmarks are schematic text, not new logo assets.
-Programme names, sources and VOD artwork are synthetic examples, not a claim about the owner's
+All previews are **1920×1080**. Channel wordmarks are schematic text, not new logo assets.
+Programme names, sources and VOD placeholders are synthetic examples, not a claim about the owner's
 actual lineup or content. Sport intentionally shows honest schedule/availability states rather
 than inventing a match. Production logos/artwork must come from authorized existing provider/cache
 sources, with readable text fallback. No private device screenshot, IPTV data or original app APK

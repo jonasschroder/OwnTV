@@ -1,0 +1,77 @@
+[
+  {
+    "screen": "home-cinema",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "home-split",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "home-compare",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "home-cinema",
+    "scenario": "six-cards",
+    "overflow": []
+  },
+  {
+    "screen": "home-cinema",
+    "scenario": "active-series",
+    "overflow": []
+  },
+  {
+    "screen": "home-cinema",
+    "scenario": "no-history",
+    "overflow": []
+  },
+  {
+    "screen": "home-cinema",
+    "scenario": "no-progress",
+    "overflow": []
+  },
+  {
+    "screen": "home-cinema",
+    "scenario": "no-epg",
+    "overflow": []
+  },
+  {
+    "screen": "profile",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "library",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "tv",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "tv",
+    "scenario": "no-epg",
+    "overflow": []
+  },
+  {
+    "screen": "tv",
+    "scenario": "empty",
+    "overflow": []
+  },
+  {
+    "screen": "sport",
+    "scenario": "populated",
+    "overflow": []
+  },
+  {
+    "screen": "sport",
+    "scenario": "offline",
+    "overflow": []
+  }
+]

@@ -200,11 +200,24 @@ class ProductionStartupTest {
                 nativeCapture("home")
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-TV").assertIsSelected()
-                compose.onNodeWithTag("sub-LIVE_TV").assertExists()
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sub-LIVE_TV").assertIsFocused(); true }.getOrDefault(false) }
                 nativeCapture("tv")
-                compose.onNodeWithTag("sub-EPG").performClick()
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitForIdle()
                 compose.onNodeWithTag("sub-EPG").assertIsSelected()
                 nativeCapture("guide")
+                val livePreference = settings.liveView.first()
+                settings.setLiveView(SettingsRepository.LiveView.GUIDE)
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.onNodeWithTag("top-TV").performClick()
+                // The explicit EPG subview is remembered; LIVE's guide-first preference is also retained.
+                compose.onNodeWithTag("sub-LIVE_TV").performClick()
+                var nowLabel = ""
+                scenario.onActivity { nowLabel = it.getString(R.string.content_epg_now_short) }
+                compose.waitUntil(5_000) { compose.onAllNodesWithText(nowLabel).fetchSemanticsNodes().isNotEmpty() }
+                assertEquals(SettingsRepository.LiveView.GUIDE, settings.liveView.first())
+                settings.setLiveView(livePreference)
                 compose.onNodeWithTag("top-SPORT").performClick()
                 compose.onNodeWithTag("top-SPORT").assertIsSelected()
                 nativeCapture("sport")
@@ -216,6 +229,10 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-PROFILE").performClick()
                 compose.onNodeWithTag("sub-MORE").assertExists()
                 nativeCapture("profile")
+                for (page in listOf("FAVORITES", "HISTORY", "BACKUP", "LOCAL_SYNC", "ERROR_LOG", "ABOUT")) {
+                    compose.onNodeWithTag("profile-page-$page").performClick()
+                    compose.onNodeWithTag("profile-content-$page").assertIsDisplayed()
+                }
                 compose.onNodeWithTag("sub-DOWNLOADS").performClick()
                 compose.onNodeWithTag("sub-DOWNLOADS").assertIsSelected()
                 nativeCapture("downloads")

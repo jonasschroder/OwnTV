@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.*
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -38,7 +39,7 @@ internal fun NativeTopNavigation(
     val labels = mapOf(TopDestination.HOME to R.string.mintv_nav_home,
         TopDestination.TV to R.string.mintv_nav_tv, TopDestination.SPORT to R.string.mintv_nav_sport,
         TopDestination.VOD to R.string.mintv_nav_vod, TopDestination.PROFILE to R.string.mintv_nav_profile)
-    BoxWithConstraints(modifier.fillMaxWidth().height(100.mpx).background(OwnTVTheme.colors.background)) {
+    BoxWithConstraints(modifier.fillMaxWidth().height(100.mpx * maxOf(1f, LocalDensity.current.fontScale)).background(OwnTVTheme.colors.background)) {
         val brand = maxWidth > 850.dp
         Row(Modifier.fillMaxSize().padding(horizontal = 32.mpx, vertical = 16.mpx)
             .focusRequester(selectedFocus)
@@ -70,9 +71,9 @@ internal fun NativeTopNavigation(
 @Composable
 private fun NativeTopItem(destination: TopDestination, label: String, active: TopDestination,
     target: FocusRequester, onSelect: (TopDestination) -> Unit) {
-    Column(Modifier.width(IntrinsicSize.Min)) {
+    Column(Modifier.width(IntrinsicSize.Max)) {
         StageSurface({ onSelect(destination) }, 14.mpx,
-            Modifier.height(56.mpx).focusRequester(target)
+            Modifier.height(56.mpx * maxOf(1f, LocalDensity.current.fontScale)).focusRequester(target)
                 .testTag("top-${destination.name}").semantics { selected = destination == active },
             focusStyle = StageFocus.FX) { focused ->
             Text(label, style = stageText(if (destination == TopDestination.PROFILE) 22 else 26, 700),
@@ -89,8 +90,10 @@ private fun NativeTopItem(destination: TopDestination, label: String, active: To
 @Composable
 internal fun NativeSubNavigation(routes: List<MainSection>, selected: MainSection,
     onSelect: (MainSection) -> Unit, onSearch: (() -> Unit)?, onHeader: () -> Unit,
-    onEnterContent: () -> Unit, onFocused: () -> Unit, modifier: Modifier = Modifier, onNowPlaying: (() -> Unit)? = null) {
-    Row(modifier.fillMaxWidth().height(64.mpx).padding(horizontal = 40.mpx)
+    onEnterContent: () -> Unit, onFocused: () -> Unit, modifier: Modifier = Modifier, onNowPlaying: (() -> Unit)? = null, entryFocusRequester: FocusRequester) {
+    val targets = remember(routes) { routes.associateWith { FocusRequester() } }
+    Row(modifier.fillMaxWidth().height(64.mpx).focusRequester(entryFocusRequester)
+        .focusProperties { onEnter = { (targets[selected] ?: targets.values.firstOrNull())?.requestFocus() } }.padding(horizontal = 40.mpx)
         .horizontalScroll(rememberScrollState()).onFocusChanged { if (it.hasFocus) onFocused() }
         .onPreviewKeyEvent { event ->
             when(event.key) {
@@ -105,7 +108,7 @@ internal fun NativeSubNavigation(routes: List<MainSection>, selected: MainSectio
                 MainSection.MORE -> R.string.mintv_nav_library
                 else -> route.labelRes
             }), { onSelect(route) },
-                Modifier.testTag("sub-${route.name}").semantics { this.selected = route == selected },
+                Modifier.focusRequester(targets.getValue(route)).testTag("sub-${route.name}").semantics { this.selected = route == selected },
                 dimmed = route != selected)
         }
         if (onNowPlaying != null) StagePill(stringResource(R.string.shell_now_playing), onNowPlaying)

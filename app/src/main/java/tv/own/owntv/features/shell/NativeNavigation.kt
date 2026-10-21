@@ -22,9 +22,10 @@ internal fun nativeRoutes(destination: TopDestination, visible: Set<MainSection>
     TopDestination.PROFILE -> listOf(MainSection.MORE, MainSection.DOWNLOADS, MainSection.SETTINGS)
 }
 
-internal fun nativeEntry(destination: TopDestination, visible: Set<MainSection>, lastVod: MainSection): MainSection? =
+internal fun nativeEntry(destination: TopDestination, visible: Set<MainSection>, lastVod: MainSection, lastTv: MainSection = MainSection.LIVE_TV): MainSection? =
     when (destination) {
         TopDestination.SPORT -> MainSection.HOME
+        TopDestination.TV -> nativeRoutes(destination, visible).let { lastTv.takeIf(it::contains) ?: it.firstOrNull() }
         TopDestination.VOD -> nativeRoutes(destination, visible).let { lastVod.takeIf(it::contains) ?: it.firstOrNull() }
         else -> nativeRoutes(destination, visible).firstOrNull()
     }

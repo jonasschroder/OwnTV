@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.aspectRatio
@@ -34,8 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -113,15 +110,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextOverflow
 
-/** Which layer currently holds focus (drives Back navigation). */
+/** Internal focus levels: primary header, contextual tabs, and content (legacy names retained). */
 private enum class ShellLayer { SIDEBAR, RAIL, CONTENT }
 
 /** Player presentation: hidden, fullscreen, docked mini-player, or audio-only now-playing bar. */
 private enum class PlayerMode { NONE, FULLSCREEN, MINI, AUDIO }
 
 /**
- * The MD3 shell: a fixed navigation panel (Layer 1) plus the active destination. Settings is a
- * single-pane sectioned screen; browse sections keep the Folder Rail → Content → Preview layout.
+ * Native TV top navigation around the existing content owners and the single shared player layer.
+ * Category sheets, settings stacks and player input retain their existing owners.
  */
 @Composable
 fun OwnTVShell(
@@ -157,12 +154,14 @@ fun OwnTVShell(
     modifier: Modifier = Modifier,
 ) {
     var presentation by rememberSaveable(activeProfileId) { mutableStateOf<TopDestination?>(null) }
+    var lastTv by rememberSaveable(activeProfileId) { mutableStateOf(MainSection.LIVE_TV) }
     var lastVod by rememberSaveable(activeProfileId) { mutableStateOf(MainSection.MOVIES) }
     var searchParent by rememberSaveable(activeProfileId) { mutableStateOf(TopDestination.TV) }
     val primary = presentation ?: if (selectedSection == MainSection.SEARCH) searchParent else topDestination(selectedSection)
     val onSelectSection: (MainSection) -> Unit = { section ->
         if (section == MainSection.SEARCH && selectedSection != MainSection.SEARCH) searchParent = primary
         if (section == MainSection.MOVIES || section == MainSection.SERIES) lastVod = section
+        if (section == MainSection.LIVE_TV || section == MainSection.EPG) lastTv = section
         presentation = null
         onSelectLegacySection(section)
     }
@@ -178,9 +177,10 @@ fun OwnTVShell(
     var contentScrolled by remember(selectedSection) { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
-    val sidebarFocus = remember { FocusRequester() }
+    val sidebarFocus = remember(activeProfileId) { FocusRequester() }
+    val nativeSubFocus = remember(activeProfileId) { FocusRequester() }
     val contentFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val homeFirstRowFocus = remember { FocusRequester() }
+    val homeFirstRowFocus = remember(activeProfileId) { FocusRequester() }
     val pageStateHolder = rememberSaveableStateHolder()
     var homeTuneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var focusedLayer by remember { mutableStateOf(ShellLayer.SIDEBAR) }
@@ -236,9 +236,9 @@ fun OwnTVShell(
     val audioEntryFocus = remember { FocusRequester() }
     // The browse UI is one focus group with a restorer, so handing focus back to it after the mini
     // player returns to the exact control the user left rather than to the top of the screen.
-    val shellContentFocus = remember { FocusRequester() }
+    val shellContentFocus = remember(activeProfileId) { FocusRequester() }
     // Where ▶ out of the Stage rail returns to: the content, exactly as it was left.
-    val contentAreaFocus = remember { FocusRequester() }
+    val contentAreaFocus = remember(activeProfileId) { FocusRequester() }
     var sportEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
     var homeEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
     var homeSetupOpen by rememberSaveable(activeProfileId) { mutableStateOf(false) }
@@ -1011,15 +1011,20 @@ fun OwnTVShell(
               }
           }
           NativeTopNavigation(primary, sidebarFocus, { destination ->
-              val target = nativeEntry(destination, nativeVisible, lastVod)
+              val target = nativeEntry(destination, nativeVisible, lastVod, lastTv)
               selectFromNav(target ?: MainSection.MORE)
               presentation = destination.takeIf { it == TopDestination.SPORT || target == null }
+              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) scope.launch {
+                  withFrameNanos { }; withFrameNanos { }
+                  runCatching { nativeSubFocus.requestFocus() }
+              }
           }, enterNativeContent, { focusedLayer = ShellLayer.SIDEBAR }, Modifier)
           if (primary in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) {
               NativeSubNavigation(nativeRoutes(primary, nativeVisible), selectedSection, { selectFromNav(it) },
                   if (primary == TopDestination.PROFILE) null else ({ selectFromNav(MainSection.SEARCH) }),
                   { runCatching { sidebarFocus.requestFocus() } }, enterNativeContent,
-                  { focusedLayer = ShellLayer.SIDEBAR }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO })
+                  { focusedLayer = ShellLayer.RAIL }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO },
+                  entryFocusRequester = nativeSubFocus)
           } else androidx.compose.foundation.layout.Row(Modifier.height(64.mpx).padding(horizontal = 40.mpx)) {
               if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
                   tv.own.owntv.ui.stage.StagePill(stringResource(R.string.shell_now_playing), enterNowPlaying)
@@ -1085,8 +1090,7 @@ fun OwnTVShell(
                     pageStateHolder.SaveableStateProvider(nativePageKey(activeProfileId, selectedSection, presentation)) {
                     when {
                         presentation == TopDestination.SPORT -> tv.own.owntv.features.home.NativeSportScreen(
-                            liveVm, activeProfileId, playerMode == PlayerMode.NONE,
-                            emptyList(), // companion resolves profile-owned channels through its existing bounded readers
+                            liveVm, homeVm, activeProfileId, playerMode == PlayerMode.NONE,
                             { channel, favorites -> scope.launch {
                                 when (liveVm.playHomeChannel(channel.id, favorites)) {
                                     LiveViewModel.HomePlayback.IN_APP -> openFullscreen(MainSection.LIVE_TV)

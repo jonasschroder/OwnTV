@@ -30,6 +30,11 @@ class NativeNavigationTest {
         assertEquals(MainSection.SERIES, nativeEntry(TopDestination.VOD, all, MainSection.SERIES))
         assertEquals(MainSection.MOVIES, nativeEntry(TopDestination.VOD, all - MainSection.SERIES, MainSection.SERIES))
     }
+    @Test fun guideSubviewIsRestoredWithoutReplacingLiveGuidePreference() {
+        assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all, MainSection.MOVIES))
+        assertEquals(MainSection.EPG, nativeEntry(TopDestination.TV, all, MainSection.MOVIES, MainSection.EPG))
+        assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all - MainSection.EPG, MainSection.MOVIES, MainSection.EPG))
+    }
     @Test fun guideOnlyAndEmptyTvDoNotUnhideLive() {
         assertEquals(MainSection.EPG, nativeEntry(TopDestination.TV, setOf(MainSection.EPG), MainSection.MOVIES))
         assertNull(nativeEntry(TopDestination.TV, emptySet(), MainSection.MOVIES))

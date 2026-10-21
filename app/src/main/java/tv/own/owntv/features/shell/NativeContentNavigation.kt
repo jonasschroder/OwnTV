@@ -20,8 +20,8 @@ internal fun Modifier.nativeContentNavigation(header: FocusRequester, manager: F
         }
     }.focusProperties { onExit = {
         if (requestedFocusDirection == FocusDirection.Up) {
+            // requestFocus redirects this transition. Cancelling afterwards would cancel that redirect.
             header.requestFocus()
-            cancelFocusChange()
         }
     } }
 

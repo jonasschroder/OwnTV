@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.*
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -42,6 +44,8 @@ class NativeNavigationDeviceTest {
 
     @Before fun remoteMode() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
     private fun press(key: Int) {
+        // Apply profile/page state mutations before dispatching the next physical-style input.
+        compose.waitForIdle()
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(key)
         compose.waitForIdle()
     }
@@ -91,6 +95,19 @@ class NativeNavigationDeviceTest {
             }
         }
     }
+    @Test fun fullLabelsFitAndFocusDoesNotResizeHeader() {
+        mount()
+        for (destination in TopDestination.entries) {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithTag("top-${destination.name}").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertTrue("Header exposes actual text layout", layouts.isNotEmpty())
+            assertTrue("Full primary label must fit", layouts.none { it.hasVisualOverflow })
+        }
+        val before = compose.onNodeWithTag("top-TV").fetchSemanticsNode().boundsInRoot
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        assertEquals(before, compose.onNodeWithTag("top-TV").fetchSemanticsNode().boundsInRoot)
+    }
+
     @Test fun focusDoesNotActivateAndAllFiveDestinationsUseOk() {
         mount()
         for (destination in TopDestination.entries) {

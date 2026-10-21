@@ -38,6 +38,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -157,7 +158,7 @@ fun MoreScreen(
                     text = label, icon = icon, value = value, warn = warn,
                     selected = selected == it,
                     onClick = { choose(it) },
-                    modifier = Modifier.focusRequester(itemFocus.getValue(it)),
+                    modifier = Modifier.focusRequester(itemFocus.getValue(it)).testTag("profile-page-${it.name}"),
                 )
             }
             item(MoreItem.SETTINGS, OwnTVIcon.SETTINGS, stringResource(R.string.common_nav_settings), null, false)
@@ -191,7 +192,7 @@ fun MoreScreen(
         Box(
             Modifier
                 .padding(start = 520.mpx, top = 128.mpx, end = 64.mpx)
-                .fillMaxSize()
+                .fillMaxSize().testTag("profile-content-${selected.name}")
                 .onFocusChanged { pageFocused = it.hasFocus },
         ) {
             val setEntry: (() -> Boolean) -> Unit = { pageEntry = it }

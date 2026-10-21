@@ -10,7 +10,7 @@ owner device without approval. All design documents and original mockups remain 
 
 `NativeTopNavigation` is a native Compose focus group, not a WebView. A fixed-height header separates
 focus decoration from the active-page underline and selected semantics. Left/Right moves focus;
-only OK selects. Down enters the **currently active** page, even if another tab is highlighted.
+only OK selects (and enters contextual tabs when present). Down enters the **currently active** page, even if another tab is highlighted.
 Primary tabs stay in predictable positions; unavailable/hidden content gets an honest settings CTA.
 Profile/Settings is pinned on the right; the primary row scrolls if width/font/locale requires it.
 
@@ -57,6 +57,8 @@ inventory remains [the approved destination map](../destination-map.md); nothing
 
 - Up exiting a content focus group targets the selected primary header. Children get their key
   events first: EPG timeline Left/Right and local modal/category controls are not globally captured.
+- OK on TV/VOD/Profile focuses its selected contextual tab; Left/Right and OK choose a subview,
+  Up/Back return to the corresponding primary control. TV and VOD remember their last available subview.
 - Header Down invokes the current screen's existing entry hook, then its focus restorer, with a
   header fallback when no child can receive focus. Screen readers retain selected semantics.
 - Saveable screen state is keyed by profile + unchanged MainSection + presentation override. The

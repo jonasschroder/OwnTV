@@ -466,7 +466,6 @@ fun EpgScreen(
             loadRows = { ch -> vm.cachedProgrammes(ch) ?: vm.programmesFor(ch) },
             loadFull = vm::programmeFull,
         )
-        val topProgramme = shown
 
         Column(Modifier.fillMaxSize()) {
         // Top (44 → 404): the video, and beside it the programme under the cursor.

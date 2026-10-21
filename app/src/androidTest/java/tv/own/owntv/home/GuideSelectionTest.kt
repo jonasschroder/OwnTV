@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.tv.material3.Text
@@ -41,6 +42,12 @@ class GuideSelectionTest {
     private val old = EpgProgrammeEntity(1, 1, "synthetic", boundary - 60_000, boundary, "Yesterday")
     private val current = EpgProgrammeEntity(2, 1, "synthetic", boundary, boundary + 60_000, "Today")
 
+    private fun shown(text: String) {
+        // IO-style delay is deliberately outside Compose's frame-idle guarantee.
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(text).assertIsDisplayed()
+    }
+
     @Test fun midnightResumeAndNowRefreshDetailsWithoutRowFocus() {
         var clock by mutableStateOf(GuideTimeState(boundary - 1, lastInteractionElapsed = 0))
         val toolbar = FocusRequester()
@@ -53,16 +60,16 @@ class GuideSelectionTest {
             }
             LaunchedEffect(Unit) { toolbar.requestFocus() }
         }
-        compose.onNodeWithText("Yesterday").assertIsDisplayed()
+        shown("Yesterday")
         compose.runOnIdle { clock = clock.refreshed(boundary, 1) }
-        compose.onNodeWithText("Today").assertIsDisplayed()
+        shown("Today")
         compose.onNodeWithTag("toolbar").assertIsFocused()
         compose.runOnIdle { clock = clock.browse(boundary - 1, 2).refreshed(boundary + 1, 3) }
-        compose.onNodeWithText("Yesterday").assertIsDisplayed() // short resume preserves manual selection
+        shown("Yesterday") // short resume preserves manual selection
         compose.runOnIdle { clock = clock.now(boundary + 1, 4) }
-        compose.onNodeWithText("Today").assertIsDisplayed() // Now works while toolbar still owns focus
+        shown("Today") // Now works while toolbar still owns focus
         compose.runOnIdle { clock = clock.browse(boundary - 1, 5).refreshed(boundary + 1, GuideTimeState.IDLE_RESET_MS + 5) }
-        compose.onNodeWithText("Today").assertIsDisplayed()
+        shown("Today")
         compose.onNodeWithTag("toolbar").assertIsFocused()
     }
 
@@ -75,10 +82,10 @@ class GuideSelectionTest {
                 { delay(100); current.copy(title = if (revision == 0) "Original" else "Refreshed") })
             Text(selected?.title ?: "No selection")
         }
-        compose.onNodeWithText("Original").assertIsDisplayed()
+        shown("Original")
         compose.runOnIdle { revision++ }
-        compose.onNodeWithText("Refreshed").assertIsDisplayed()
+        shown("Refreshed")
         compose.runOnIdle { row = null }
-        compose.onNodeWithText("No selection").assertIsDisplayed()
+        shown("No selection")
     }
 }

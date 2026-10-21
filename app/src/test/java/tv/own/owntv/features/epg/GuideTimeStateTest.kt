@@ -60,4 +60,23 @@ class GuideTimeStateTest {
         assertEquals(manual, manual.refreshed(midnight - 86_400_000, 200))
         assertEquals(midnight - 60_000, manual.refreshed(midnight, 100 + GuideTimeState.IDLE_RESET_MS - 1).cursor)
     }
+
+    @Test fun fullDescriptionPreservesShiftedRowIntervalAndRejectsAnotherProgramme() {
+        val row = programme(1, midnight, midnight + 60_000, "Current")
+        val stored = row.copy(startMs = row.startMs - 3_600_000, stopMs = row.stopMs - 3_600_000, description = "Full details")
+        val shown = guideProgrammeDetails(row, stored)!!
+        assertEquals(row.startMs, shown.startMs)
+        assertEquals(row.stopMs, shown.stopMs)
+        assertEquals("Full details", shown.description)
+        assertEquals(row, guideProgrammeDetails(row, stored.copy(id = 2)))
+        assertNull(guideProgrammeDetails(null, stored))
+    }
+
+    @Test fun reorderedRowsKeepTheFocusedChannelAndRemovedRowsClampSafely() {
+        val a = tv.own.owntv.core.database.entity.ChannelEntity(id = 1, sourceId = 1, name = "A", streamUrl = "")
+        val b = a.copy(id = 2, name = "B")
+        assertEquals(1, guideRowIndex(listOf(b, a), a.id, 0))
+        assertEquals(0, guideRowIndex(listOf(b), a.id, 10))
+        assertEquals(0, guideRowIndex(emptyList(), a.id, 10))
+    }
 }

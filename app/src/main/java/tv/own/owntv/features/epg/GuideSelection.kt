@@ -38,5 +38,5 @@ internal fun rememberGuideSelection(
             value = programme?.id?.takeIf { it > 0 }?.let { loadFull(it) }
         }
     }
-    return full?.takeIf { it.id == programme?.id } ?: programme
+    return guideProgrammeDetails(programme, full)
 }

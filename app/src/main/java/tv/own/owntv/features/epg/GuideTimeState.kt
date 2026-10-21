@@ -23,3 +23,19 @@ internal data class GuideTimeState(
 /** Never retain a programme object after its channel/cursor or backing row changes. */
 internal fun programmeAt(programmes: List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>?, time: Long) =
     programmes?.firstOrNull { time in it.startMs until it.stopMs }
+
+/** A data refresh may reorder channels without moving the keyed Compose focus node. */
+internal fun guideRowIndex(
+    channels: List<tv.own.owntv.core.database.entity.ChannelEntity>,
+    focusedChannelId: Long?,
+    fallbackIndex: Int,
+): Int = channels.indexOfFirst { it.id == focusedChannelId }.takeIf { it >= 0 }
+    ?: fallbackIndex.coerceIn(0, (channels.size - 1).coerceAtLeast(0))
+
+/** Full descriptions come from stored time; keep the row's already-offset display interval. */
+internal fun guideProgrammeDetails(
+    summary: tv.own.owntv.core.database.entity.EpgProgrammeEntity?,
+    full: tv.own.owntv.core.database.entity.EpgProgrammeEntity?,
+): tv.own.owntv.core.database.entity.EpgProgrammeEntity? = summary?.let { row ->
+    full?.takeIf { it.id == row.id }?.copy(startMs = row.startMs, stopMs = row.stopMs) ?: row
+}

@@ -11,6 +11,8 @@ and data/settings events. A screen left open through the night could retain yest
 cursor. `selected` separately retained a channel/programme pair; only the focused `GuideRow` updated
 it. Now changed scroll/cursor while the toolbar owned focus, leaving the header's programme behind.
 An asynchronous full-description producer could also momentarily retain the previous programme.
+The selection now follows the focused channel identity across row reordering, and full stored
+descriptions preserve the row's already-offset display times instead of restoring raw database times.
 
 Use one absolute-time cursor for cells and details. Derive details from that cursor and the selected
 row even while a toolbar owns focus; key the row and full-description state by its actual identity

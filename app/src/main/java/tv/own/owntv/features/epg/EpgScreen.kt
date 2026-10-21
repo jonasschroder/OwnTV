@@ -223,7 +223,6 @@ fun EpgScreen(
     val categoryKey: LiveKey? = if (liveMode) liveSelected.takeUnless { it == LiveKey.All } else categoryFilter
     LaunchedEffect(liveMode, liveSelected) { if (liveMode) vm.setCategoryFilter(liveSelected) }
 
-
     // The focused channel plays in the video after the focus settles, as in Live TV.
     val effectivePreview = previewEnabled && livePreviewSetting
     LaunchedEffect(previewChannel?.id, effectivePreview, previewArmed) {
@@ -269,6 +268,10 @@ fun EpgScreen(
     val rowRequesters = remember { HashMap<Int, FocusRequester>() }
     fun rowFocus(i: Int): FocusRequester = rowRequesters.getOrPut(i) { FocusRequester() }
     var focusedRow by remember { mutableIntStateOf(0) }
+    var focusedChannelId by remember { mutableStateOf<Long?>(null) }
+    val focusedIndex = remember(state.channels, focusedChannelId, focusedRow) {
+        guideRowIndex(state.channels, focusedChannelId, focusedRow)
+    }
     var gridHasFocus by remember { mutableStateOf(false) }
     val cursorTime = guideTime.cursor
     // Row stage (false): ▲ ▼ move between channels, ◀ leaves for the menu. Cell stage (true): ◀ ▶ go
@@ -301,7 +304,7 @@ fun EpgScreen(
         }
     }
     // Back to the grid at the row focus was on (after a menu, the sheet, a jump).
-    fun focusGrid(row: Int = focusedRow) {
+    fun focusGrid(row: Int = focusedIndex) {
         val i = row.coerceIn(0, (state.channels.size - 1).coerceAtLeast(0))
         scope.launch {
             val visible = rowListState.layoutInfo.visibleItemsInfo.any { it.index == i }
@@ -329,6 +332,7 @@ fun EpgScreen(
         if (!restoreFocus || state.loading || state.channels.isEmpty()) return@LaunchedEffect
         val idx = vm.lastTunedChannelId?.let { id -> state.channels.indexOfFirst { it.id == id } }?.takeIf { it >= 0 } ?: 0
         focusedRow = idx
+        focusedChannelId = state.channels[idx].id
         delay(80)
         focusGrid(idx)
         onRestored()
@@ -423,7 +427,7 @@ fun EpgScreen(
     DisposableEffect(onEntryHook) {
         onEntryHook?.invoke {
             state.channels.isNotEmpty() &&
-                runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() }.getOrDefault(false)
+                runCatching { rowFocus(focusedIndex.coerceIn(0, state.channels.size - 1)).requestFocus() }.getOrDefault(false)
         }
         onDispose { onEntryHook?.invoke(null) }
     }
@@ -444,7 +448,7 @@ fun EpgScreen(
                 false
             }
             // Entering from the rail lands in the grid, on the row focus was on.
-            .focusProperties { onEnter = { if (state.channels.isNotEmpty()) runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
+            .focusProperties { onEnter = { if (state.channels.isNotEmpty()) runCatching { rowFocus(focusedIndex.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
             .focusGroup(),
     ) {
         val screenW = maxWidth
@@ -453,7 +457,7 @@ fun EpgScreen(
         val timelineW = screenW - fx(48) - labelW - fx(64)
         LaunchedEffect(timelineW) { timelinePx = with(density) { timelineW.roundToPx() } }
 
-        val topChannel = state.channels.getOrNull(focusedRow)
+        val topChannel = state.channels.getOrNull(focusedIndex)
         val cacheRevision by vm.cacheRevision.collectAsStateWithLifecycle()
         // The selected row remains authoritative even when the Now/day tools own focus.
         val shown = rememberGuideSelection(
@@ -586,7 +590,7 @@ fun EpgScreen(
                                 .padding(start = fx(48), end = fx(64), top = 48.mpx)
                                 .fillMaxSize()
                                 .onFocusChanged { gridHasFocus = it.hasFocus }
-                                .focusProperties { onEnter = { runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
+                                .focusProperties { onEnter = { runCatching { rowFocus(focusedIndex.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
                                 .focusGroup(),
                             verticalArrangement = Arrangement.spacedBy(GuideGridDefaults.RowGap),
                             contentPadding = PaddingValues(bottom = 24.mpx),
@@ -604,7 +608,7 @@ fun EpgScreen(
                                     now = liveNow,
                                     scrollPx = scrollPx,
                                     focusRequester = rowFocus(index),
-                                    selectedRow = gridHasFocus && index == focusedRow,
+                                    selectedRow = gridHasFocus && index == focusedIndex,
                                     cursorTime = cursorTime,
                                     cellMode = inCellMode,
                                     onEnterCell = { inCellMode = true },
@@ -612,6 +616,7 @@ fun EpgScreen(
                                     reminderStarts = remindersByChannel[channel.id].orEmpty(),
                                     onFocused = {
                                         focusedRow = index
+                                        focusedChannelId = channel.id
                                         if (cursorTime !in state.windowStart until state.windowEnd) {
                                             guideTime = guideTime.now(System.currentTimeMillis(), android.os.SystemClock.elapsedRealtime())
                                         }
@@ -666,6 +671,7 @@ fun EpgScreen(
                     railItems.getOrNull(idx)?.key?.let { key -> if (liveMode) liveVm.select(key) else vm.setCategoryFilter(key) }
                     sheetOpen = false
                     focusedRow = 0
+                    focusedChannelId = null
                     scope.launch { runCatching { rowListState.scrollToItem(0) } }
                     focusGrid(0)
                 },

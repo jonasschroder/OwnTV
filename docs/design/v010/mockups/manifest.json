@@ -1,0 +1,78 @@
+{
+  "renderer": "Codex in-app browser screenshot API",
+  "data": "synthetic design only; no owner IPTV data",
+  "images": [
+    {
+      "file": "home-cinema-no-history.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "b8f1b71c0dd251c541062915ca9426852cdb0f3bcf793fed4038dec39439b0e8"
+    },
+    {
+      "file": "home-cinema.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "ad5e972cb1af597b875b5830367ea219e94f567aa121e9844cee8dfdb90ae403"
+    },
+    {
+      "file": "home-split.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "19e4028f593ef4974d103957e5e95732c55a13ba529fba4ad03bf0b343f2fe58"
+    },
+    {
+      "file": "library.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "3a3ad5f41b0b99d4dcac8b38ec9cbd16d4d795020b3eb5f7c14c371b2f5f2a9a"
+    },
+    {
+      "file": "profile.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "58c91eb072fd9ecd91c4a2438eaecd305b2aa2fe9954cfceddf7f0fad71a8228"
+    },
+    {
+      "file": "quality-picker.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "de94db2cab8f4323cbcc2c2703ceec9fbdeabf15848274206b0c715a4fc7082d"
+    },
+    {
+      "file": "sport-offline.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "3b49733f478b390644a5c7b4693b2a4347e23aed376d9c28c7aca404c929d9db"
+    },
+    {
+      "file": "sport.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "bbde5871559534ea560e07acfb1e092dd26577d47f731b50d36fd25630ff8ed6"
+    },
+    {
+      "file": "tv-empty.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "1a39ffd3d040796dc9478e8591396834666ae0c4814ac025cd9c0332244958de"
+    },
+    {
+      "file": "tv-guide.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e243fbdad46b18d744b08364680d4d4ea35c82ff78fe11e8c7e706a44fbc2df6"
+    },
+    {
+      "file": "tv-no-epg.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "e6ec0fea343d13fdc951d76665d16ea2822f04fbc953384ba5f08de6c12d91a3"
+    },
+    {
+      "file": "tv.jpg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "c56df47bf1fb7e384d7ac3d7f052557321d6b96274c4ad4f2eb0f3d54737a042"
+    }
+  ]
+}

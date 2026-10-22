@@ -37,9 +37,14 @@ class SmartHomeDeviceTest {
     private var entered: (() -> Boolean)? = null
     @Before fun remote() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
     private fun press(code: Int) {
-        compose.waitForIdle(); InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code); compose.waitForIdle()
+        compose.waitForIdle()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val down = android.os.SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+        instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+        compose.waitForIdle()
     }
-    private fun mount() { compose.setContent {
+    private fun mount(onSource: ((ChannelEntity, Long) -> Unit)? = null) { compose.setContent {
         MaterialTheme {
             val header = remember(profile) { FocusRequester() }
             val first = remember(profile) { FocusRequester() }
@@ -49,12 +54,41 @@ class SmartHomeDeviceTest {
                 key(profile) {
                     SmartHomeContent(snapshot, guide, profile, { played++ }, { played++ }, {}, {}, {}, {},
                         first, { entered = it }, {}, false, {}, 64.mpx, 0.mpx,
-                        Modifier.weight(1f).nativeContentNavigation(header, manager), onHeader = { header.requestFocus() })
+                        Modifier.weight(1f).nativeContentNavigation(header, manager), onHeader = { header.requestFocus() }, onSource = onSource)
                 }
             }
             LaunchedEffect(profile) { withFrameNanos { }; header.requestFocus() }
         }
     } }
+    @Test fun homeHeroAndChannelCardLongOkNeverTriggerShortPlayback() {
+        val opened = java.util.concurrent.CopyOnWriteArrayList<Long>()
+        mount { channel, _ -> opened.add(channel.id) }
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        fun held(expected: Long) {
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            val down = android.os.SystemClock.uptimeMillis()
+            instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+            Thread.sleep(650)
+            compose.waitUntil(5000) { opened.lastOrNull() == expected }
+            for (repeat in 1..4) instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, repeat))
+            instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+            compose.waitForIdle()
+        }
+        val pending = android.os.SystemClock.uptimeMillis()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.sendKeySync(KeyEvent(pending, pending, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        press(KeyEvent.KEYCODE_DPAD_DOWN) // Consumed by the Home ancestor before the button.
+        Thread.sleep(650)
+        instrumentation.sendKeySync(KeyEvent(pending, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        assertTrue(opened.isEmpty()); assertEquals(0, played)
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        held(1)
+        press(KeyEvent.KEYCODE_DPAD_DOWN); repeat(3) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        compose.onNodeWithTag("smart-channel-TV4").assertIsFocused()
+        held(4)
+        assertEquals(listOf(1L, 4L), opened.toList()); assertEquals(0, played)
+        press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, played)
+    }
     @Test fun eightLogicalChannelsFitAndRightScrollsToAdditionalChannel() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("smart-hero-play").assertIsFocused()

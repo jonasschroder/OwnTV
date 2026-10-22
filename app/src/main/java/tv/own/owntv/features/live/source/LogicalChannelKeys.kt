@@ -12,15 +12,17 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
 /** Opt-in only for logical TV actions; VOD and programme context-menu handlers stay unchanged. */
-internal fun Modifier.logicalChannelKeys(onClick: () -> Unit, onLong: (Long) -> Unit): Modifier = composed {
+internal fun Modifier.logicalChannelKeys(onClick: () -> Unit, onLong: (Long) -> Unit,
+    cancellation: SourcePressCancellation? = null): Modifier = composed {
     val click by rememberUpdatedState(onClick)
     val held by rememberUpdatedState(onLong)
-    val state = remember { RemoteOkPress() }
+    val state = remember(cancellation) { RemoteOkPress() }
+    val identity = remember(cancellation) { Any() }
     val handler = remember { Handler(Looper.getMainLooper()) }
-    var timer by remember { mutableStateOf<Runnable?>(null) }
+    var timer by remember(cancellation) { mutableStateOf<Runnable?>(null) }
     val owner = LocalLifecycleOwner.current
-    fun cancel() { timer?.let(handler::removeCallbacks); timer = null; state.cancel() }
-    DisposableEffect(owner) {
+    fun cancel() { cancellation?.clear(identity); timer?.let(handler::removeCallbacks); timer = null; state.cancel() }
+    DisposableEffect(owner, cancellation) {
         val observer = LifecycleEventObserver { _, event -> if (event != Lifecycle.Event.ON_RESUME) cancel() }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer); cancel() }
@@ -33,6 +35,7 @@ internal fun Modifier.logicalChannelKeys(onClick: () -> Unit, onLong: (Long) -> 
             if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                 when (event.type) {
                     KeyEventType.KeyDown -> if (state.down(native.downTime, native.repeatCount)) {
+                        cancellation?.register(identity, ::cancel)
                         timer?.let(handler::removeCallbacks)
                         timer = Runnable { if (state.held(native.downTime)) held(native.downTime) }
                             .also { handler.postDelayed(it, 500L) }

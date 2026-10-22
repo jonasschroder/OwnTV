@@ -32,12 +32,17 @@ class ChannelSourceDeviceTest {
     private var saves = 0
     private var profile by mutableLongStateOf(7)
     private var choices by mutableStateOf(SwedishChoices(preferred = mapOf("tv4" to "101:2")))
-    private fun row(id: Long, quality: String) = SwedishVariant(id, 101, "101:$id", "TV4 $quality",
-        SwedishChannels.recognize("TV4 $quality")!!, null)
+    private fun row(id: Long, quality: String) = SwedishVariant(id, 101, "101:$id", "SE: TV4 $quality",
+        SwedishChannels.recognize("SE: TV4 $quality")!!, null)
     private var rows by mutableStateOf(listOf(row(1, "HD"), row(2, "FHD"), row(3, "UHD")))
     private var failSave by mutableStateOf(false)
     @Before fun remote() { instrumentation.setInTouchMode(false) }
-    private fun press(code: Int) { instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+    private fun press(code: Int) {
+        val down = SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+        instrumentation.sendKeySync(KeyEvent(down, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+        compose.waitForIdle()
+    }
     private fun focus(tag: String) {
         compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus) { assertTrue(it()) }
         compose.onNodeWithTag(tag).assertIsFocused()
@@ -83,6 +88,11 @@ class ChannelSourceDeviceTest {
         press(KeyEvent.KEYCODE_BACK)
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("origin").assertIsFocused(); true }.getOrDefault(false) }
         assertEquals("101:2", choices.preferred["tv4"])
+        val canceled = hold()
+        press(KeyEvent.KEYCODE_BACK)
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("origin").assertIsFocused(); true }.getOrDefault(false) }
+        send(KeyEvent.ACTION_DOWN, canceled, 8); send(KeyEvent.ACTION_UP, canceled); compose.waitForIdle()
+        assertEquals(1, plays); assertEquals(0, saves)
         press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(2, plays)
     }
     @Test fun saveOnlyAndSavePlayReopenAtSavedVariantWithSinglePlayback() {
@@ -109,6 +119,19 @@ class ChannelSourceDeviceTest {
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("source-close").assertIsFocused(); true }.getOrDefault(false) }
         assertEquals("101:2", choices.preferred["tv4"])
         press(KeyEvent.KEYCODE_BACK); assertEquals(1, plays); assertEquals(1, saves)
+    }
+    @Test fun emptyAndUnverifiedServicesRemainCloseableWithoutSavingOrPlayback() {
+        rows = emptyList(); mount(); focus("origin")
+        val empty = hold(); send(KeyEvent.ACTION_UP, empty); compose.waitForIdle()
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("source-close").assertIsFocused(); true }.getOrDefault(false) }
+        press(KeyEvent.KEYCODE_BACK)
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("origin").assertIsFocused(); true }.getOrDefault(false) }
+        compose.runOnIdle { rows = listOf(row(4, "+1 HD")) }
+        val unknown = hold(); send(KeyEvent.ACTION_UP, unknown); compose.waitForIdle()
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("source-close").assertIsFocused(); true }.getOrDefault(false) }
+        compose.onAllNodes(hasTestTag("source-variant-4")).assertCountEquals(0)
+        press(KeyEvent.KEYCODE_BACK)
+        assertEquals(0, plays); assertEquals(0, saves)
     }
     @Test fun storageFailureKeepsDialogAndNeverReportsSavedOrStartsPlayback() {
         mount(); focus("origin"); compose.runOnIdle { failSave = true }

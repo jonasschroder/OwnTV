@@ -18,14 +18,16 @@ durable storage is uncertain; it is never presented as success.
 search names across the catalog. Saved available versions win, including explicit UHD; otherwise the
 unchanged automatic order is HD, SD, FHD, unknown, UHD (UHD requires the existing opt-in).
 The picker shows all actually available explicit choices; quality is provider-advertised, not measured.
-A missing saved key is retained, with an honest fallback status. Unknown decorated services stay
+The chooser sorts actual variants by advertised quality/source/stable key; refresh does not reorder
+by ephemeral Room IDs. A missing saved key is retained, with an honest fallback status. Unknown decorated services stay
 exact. Duplicate stable keys on different channel rows are excluded rather than arbitrarily selected.
 Existing regional/EPG service partitions remain distinct; no prefix or fuzzy-name fallback rejoins them.
 
 `rememberChannelSourceSelection` is a destination-scoped coordinator, not a repository or player.
 It reloads local alternatives on channel/source/profile/category/access changes, resolves refreshed
 row IDs by the stable key, and revalidates visibility, source, owner and active context before saving
-and before calling existing playback. One in-flight latch prevents repeat commits/play requests.
+and before calling existing playback. One in-flight latch prevents repeat commits/play requests. The chosen source is also retained in the
+existing logical zap queue so its first channel change cannot revert to the previous quality.
 There is no provider request, EPG scan, stream probe, extra decoder or automatic stream fallback here.
 
 Home retains the logical focus key and module order when a preference updates; only the actual
@@ -41,7 +43,8 @@ logical channel. Existing shared playback and ExoPlayer/MPV fallback remain unch
   thread still recognizes a long duration at release instead of accidentally taking the short action.
 - Focus/navigation/lifecycle/disposal cancels pending holds. The opening cycle is identified by
   Android monotonic `downTime`; old repeat/up events are swallowed even across dialog focus transfer.
-  A lost release does not consume the next deliberate OK.
+  A lost release does not consume the next deliberate OK. Destination-owned cancellation also
+  catches navigation that a Home ancestor consumes before the focused button sees it.
 - Initial dialog focus: saved available variant, otherwise automatic choice, otherwise first real
   explicit choice. Up/Down browses, OK saves and plays. Right moves to Save without playing; Left
   returns to the marked variant. Back closes without a preference write and restores caller focus.
@@ -95,8 +98,18 @@ at both 1920×1080 and 1280×720, alongside unchanged native Home/navigation scr
 These are actual native emulator pixels with explicitly synthetic data, not physical IPTV evidence.
 
 Build, startup, device, upgrade, disposable-signing-safety, i18n and tooling results and artifact
-links are recorded in the PR. The approved visual target is [quality-picker.jpg](../mockups/quality-picker.jpg).
+links are recorded in the PR. The approved visual target is [quality-picker.jpg](../mockups/quality-picker.jpg). The chooser uses
+the existing `OwnTVPopup` Stage host, retaining application/popup density and typography; its own
+window hides system bars without changing device settings. It is centered with bounded lazy rows.
 
 Hardware/firmware remote timing, sofa readability/overscan, DRM, real IPTV and engine fallback still
 need separately approved physical QA. No owner Chromecast app, setting or data is touched. No merge,
 production signing, distribution or installation is authorized by this PR.
+
+The first M3 native run passed startup (including both resolutions, save-only and Home/TV persisted
+consistency), upgrades and 122 of 123 device cases. Its new short-OK test used
+`Instrumentation.sendKeyDownUpSync`, which constructs separate timestamped events. The source-cycle
+guard correctly rejected the mismatched release. New test helpers explicitly inject down/up with
+one shared monotonic `downTime`, like a physical remote; stale-release and repeat assertions remain.
+[AOSP implementation](https://android.googlesource.com/platform/frameworks/base/+/2f431e264d886fd33d537802095e98e9c3425b7c/core/java/android/app/Instrumentation.java)
+explains the helper behavior. Final CI evidence supersedes that development run.

@@ -15,6 +15,7 @@ import tv.own.owntv.core.model.MediaType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.sync.Mutex
@@ -37,7 +38,7 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         prefs.registerOnSharedPreferenceChangeListener(listener)
         trySend(Unit)
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }.conflate().mapLatest { choices(profile) }
+    }.conflate().combine(db.profileDao().observeById(profile)) { _, _ -> Unit }.mapLatest { choices(profile) }
     suspend fun owner(profile: Long): Long? = withContext(Dispatchers.IO) { db.profileDao().getById(profile)?.createdAt }
     suspend fun choices(profile: Long): SwedishChoices = withContext(Dispatchers.IO) {
         val owner = db.profileDao().getById(profile)?.createdAt ?: return@withContext SwedishChoices()

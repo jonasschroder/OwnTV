@@ -21,3 +21,19 @@ internal class RemoteOkPress {
     }
     fun cancel() { pending = false }
 }
+
+/** Destination-owned cancellation, including navigation consumed by an ancestor before the button. */
+internal class SourcePressCancellation {
+    private var owner: Any? = null
+    private var pending: (() -> Unit)? = null
+    fun register(owner: Any, cancel: () -> Unit) {
+        if (this.owner !== owner) this.cancel()
+        this.owner = owner; pending = cancel
+    }
+    fun clear(owner: Any) { if (this.owner === owner) { this.owner = null; pending = null } }
+    fun cancel() {
+        val action = pending
+        owner = null; pending = null
+        action?.invoke()
+    }
+}

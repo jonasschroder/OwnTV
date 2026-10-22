@@ -20,7 +20,7 @@ private data class PickerSession(val identity: String, val owner: Long, val open
  */
 @Composable
 internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnTVDatabase, vm: LiveViewModel,
-    profile: Long, sources: List<Long>, onPlay: (ChannelEntity) -> Unit, onClosed: () -> Unit): ChannelSourceActions {
+    profile: Long, sources: List<Long>, onPlay: (ChannelEntity, String) -> Unit, onClosed: () -> Unit): ChannelSourceActions {
     val scope = rememberCoroutineScope()
     val access by vm.swedishRowContext.collectAsStateWithLifecycle()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
@@ -81,7 +81,7 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
                     // Saved choices survive a later playback failure. Never start stale/removed data.
                     if (actual == null || session != expected || !current()) { error = SourcePickerError.UNAVAILABLE; return@launch }
                     session = null; data = null
-                    if (play) currentPlay(actual) else closed()
+                    if (play) currentPlay(actual, expected.identity) else closed()
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { error = SourcePickerError.SAVE_FAILED }
                 finally { busy = false; actionInFlight[0] = false }
@@ -102,7 +102,7 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
                     vm.homeChannel(original.id, profile)?.takeIf { current() && it.streamUrl.isNotBlank() &&
                         it.sourceId == original.sourceId && CustomizeKeys.channel(it) == CustomizeKeys.channel(original) }
                 }
-                if (actual != null && current()) currentPlay(actual)
+                if (actual != null && current()) currentPlay(actual, identity)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* Failed availability read never starts a decoder. */ }
             finally { actionInFlight[0] = false }

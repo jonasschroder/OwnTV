@@ -122,27 +122,27 @@ internal fun MinTvContentHome(
     fun logical(channel: ChannelEntity): String = current?.channels?.firstOrNull { it.channel.homeEpgKey() == channel.homeEpgKey() }?.key
         ?: logicalBySource[tv.own.owntv.core.customize.CustomizeKeys.channel(channel)].orEmpty()
     val sourceActions = rememberChannelSourceSelection(store, db, liveVm, profile, context.second,
-        onPlay = { actual -> onPlayChannel(actual, current?.channels.orEmpty().map { it.channel }) },
+        onPlay = { actual, identity -> onPlayChannel(actual, current?.channels.orEmpty().map { if (it.key == identity) actual else it.channel }) },
         onClosed = { restoreAfterPicker = true })
     // A saved source changes only the entity/EPG behind an existing logical key, not Home membership,
     // programme ordering, hero kind or focus. EPG refresh itself never rebuilds this snapshot.
     LaunchedEffect(savedChoices, profile, current != null) {
         try {
-        val before = current ?: return@LaunchedEffect
-        val choices = savedChoices ?: return@LaunchedEffect
-        val groups = store.library(profile, context.second, choices).groups
-        suspend fun selected(identity: String, exact: ChannelEntity): ChannelEntity {
-            val group = groups.singleOrNull { it.identity == identity } ?: return exact
-            val variant = ChannelSourceResolver.resolve(group, choices, exact = tv.own.owntv.core.customize.CustomizeKeys.channel(exact)).selected ?: return exact
-            return liveVm.homeChannel(variant.id, profile) ?: exact
-        }
-        val rows = before.channels.map { it.copy(channel = selected(it.key, it.channel)) }
-        val live = before.live?.let { old ->
-            val group = groups.firstOrNull { g -> g.variants.any { it.stableKey == tv.own.owntv.core.customize.CustomizeKeys.channel(old) } }
-                ?: groups.firstOrNull { it.identity == logical(old) }
-            if (group == null) old else selected(group.identity, old)
-        }
-        if (liveVm.homeLibraryContext.value == context && snapshot == before) snapshot = before.copy(channels = rows, live = live)
+            val before = current ?: return@LaunchedEffect
+            val choices = savedChoices ?: return@LaunchedEffect
+            val groups = store.library(profile, context.second, choices).groups
+            suspend fun selected(identity: String, exact: ChannelEntity): ChannelEntity {
+                val group = groups.singleOrNull { it.identity == identity } ?: return exact
+                val variant = ChannelSourceResolver.resolve(group, choices, exact = tv.own.owntv.core.customize.CustomizeKeys.channel(exact)).selected ?: return exact
+                return liveVm.homeChannel(variant.id, profile) ?: exact
+            }
+            val rows = before.channels.map { it.copy(channel = selected(it.key, it.channel)) }
+            val live = before.live?.let { old ->
+                val group = groups.firstOrNull { g -> g.variants.any { it.stableKey == tv.own.owntv.core.customize.CustomizeKeys.channel(old) } }
+                    ?: groups.firstOrNull { it.identity == logical(old) }
+                if (group == null) old else selected(group.identity, old)
+            }
+            if (liveVm.homeLibraryContext.value == context && snapshot == before) snapshot = before.copy(channels = rows, live = live)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* Retain the current snapshot; playback still revalidates availability. */ }
     }

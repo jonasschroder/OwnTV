@@ -7,6 +7,9 @@ internal enum class ChannelSourceStatus { SAVED, AUTOMATIC, SAVED_MISSING, UNAVA
 internal data class ChannelSourceResolution(val selected: SwedishVariant?, val alternatives: List<SwedishVariant>,
     val status: ChannelSourceStatus)
 
+internal fun sourceChoiceAllowsPreview(focused: String?, suppressed: String?, pickerOpen: Boolean): Boolean =
+    focused != null && focused != suppressed && !pickerOpen
+
 /** No fuzzy matching. The caller supplies an already access-filtered Swedish group or exact rows.
  * Event actions cannot gain equivalence from a channel name. A verified broadcast's candidates
  * must ALL already have fixture/broadcaster evidence; this resolver never creates that evidence.
@@ -15,6 +18,7 @@ internal object ChannelSourceResolver {
     fun alternatives(group: SwedishGroup): List<SwedishVariant> = group.variants
         .filter { it.name.identity == group.identity }
         .groupBy { it.stableKey }.values.mapNotNull { rows -> rows.distinctBy { it.id }.singleOrNull() }
+        .sortedWith(compareBy<SwedishVariant> { it.name.quality.automaticRank }.thenBy { it.sourceId }.thenBy { it.stableKey })
 
     fun resolve(group: SwedishGroup, choices: SwedishChoices, intent: ChannelSourceIntent = ChannelSourceIntent.LOGICAL,
         exact: String? = null): ChannelSourceResolution {

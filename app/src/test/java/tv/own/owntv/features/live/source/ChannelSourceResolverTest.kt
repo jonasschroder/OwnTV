@@ -11,6 +11,13 @@ class ChannelSourceResolverTest {
     private val fhd = row(2, "TV4 FHD")
     private val uhd = row(3, "TV4 4K", 102)
     private val group = SwedishGroup("tv4", "TV4", listOf(hd, fhd, uhd))
+    @Test fun saveOnlyOrOpenPickerCannotAutotuneAnUpdatedPreferenceButOtherChannelBrowsingCanPreview() {
+        assertFalse(sourceChoiceAllowsPreview("tv4", "tv4", false))
+        assertFalse(sourceChoiceAllowsPreview("svt1", "tv4", true))
+        assertFalse(sourceChoiceAllowsPreview(null, null, false))
+        assertTrue(sourceChoiceAllowsPreview("svt1", "tv4", false))
+        assertTrue(sourceChoiceAllowsPreview("tv4", null, false)) // new profile/visit has no suppression
+    }
     @Test fun automaticPolicyAndExplicitAdvertisedQualityRemainUnchanged() {
         val auto = ChannelSourceResolver.resolve(group, SwedishChoices())
         assertEquals(hd, auto.selected)

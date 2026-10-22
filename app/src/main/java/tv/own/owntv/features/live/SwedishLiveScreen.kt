@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -43,6 +44,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val context by vm.homeLibraryContext.collectAsStateWithLifecycle()
     val profile = context.first
     val scope = rememberCoroutineScope()
+    val pendingSourcePress = remember(profile) { SourcePressCancellation() }
     var choices by remember(profile) { mutableStateOf(SwedishChoices()) }
     var library by remember(profile) { mutableStateOf(SwedishLibrary(emptyList())) }
     var collection by rememberSaveable(profile) { mutableStateOf(SwedishCollection.GENERAL) }
@@ -140,31 +142,40 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         val variant = preferred ?: return@LaunchedEffect
         val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
         resolved = channel?.let { variant.rowKey() to it }
-        if (focusId != previewSuppressedFor) channel?.let(vm::onChannelFocused)
+        if (sourceChoiceAllowsPreview(focusId, previewSuppressedFor, false)) channel?.let(vm::onChannelFocused)
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
-    fun playChannel(original: ChannelEntity) { scope.launch {
+    fun playChannel(original: ChannelEntity, logicalIdentity: String? = null) { scope.launch {
         val channel = vm.homeChannel(original.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == tv.own.owntv.core.customize.CustomizeKeys.channel(original) && it.sourceId == original.sourceId && it.streamUrl.isNotBlank() } ?: return@launch
         // Fresh entity retains all provider authorization, DRM, catch-up and EPG context.
-        val zap = groups.mapNotNull { it.preferred(choices.preferred[it.identity], choices.showUhd) }
+        val latestChoices = store.choices(profile)
+        val zap = groups.mapNotNull { it.preferred(latestChoices.preferred[it.identity], latestChoices.showUhd) }
             .take(200).mapNotNull { row -> vm.homeChannel(row.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == row.stableKey && it.sourceId == row.sourceId } }
         val expected = metadata ?: return@launch
         if (currentMetadata != expected || expected.profileId != profile || !vm.swedishContextCurrent(expected)) return@launch
-        vm.watchFullscreen(channel, zap)
+        val selectedIdentity = logicalIdentity ?: library.groups.firstOrNull { group -> group.variants.any { it.id == channel.id } }?.identity
+        val consistentZap = zap.map { row ->
+            val identity = library.groups.firstOrNull { group -> group.variants.any { it.id == row.id } }?.identity
+            if (identity != null && identity == selectedIdentity) channel else row
+        }.distinctBy { it.id }
+        vm.watchFullscreen(channel, consistentZap)
         if (!external || channel.drmConfig != null) onFullscreen()
     } }
     fun play(variant: SwedishVariant) { scope.launch {
-        vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }?.let(::playChannel)
+        vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }?.let { playChannel(it, variant.name.identity) }
     } }
     val sourceActions = rememberChannelSourceSelection(store, db, vm, profile, context.second,
-        onPlay = ::playChannel, onClosed = { scope.launch { restoreChannel() } })
+        onPlay = { channel, identity -> playChannel(channel, identity) }, onClosed = { scope.launch { restoreChannel() } })
     LaunchedEffect(sourceActions.isOpen) { if (sourceActions.isOpen) previewSuppressedFor = focusId }
     LaunchedEffect(selected?.id, focusId, active, previewEnabled, previewSetting, sourceActions.isOpen, previewSuppressedFor) {
-        if (active && previewEnabled && previewSetting && !sourceActions.isOpen && focusId != previewSuppressedFor)
+        if (active && previewEnabled && previewSetting && sourceChoiceAllowsPreview(focusId, previewSuppressedFor, sourceActions.isOpen))
             selected?.let { delay(700); vm.playPreview(it) }
     }
     fun openSources() { focused?.let { sourceActions.open(it.identity, null) } }
-    SwedishLiveFrame(modifier.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
+    SwedishLiveFrame(modifier.onPreviewKeyEvent { event ->
+        if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
+        false
+    }.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
             TvText(stringResource(R.string.mintv_swedish_channels), Modifier.weight(1f), size = 34, bold = true)
             SwedishLiveAction(stringResource(R.string.mintv_full_library), onLibrary, Modifier.focusRequester(entry))
             SwedishLiveAction(stringResource(R.string.mintv_collection_settings), { edit = !edit })
@@ -208,7 +219,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
                         modifier = Modifier.testTag("swedish-channel-${group.identity}").focusRequester(rowFocus).logicalChannelKeys({
                             if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
                             else sourceActions.play(group.identity, null)
-                        }, { sourceActions.open(group.identity, it) }).onFocusChanged { if (it.isFocused) focusId = group.identity })
+                        }, { sourceActions.open(group.identity, it) }, pendingSourcePress).onFocusChanged { if (it.isFocused) focusId = group.identity })
                     if (choices.showVariants) {
                         HomeButton(stringResource(R.string.mintv_source_title), { sourceActions.open(group.identity, null) }, Modifier.padding(start = 24.mpx))
                     }

@@ -240,7 +240,7 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
         }
         if (live != null || resume != null) Column(Modifier.weight(1f).fillMaxHeight().background(Color.White.copy(alpha = .025f)).padding(30.mpx),
             verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-            TvText(stringResource(if (resume != null && live != null) R.string.mintv_smart_last_tv else R.string.mintv_smart_next),
+            TvText(stringResource(if (resume != null) { if (live != null) R.string.mintv_smart_last_tv else R.string.search_continue } else R.string.mintv_smart_next),
                 size = 18, bold = true, color = MinTvTeal, lines = 1)
             TvText(if (resume != null) live?.name ?: resume.seriesTitle ?: resume.title
                 else info?.next?.title ?: stringResource(R.string.mintv_v08_empty_now), size = 30, bold = true, lines = 2)

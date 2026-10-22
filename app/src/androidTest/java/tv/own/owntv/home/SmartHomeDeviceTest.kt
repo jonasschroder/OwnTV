@@ -15,6 +15,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.features.home.*
 import tv.own.owntv.features.live.*
@@ -117,6 +118,7 @@ class SmartHomeDeviceTest {
         compose.onNodeWithTag("smart-resume-episode").assertDoesNotExist()
         compose.onNodeWithTag("smart-resume-movie").assertExists()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.runOnIdle { assertEquals(1, played) }
+        compose.runOnIdle { assertEquals(1, played); snapshot = snapshot!!.copy(live = null, liveWatchedAt = null) }
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_smart_next)).assertDoesNotExist()
     }
 }

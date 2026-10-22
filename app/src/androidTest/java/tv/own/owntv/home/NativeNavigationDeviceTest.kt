@@ -36,6 +36,7 @@ class NativeNavigationDeviceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private var profile by mutableLongStateOf(7)
     private var available by mutableStateOf(true)
+    private var loadOnEntry by mutableStateOf(false)
     private var fullscreen by mutableStateOf(false)
     private var active by mutableStateOf(TopDestination.HOME)
     private val enteredPages = mutableListOf<TopDestination>()
@@ -65,6 +66,12 @@ class NativeNavigationDeviceTest {
                         NativeBack.EXIT -> Unit
                     }
                 }
+                LaunchedEffect(active, profile) {
+                    if (loadOnEntry && active == TopDestination.TV) {
+                        kotlinx.coroutines.delay(80)
+                        available = true
+                    }
+                }
                 if (!fullscreen) Column {
                     var entryRequest by remember(profile) { mutableIntStateOf(0) }
                     NativeContentEntry(entryRequest, "$profile:$active", { enter?.invoke() == true }, { header.requestFocus() }, { entryRequest = 0 })
@@ -77,7 +84,8 @@ class NativeNavigationDeviceTest {
                         var last by rememberSaveable { mutableIntStateOf(0) }
                         val targets = remember(profile, active) { (0..30).associateWith { FocusRequester() } }
                         DisposableEffect(profile, active, available) {
-                            enter = { enteredPages.add(active); if (available) runCatching { targets.getValue(last).requestFocus() }.getOrDefault(false) else false }
+                            val owner = active
+                            enter = { enteredPages.add(owner); if (available) runCatching { targets.getValue(last).requestFocus() }.getOrDefault(false) else false }
                             onDispose { enter = null }
                         }
                         LazyColumn(state = rows, modifier = Modifier.fillMaxSize().nativeContentNavigation(header, manager)
@@ -128,6 +136,14 @@ class NativeNavigationDeviceTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("native-row-0").assertIsFocused()
     }
+    @Test fun downWaitsForAsynchronousDestinationControls() {
+        available = false; loadOnEntry = true
+        mount()
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("native-row-0").assertIsFocused()
+        compose.runOnIdle { assertEquals(TopDestination.TV, active); assertTrue(enteredPages.all { it == TopDestination.TV }) }
+    }
+
     @Test fun fullLabelsFitAndFocusDoesNotResizeHeader() {
         mount()
         for (destination in TopDestination.entries) {

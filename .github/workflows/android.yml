@@ -187,6 +187,7 @@ jobs:
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'scrollingReentryPreservesSavedRowAndProfileDoesNotReuseIt'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'fullLabelsFitAndFocusDoesNotResizeHeader'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downActivatesFocusedDestinationWithoutEnteringOutgoingContent'),
+              ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downWaitsForAsynchronousDestinationControls'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downToUnavailableDestinationKeepsNavigationUsableAndCanRetryAfterLoading'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'focusDoesNotActivateAndAllFiveDestinationsUseOk'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downRestoresLastRowAcrossPageVisitsAndUpTargetsActiveHeader'),

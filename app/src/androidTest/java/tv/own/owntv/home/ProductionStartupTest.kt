@@ -186,6 +186,14 @@ class ProductionStartupTest {
                 fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
                 fun nativeCapture(name: String) {
                     compose.waitForIdle(); instrumentation.waitForIdleSync()
+                    val frames = java.util.concurrent.CountDownLatch(1)
+                    scenario.onActivity { activity ->
+                        activity.window.decorView.postOnAnimation {
+                            activity.window.decorView.postOnAnimation { frames.countDown() }
+                        }
+                    }
+                    assertTrue("Native capture waits for rendered frames", frames.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                    instrumentation.waitForIdleSync()
                     val native = instrumentation.uiAutomation.takeScreenshot()
                     File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
                         assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
@@ -207,7 +215,9 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-TV").performClick()
                 db.progressDao().save(originalProgress.copy(updatedAt = System.currentTimeMillis()))
                 compose.onNodeWithTag("top-HOME").performClick()
-                compose.waitUntil(10_000) { compose.onAllNodesWithText("Syntetiskt sparat avsnitt").fetchSemanticsNodes().isNotEmpty() }
+                val episodeHero = hasText("Syntetiskt sparat avsnitt") and hasAnyAncestor(hasTestTag("smart-hero"))
+                compose.waitUntil(10_000) { compose.onAllNodes(episodeHero).fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("smart-hero").assert(hasAnyDescendant(hasText("Syntetiskt sparat avsnitt")))
                 nativeCapture("smart-active-series")
                 db.progressDao().save(originalProgress)
                 compose.onNodeWithTag("top-TV").performClick()

@@ -504,6 +504,18 @@
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-access-blocked
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-blocked-code
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/ShlRepository.kt	shl-enabled
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-channel-${item.key}
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-channel-row
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-hero
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-hero-play
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-now
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-resume
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt	smart-resume-${item.key}
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeReader.kt	,
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeReader.kt	?
+1	sql	app/src/main/java/tv/own/owntv/features/home/SmartHomeReader.kt	SELECT p.mediaType,p.itemId,p.positionMs,p.durationMs,p.updatedAt FROM playback_progress p LEFT JOIN movies m ON p.mediaType='MOVIE' AND p.itemId=m.id LEFT JOIN episodes e ON p.mediaType='EPISODE' AND p.itemId=e.id LEFT JOIN series s ON e.seriesId=s.id WHERE p.profileId=? AND p.positionMs>0 AND p.durationMs>0 AND CAST(p.positionMs AS REAL)/p.durationMs<0.9 AND (m.sourceId IN ($movieSlots) OR s.sourceId IN ($seriesSlots)) ORDER BY p.updatedAt DESC,p.mediaType,p.itemId LIMIT 96
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeReader.kt	episode:${show.sourceId}:${show.remoteId ?: show.id}:${episode.remoteId ?: episode.id}
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/SmartHomeReader.kt	movie:${movie.sourceId}:${movie.remoteId ?: movie.id}
 4	empty	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	\0
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${BuildConfig.APPLICATION_ID}; Android API ${Build.VERSION.SDK_INT}
 1	log	app/src/main/java/tv/own/owntv/features/home/SportsDiagnostics.kt	${System.currentTimeMillis()} ${event.name}${stage?.let { " ${it.name}" }.orEmpty()}

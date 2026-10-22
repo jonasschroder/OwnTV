@@ -1,0 +1,18 @@
+<resources>
+    <string name="mintv_smart_evening">Din kväll</string>
+    <string name="mintv_smart_back_channel">Tillbaka till din kanal</string>
+    <string name="mintv_smart_continue_series">Fortsätt din serie</string>
+    <string name="mintv_smart_last_tv">Senast på TV</string>
+    <string name="mintv_smart_next">Härnäst</string>
+    <string name="mintv_smart_loading">Läser in din kväll…</string>
+    <string name="mintv_smart_start">Hitta något att titta på</string>
+    <string name="mintv_smart_add_source">Lägg till källa</string>
+    <string name="mintv_smart_episodes">Alla avsnitt</string>
+    <string name="mintv_smart_all_channels">Alla kanaler →</string>
+    <string name="mintv_smart_previous">← Föregående</string>
+    <string name="mintv_smart_more_channels">Fler kanaler →</string>
+    <string name="mintv_smart_remaining">%1$d min kvar</string>
+    <string name="mintv_smart_episode_remaining">S%1$d · A%2$d · %3$d min kvar</string>
+    <string name="mintv_smart_source_hint">Lägg till en källa för att se dina kanaler och sparade positioner.</string>
+    <string name="mintv_smart_browse_hint">Öppna TV för att bläddra bland dina tillgängliga kanaler.</string>
+</resources>

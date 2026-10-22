@@ -1039,7 +1039,7 @@ fun OwnTVShell(
                   { runCatching { sidebarFocus.requestFocus() } }, enterNativeContent,
                   { focusedLayer = ShellLayer.RAIL }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO },
                   entryFocusRequester = nativeSubFocus)
-          } else androidx.compose.foundation.layout.Row(Modifier.height(64.mpx).padding(horizontal = 40.mpx)) {
+          } else androidx.compose.foundation.layout.Row(Modifier.height(if (primary == TopDestination.HOME && playerMode == PlayerMode.NONE) 0.mpx else 64.mpx).padding(horizontal = 40.mpx)) {
               if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
                   tv.own.owntv.ui.stage.StagePill(stringResource(R.string.shell_now_playing), enterNowPlaying)
           }
@@ -1222,8 +1222,9 @@ fun OwnTVShell(
                             onRestored = { restoreFocus = false },
                             firstRowFocusRequester = homeFirstRowFocus,
                             onEntryHook = { homeEntry = it },
+                            onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             contentStart = 64.mpx,
-                            reservedTop = homeStatusHeight + 24.mpx,
+                            reservedTop = homeStatusHeight + 8.mpx,
                             statusWidth = homeStatusWidth,
                             modifier = Modifier.fillMaxSize(),
                         ) }
@@ -1405,6 +1406,7 @@ fun OwnTVShell(
                 clockColors = clockColors,
                 playlistDownFocusRequester = homeFirstRowFocus.takeIf { selectedSection == MainSection.HOME },
                 onPlaylistPillBounds = { playlistPillBounds = it },
+                topInset = if (primary == TopDestination.HOME) 8.mpx else 34.mpx,
                 modifier = Modifier.align(Alignment.TopEnd).onSizeChanged {
                     homeStatusHeight = with(statusDensity) { it.height.toDp() }
                     homeStatusWidth = with(statusDensity) { it.width.toDp() }

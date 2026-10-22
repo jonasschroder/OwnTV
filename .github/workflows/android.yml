@@ -186,6 +186,13 @@ jobs:
           required = {
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'scrollingReentryPreservesSavedRowAndProfileDoesNotReuseIt'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'fullLabelsFitAndFocusDoesNotResizeHeader'),
+              ('tv.own.owntv.home.SmartHomeStorageTest', 'storedProgressKeepsExactEpisodeProfileScopeAndExcludesUnknownCompletedOrMissingItems'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'eightLogicalChannelsFitAndRightScrollsToAdditionalChannel'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'removedRowsFallbackToHeroWithoutFocusTrap'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'programmeRefreshAndMidnightDoNotMoveChannelFocusOrCreateHistory'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'headerRoundTripRestoresLogicalChannel'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'emptyMissingGuideAndProfileSwitchRemainNavigable'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'promotedSeriesKeepsLastLiveAndRemovesOnlyExactHeroFromResumeRow'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downActivatesFocusedDestinationWithoutEnteringOutgoingContent'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downWaitsForAsynchronousDestinationControls'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'downToUnavailableDestinationKeepsNavigationUsableAndCanRetryAfterLoading'),

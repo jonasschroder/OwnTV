@@ -81,7 +81,7 @@ class ProductionStartupTest {
     @Test fun populatePremiumHomeFixture(): Unit = runBlocking {
         assertTrue(app.getSharedPreferences("startup-fixture", Context.MODE_PRIVATE).getBoolean("seeded", false))
         val now = System.currentTimeMillis()
-        val names = listOf("SVT1 HD", "SVT2 SD", "TV3 HD", "TV4 HD", "Kanal 5 HD", "TV6 HD", "TV4 FHD", "TV4 Sport Live 2 HD")
+        val names = listOf("SVT1 HD", "SVT2 SD", "TV3 HD", "TV4 HD", "Kanal 5 HD", "TV6 HD", "Sjuan HD", "TV8 HD", "Kanal 9 HD", "TV10 HD")
         val pictures = File(app.filesDir, "synthetic-logos").apply { mkdirs() }
         for ((index, name) in names.withIndex()) {
             val file = File(pictures, "$index.png")
@@ -109,6 +109,17 @@ class ProductionStartupTest {
                 EpgProgrammeEntity(sourceId = 101, epgChannelId = "missing-guide-${index + 1}",
                     startMs = now - 15 * 60_000, stopMs = now + 45 * 60_000, title = "Syntetiskt nästa program ${index + 1}")))
         }
+        val source = db.sourceDao().getById(101)!!
+        db.sourceDao().update(source.copy(syncMovies = true, syncSeries = true))
+        db.movieDao().insertAll(listOf(
+            MovieEntity(id = 5001, sourceId = 101, name = "Syntetisk film — sparad position", streamUrl = "http://127.0.0.1:9/movie/1"),
+            MovieEntity(id = 5002, sourceId = 101, name = "Syntetisk andra film", streamUrl = "http://127.0.0.1:9/movie/2")))
+        db.seriesDao().insertSeries(listOf(SeriesEntity(id = 6001, sourceId = 101, name = "Syntetisk serie")))
+        db.seriesDao().upsertEpisodes(listOf(EpisodeEntity(id = 6002, seriesId = 6001, seasonNumber = 1, episodeNumber = 3,
+            name = "Syntetiskt sparat avsnitt", streamUrl = "http://127.0.0.1:9/episode/3")))
+        for ((index, item) in listOf(MediaType.EPISODE to 6002L, MediaType.MOVIE to 5001L, MediaType.MOVIE to 5002L).withIndex())
+            db.progressDao().save(PlaybackProgressEntity(profileId = 7, mediaType = item.first, itemId = item.second,
+                positionMs = (18 + index) * 60_000L, durationMs = 48 * 60_000L, updatedAt = now - 3_600_000 - index))
     }
 
     @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }
@@ -126,7 +137,7 @@ class ProductionStartupTest {
             // its own resources with the persisted app locale. Assert against the latter.
             var homeLabel = ""
             scenario.onActivity { activity ->
-                homeLabel = activity.getString(R.string.mintv_v08_last_watched)
+                homeLabel = activity.getString(R.string.mintv_smart_back_channel)
                 if (LocaleStore.from(activity).readBlocking() == "sv") {
                     assertEquals("sv", activity.resources.configuration.locales[0].language)
                 }
@@ -135,6 +146,7 @@ class ProductionStartupTest {
             compose.waitUntil(30_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
             Thread.sleep(8_000) // Real elapsed survival beyond the reported one-second fatal window.
             compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            compose.onNodeWithTag("smart-hero-play").assertIsDisplayed()
             val premium = InstrumentationRegistry.getArguments().getString("premiumHome") == "true"
             if (premium) {
                 compose.waitUntil(15_000) {
@@ -156,41 +168,32 @@ class ProductionStartupTest {
                 .outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             bitmap.recycle()
             if (premium) {
-                var moreLabel = ""
-                var guideLabel = ""
-                scenario.onActivity { activity ->
-                    moreLabel = activity.getString(R.string.mintv_v08_more)
-                    guideLabel = activity.getString(R.string.mintv_guide)
-                }
-                fun press(code: Int) { instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+                fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("smart-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("smart-hero-play").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                compose.onNodeWithTag("smart-hero-play").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.onNodeWithTag("smart-channel-svt1").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
-                compose.onNodeWithText(moreLabel).assertIsFocused()
-                press(KeyEvent.KEYCODE_DPAD_CENTER)
-                compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(guideLabel).assertIsFocused(); true }.getOrDefault(false) }
-                press(KeyEvent.KEYCODE_BACK)
-                compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(moreLabel).assertIsFocused(); true }.getOrDefault(false) }
-                press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
-                compose.waitUntil(5_000) { compose.onAllNodes(hasText("SVT1") and isFocused()).fetchSemanticsNodes().size == 1 }
-                press(KeyEvent.KEYCODE_DPAD_RIGHT)
-                // Existing favorite/history ordering is intentionally not changed by this PR.
-                val channelLabels = setOf("SVT2", "TV3", "TV4", "Kanal 5", "TV6", "TV4 Sport Live 2")
-                fun focusedChannel(): String? = compose.onAllNodes(isFocused()).fetchSemanticsNodes()
-                    .flatMap { it.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() } }
-                    .firstOrNull { it.text in channelLabels }?.text
-                compose.waitUntil(5_000) { focusedChannel() != null }
-                val selectedChannel = focusedChannel()
+                compose.onNodeWithTag("smart-channel-tv3").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
-                compose.onNodeWithText(homeLabel).assertIsDisplayed()
+                compose.onNodeWithTag("top-HOME").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
-                compose.waitUntil(5_000) { focusedChannel() == selectedChannel }
-                press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
-                compose.onNodeWithText(homeLabel).assertIsDisplayed()
+                compose.onNodeWithTag("smart-channel-tv3").assertIsFocused()
             }
             if (premium) {
                 // Real application owners and persisted data, not a replacement setContent fixture.
                 fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
                 fun nativeCapture(name: String) {
                     compose.waitForIdle(); instrumentation.waitForIdleSync()
+                    val frames = java.util.concurrent.CountDownLatch(1)
+                    scenario.onActivity { activity ->
+                        activity.window.decorView.postOnAnimation {
+                            activity.window.decorView.postOnAnimation { frames.countDown() }
+                        }
+                    }
+                    assertTrue("Native capture waits for rendered frames", frames.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                    instrumentation.waitForIdleSync()
                     val native = instrumentation.uiAutomation.takeScreenshot()
                     File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
                         assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
@@ -198,7 +201,30 @@ class ProductionStartupTest {
                     native.recycle()
                 }
                 compose.onNodeWithTag("top-HOME").assertExists()
+                // Home overrides Compose density; compare raw root pixels, never unrelated dp units.
+                val viewport = compose.onRoot().fetchSemanticsNode().boundsInRoot
+                for (key in listOf("movie:101:5001", "movie:101:5002", "episode:101:6001:6002")) {
+                    val node = compose.onNodeWithTag("smart-resume-$key").fetchSemanticsNode()
+                    val top = node.positionInRoot.y
+                    val bottom = top + node.size.height
+                    assertTrue("All three full resume cards fit above the fold: $top..$bottom in $viewport",
+                        top >= viewport.top && bottom <= viewport.bottom)
+                }
                 nativeCapture("home")
+                val originalProgress = db.progressDao().get(7, MediaType.EPISODE, 6002)!!
+                compose.onNodeWithTag("top-TV").performClick()
+                db.progressDao().save(originalProgress.copy(updatedAt = System.currentTimeMillis()))
+                compose.onNodeWithTag("top-HOME").performClick()
+                val episodeHero = hasText("Syntetiskt sparat avsnitt") and hasAnyAncestor(hasTestTag("smart-hero"))
+                compose.waitUntil(10_000) { compose.onAllNodes(episodeHero).fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("smart-hero").assert(hasAnyDescendant(hasText("Syntetiskt sparat avsnitt")))
+                val storedGuide = hasText("Syntetiska Nyheterna", substring = true) and hasTestTag("smart-channel-svt1")
+                compose.waitUntil(10_000) { compose.onAllNodes(storedGuide).fetchSemanticsNodes().isNotEmpty() }
+                nativeCapture("smart-active-series")
+                db.progressDao().save(originalProgress)
+                compose.onNodeWithTag("top-TV").performClick()
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.waitUntil(10_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-TV").assertIsSelected()
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sub-LIVE_TV").assertIsFocused(); true }.getOrDefault(false) }

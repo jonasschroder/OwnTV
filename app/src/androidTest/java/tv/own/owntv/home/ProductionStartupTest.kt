@@ -188,6 +188,7 @@ class ProductionStartupTest {
             }
             if (premium) {
                 // Real application owners and persisted data, not a replacement setContent fixture.
+                fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
                 fun nativeCapture(name: String) {
                     compose.waitForIdle(); instrumentation.waitForIdleSync()
                     val native = instrumentation.uiAutomation.takeScreenshot()

@@ -186,6 +186,85 @@ class ProductionStartupTest {
                 press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_UP)
                 compose.onNodeWithText(homeLabel).assertIsDisplayed()
             }
+            if (premium) {
+                // Real application owners and persisted data, not a replacement setContent fixture.
+                fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+                fun nativeCapture(name: String) {
+                    compose.waitForIdle(); instrumentation.waitForIdleSync()
+                    val native = instrumentation.uiAutomation.takeScreenshot()
+                    File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
+                        assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
+                    }
+                    native.recycle()
+                }
+                compose.onNodeWithTag("top-HOME").assertExists()
+                nativeCapture("home")
+                compose.onNodeWithTag("top-TV").performClick()
+                compose.onNodeWithTag("top-TV").assertIsSelected()
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sub-LIVE_TV").assertIsFocused(); true }.getOrDefault(false) }
+                nativeCapture("tv")
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitForIdle()
+                compose.onNodeWithTag("sub-EPG").assertIsSelected()
+                nativeCapture("guide")
+                val livePreference = settings.liveView.first()
+                settings.setLiveView(SettingsRepository.LiveView.GUIDE)
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.onNodeWithTag("top-TV").performClick()
+                // The explicit EPG subview is remembered; LIVE's guide-first preference is also retained.
+                compose.onNodeWithTag("sub-LIVE_TV").performClick()
+                var nowLabel = ""
+                scenario.onActivity { nowLabel = it.getString(R.string.content_epg_now_short) }
+                compose.waitUntil(5_000) { compose.onAllNodesWithText(nowLabel).fetchSemanticsNodes().isNotEmpty() }
+                assertEquals(SettingsRepository.LiveView.GUIDE, settings.liveView.first())
+                settings.setLiveView(livePreference)
+                compose.onNodeWithTag("top-TV").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                compose.waitForIdle()
+                compose.onNodeWithTag("top-TV").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("top-SPORT").assertIsFocused()
+                compose.onNodeWithTag("top-TV").assertIsSelected()
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitForIdle()
+                compose.onNodeWithTag("top-SPORT").assertIsNotFocused()
+                compose.onNodeWithTag("top-SPORT").assertIsSelected()
+                nativeCapture("sport")
+                compose.onNodeWithTag("top-VOD").performClick()
+                compose.onNodeWithTag("sub-MOVIES").assertExists()
+                compose.onNodeWithTag("sub-SERIES").performClick()
+                compose.onNodeWithTag("sub-SERIES").assertIsSelected()
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                compose.waitForIdle()
+                compose.onNodeWithTag("top-HOME").assertIsFocused()
+                repeat(3) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+                compose.onNodeWithTag("top-VOD").assertIsFocused()
+                compose.onNodeWithTag("top-HOME").assertIsSelected()
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitForIdle()
+                compose.onNodeWithTag("sub-SERIES").assertIsSelected()
+                compose.onNodeWithTag("top-VOD").assertIsNotFocused()
+                nativeCapture("series")
+                compose.onNodeWithTag("top-PROFILE").performClick()
+                compose.onNodeWithTag("sub-MORE").assertExists()
+                nativeCapture("profile")
+                for (page in listOf("FAVORITES", "HISTORY", "BACKUP", "LOCAL_SYNC", "ERROR_LOG", "ABOUT")) {
+                    compose.onNodeWithTag("profile-page-$page").performClick()
+                    compose.onNodeWithTag("profile-content-$page").assertIsDisplayed()
+                }
+                compose.onNodeWithTag("sub-DOWNLOADS").performClick()
+                compose.onNodeWithTag("sub-DOWNLOADS").assertIsSelected()
+                nativeCapture("downloads")
+                var recordingsLabel = ""
+                scenario.onActivity { recordingsLabel = it.getString(R.string.recording_title) }
+                compose.onNode(hasText(recordingsLabel) and hasClickAction()).performClick()
+                nativeCapture("recordings")
+                compose.onNodeWithTag("sub-SETTINGS").performClick()
+                compose.onNodeWithTag("sub-SETTINGS").assertIsSelected()
+                nativeCapture("settings")
+                compose.onNodeWithTag("top-HOME").performClick()
+            }
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)

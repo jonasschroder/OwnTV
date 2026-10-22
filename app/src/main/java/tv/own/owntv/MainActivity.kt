@@ -452,10 +452,11 @@ open class MainActivity : ComponentActivity() {
                                 onAddProfile = { gateSession.startAddingProfile() },
                                 modifier = Modifier.fillMaxSize(),
                             )
-                            shellReady -> OwnTVShell(
+                            // Profile owns every shell bookmark and saved UI state, including after process recreation.
+                            shellReady -> androidx.compose.runtime.key(profile) { OwnTVShell(
                                 selectedSection = selectedSection,
                                 visibleSections = visibleSections,
-                                onSelectSection = viewModel::selectSection,
+                                onSelectLegacySection = viewModel::selectSection,
                                 themeMode = themeMode,
                                 uiZoomPercent = uiZoomPercent,
                                 onSetZoom = viewModel::setUiZoom,
@@ -489,7 +490,7 @@ open class MainActivity : ComponentActivity() {
                                     gateSession.requestSwitchProfile()
                                 },
                                 modifier = Modifier.fillMaxSize(),
-                            )
+                            ) }
                             // No unexpected combination of asynchronous state may fall through to
                             // the shell. The known loading/onboarding/gate cases are above; a blank
                             // frame is safer than rendering protected content if a new state is added.

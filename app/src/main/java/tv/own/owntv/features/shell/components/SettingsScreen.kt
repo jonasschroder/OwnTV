@@ -1921,7 +1921,7 @@ private fun ReminderLeadDialog(settingsVm: SettingsViewModel, onClose: () -> Uni
 /** Chip label for the Navigation row: the chosen rail style. */
 @Composable
 private fun navStyleLabel(style: tv.own.owntv.core.settings.SettingsRepository.NavStyle): String = stringResource(
-    when (style) {
+    if (tv.own.owntv.features.shell.LocalNativeTopNavigation.current) R.string.mintv_nav_top else when (style) {
         tv.own.owntv.core.settings.SettingsRepository.NavStyle.FLOATING -> R.string.settings_nav_floating
         tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED -> R.string.settings_nav_docked
     },

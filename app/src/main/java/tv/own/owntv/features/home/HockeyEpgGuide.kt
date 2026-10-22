@@ -95,7 +95,13 @@ internal fun preferredHockeyChannel(channels: List<ChannelEntity>, choices: Swed
     val named = rows.map { channel -> channel to (SwedishChannels.recognize(channel.name) ?: return null) }
     if (named.map { it.second.identity }.distinct().size != 1) return null
     val identity = named.first().second.identity
-    rows.singleOrNull { CustomizeKeys.channel(it) == choices.preferred[identity] }?.let { return it }
+    val verifiedGroup = tv.own.owntv.features.live.SwedishGroup(identity, named.first().second.label, named.map { (channel, name) ->
+        tv.own.owntv.features.live.SwedishVariant(channel.id, channel.sourceId, CustomizeKeys.channel(channel), channel.name, name, channel.number)
+    })
+    val resolved = tv.own.owntv.features.live.source.ChannelSourceResolver.resolve(verifiedGroup, choices,
+        tv.own.owntv.features.live.source.ChannelSourceIntent.VERIFIED_BROADCAST)
+    if (resolved.status == tv.own.owntv.features.live.source.ChannelSourceStatus.SAVED)
+        rows.singleOrNull { it.id == resolved.selected?.id && it.sourceId == resolved.selected?.sourceId }?.let { return it }
     if (rows.map { it.sourceId }.distinct().size != 1) return null
     // Different EPG services can carry regional, audio or time-shift variants.
     if (rows.map { it.epgChannelId }.distinct().size != 1) return null

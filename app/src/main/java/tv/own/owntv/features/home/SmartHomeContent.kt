@@ -25,6 +25,7 @@ import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.features.live.SwedishRowInfo
+import tv.own.owntv.features.live.source.logicalChannelKeys
 import tv.own.owntv.ui.format.rememberSystemTimeFormatter
 import tv.own.owntv.ui.theme.mpx
 
@@ -41,7 +42,8 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     firstFocus: FocusRequester, onEntry: ((() -> Boolean)?) -> Unit,
     onFocused: () -> Unit, restore: Boolean, onRestored: () -> Unit,
     contentStart: Dp, reservedTop: Dp, modifier: Modifier = Modifier,
-    onVisibleChannels: (List<ChannelEntity>) -> Unit = {}, onHeader: () -> Unit) {
+    onVisibleChannels: (List<ChannelEntity>) -> Unit = {}, onHeader: () -> Unit,
+    onSource: ((ChannelEntity, Long) -> Unit)? = null) {
     val current = snapshot?.takeIf { it.profile == profile }
     val channels = current?.channels.orEmpty()
     val resumes = current?.resumes.orEmpty()
@@ -124,7 +126,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                 }.onFocusChanged { if (it.hasFocus) onFocused() }.focusGroup()) {
             item(key = "smart-hero") {
                 SmartHomeHero(current, guide, onLive, onResume, onEpisodes, onTv, onGuide, onSources,
-                    nav.section(0))
+                    nav.section(0), onSource)
             }
             if (channels.isNotEmpty()) item(key = "smart-now") {
                 Column(Modifier.onFocusChanged { if (it.hasFocus) nav.selected = 1 }.focusGroup(), verticalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -137,6 +139,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                         items(channels, key = { it.key }) { item ->
                             SmartChannelCard(item, guide.rows[item.channel.homeEpgKey()], guide.at, { onLive(item.channel) },
                                 Modifier.width(width).then(if (item.key == entryChannel) nav.section(1) else Modifier)
+                                    .then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(item.channel) }, { onSource(item.channel, it) }) else Modifier)
                                     .testTag("smart-channel-${item.key}").onFocusChanged { if (it.isFocused) channelKey = item.key })
                         }
                     }
@@ -194,7 +197,8 @@ internal fun SmartAction(label: String, onClick: () -> Unit, modifier: Modifier 
 @Composable
 private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
     onLive: (ChannelEntity) -> Unit, onResume: (SmartResume) -> Unit, onEpisodes: (Long) -> Unit,
-    onTv: () -> Unit, onGuide: () -> Unit, onSources: () -> Unit, first: Modifier) {
+    onTv: () -> Unit, onGuide: () -> Unit, onSources: () -> Unit, first: Modifier,
+    onSource: ((ChannelEntity, Long) -> Unit)?) {
     val live = snapshot?.live
     val resume = snapshot?.heroResume
     val info = live?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
@@ -233,7 +237,8 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
                 SmartAction(stringResource(when { resume != null -> R.string.content_action_resume; live != null -> R.string.mintv_watch_channel
                     snapshot?.hasSources == false -> R.string.mintv_smart_add_source; else -> R.string.mintv_home_live }),
                     { when { resume != null -> onResume(resume); live != null -> onLive(live); snapshot?.hasSources == false -> onSources(); else -> onTv() } },
-                    first.testTag("smart-hero-play"), primary = true)
+                    first.testTag("smart-hero-play").then(if (resume == null && live != null && onSource != null)
+                        Modifier.logicalChannelKeys({ onLive(live) }, { onSource(live, it) }) else Modifier), primary = true)
                 if (resume?.seriesId != null) SmartAction(stringResource(R.string.mintv_smart_episodes), { onEpisodes(resume.seriesId) })
                 else if (live != null) SmartAction(stringResource(R.string.mintv_guide), onGuide)
             }
@@ -244,7 +249,8 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
                 size = 18, bold = true, color = MinTvTeal, lines = 1)
             TvText(if (resume != null) live?.name ?: resume.seriesTitle ?: resume.title
                 else info?.next?.title ?: stringResource(R.string.mintv_v08_empty_now), size = 30, bold = true, lines = 2)
-            if (resume != null && live != null) SmartAction(stringResource(R.string.mintv_watch_channel), { onLive(live) })
+            if (resume != null && live != null) SmartAction(stringResource(R.string.mintv_watch_channel), { onLive(live) },
+                Modifier.testTag("smart-last-live").then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(live) }, { onSource(live, it) }) else Modifier))
             else if (resume == null) {
                 info?.next?.let { TvText(stringResource(R.string.mintv_v08_time_range, time(it.startMs), time(it.stopMs)), size = 22, color = MinTvMuted, lines = 1) }
                 SmartAction(stringResource(R.string.mintv_guide), onGuide)

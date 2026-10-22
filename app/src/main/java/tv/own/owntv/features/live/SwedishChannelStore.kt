@@ -13,6 +13,13 @@ import tv.own.owntv.core.customize.CustomizationStore
 import tv.own.owntv.core.customize.CustomizeKeys
 import tv.own.owntv.core.model.MediaType
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import android.content.SharedPreferences
 
 internal data class SwedishChoices(val showUhd: Boolean = false, val showVariants: Boolean = false,
     val order: List<String> = emptyList(), val hidden: Set<String> = emptySet(), val preferred: Map<String, String> = emptyMap())
@@ -21,6 +28,17 @@ internal data class SwedishLibrary(val groups: List<SwedishGroup>, val bounded: 
 /** Derived compact index from existing Room tables. No stream URLs, DB migration or catalog mutation. */
 internal class SwedishChannelStore(context: Context, private val db: OwnTVDatabase, private val customize: CustomizationStore) {
     private val prefs = context.getSharedPreferences("mintv-swedish-channels", 0)
+    private val writes = Mutex()
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun observeChoices(profile: Long) = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == "profile:$profile") trySend(Unit)
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(Unit)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.conflate().mapLatest { choices(profile) }
+    suspend fun owner(profile: Long): Long? = withContext(Dispatchers.IO) { db.profileDao().getById(profile)?.createdAt }
     suspend fun choices(profile: Long): SwedishChoices = withContext(Dispatchers.IO) {
         val owner = db.profileDao().getById(profile)?.createdAt ?: return@withContext SwedishChoices()
         runCatching {
@@ -33,12 +51,29 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
                 preferred?.keys()?.asSequence()?.take(4096)?.associateWith { preferred.getString(it) }.orEmpty())
         }.getOrDefault(SwedishChoices())
     }
-    suspend fun save(profile: Long, value: SwedishChoices) = withContext(Dispatchers.IO) {
-        val owner = db.profileDao().getById(profile)?.createdAt ?: return@withContext
+    suspend fun save(profile: Long, value: SwedishChoices) = writes.withLock { persist(profile, value) }
+    /** Merge only this choice into the latest preferences; never overwrite order/hidden/UHD settings. */
+    suspend fun savePreferred(profile: Long, expectedOwner: Long, identity: String, key: String,
+        available: suspend () -> Boolean) = writes.withLock {
+        check(owner(profile) == expectedOwner && available())
+        val latest = choices(profile)
+        check(owner(profile) == expectedOwner)
+        persist(profile, latest.copy(preferred = latest.preferred + (identity to key)), expectedOwner)
+    }
+    private suspend fun persist(profile: Long, value: SwedishChoices, expectedOwner: Long? = null) = withContext(Dispatchers.IO) {
+        val owner = checkNotNull(db.profileDao().getById(profile)?.createdAt)
+        check(expectedOwner == null || owner == expectedOwner)
         val raw = JSONObject().put("owner", owner).put("uhd", value.showUhd).put("variants", value.showVariants)
             .put("order", JSONArray(value.order)).put("hidden", JSONArray(value.hidden.toList()))
             .put("preferred", JSONObject(value.preferred)).toString()
-        require(raw.length <= 65_536); check(prefs.edit().putString("profile:$profile", raw).commit())
+        require(raw.length <= 65_536)
+        val key = "profile:$profile"
+        val previous = prefs.getString(key, null)
+        // Android can publish the in-memory value before reporting a failed disk commit.
+        // Restore the previous value on failure; never proceed to playback or claim success.
+        val saved = runCatching { prefs.edit().putString(key, raw).commit() }.getOrDefault(false)
+        if (!saved) runCatching { prefs.edit().putString(key, previous).commit() }
+        check(saved)
     }
     suspend fun library(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary = withContext(Dispatchers.IO) {
         val permitted = db.sourceDao().observeForProfile(profile).first().filter { it.syncLive }.map { it.id }.toSet()
@@ -55,7 +90,7 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
             currentCoroutineContext().ensureActive()
             var count = 0
             db.readCatalog(
-                "SELECT id,sourceId,remoteId,name,number,categoryId,epgChannelId FROM channels WHERE sourceId IN ($marks) AND id > ? ORDER BY id LIMIT 400",
+                "SELECT id,sourceId,remoteId,name,number,categoryId,epgChannelId FROM channels WHERE sourceId IN ($marks) AND id > ? AND trim(streamUrl)!='' ORDER BY id LIMIT 400",
                 (scopedSources + last).toTypedArray()) { cursor ->
                 while (cursor.moveToNext()) {
                     last = cursor.getLong(0); count++; scanned++

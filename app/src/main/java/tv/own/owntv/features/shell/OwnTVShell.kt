@@ -1039,7 +1039,7 @@ fun OwnTVShell(
                   { runCatching { sidebarFocus.requestFocus() } }, enterNativeContent,
                   { focusedLayer = ShellLayer.RAIL }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO },
                   entryFocusRequester = nativeSubFocus)
-          } else androidx.compose.foundation.layout.Row(Modifier.height(64.mpx).padding(horizontal = 40.mpx)) {
+          } else androidx.compose.foundation.layout.Row(Modifier.height(if (primary == TopDestination.HOME && playerMode == PlayerMode.NONE) 0.mpx else 64.mpx).padding(horizontal = 40.mpx)) {
               if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
                   tv.own.owntv.ui.stage.StagePill(stringResource(R.string.shell_now_playing), enterNowPlaying)
           }

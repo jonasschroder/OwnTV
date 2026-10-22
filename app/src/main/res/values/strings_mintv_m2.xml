@@ -1,0 +1,16 @@
+<resources>
+    <string name="mintv_smart_evening">Your evening</string>
+    <string name="mintv_smart_back_channel">Back to your channel</string>
+    <string name="mintv_smart_continue_series">Continue your series</string>
+    <string name="mintv_smart_last_tv">Last on TV</string>
+    <string name="mintv_smart_next">Up next</string>
+    <string name="mintv_smart_loading">Loading your evening…</string>
+    <string name="mintv_smart_start">Find something to watch</string>
+    <string name="mintv_smart_add_source">Add source</string>
+    <string name="mintv_smart_episodes">All episodes</string>
+    <string name="mintv_smart_all_channels">All channels →</string>
+    <string name="mintv_smart_previous">← Previous</string>
+    <string name="mintv_smart_more_channels">More channels →</string>
+    <string name="mintv_smart_remaining">%1$d min left</string>
+    <string name="mintv_smart_episode_remaining">S%1$d · E%2$d · %3$d min left</string>
+</resources>

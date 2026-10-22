@@ -43,6 +43,8 @@ class ChannelSourceStorageTest {
             val store = SwedishChannelStore(isolated, db, custom)
             val original = SwedishChoices(showUhd = false, showVariants = true, order = listOf("tv4", "svt1"), hidden = setOf("svt2"),
                 preferred = mapOf("svt1" to "keep:other"))
+            store.save(999, original) // Legacy collection controls remain safe before profile arrival.
+            assertEquals(SwedishChoices(), store.choices(999))
             store.save(7, original)
             val firstObserved = CompletableDeferred<Unit>()
             val observed = async {

@@ -47,7 +47,8 @@ logical channel. Existing shared playback and ExoPlayer/MPV fallback remain unch
   catches navigation that a Home ancestor consumes before the focused button sees it.
 - Initial dialog focus: saved available variant, otherwise automatic choice, otherwise first real
   explicit choice. Up/Down browses, OK saves and plays. Right moves to Save without playing; Left
-  returns to the marked variant. Back closes without a preference write and restores caller focus.
+  returns to the marked variant. Back closes without a preference write and restores caller focus, including the last-live companion
+  when an episode owns the hero. If that action disappears, focus falls back to the retained section.
 - Missing/unverified alternatives, removal while open and save failures have explicit recoverable
   states. Removal does not auto-select another source or silently overwrite the saved preference.
 - Source ordinals identify real source IDs without displaying private account/source names or URLs.
@@ -113,3 +114,9 @@ guard correctly rejected the mismatched release. New test helpers explicitly inj
 one shared monotonic `downTime`, like a physical remote; stale-release and repeat assertions remain.
 [AOSP implementation](https://android.googlesource.com/platform/frameworks/base/+/2f431e264d886fd33d537802095e98e9c3425b7c/core/java/android/app/Instrumentation.java)
 explains the helper behavior. Final CI evidence supersedes that development run.
+
+The empty/unverified chooser regression exposed an early Close focus request before its platform
+window gained focus. Initialization now runs inside the popup and waits for that window’s focus
+state, retaining explicit Close focus for empty, removed and unverified alternatives. Companion
+source dismissal also restores the exact last-live action rather than the episode Resume action;
+component and real persisted startup cases cover it, with a safe fallback when the action disappears.

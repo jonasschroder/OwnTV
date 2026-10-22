@@ -62,7 +62,11 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         persist(profile, latest.copy(preferred = latest.preferred + (identity to key)), expectedOwner)
     }
     private suspend fun persist(profile: Long, value: SwedishChoices, expectedOwner: Long? = null) = withContext(Dispatchers.IO) {
-        val owner = checkNotNull(db.profileDao().getById(profile)?.createdAt)
+        val owner = db.profileDao().getById(profile)?.createdAt
+        if (owner == null) {
+            check(expectedOwner == null) // Preserve legacy collection-save no-op while profiles load.
+            return@withContext
+        }
         check(expectedOwner == null || owner == expectedOwner)
         val raw = JSONObject().put("owner", owner).put("uhd", value.showUhd).put("variants", value.showVariants)
             .put("order", JSONArray(value.order)).put("hidden", JSONArray(value.hidden.toList()))

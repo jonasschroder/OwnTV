@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.focus.*
@@ -44,18 +45,20 @@ internal fun ChannelSourcePicker(data: SourcePickerData?, openingDownTime: Long?
     val initial = rows.firstOrNull { it.stableKey == data?.choices?.preferred?.get(data.group.identity) }
         ?: result?.selected ?: rows.firstOrNull()
     val selectedRow = rows.firstOrNull { it.stableKey == selected }
-    LaunchedEffect(rows.map { it.stableKey }, error, data != null) {
-        if (!entered) {
-            selected = initial?.stableKey
-            if (initial != null) {
-                list.scrollToItem(rows.indexOf(initial))
-                repeat(2) { withFrameNanos { } }
-                entered = targets[initial.stableKey]?.requestSafely() == true
-            } else if (data != null || error != null) { withFrameNanos { }; close.requestSafely() }
-        } else if (selectedRow == null) { withFrameNanos { }; close.requestSafely() }
-    }
     OwnTVPopup(onDismissRequest = { if (!busy) onDismiss() }, dismissOnBackPress = !busy,
         dismissOnClickOutside = !busy, stageLayout = true) {
+        val windowFocused = LocalWindowInfo.current.isWindowFocused
+        LaunchedEffect(windowFocused, rows.map { it.stableKey }, error, data != null) {
+            if (!windowFocused) return@LaunchedEffect
+            if (!entered) {
+                selected = initial?.stableKey
+                if (initial != null) {
+                    list.scrollToItem(rows.indexOf(initial))
+                    repeat(2) { withFrameNanos { } }
+                    entered = targets[initial.stableKey]?.requestSafely() == true
+                } else if (data != null || error != null) { repeat(2) { withFrameNanos { } }; entered = close.requestSafely() }
+            } else if (selectedRow == null) { withFrameNanos { }; close.requestSafely() }
+        }
         val view = LocalView.current
         DisposableEffect(view) {
             val hideBars = Runnable {
@@ -74,7 +77,7 @@ internal fun ChannelSourcePicker(data: SourcePickerData?, openingDownTime: Long?
                 .background(Color(0xFF192E38), RoundedCornerShape(26.mpx)).padding(38.mpx)
                 .testTag("source-picker"), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                 TvText(stringResource(R.string.mintv_source_title), size = 22, color = MinTvMuted, bold = true, lines = 1)
-                TvText(data?.group?.label ?: stringResource(R.string.mintv_source_loading), size = 38, bold = true, lines = 2)
+                if (data != null || error == null) TvText(data?.group?.label ?: stringResource(R.string.mintv_source_loading), size = 38, bold = true, lines = 2)
                 TvText(stringResource(R.string.mintv_source_hint), size = 21, color = MinTvMuted, lines = 2)
                 if (result?.status == ChannelSourceStatus.SAVED_MISSING)
                     TvText(stringResource(R.string.mintv_source_saved_missing), size = 19, color = MinTvTeal, lines = 3)
@@ -122,7 +125,10 @@ internal fun ChannelSourcePicker(data: SourcePickerData?, openingDownTime: Long?
                                 if (e.type == KeyEventType.KeyDown) selected?.let { targets[it]?.requestSafely() }
                                 true
                             } else false
-                        }, scale = ButtonDefaults.scale(focusedScale = 1f)) {
+                        }, shape = ButtonDefaults.shape(RoundedCornerShape(14.mpx)),
+                    colors = ButtonDefaults.colors(containerColor = Color(0xFF29404A), focusedContainerColor = Color(0xFF365661)),
+                    border = ButtonDefaults.border(focusedBorder = Border(BorderStroke(3.mpx, MinTvTeal))),
+                    scale = ButtonDefaults.scale(focusedScale = 1f)) {
                     TvText(stringResource(R.string.mintv_source_save_only), size = 21, lines = 2)
                 }
                 SmartAction(stringResource(R.string.mintv_close), { if (!busy) onDismiss() },

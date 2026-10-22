@@ -159,9 +159,10 @@ internal fun MinTvContentHome(
         }
     }
     SmartHomeContent(current, guide, activeProfileId, ::play, ::resume, onOpenSeries, onLiveTv, onGuide, onSources,
-        firstRowFocusRequester, onEntryHook, onChildFocused, restoreFocus || restoreAfterPicker, { restoreAfterPicker = false; onRestored() }, contentStart, reservedTop, modifier,
+        firstRowFocusRequester, onEntryHook, onChildFocused, restoreFocus, onRestored, contentStart, reservedTop, modifier,
         onVisibleChannels = { visible = it }, onHeader = onHeader,
-        onSource = { channel, downTime -> sourceActions.open(logical(channel), downTime) })
+        onSource = { channel, downTime -> sourceActions.open(logical(channel), downTime) },
+        restoreSourceFocus = restoreAfterPicker, onSourceRestored = { restoreAfterPicker = false })
 }
 
 @Composable

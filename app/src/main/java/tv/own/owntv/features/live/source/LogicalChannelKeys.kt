@@ -37,7 +37,8 @@ internal fun Modifier.logicalChannelKeys(onClick: () -> Unit, onLong: (Long) -> 
                     KeyEventType.KeyDown -> if (state.down(native.downTime, native.repeatCount)) {
                         cancellation?.register(identity, ::cancel)
                         timer?.let(handler::removeCallbacks)
-                        timer = Runnable { if (state.held(native.downTime)) held(native.downTime) }
+                        val downTime = native.downTime // KeyEvent objects are pooled after dispatch.
+                        timer = Runnable { if (state.held(downTime)) held(downTime) }
                             .also { handler.postDelayed(it, 500L) }
                     }
                     KeyEventType.KeyUp -> {

@@ -264,6 +264,10 @@ class ProductionStartupTest {
                 val storedGuide = hasText("Syntetiska Nyheterna", substring = true) and hasTestTag("smart-channel-svt1")
                 compose.waitUntil(10_000) { compose.onAllNodes(storedGuide).fetchSemanticsNodes().isNotEmpty() }
                 nativeCapture("smart-active-series")
+                openSources("smart-last-live")
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("smart-last-live").assertIsFocused(); true }.getOrDefault(false) }
+                assertEquals(originalChoices, sourceStore.choices(7))
                 db.progressDao().save(originalProgress)
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-HOME").performClick()

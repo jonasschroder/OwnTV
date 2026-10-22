@@ -186,6 +186,7 @@ jobs:
           required = {
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'scrollingReentryPreservesSavedRowAndProfileDoesNotReuseIt'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'fullLabelsFitAndFocusDoesNotResizeHeader'),
+              ('tv.own.owntv.home.SmartHomeDeviceTest', 'companionSourceDismissRestoresExactLiveActionAndRemovedCompanionFallsBackSafely'),
               ('tv.own.owntv.home.SmartHomeDeviceTest', 'homeHeroAndChannelCardLongOkNeverTriggerShortPlayback'),
               ('tv.own.owntv.home.ChannelSourceDeviceTest', 'shortLongRepeatReleaseAndBackPreserveFocusAndDoNotAccidentallyPlay'),
               ('tv.own.owntv.home.ChannelSourceDeviceTest', 'saveOnlyAndSavePlayReopenAtSavedVariantWithSinglePlayback'),

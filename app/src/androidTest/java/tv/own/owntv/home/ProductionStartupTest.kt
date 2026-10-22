@@ -193,10 +193,14 @@ class ProductionStartupTest {
                     native.recycle()
                 }
                 compose.onNodeWithTag("top-HOME").assertExists()
-                val viewport = compose.onRoot().getUnclippedBoundsInRoot()
+                // Home overrides Compose density; compare raw root pixels, never unrelated dp units.
+                val viewport = compose.onRoot().fetchSemanticsNode().boundsInRoot
                 for (key in listOf("movie:101:5001", "movie:101:5002", "episode:101:6001:6002")) {
-                    val bounds = compose.onNodeWithTag("smart-resume-$key").getUnclippedBoundsInRoot()
-                    assertTrue("All three resume cards fit above the fold: $bounds in $viewport", bounds.top >= viewport.top && bounds.bottom <= viewport.bottom)
+                    val node = compose.onNodeWithTag("smart-resume-$key").fetchSemanticsNode()
+                    val top = node.positionInRoot.y
+                    val bottom = top + node.size.height
+                    assertTrue("All three full resume cards fit above the fold: $top..$bottom in $viewport",
+                        top >= viewport.top && bottom <= viewport.bottom)
                 }
                 nativeCapture("home")
                 val originalProgress = db.progressDao().get(7, MediaType.EPISODE, 6002)!!

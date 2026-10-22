@@ -51,6 +51,13 @@ class SmartHomeStorageTest {
                 itemId = id, positionMs = 1, durationMs = 100, updatedAt = id))
             val bounded = readSmartResumesForSources(db, custom, 7, setOf(101), setOf(101))
             assertEquals(96, bounded.size); assertEquals(1120L, bounded.first().itemId)
+            assertFalse(bounded.any { it.itemId == 12L })
+            // Revalidating a frozen card is an exact DAO lookup, not another ranking-window lookup.
+            assertEquals(listOf(12L), readSmartResumesForSources(db, custom, 7, setOf(101), setOf(101), actual.first()).map { it.itemId })
+            assertTrue(readSmartResumesForSources(db, custom, 8, setOf(101), setOf(101), actual.first()).isEmpty())
+            val originalEpisode = db.seriesDao().getEpisodeById(12)!!
+            db.seriesDao().upsertEpisodes(listOf(originalEpisode.copy(name = "Synthetic replacement using the same row ID")))
+            assertTrue(readSmartResumesForSources(db, custom, 7, setOf(101), setOf(101), actual.first()).isEmpty())
             assertEquals(50L, db.progressDao().get(7, MediaType.EPISODE, 12)?.positionMs)
             assertFalse(db.historyDao().exists(7, MediaType.EPISODE, 12))
         } finally { db.close() }

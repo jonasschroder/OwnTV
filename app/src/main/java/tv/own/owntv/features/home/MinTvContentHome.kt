@@ -124,7 +124,7 @@ internal fun MinTvContentHome(
     fun resume(item: SmartResume) {
         val profile = activeProfileId ?: return
         scope.launch {
-            val actual = readSmartResumes(db, settings, custom, profile).firstOrNull { it.key == item.key } ?: return@launch
+            val actual = readSmartResumes(db, settings, custom, profile, exact = item).firstOrNull { it.key == item.key } ?: return@launch
             if (settings.activeProfileId.first() != profile) return@launch
             when (actual.kind) {
                 SmartResumeKind.MOVIE -> onPlayMovie(actual.itemId, actual.position)

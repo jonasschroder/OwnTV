@@ -19,9 +19,11 @@ This is native Compose, not a rendered HTML view. Final emulator comparisons and
   are requested. Missing/expired EPG never manufactures a title, time, progress or next event.
 - `SmartHomeReader`: the same Room bundled connection and exact-item DAOs. Projects at most 96
   positive-progress candidates from active, section-enabled, profile-linked sources, then checks
-  category/adult visibility, hidden items and playable stream presence. No stream probing.
+  category/adult visibility, hidden items and playable stream presence. Clicks revalidate one exact
+  progress/catalog identity directly, so a newly synced history cannot evict a frozen card from
+  playback merely by exceeding the ranking window. No stream probing.
 - `SmartHomeContent`: stable logical Compose keys, eight compact channel cards, a split 302-unit
-  minimum hero, and up to three actual continuation items. Scrolling remains available for larger
+  hero (growing with font scale), and up to three actual continuation items. Scrolling remains available for larger
   fonts. Home uses explicit native button heights and a smaller status inset so all three resume
   cards fit above the fold at the standard font scale, checked by unclipped bounds. Focus outlines do not scale/resize cards. Previous/More also move into the revealed card.
 

@@ -68,9 +68,11 @@ class SmartHomeDeviceTest {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithTag("smart-channel-TV3").assertIsFocused()
+        val beforeBounds = compose.onNodeWithTag("smart-channel-TV3").getUnclippedBoundsInRoot()
         compose.runOnIdle { guide = HomeGuideState(now + 86_400_000, guide.rows.mapValues { (_, row) ->
-            row.copy(now = SwedishProgramme(44, "Synthetic next day", now + 86_399_000, now + 86_401_000)) }) }
+            row.copy(now = SwedishProgramme(44, "Synthetic next day programme with a deliberately long title that wraps across two lines", now + 86_399_000, now + 86_401_000)) }) }
         compose.onNodeWithTag("smart-channel-TV3").assertIsFocused()
+        assertEquals(beforeBounds, compose.onNodeWithTag("smart-channel-TV3").getUnclippedBoundsInRoot())
         compose.runOnIdle { assertEquals(0, played) }
     }
     @Test fun headerRoundTripRestoresLogicalChannel() {

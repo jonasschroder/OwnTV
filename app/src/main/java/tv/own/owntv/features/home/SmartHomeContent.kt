@@ -81,7 +81,12 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
             val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }
             if (visible == null || visible.offset < list.layoutInfo.viewportStartOffset || visible.offset + visible.size > list.layoutInfo.viewportEndOffset)
                 list.scrollToItem(target)
-            if (section == 1) rail.scrollToItem(currentChannels.indexOfFirst { it.key == currentChannelKey }.coerceAtLeast(0))
+            if (section == 1) {
+                val index = currentChannels.indexOfFirst { it.key == currentChannelKey }.coerceAtLeast(0)
+                val item = rail.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                if (item == null || item.offset < rail.layoutInfo.viewportStartOffset || item.offset + item.size > rail.layoutInfo.viewportEndOffset)
+                    rail.scrollToItem(index)
+            }
             repeat(2) { withFrameNanos { } }
             if (!nav.focus[section].requestSafely()) { list.scrollToItem(0); withFrameNanos { }; firstFocus.requestSafely() }
         }
@@ -195,9 +200,9 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
     val info = live?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
     val time = rememberSystemTimeFormatter()
     val scale = maxOf(1f, LocalDensity.current.fontScale)
-    Row(Modifier.fillMaxWidth().heightIn(min = 302.mpx * scale).clip(RoundedCornerShape(24.mpx))
+    Row(Modifier.fillMaxWidth().height(302.mpx * scale).clip(RoundedCornerShape(24.mpx))
         .background(Color(0xFF182D34)).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
-        Column(Modifier.weight(1.6f).padding(30.mpx), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+        Column(Modifier.weight(1.6f).padding(30.mpx), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
             TvText(stringResource(when {
                 resume?.kind == SmartResumeKind.EPISODE -> R.string.mintv_smart_continue_series
                 resume != null -> R.string.search_continue

@@ -995,7 +995,7 @@ fun OwnTVShell(
                   )
               }
           } else null
-          val enterNativeContent: () -> Unit = {
+          val tryEnterNativeContent: () -> Boolean = {
               restoreFocus = true
               val hook = if (presentation == TopDestination.SPORT) sportEntry else when (selectedSection) {
                   MainSection.HOME -> homeEntry
@@ -1005,20 +1005,34 @@ fun OwnTVShell(
                   MainSection.MORE -> moreEntry
                   else -> null
               }
-              if (hook?.invoke() != true && !runCatching { contentAreaFocus.requestFocus() }.getOrDefault(false)) {
+              runCatching { hook?.invoke() == true || contentAreaFocus.requestFocus() }.getOrDefault(false)
+          }
+          val enterNativeContent: () -> Unit = {
+              if (!tryEnterNativeContent()) {
                   restoreFocus = false
                   runCatching { sidebarFocus.requestFocus() }
               }
           }
-          NativeTopNavigation(primary, sidebarFocus, { destination ->
+          var nativeEntryRequest by remember(activeProfileId) { mutableStateOf(0) }
+          val activateNative: (TopDestination) -> Unit = { destination ->
               val target = nativeEntry(destination, nativeVisible, lastVod, lastTv)
               selectFromNav(target ?: MainSection.MORE)
               presentation = destination.takeIf { it == TopDestination.SPORT || target == null }
+          }
+          NativeContentEntry(nativeEntryRequest, nativePageKey(activeProfileId, selectedSection, presentation), {
+              tryEnterNativeContent()
+          }, { restoreFocus = false; runCatching { sidebarFocus.requestFocus() } }, { nativeEntryRequest = 0 })
+          NativeTopNavigation(primary, sidebarFocus, { destination ->
+              nativeEntryRequest = 0
+              activateNative(destination)
               if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) scope.launch {
                   withFrameNanos { }; withFrameNanos { }
                   runCatching { nativeSubFocus.requestFocus() }
               }
-          }, enterNativeContent, { focusedLayer = ShellLayer.SIDEBAR }, Modifier)
+          }, { destination ->
+              activateNative(destination)
+              nativeEntryRequest++
+          }, { focusedLayer = ShellLayer.SIDEBAR }, Modifier)
           if (primary in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) {
               NativeSubNavigation(nativeRoutes(primary, nativeVisible), selectedSection, { selectFromNav(it) },
                   if (primary == TopDestination.PROFILE) null else ({ selectFromNav(MainSection.SEARCH) }),

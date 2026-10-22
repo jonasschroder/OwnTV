@@ -31,10 +31,11 @@ internal fun NativeTopNavigation(
     selected: TopDestination,
     selectedFocus: FocusRequester,
     onSelect: (TopDestination) -> Unit,
-    onEnterContent: () -> Unit,
+    onEnterContent: (TopDestination) -> Unit,
     onFocused: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var focused by remember { mutableStateOf(selected) }
     val targets = remember { TopDestination.entries.associateWith { FocusRequester() } }
     val labels = mapOf(TopDestination.HOME to R.string.mintv_nav_home,
         TopDestination.TV to R.string.mintv_nav_tv, TopDestination.SPORT to R.string.mintv_nav_sport,
@@ -47,7 +48,7 @@ internal fun NativeTopNavigation(
             .onFocusChanged { if (it.hasFocus) onFocused() }
             .onPreviewKeyEvent { event ->
                 if (event.key == Key.DirectionDown) {
-                    if (event.type == KeyEventType.KeyDown) onEnterContent()
+                    if (event.type == KeyEventType.KeyDown) onEnterContent(focused)
                     true
                 } else false
             }.focusGroup(),
@@ -58,11 +59,11 @@ internal fun NativeTopNavigation(
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                 TopDestination.entries.filter { it != TopDestination.PROFILE }.forEach { destination ->
                     NativeTopItem(destination, stringResource(labels.getValue(destination)), selected,
-                        targets.getValue(destination), onSelect)
+                        targets.getValue(destination), onSelect) { focused = destination }
                 }
             }
             NativeTopItem(TopDestination.PROFILE, stringResource(labels.getValue(TopDestination.PROFILE)),
-                selected, targets.getValue(TopDestination.PROFILE), onSelect)
+                selected, targets.getValue(TopDestination.PROFILE), onSelect) { focused = TopDestination.PROFILE }
 
         }
     }
@@ -70,10 +71,11 @@ internal fun NativeTopNavigation(
 
 @Composable
 private fun NativeTopItem(destination: TopDestination, label: String, active: TopDestination,
-    target: FocusRequester, onSelect: (TopDestination) -> Unit) {
+    target: FocusRequester, onSelect: (TopDestination) -> Unit, onFocused: () -> Unit) {
     Column(Modifier.width(IntrinsicSize.Max)) {
         StageSurface({ onSelect(destination) }, 14.mpx,
             Modifier.height(56.mpx * maxOf(1f, LocalDensity.current.fontScale)).focusRequester(target)
+                .onFocusChanged { if (it.isFocused) onFocused() }
                 .testTag("top-${destination.name}").semantics { selected = destination == active },
             focusStyle = StageFocus.FX) { focused ->
             Text(label, style = stageText(if (destination == TopDestination.PROFILE) 22 else 26, 700),

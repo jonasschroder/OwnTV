@@ -38,9 +38,10 @@ class NativeNavigationDeviceTest {
     private var available by mutableStateOf(true)
     private var fullscreen by mutableStateOf(false)
     private var active by mutableStateOf(TopDestination.HOME)
+    private val enteredPages = mutableListOf<TopDestination>()
     private var activations = 0
     private var timelineMoves = 0
-    private var enter: (() -> Unit)? = null
+    private var enter: (() -> Boolean)? = null
 
     @Before fun remoteMode() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
     private fun press(key: Int) {
@@ -65,14 +66,18 @@ class NativeNavigationDeviceTest {
                     }
                 }
                 if (!fullscreen) Column {
-                    NativeTopNavigation(active, header, { active = it; activations++ }, { enter?.invoke() }, { inHeader = true })
+                    var entryRequest by remember(profile) { mutableIntStateOf(0) }
+                    NativeContentEntry(entryRequest, "$profile:$active", { enter?.invoke() == true }, { header.requestFocus() }, { entryRequest = 0 })
+                    NativeTopNavigation(active, header, { entryRequest = 0; active = it; activations++ }, {
+                        active = it; activations++; entryRequest++
+                    }, { inHeader = true })
                     val section = nativeEntry(active, MainSection.entries.toSet(), MainSection.MOVIES)!!
                     holder.SaveableStateProvider(nativePageKey(profile, section, active)) {
                         val rows = rememberLazyListState()
                         var last by rememberSaveable { mutableIntStateOf(0) }
                         val targets = remember(profile, active) { (0..30).associateWith { FocusRequester() } }
                         DisposableEffect(profile, active, available) {
-                            enter = { if (available) targets.getValue(last).requestFocus() else header.requestFocus() }
+                            enter = { enteredPages.add(active); if (available) runCatching { targets.getValue(last).requestFocus() }.getOrDefault(false) else false }
                             onDispose { enter = null }
                         }
                         LazyColumn(state = rows, modifier = Modifier.fillMaxSize().nativeContentNavigation(header, manager)
@@ -94,6 +99,34 @@ class NativeNavigationDeviceTest {
                 } else HomeButton("Synthetic player", { fullscreen = false }, Modifier.testTag("native-player"))
             }
         }
+    }
+
+    @Test fun downActivatesFocusedDestinationWithoutEnteringOutgoingContent() {
+        mount()
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.runOnIdle { assertEquals(TopDestination.HOME, active); assertEquals(0, activations) }
+        compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.runOnIdle { assertEquals(TopDestination.SPORT, active); assertEquals(1, activations); assertTrue(enteredPages.isNotEmpty()); assertTrue(enteredPages.all { it == TopDestination.SPORT }) }
+        compose.onNodeWithTag("native-row-0").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_BACK); press(KeyEvent.KEYCODE_DPAD_LEFT); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.runOnIdle { assertEquals(TopDestination.TV, active) }
+        press(KeyEvent.KEYCODE_BACK); press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("native-row-1").assertIsFocused()
+    }
+
+    @Test fun downToUnavailableDestinationKeepsNavigationUsableAndCanRetryAfterLoading() {
+        mount()
+        compose.runOnIdle { available = false }
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.runOnIdle { assertEquals(TopDestination.TV, active) }
+        compose.waitUntil(5000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.runOnIdle { available = true }
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("native-row-0").assertIsFocused()
     }
     @Test fun fullLabelsFitAndFocusDoesNotResizeHeader() {
         mount()

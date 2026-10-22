@@ -44,7 +44,7 @@ Production startup now also exercises:
   plus Downloads/Recordings and all Settings groups through the original screens.
 - Native route screenshots at the existing 1080p and 720p emulator configurations.
 
-`NativeNavigationDeviceTest` covers six cases: OK-only activation of five entries; full labels and
+`NativeNavigationDeviceTest` covers eight cases: explicit OK/Down activation of five entries; full labels and
 stable geometry; Up/Down and return focus; scrolling/page re-entry; profile isolation and empty
 content; local timeline Left/Right and synthetic fullscreen hiding/return. The last case tests
 navigation boundaries rather than hardware decoding. Existing CI asserts every required method
@@ -65,3 +65,5 @@ Real hardware decoding/DRM, provider authentication, external companion apps, Ta
 custom fonts/extreme UI zoom and overscan still need separately approved QA acceptance. Neither
 Chromecast installation was opened, installed, uninstalled or cleared. Debug build artifacts remain
 local/CI-only; no release was signed or distributed.
+
+Final remote refinement: Down selects the focused primary destination before deferred content entry. The shared native entry effect cancels on profile/page changes and bounds retries for attaching asynchronous controls. Empty destinations retain reachable header navigation. Added required native tests for cross-destination Down, restored rows, and empty/loading retry. Latest-head CI results are recorded in PR #17.

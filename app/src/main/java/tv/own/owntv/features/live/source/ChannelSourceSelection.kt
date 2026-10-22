@@ -43,8 +43,12 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
         val group = library.groups.singleOrNull { it.identity == identity } ?: return null
         return SourcePickerData(group, choices, library.bounded)
     }
-    suspend fun channel(variant: SwedishVariant): ChannelEntity? = vm.homeChannel(variant.id, profile)?.takeIf {
-        current() && it.streamUrl.isNotBlank() && it.sourceId == variant.sourceId && CustomizeKeys.channel(it) == variant.stableKey
+    suspend fun channel(variant: SwedishVariant): ChannelEntity? {
+        val expected = access?.takeIf { it.profileId == profile && it.sourceIds == sources } ?: return null
+        return vm.homeChannel(variant.id, profile)?.takeIf {
+            current() && it.streamUrl.isNotBlank() && it.sourceId == variant.sourceId &&
+                CustomizeKeys.channel(it) == variant.stableKey && vm.swedishContextCurrent(expected)
+        }
     }
     fun dismiss() { session = null; data = null; error = null; closed() }
     LaunchedEffect(lifecycle) { if (lifecycle != Lifecycle.State.RESUMED) { session = null; data = null } }

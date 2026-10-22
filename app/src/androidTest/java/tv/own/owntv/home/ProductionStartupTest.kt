@@ -218,6 +218,8 @@ class ProductionStartupTest {
                 val episodeHero = hasText("Syntetiskt sparat avsnitt") and hasAnyAncestor(hasTestTag("smart-hero"))
                 compose.waitUntil(10_000) { compose.onAllNodes(episodeHero).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("smart-hero").assert(hasAnyDescendant(hasText("Syntetiskt sparat avsnitt")))
+                val storedGuide = hasText("Syntetiska Nyheterna", substring = true) and hasTestTag("smart-channel-svt1")
+                compose.waitUntil(10_000) { compose.onAllNodes(storedGuide).fetchSemanticsNodes().isNotEmpty() }
                 nativeCapture("smart-active-series")
                 db.progressDao().save(originalProgress)
                 compose.onNodeWithTag("top-TV").performClick()

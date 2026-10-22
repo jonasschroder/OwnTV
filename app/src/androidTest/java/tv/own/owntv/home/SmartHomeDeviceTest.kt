@@ -81,6 +81,10 @@ class SmartHomeDeviceTest {
         compose.onNodeWithTag("top-HOME").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("smart-channel-TV4").assertIsFocused()
+        compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        compose.runOnIdle { snapshot = snapshot!!.copy(channels = channels.filterNot { it.key == "TV4" }) }
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-channel-Kanal 5").assertIsFocused()
     }
     @Test fun emptyMissingGuideAndProfileSwitchRemainNavigable() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN)

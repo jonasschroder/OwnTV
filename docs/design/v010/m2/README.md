@@ -22,7 +22,8 @@ This is native Compose, not a rendered HTML view. Final emulator comparisons and
   category/adult visibility, hidden items and playable stream presence. No stream probing.
 - `SmartHomeContent`: stable logical Compose keys, eight compact channel cards, a split 302-unit
   minimum hero, and up to three actual continuation items. Scrolling remains available for larger
-  fonts. Focus outlines do not scale/resize cards. Previous/More also move into the revealed card.
+  fonts. Home uses explicit native button heights and a smaller status inset so all three resume
+  cards fit above the fold at the standard font scale, checked by unclipped bounds. Focus outlines do not scale/resize cards. Previous/More also move into the revealed card.
 
 No persisted enum, schema, favorite, history, source/quality preference, signing/update contract,
 shared player, subtitle engine or source picker is changed. M3 and M4 are excluded. Legacy Home
@@ -43,8 +44,8 @@ The old Home version/customization shortcuts are available through their existin
    ID is absent). Deduplicate exact identity only, never titles. Multiple unfinished episodes of
    the same series are distinct actual progress entries; there is no unapproved next-up inference.
 4. Only the **latest eligible resume item**, if an episode no older than seven days (inclusive),
-   newer than the most recent accessible live watch, may replace the live hero. Future timestamps
-   cannot promote a series. With no live history, latest eligible resume wins regardless of age.
+   newer than the most recent accessible live watch, may replace the live hero. With live history, future timestamps
+   cannot promote a series over live. With no live history, latest eligible resume wins regardless of age.
 5. Otherwise use most recent accessible live history (bounded existing 20-event reader), then first
    available Swedish channel in saved/default order. No source means Add source; a source with no
    playable channels/progress keeps TV discovery available. Unavailable items are skipped.
@@ -68,7 +69,8 @@ Optional installed-app shortcuts are deferred; no network work is added to compe
 JVM tests cover eligibility/completion boundaries, deterministic ties, exact identity, seven days,
 newer live/movie precedence, midnight/re-entry and removed-key fallback. Required emulator cases
 cover eight-card geometry and scrolling, EPG refresh/midnight focus, header focus restoration,
-missing EPG/no-source/profile isolation, promoted series and read-only exact stored progress.
+missing EPG/no-source/profile isolation, promoted series, removed-row fallback and read-only exact
+stored progress (including hidden items and the 96-candidate bound).
 The real QA startup fixture includes canonical channels, actual synthetic Room EPG, three saved
 progress rows and profile/source settings. It captures native production Home at 1920×1080 and
 1280×720, and retains all existing native route/startup/upgrade regressions. Synthetic fixtures

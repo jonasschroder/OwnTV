@@ -16,6 +16,8 @@ import androidx.tv.material3.*
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import tv.own.owntv.R
@@ -23,7 +25,7 @@ import tv.own.owntv.core.customize.CustomizationStore
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.model.MediaType
-import tv.own.owntv.core.repository.activeSourceIds
+import tv.own.owntv.core.repository.activeProfileSources
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.features.discovery.DiscoveryCard
 import tv.own.owntv.features.live.*
@@ -47,6 +49,11 @@ internal fun MinTvContentHome(
     val db: OwnTVDatabase = koinInject()
     val store: SwedishChannelStore = koinInject()
     val custom: CustomizationStore = koinInject()
+    val sourceAccess by remember(settings, db) {
+        activeProfileSources(settings, db.sourceDao()).map {
+            SmartSourceAccess(it.profileId, it.liveSourceIds, it.movieSourceIds, it.seriesSourceIds)
+        }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
     val context by liveVm.homeLibraryContext.collectAsStateWithLifecycle()
     val metadata by liveVm.swedishRowContext.collectAsStateWithLifecycle()
     val movieVisibility by remember(activeProfileId) { custom.observe(activeProfileId ?: -1, MediaType.MOVIE) }
@@ -57,22 +64,23 @@ internal fun MinTvContentHome(
         .collectAsStateWithLifecycle(initialValue = null)
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val active = previewEnabled && lifecycle == Lifecycle.State.RESUMED
-    var snapshot by remember(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings) { mutableStateOf<SmartHomeSnapshot?>(null) }
+    var snapshot by remember(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, sourceAccess) { mutableStateOf<SmartHomeSnapshot?>(null) }
     var visible by remember(activeProfileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     val scope = rememberCoroutineScope()
     DisposableEffect(vm, liveVm) {
         vm.setPreviewEnabled(false); vm.stopPreview(); liveVm.homePreview.setActive(false)
         onDispose { onPauseOrDispose(); liveVm.homePreview.setActive(false) }
     }
-    LaunchedEffect(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, active) {
+    LaunchedEffect(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, sourceAccess, active) {
         if (!active) return@LaunchedEffect
         val profile = activeProfileId ?: return@LaunchedEffect
-        if (profileSettings == null || movieVisibility == null || seriesVisibility == null) return@LaunchedEffect
+        if (profileSettings == null || movieVisibility == null || seriesVisibility == null || sourceAccess?.profile != profile) return@LaunchedEffect
         val expected = metadata?.takeIf { it.profileId == profile && context.first == profile && it.sourceIds == context.second }
             ?: return@LaunchedEffect
         try {
             val choices = store.choices(profile)
-            val groups = store.library(profile, expected.sourceIds, choices).groups.take(48)
+            val allGroups = store.library(profile, expected.sourceIds, choices.copy(hidden = emptySet())).groups
+            val groups = allGroups.filterNot { it.identity in choices.hidden }.take(48)
             val channels = groups.mapNotNull { group ->
                 group.preferred(choices.preferred[group.identity], choices.showUhd)?.let { variant ->
                     liveVm.homeChannel(variant.id, profile)?.let { SmartChannel(group.identity, group.label, it) }
@@ -84,7 +92,7 @@ internal fun MinTvContentHome(
             for (row in recent) {
                 val actual = liveVm.homeChannel(row.channel.id, profile) ?: continue
                 if (SwedishChannels.recognize(actual.name)?.identity in choices.hidden) continue
-                val group = groups.firstOrNull { g -> g.variants.any { it.id == actual.id } }
+                val group = allGroups.firstOrNull { g -> g.variants.any { it.id == actual.id } }
                 if (group != null && group.identity in choices.hidden) continue
                 val preference = group?.let { choices.preferred[it.identity] }
                 watched = if (preference == null) actual else group.preferred(preference, choices.showUhd)?.let { liveVm.homeChannel(it.id, profile) } ?: actual
@@ -92,13 +100,10 @@ internal fun MinTvContentHome(
                 break
             }
             val resumes = readSmartResumes(db, settings, custom, profile)
-            val promoted = smartHeroResume(resumes, watchedAt, System.currentTimeMillis())
-            val hasSources = activeSourceIds(settings, db.sourceDao(), profile, MediaType.LIVE).isNotEmpty() ||
-                activeSourceIds(settings, db.sourceDao(), profile, MediaType.MOVIE).isNotEmpty() ||
-                activeSourceIds(settings, db.sourceDao(), profile, MediaType.SERIES).isNotEmpty()
-            if (liveVm.swedishContextCurrent(expected)) snapshot = SmartHomeSnapshot(profile, hasSources, channels,
-                watched ?: if (promoted == null) channels.firstOrNull()?.channel else null, watchedAt, promoted,
-                resumes.filter { it.key != promoted?.key }.take(3))
+            val access = sourceAccess ?: return@LaunchedEffect
+            val hasSources = access.live.isNotEmpty() || access.movies.isNotEmpty() || access.series.isNotEmpty()
+            if (liveVm.swedishContextCurrent(expected)) snapshot = selectSmartHome(profile, hasSources, channels,
+                watched, watchedAt, resumes, System.currentTimeMillis())
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
             // A failed local read cannot invent a channel or progress. Existing TV remains reachable.

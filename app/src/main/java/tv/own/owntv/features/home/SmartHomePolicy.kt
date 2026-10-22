@@ -1,6 +1,7 @@
 package tv.own.owntv.features.home
 
 internal const val SMART_SERIES_WINDOW_MS = 7L * 24 * 60 * 60 * 1000
+internal data class SmartSourceAccess(val profile: Long, val live: List<Long>, val movies: List<Long>, val series: List<Long>)
 internal enum class SmartResumeKind { MOVIE, EPISODE }
 internal data class SmartResume(
     val key: String, val kind: SmartResumeKind, val itemId: Long, val seriesId: Long? = null,
@@ -31,4 +32,14 @@ internal fun smartFocusKey(key: String?, previous: List<String>, current: List<S
             .firstOrNull { it in current }?.let { return it }
     }
     return current.firstOrNull()
+}
+
+internal fun selectSmartHome(profile: Long, hasSources: Boolean, channels: List<SmartChannel>,
+    watched: tv.own.owntv.core.database.entity.ChannelEntity?, watchedAt: Long?,
+    progress: List<SmartResume>, at: Long): SmartHomeSnapshot {
+    if (!hasSources) return SmartHomeSnapshot(profile, false, emptyList(), null, null, null, emptyList())
+    val eligible = smartResumeOrder(progress)
+    val promoted = smartHeroResume(eligible, watchedAt, at)
+    return SmartHomeSnapshot(profile, true, channels, watched ?: if (promoted == null) channels.firstOrNull()?.channel else null,
+        watchedAt, promoted, eligible.filter { it.key != promoted?.key }.take(3))
 }

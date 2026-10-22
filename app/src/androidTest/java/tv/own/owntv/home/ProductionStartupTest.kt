@@ -193,7 +193,22 @@ class ProductionStartupTest {
                     native.recycle()
                 }
                 compose.onNodeWithTag("top-HOME").assertExists()
+                val viewport = compose.onRoot().getUnclippedBoundsInRoot()
+                for (key in listOf("movie:101:5001", "movie:101:5002", "episode:101:6001:6002")) {
+                    val bounds = compose.onNodeWithTag("smart-resume-$key").getUnclippedBoundsInRoot()
+                    assertTrue("All three resume cards fit above the fold: $bounds in $viewport", bounds.top >= viewport.top && bounds.bottom <= viewport.bottom)
+                }
                 nativeCapture("home")
+                val originalProgress = db.progressDao().get(7, MediaType.EPISODE, 6002)!!
+                compose.onNodeWithTag("top-TV").performClick()
+                db.progressDao().save(originalProgress.copy(updatedAt = System.currentTimeMillis()))
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.waitUntil(10_000) { compose.onAllNodesWithText("Syntetiskt sparat avsnitt").fetchSemanticsNodes().isNotEmpty() }
+                nativeCapture("smart-active-series")
+                db.progressDao().save(originalProgress)
+                compose.onNodeWithTag("top-TV").performClick()
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.waitUntil(10_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-TV").assertIsSelected()
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sub-LIVE_TV").assertIsFocused(); true }.getOrDefault(false) }

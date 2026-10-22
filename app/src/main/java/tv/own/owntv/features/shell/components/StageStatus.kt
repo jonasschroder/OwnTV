@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
@@ -73,9 +74,10 @@ fun StageStatusCluster(
     modifier: Modifier = Modifier,
     playlistDownFocusRequester: FocusRequester? = null,
     onPlaylistPillBounds: (Rect) -> Unit = {},
+    topInset: Dp = 34.mpx,
 ) {
     Row(
-        modifier.padding(end = 64.mpx, top = 34.mpx),
+        modifier.padding(end = 64.mpx, top = topInset),
         horizontalArrangement = Arrangement.spacedBy(22.mpx),
         // The pills' top lines up with the top of the clock's digits (owner), not with the block's middle.
         verticalAlignment = Alignment.Top,

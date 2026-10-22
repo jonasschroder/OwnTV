@@ -54,4 +54,21 @@ class SmartHomePolicyTest {
         assertEquals("svt1", smartFocusKey("missing", before, listOf("svt1")))
         assertNull(smartFocusKey("tv3", before, emptyList()))
     }
+    @Test fun noHistoryUsesFirstAvailableCanonicalChannelAndNoSourceCannotExposeStaleData() {
+        val channel = tv.own.owntv.core.database.entity.ChannelEntity(id = 1, sourceId = 101, name = "SVT1", streamUrl = "http://example.invalid")
+        val row = listOf(SmartChannel("svt1", "SVT1", channel))
+        val first = selectSmartHome(7, true, row, null, null, emptyList(), now)
+        assertEquals(channel, first.live); assertNull(first.liveWatchedAt); assertNull(first.heroResume)
+        assertTrue(first.resumes.isEmpty())
+        val empty = selectSmartHome(8, false, row, channel, now, listOf(item()), now)
+        assertEquals(8L, empty.profile); assertNull(empty.live); assertTrue(empty.channels.isEmpty()); assertTrue(empty.resumes.isEmpty())
+    }
+    @Test fun promotedExactEpisodeIsRemovedButOtherRealProgressSurvivesAndRowIsBounded() {
+        val episode = item()
+        val older = (1..5).map { item("movie:$it", now - it, kind = SmartResumeKind.MOVIE) }
+        val chosen = selectSmartHome(7, true, emptyList(), null, now - 20, listOf(episode) + older, now)
+        assertEquals(episode, chosen.heroResume)
+        assertEquals(older.take(3), chosen.resumes)
+        assertFalse(chosen.resumes.any { it.key == episode.key })
+    }
 }

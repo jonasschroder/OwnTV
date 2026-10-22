@@ -1224,7 +1224,7 @@ fun OwnTVShell(
                             onEntryHook = { homeEntry = it },
                             onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             contentStart = 64.mpx,
-                            reservedTop = homeStatusHeight + 24.mpx,
+                            reservedTop = homeStatusHeight + 8.mpx,
                             statusWidth = homeStatusWidth,
                             modifier = Modifier.fillMaxSize(),
                         ) }
@@ -1406,6 +1406,7 @@ fun OwnTVShell(
                 clockColors = clockColors,
                 playlistDownFocusRequester = homeFirstRowFocus.takeIf { selectedSection == MainSection.HOME },
                 onPlaylistPillBounds = { playlistPillBounds = it },
+                topInset = if (primary == TopDestination.HOME) 8.mpx else 34.mpx,
                 modifier = Modifier.align(Alignment.TopEnd).onSizeChanged {
                     homeStatusHeight = with(statusDensity) { it.height.toDp() }
                     homeStatusWidth = with(statusDensity) { it.width.toDp() }

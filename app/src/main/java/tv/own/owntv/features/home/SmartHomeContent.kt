@@ -23,6 +23,7 @@ import androidx.tv.material3.*
 import kotlinx.coroutines.launch
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
+import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.features.live.SwedishRowInfo
 import tv.own.owntv.ui.format.rememberSystemTimeFormatter
 import tv.own.owntv.ui.theme.mpx
@@ -52,11 +53,16 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     var resumeKey by rememberSaveable(profile) { mutableStateOf<String?>(null) }
     val keys = channels.map { it.key }
     val resumeKeys = resumes.map { it.key }
-    var previousKeys by remember(profile) { mutableStateOf(keys) }
-    var previousResumes by remember(profile) { mutableStateOf(resumeKeys) }
+    var previousKeys by rememberSaveable(profile) { mutableStateOf(keys) }
+    var previousResumes by rememberSaveable(profile) { mutableStateOf(resumeKeys) }
     val entryChannel = smartFocusKey(channelKey, previousKeys, keys)
     val entryResume = smartFocusKey(resumeKey, previousResumes, resumeKeys)
-    SideEffect { if (current != null) { previousKeys = keys; previousResumes = resumeKeys } }
+    SideEffect {
+        if (current != null) {
+            channelKey = entryChannel; resumeKey = entryResume
+            previousKeys = keys; previousResumes = resumeKeys
+        }
+    }
     val indices = listOf(0, if (channels.isEmpty()) -1 else 1,
         if (resumes.isEmpty()) -1 else if (channels.isEmpty()) 1 else 2)
     LaunchedEffect(indices, current != null) {
@@ -139,8 +145,12 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                         }, compact = true)
                         SmartAction(stringResource(R.string.mintv_smart_more_channels), {
                             scope.launch {
-                                val next = (rail.firstVisibleItemIndex + 1).coerceAtMost(channels.lastIndex)
-                                channelKey = channels[next].key; rail.animateScrollToItem(next)
+                                val lastVisible = rail.layoutInfo.visibleItemsInfo.lastOrNull {
+                                    it.offset + it.size <= rail.layoutInfo.viewportEndOffset
+                                }?.index ?: rail.firstVisibleItemIndex
+                                val next = (lastVisible + 1).coerceAtMost(channels.lastIndex)
+                                channelKey = channels[next].key
+                                rail.animateScrollToItem((rail.firstVisibleItemIndex + 1).coerceAtMost(channels.lastIndex))
                                 repeat(2) { withFrameNanos { } }; nav.focus[1].requestSafely()
                             }
                         }, compact = true)
@@ -166,7 +176,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
 @Composable
 internal fun SmartAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier,
     primary: Boolean = false, compact: Boolean = false) {
-    Button(onClick, modifier.heightIn(min = (if (compact) 32 else 48).mpx),
+    Button(onClick, modifier.height((if (compact) 36 else 50).mpx * maxOf(1f, LocalDensity.current.fontScale)),
         contentPadding = PaddingValues(horizontal = if (compact) 10.mpx else 20.mpx, vertical = 5.mpx),
         shape = ButtonDefaults.shape(RoundedCornerShape(12.mpx)),
         colors = ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else Color.Transparent,
@@ -195,12 +205,17 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
                 else -> R.string.mintv_smart_evening
             }), size = 18, color = MinTvTeal, bold = true, lines = 1)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-                if (resume == null && live != null) HomeChannelLogo(live.name, info?.logo ?: live.logoUrl, Modifier.size(64.mpx))
+                if (resume == null && live != null) HomeChannelLogo(live.name, info?.logo ?: live.displayLogoUrl, Modifier.size(64.mpx))
+                if (resume != null) SmartResumeIdentity(resume, 64.mpx)
                 Column(Modifier.weight(1f)) {
                     (resume?.seriesTitle ?: live?.name)?.let { TvText(it, size = 21, color = MinTvMuted, lines = 1) }
                     TvText(resume?.title ?: info?.now?.title ?: stringResource(if (live != null) R.string.mintv_v08_empty_now
                         else if (snapshot == null) R.string.mintv_smart_loading else R.string.mintv_smart_start), size = 36, bold = true, lines = 2)
                 }
+            }
+            if (live == null && resume == null && snapshot != null) {
+                TvText(stringResource(if (snapshot.hasSources) R.string.mintv_smart_browse_hint else R.string.mintv_smart_source_hint),
+                    size = 22, color = MinTvMuted, lines = 2)
             }
             if (resume != null) {
                 SmartResumeLine(resume)
@@ -218,7 +233,7 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
                 else if (live != null) SmartAction(stringResource(R.string.mintv_guide), onGuide)
             }
         }
-        Column(Modifier.weight(1f).fillMaxHeight().background(Color.White.copy(alpha = .025f)).padding(30.mpx),
+        if (live != null || resume != null) Column(Modifier.weight(1f).fillMaxHeight().background(Color.White.copy(alpha = .025f)).padding(30.mpx),
             verticalArrangement = Arrangement.spacedBy(14.mpx)) {
             TvText(stringResource(if (resume != null && live != null) R.string.mintv_smart_last_tv else R.string.mintv_smart_next),
                 size = 18, bold = true, color = MinTvTeal, lines = 1)
@@ -239,7 +254,7 @@ private fun SmartChannelCard(item: SmartChannel, info: SwedishRowInfo?, at: Long
     val time = rememberSystemTimeFormatter()
     SmartCard(play, modifier.heightIn(min = 193.mpx)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
-            HomeChannelLogo(item.label, info?.logo ?: item.channel.logoUrl, Modifier.size(32.mpx))
+            HomeChannelLogo(item.label, info?.logo ?: item.channel.displayLogoUrl, Modifier.size(32.mpx))
             TvText(item.label, Modifier.weight(1f), size = 22, bold = true, lines = 2)
         }
         TvText(current?.title ?: stringResource(R.string.mintv_v08_empty_now), size = 22, lines = 2)
@@ -254,15 +269,21 @@ private fun SmartChannelCard(item: SmartChannel, info: SwedishRowInfo?, at: Long
 @Composable
 private fun SmartResumeCard(item: SmartResume, play: () -> Unit, modifier: Modifier) {
     SmartCard(play, modifier.heightIn(min = 100.mpx)) {
-        TvText(item.seriesTitle ?: item.title, size = 23, bold = true, lines = 1)
-        SmartResumeLine(item)
-        ProgrammeProgress((item.position.toDouble() / item.duration).toFloat())
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
+            SmartResumeIdentity(item, 52.mpx)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
+                TvText(item.seriesTitle ?: item.title, size = 23, bold = true, lines = 1)
+                SmartResumeLine(item)
+                ProgrammeProgress((item.position.toDouble() / item.duration).toFloat())
+            }
+        }
     }
 }
 
 @Composable
 private fun SmartResumeLine(item: SmartResume) {
-    val remaining = ((item.duration - item.position + 59_999) / 60_000).coerceAtLeast(1)
+    val milliseconds = item.duration - item.position
+    val remaining = (milliseconds / 60_000 + if (milliseconds % 60_000 > 0) 1 else 0).coerceAtLeast(1)
     val label = if (item.kind == SmartResumeKind.EPISODE) stringResource(R.string.mintv_smart_episode_remaining,
         item.season ?: 0, item.episode ?: 0, remaining) else stringResource(R.string.mintv_smart_remaining, remaining)
     TvText(label, size = 19, color = MinTvMuted, lines = 1)
@@ -276,5 +297,15 @@ private fun SmartCard(play: () -> Unit, modifier: Modifier, content: @Composable
         border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
         scale = ButtonDefaults.scale(focusedScale = 1f)) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.mpx), content = content)
+    }
+}
+
+/** Semantic media-type badge, never generated or guessed programme artwork. */
+@Composable
+private fun SmartResumeIdentity(item: SmartResume, size: Dp) {
+    Box(Modifier.size(size).background(Color(0xFF29454D), RoundedCornerShape(12.mpx)), contentAlignment = Alignment.Center) {
+        tv.own.owntv.ui.components.OwnTVIcon(
+            if (item.kind == SmartResumeKind.EPISODE) tv.own.owntv.ui.components.OwnTVIcon.SERIES else tv.own.owntv.ui.components.OwnTVIcon.MOVIES,
+            MinTvTeal, Modifier.size(size * .6f))
     }
 }

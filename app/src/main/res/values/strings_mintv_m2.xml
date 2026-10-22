@@ -13,4 +13,6 @@
     <string name="mintv_smart_more_channels">More channels →</string>
     <string name="mintv_smart_remaining">%1$d min left</string>
     <string name="mintv_smart_episode_remaining">S%1$d · E%2$d · %3$d min left</string>
+    <string name="mintv_smart_source_hint">Add a source to see your channels and saved positions.</string>
+    <string name="mintv_smart_browse_hint">Open TV to browse your available channels.</string>
 </resources>

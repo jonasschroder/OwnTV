@@ -1222,6 +1222,7 @@ fun OwnTVShell(
                             onRestored = { restoreFocus = false },
                             firstRowFocusRequester = homeFirstRowFocus,
                             onEntryHook = { homeEntry = it },
+                            onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             contentStart = 64.mpx,
                             reservedTop = homeStatusHeight + 24.mpx,
                             statusWidth = homeStatusWidth,

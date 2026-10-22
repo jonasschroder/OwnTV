@@ -40,7 +40,7 @@ internal fun MinTvContentHome(
     onOpenSeries: (Long) -> Unit, onSources: () -> Unit, onManageSources: () -> Unit,
     onOpenSettings: (MinTvSettingsDestination) -> Unit,
     onChildFocused: () -> Unit, restoreFocus: Boolean, onRestored: () -> Unit,
-    firstRowFocusRequester: FocusRequester, onEntryHook: ((() -> Boolean)?) -> Unit,
+    firstRowFocusRequester: FocusRequester, onEntryHook: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit,
     contentStart: Dp, reservedTop: Dp = 144.mpx, statusWidth: Dp = 760.mpx, modifier: Modifier = Modifier,
 ) {
     val settings: SettingsRepository = koinInject()
@@ -129,7 +129,7 @@ internal fun MinTvContentHome(
     }
     SmartHomeContent(current, guide, activeProfileId, ::play, ::resume, onOpenSeries, onLiveTv, onGuide, onSources,
         firstRowFocusRequester, onEntryHook, onChildFocused, restoreFocus, onRestored, contentStart, reservedTop, modifier,
-        onVisibleChannels = { visible = it })
+        onVisibleChannels = { visible = it }, onHeader = onHeader)
 }
 
 @Composable

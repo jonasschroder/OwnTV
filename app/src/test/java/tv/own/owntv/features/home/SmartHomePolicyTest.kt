@@ -39,11 +39,12 @@ class SmartHomePolicyTest {
         assertEquals(movie, smartHeroResume(listOf(movie), null, now))
         assertNull(smartHeroResume(emptyList(), null, now))
     }
-    @Test fun midnightAndClockTicksDoNotMutateAnExistingVisitSelection() {
-        val chosen = smartHeroResume(listOf(item()), now - 1, now)
-        assertEquals(chosen, chosen?.copy())
-        // A new visit may re-evaluate age. Existing snapshots contain the chosen value, no clock.
-        assertNull(smartHeroResume(listOf(item()), now - 1, now + SMART_SERIES_WINDOW_MS + 1))
+    @Test fun midnightDoesNotIntroduceCalendarDayAgeRounding() {
+        val midnight = java.time.Instant.parse("2026-10-23T00:00:00Z").toEpochMilli()
+        val episode = item(at = midnight - SMART_SERIES_WINDOW_MS)
+        assertEquals(episode, smartHeroResume(listOf(episode), episode.playedAt - 1, midnight - 1))
+        assertEquals(episode, smartHeroResume(listOf(episode), episode.playedAt - 1, midnight))
+        assertNull(smartHeroResume(listOf(episode), episode.playedAt - 1, midnight + 1))
     }
     @Test fun logicalFocusSurvivesMetadataRefreshAndRemovedSourceChoosesAdjacent() {
         val before = listOf("svt1", "svt2", "tv3", "tv4")

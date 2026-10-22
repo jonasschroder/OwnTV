@@ -48,7 +48,7 @@ class SmartHomeDeviceTest {
                 key(profile) {
                     SmartHomeContent(snapshot, guide, profile, { played++ }, { played++ }, {}, {}, {}, {},
                         first, { entered = it }, {}, false, {}, 64.mpx, 0.mpx,
-                        Modifier.weight(1f).nativeContentNavigation(header, manager))
+                        Modifier.weight(1f).nativeContentNavigation(header, manager), onHeader = { header.requestFocus() })
                 }
             }
             LaunchedEffect(profile) { withFrameNanos { }; header.requestFocus() }
@@ -90,6 +90,14 @@ class SmartHomeDeviceTest {
         compose.runOnIdle { assertEquals(1, played); profile = 8; snapshot = SmartHomeSnapshot(8, false, emptyList(), null, null, null, emptyList()) }
         compose.onNodeWithTag("smart-channel-SVT1").assertDoesNotExist()
         press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-hero-play").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithTag("top-HOME").assertIsFocused()
+    }
+    @Test fun removedRowsFallbackToHeroWithoutFocusTrap() {
+        mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-channel-SVT1").assertIsFocused()
+        compose.runOnIdle { snapshot = snapshot!!.copy(channels = emptyList(), live = null, liveWatchedAt = null) }
         compose.onNodeWithTag("smart-hero-play").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP)
         compose.onNodeWithTag("top-HOME").assertIsFocused()

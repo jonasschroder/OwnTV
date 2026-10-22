@@ -40,7 +40,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     firstFocus: FocusRequester, onEntry: ((() -> Boolean)?) -> Unit,
     onFocused: () -> Unit, restore: Boolean, onRestored: () -> Unit,
     contentStart: Dp, reservedTop: Dp, modifier: Modifier = Modifier,
-    onVisibleChannels: (List<ChannelEntity>) -> Unit = {}) {
+    onVisibleChannels: (List<ChannelEntity>) -> Unit = {}, onHeader: () -> Unit) {
     val current = snapshot?.takeIf { it.profile == profile }
     val channels = current?.channels.orEmpty()
     val resumes = current?.resumes.orEmpty()
@@ -59,7 +59,12 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     SideEffect { if (current != null) { previousKeys = keys; previousResumes = resumeKeys } }
     val indices = listOf(0, if (channels.isEmpty()) -1 else 1,
         if (resumes.isEmpty()) -1 else if (channels.isEmpty()) 1 else 2)
-    ReconcileHomeNavigation(nav, list, indices, current != null)
+    LaunchedEffect(indices, current != null) {
+        if (current != null && indices.getOrNull(nav.selected) == -1) {
+            nav.selected = 0; list.scrollToItem(0)
+            repeat(2) { withFrameNanos { } }; firstFocus.requestSafely()
+        }
+    }
     val currentIndices by rememberUpdatedState(indices)
     val currentChannels by rememberUpdatedState(channels)
     val currentChannelKey by rememberUpdatedState(entryChannel)
@@ -92,7 +97,10 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                 .onPreviewKeyEvent { event ->
                     val delta = when (event.key) { Key.DirectionDown -> 1; Key.DirectionUp -> -1; else -> 0 }
                     val target = nextHomeSection(nav.selected, delta, indices)
-                    if (target == null) false else {
+                    if (delta == -1 && nav.selected == 0) {
+                        if (event.type == KeyEventType.KeyDown) onHeader()
+                        true
+                    } else if (target == null) false else {
                         if (event.type == KeyEventType.KeyDown) scope.launch {
                             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == indices[target] }
                             if (item == null || item.offset < list.layoutInfo.viewportStartOffset || item.offset + item.size > list.layoutInfo.viewportEndOffset)

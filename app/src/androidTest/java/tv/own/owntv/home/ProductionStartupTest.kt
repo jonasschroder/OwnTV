@@ -137,7 +137,7 @@ class ProductionStartupTest {
             // its own resources with the persisted app locale. Assert against the latter.
             var homeLabel = ""
             scenario.onActivity { activity ->
-                homeLabel = activity.getString(R.string.mintv_v08_last_watched)
+                homeLabel = activity.getString(R.string.mintv_smart_back_channel)
                 if (LocaleStore.from(activity).readBlocking() == "sv") {
                     assertEquals("sv", activity.resources.configuration.locales[0].language)
                 }
@@ -146,6 +146,7 @@ class ProductionStartupTest {
             compose.waitUntil(30_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
             Thread.sleep(8_000) // Real elapsed survival beyond the reported one-second fatal window.
             compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            compose.onNodeWithTag("smart-hero-play").assertIsDisplayed()
             val premium = InstrumentationRegistry.getArguments().getString("premiumHome") == "true"
             if (premium) {
                 compose.waitUntil(15_000) {

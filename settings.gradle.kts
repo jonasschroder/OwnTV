@@ -48,16 +48,33 @@ val localCorePath = providers.gradleProperty("owntv.corePath").orNull?.takeIf { 
 if (localCorePath != null) {
     includeBuild(localCorePath)
 } else {
-    val coreCommit = file("gradle/owntv-core.commit").readText().trim()
+    val coreRepository = file("gradle/owntv-core.repository").readText().trimEnd('\n')
+    require(coreRepository in setOf(
+        "https://github.com/ahXN00/OwnTV_Core.git",
+        "https://github.com/jonasschroder/OwnTV_Core.git",
+    )) { "Invalid gradle/owntv-core.repository; expected an approved HTTPS GitHub repository." }
+    val coreCommit = file("gradle/owntv-core.commit").readText().trimEnd('\n')
     require(coreCommit.matches(Regex("[0-9a-f]{40}"))) { "Invalid gradle/owntv-core.commit" }
     val coreDir = file(".gradle-cache/OwnTV_Core")
     check(coreDir.resolve(".git").isDirectory) { "Run bash tools/prepare-core.sh before building." }
+    check(!java.nio.file.Files.isSymbolicLink(coreDir.toPath()) &&
+        !java.nio.file.Files.isSymbolicLink(coreDir.resolve(".git").toPath())) { "Pinned Core must not be a symbolic link." }
+    val actualRepository = providers.exec {
+        commandLine("git", "-C", coreDir.absolutePath, "remote", "get-url", "--all", "origin")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trimEnd('\n')
+    check(actualRepository == coreRepository) { "Core source differs from gradle/owntv-core.repository; run bash tools/prepare-core.sh." }
+    val attachedHead = providers.exec {
+        commandLine("git", "-C", coreDir.absolutePath, "symbolic-ref", "-q", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+    check(attachedHead.isEmpty()) { "Pinned Core must use a detached HEAD." }
     val actualCommit = providers.exec {
         commandLine("git", "-C", coreDir.absolutePath, "rev-parse", "HEAD")
     }.standardOutput.asText.get().trim()
     check(actualCommit == coreCommit) { "Core revision differs from gradle/owntv-core.commit; run bash tools/prepare-core.sh." }
     val coreChanges = providers.exec {
-        commandLine("git", "-C", coreDir.absolutePath, "status", "--porcelain", "--untracked-files=no")
+        commandLine("git", "-C", coreDir.absolutePath, "status", "--porcelain")
     }.standardOutput.asText.get().trim()
     check(coreChanges.isEmpty()) { "Pinned Core has local changes; use owntv.corePath for Core development." }
     includeBuild(coreDir)

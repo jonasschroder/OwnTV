@@ -1,0 +1,17 @@
+<resources>
+    <string name="mintv_source_title">Source &amp; quality</string>
+    <string name="mintv_source_hint">OK saves this version and starts playback. Right: save without playing.</string>
+    <string name="mintv_source_save_only">Save marked version as default — do not play</string>
+    <string name="mintv_source_saved">Saved default</string>
+    <string name="mintv_source_play">Save &amp; play</string>
+    <string name="mintv_source_unknown_quality">Quality not specified</string>
+    <string name="mintv_source_provider">Source %1$d</string>
+    <string name="mintv_source_version">%1$s · %2$s · %3$s</string>
+    <string name="mintv_source_back_hint">Back closes without changing your choice. Quality labels come from the provider.</string>
+    <string name="mintv_source_unavailable">This version is no longer available. Close and choose again.</string>
+    <string name="mintv_source_save_failed">The default could not be saved. Nothing was played. Try again or close.</string>
+    <string name="mintv_source_saved_missing">Your saved version is unavailable. An available version is used until it returns.</string>
+    <string name="mintv_source_loading">Loading available versions…</string>
+    <string name="mintv_source_partial">The local channel index is limited; additional versions may exist in All channels.</string>
+    <string name="mintv_source_ambiguous">No verified alternative version is available. Use the exact channel in TV.</string>
+</resources>

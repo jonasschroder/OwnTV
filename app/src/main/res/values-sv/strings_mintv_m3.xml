@@ -1,0 +1,17 @@
+<resources>
+    <string name="mintv_source_title">Källa &amp; kvalitet</string>
+    <string name="mintv_source_hint">OK sparar versionen och startar kanalen. Höger: spara utan att spela.</string>
+    <string name="mintv_source_save_only">Spara markerad version som standard — spela inte</string>
+    <string name="mintv_source_saved">Sparad standard</string>
+    <string name="mintv_source_play">Spara &amp; spela</string>
+    <string name="mintv_source_unknown_quality">Kvalitet ej angiven</string>
+    <string name="mintv_source_provider">Källa %1$d</string>
+    <string name="mintv_source_version">%1$s · %2$s · %3$s</string>
+    <string name="mintv_source_back_hint">Tillbaka stänger utan att ändra ditt val. Kvalitetsangivelser kommer från leverantören.</string>
+    <string name="mintv_source_unavailable">Versionen är inte längre tillgänglig. Stäng och välj igen.</string>
+    <string name="mintv_source_save_failed">Standardvalet kunde inte sparas. Ingenting spelades. Försök igen eller stäng.</string>
+    <string name="mintv_source_saved_missing">Din sparade version är inte tillgänglig. En tillgänglig version används tills den återkommer.</string>
+    <string name="mintv_source_loading">Hämtar tillgängliga versioner…</string>
+    <string name="mintv_source_partial">Det lokala kanalindexet är begränsat. Fler versioner kan finnas under Alla kanaler.</string>
+    <string name="mintv_source_ambiguous">Ingen verifierad alternativ version är tillgänglig. Använd den exakta kanalen under TV.</string>
+</resources>

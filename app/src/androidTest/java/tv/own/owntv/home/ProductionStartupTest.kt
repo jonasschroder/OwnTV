@@ -109,6 +109,10 @@ class ProductionStartupTest {
                 EpgProgrammeEntity(sourceId = 101, epgChannelId = "missing-guide-${index + 1}",
                     startMs = now - 15 * 60_000, stopMs = now + 45 * 60_000, title = "Syntetiskt nästa program ${index + 1}")))
         }
+        val tv3 = db.channelDao().getById(101003)!!
+        db.channelDao().insertAll(listOf(
+            tv3.copy(id = 7001, remoteId = "synthetic-m3-fhd", name = "TV3 FHD"),
+            tv3.copy(id = 7002, remoteId = "synthetic-m3-uhd", name = "TV3 UHD")))
         val source = db.sourceDao().getById(101)!!
         db.sourceDao().update(source.copy(syncMovies = true, syncSeries = true))
         db.movieDao().insertAll(listOf(
@@ -211,6 +215,45 @@ class ProductionStartupTest {
                         top >= viewport.top && bottom <= viewport.bottom)
                 }
                 nativeCapture("home")
+                val sourceStore = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
+                val originalChoices = sourceStore.choices(7)
+                fun openSources(tag: String) {
+                    compose.onNodeWithTag(tag).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                    compose.onNodeWithTag(tag).assertIsFocused()
+                    val down = android.os.SystemClock.uptimeMillis()
+                    instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                    Thread.sleep(650)
+                    compose.waitUntil(10_000) { compose.onAllNodesWithTag("source-picker").fetchSemanticsNodes().isNotEmpty() }
+                    instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 3))
+                    instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                    compose.waitForIdle()
+                }
+                openSources("smart-channel-tv3")
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("source-variant-7002").fetchSemanticsNodes().isNotEmpty() }
+                assertEquals(originalChoices, sourceStore.choices(7)) // held OK/release never save/play
+                nativeCapture("source-picker")
+                compose.onNodeWithTag("source-variant-7002").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("source-save-only").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("source-picker").fetchSemanticsNodes().isEmpty() }
+                assertEquals("101:synthetic-m3-uhd", sourceStore.choices(7).preferred["tv3"])
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("smart-channel-tv3").assertIsFocused(); true }.getOrDefault(false) }
+                openSources("smart-channel-tv3")
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("source-variant-7002").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_BACK)
+                compose.onNodeWithTag("top-TV").performClick()
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("swedish-channel-tv3").fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("swedish-channel-tv3").assert(hasText("UHD"))
+                openSources("swedish-channel-tv3")
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("source-variant-7002").assertIsFocused(); true }.getOrDefault(false) }
+                nativeCapture("source-picker-tv-saved")
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("swedish-channel-tv3").assertIsFocused(); true }.getOrDefault(false) }
+                sourceStore.save(7, originalChoices) // Restore only this disposable fixture's preferences.
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.waitUntil(10_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
+
                 val originalProgress = db.progressDao().get(7, MediaType.EPISODE, 6002)!!
                 compose.onNodeWithTag("top-TV").performClick()
                 db.progressDao().save(originalProgress.copy(updatedAt = System.currentTimeMillis()))
@@ -221,6 +264,10 @@ class ProductionStartupTest {
                 val storedGuide = hasText("Syntetiska Nyheterna", substring = true) and hasTestTag("smart-channel-svt1")
                 compose.waitUntil(10_000) { compose.onAllNodes(storedGuide).fetchSemanticsNodes().isNotEmpty() }
                 nativeCapture("smart-active-series")
+                openSources("smart-last-live")
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("smart-last-live").assertIsFocused(); true }.getOrDefault(false) }
+                assertEquals(originalChoices, sourceStore.choices(7))
                 db.progressDao().save(originalProgress)
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-HOME").performClick()

@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -29,6 +31,7 @@ import tv.own.owntv.R
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.features.home.*
+import tv.own.owntv.features.live.source.*
 import tv.own.owntv.ui.theme.mpx
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
@@ -41,6 +44,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val context by vm.homeLibraryContext.collectAsStateWithLifecycle()
     val profile = context.first
     val scope = rememberCoroutineScope()
+    val pendingSourcePress = remember(profile) { SourcePressCancellation() }
     var choices by remember(profile) { mutableStateOf(SwedishChoices()) }
     var library by remember(profile) { mutableStateOf(SwedishLibrary(emptyList())) }
     var collection by rememberSaveable(profile) { mutableStateOf(SwedishCollection.GENERAL) }
@@ -58,6 +62,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     var expectedGuideRevision by remember(metadata) { mutableIntStateOf(0) }
     var edit by rememberSaveable(profile) { mutableStateOf(false) }
     var variants by rememberSaveable(profile) { mutableStateOf(false) }
+    var previewSuppressedFor by remember(context) { mutableStateOf<String?>(null) }
     var failed by remember(profile) { mutableStateOf(false) }
     val list = rememberLazyListState()
     val entry = remember { FocusRequester() }
@@ -70,12 +75,12 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val providerNames by vm.providerNames.collectAsStateWithLifecycle()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val active = lifecycle == Lifecycle.State.RESUMED
-    LaunchedEffect(context) { choices = store.choices(profile) }
+    LaunchedEffect(context) { store.observeChoices(profile).collect { choices = it } }
     val access = metadata?.custom?.let { Triple(it.hiddenCategories, it.hiddenItems, it.customCategories) }
     LaunchedEffect(context, choices.order, choices.hidden, access) {
         failed = false
         try {
-            db.invalidationTracker.createFlow("channels", "categories", "profiles").collect {
+            db.invalidationTracker.createFlow("channels", "categories", "profiles", "sources").collect {
                 library = store.library(profile, context.second, choices); loaded = true
             }
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -137,23 +142,40 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         val variant = preferred ?: return@LaunchedEffect
         val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
         resolved = channel?.let { variant.rowKey() to it }
-        channel?.let(vm::onChannelFocused)
-    }
-    LaunchedEffect(selected?.id, active, previewEnabled, previewSetting) {
-        if (active && previewEnabled && previewSetting) selected?.let { delay(700); vm.playPreview(it) }
+        if (sourceChoiceAllowsPreview(focusId, previewSuppressedFor, false)) channel?.let(vm::onChannelFocused)
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
-    fun play(variant: SwedishVariant) { scope.launch {
-        val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId } ?: return@launch
+    fun playChannel(original: ChannelEntity, logicalIdentity: String? = null) { scope.launch {
+        val channel = vm.homeChannel(original.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == tv.own.owntv.core.customize.CustomizeKeys.channel(original) && it.sourceId == original.sourceId && it.streamUrl.isNotBlank() } ?: return@launch
         // Fresh entity retains all provider authorization, DRM, catch-up and EPG context.
-        val zap = groups.mapNotNull { it.preferred(choices.preferred[it.identity], choices.showUhd) }
+        val latestChoices = store.choices(profile)
+        val zap = groups.mapNotNull { it.preferred(latestChoices.preferred[it.identity], latestChoices.showUhd) }
             .take(200).mapNotNull { row -> vm.homeChannel(row.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == row.stableKey && it.sourceId == row.sourceId } }
         val expected = metadata ?: return@launch
         if (currentMetadata != expected || expected.profileId != profile || !vm.swedishContextCurrent(expected)) return@launch
-        vm.watchFullscreen(channel, zap)
+        val selectedIdentity = logicalIdentity ?: library.groups.firstOrNull { group -> group.variants.any { it.id == channel.id } }?.identity
+        val consistentZap = zap.map { row ->
+            val identity = library.groups.firstOrNull { group -> group.variants.any { it.id == row.id } }?.identity
+            if (identity != null && identity == selectedIdentity) channel else row
+        }.distinctBy { it.id }
+        vm.watchFullscreen(channel, consistentZap)
         if (!external || channel.drmConfig != null) onFullscreen()
     } }
-    SwedishLiveFrame(modifier.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
+    fun play(variant: SwedishVariant) { scope.launch {
+        vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }?.let { playChannel(it, variant.name.identity) }
+    } }
+    val sourceActions = rememberChannelSourceSelection(store, db, vm, profile, context.second,
+        onPlay = { channel, identity -> playChannel(channel, identity) }, onClosed = { scope.launch { restoreChannel() } })
+    LaunchedEffect(sourceActions.isOpen) { if (sourceActions.isOpen) previewSuppressedFor = focusId }
+    LaunchedEffect(selected?.id, focusId, active, previewEnabled, previewSetting, sourceActions.isOpen, previewSuppressedFor) {
+        if (active && previewEnabled && previewSetting && sourceChoiceAllowsPreview(focusId, previewSuppressedFor, sourceActions.isOpen))
+            selected?.let { delay(700); vm.playPreview(it) }
+    }
+    fun openSources() { focused?.let { sourceActions.open(it.identity, null) } }
+    SwedishLiveFrame(modifier.onPreviewKeyEvent { event ->
+        if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
+        false
+    }.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
             TvText(stringResource(R.string.mintv_swedish_channels), Modifier.weight(1f), size = 34, bold = true)
             SwedishLiveAction(stringResource(R.string.mintv_full_library), onLibrary, Modifier.focusRequester(entry))
             SwedishLiveAction(stringResource(R.string.mintv_collection_settings), { edit = !edit })
@@ -173,7 +195,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
                     item { HomeButton(stringResource(R.string.mintv_show_variants), { update(choices.copy(showVariants = !choices.showVariants)) }) }
                     item { HomeButton(stringResource(R.string.mintv_restore_collection), { update(SwedishChoices()); focusId = null; variants = false }) }
                     focused?.let { group ->
-                        item { HomeButton(stringResource(R.string.mintv_choose_variant), { variants = !variants }) }
+                        item { HomeButton(stringResource(R.string.mintv_choose_variant), { openSources() }) }
                         item { HomeButton(stringResource(R.string.mintv_pin_channel), { selected?.let(vm::toggleFavorite) }) }
                         item { HomeButton(stringResource(R.string.mintv_hide_channel), { update(choices.copy(hidden = choices.hidden + group.identity)); focusId = null }) }
                         for (offset in listOf(-1, 1)) item {
@@ -190,21 +212,21 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
                     val preferred = group.preferred(choices.preferred[group.identity], choices.showUhd)!!
                     val rowFocus = remember(profile, group.identity) { targets.getOrPut(group.identity) { FocusRequester() } }
                     SwedishChannelRow(group.label, preferred.name.quality, rowData[preferred.rowKey()], at,
-                        selected = focusId == group.identity, onPlay = { play(preferred) },
-                        modifier = Modifier.focusRequester(rowFocus).onFocusChanged { if (it.isFocused) focusId = group.identity })
-                    if (choices.showVariants || variants && focusId == group.identity) {
-                        group.variants.forEach { variant ->
-                            HomeButton(listOfNotNull(variant.rawName, providerNames[variant.sourceId]).joinToString(stringResource(R.string.mintv_team_separator)), {
-                                update(choices.copy(preferred = choices.preferred + (group.identity to variant.stableKey)))
-                                variants = false
-                                scope.launch { restoreChannel() }
-                            }, Modifier.padding(start = 24.mpx))
-                        }
+                        selected = focusId == group.identity, onPlay = {
+                            if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
+                            else sourceActions.play(group.identity, null)
+                        },
+                        modifier = Modifier.testTag("swedish-channel-${group.identity}").focusRequester(rowFocus).logicalChannelKeys({
+                            if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
+                            else sourceActions.play(group.identity, null)
+                        }, { sourceActions.open(group.identity, it) }, pendingSourcePress).onFocusChanged { if (it.isFocused) focusId = group.identity })
+                    if (choices.showVariants) {
+                        HomeButton(stringResource(R.string.mintv_source_title), { sourceActions.open(group.identity, null) }, Modifier.padding(start = 24.mpx))
                     }
                 }
             }
         }, preview = {
-                SwedishLiveAction(stringResource(R.string.mintv_choose_variant), { variants = !variants })
+                SwedishLiveAction(stringResource(R.string.mintv_choose_variant), { openSources() })
                 val epg = guide?.takeIf { it.revision >= expectedGuideRevision }?.forChannel(selected, metadata, at)
                 LiveStagePane(selected, focused?.label, epg, vm.previewEngine,
                     showVideo = active && previewEnabled && previewSetting && selected != null,

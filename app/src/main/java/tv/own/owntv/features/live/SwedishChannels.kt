@@ -69,7 +69,9 @@ internal object SwedishChannels {
             general.indexOf(label).takeIf { it >= 0 } ?: 100)
     }
     fun group(variants: List<SwedishVariant>, order: List<String> = emptyList(), hidden: Set<String> = emptySet()): List<SwedishGroup> =
-        variants.filter { it.name.identity !in hidden }.groupBy { it.name.identity }.map { (id, rows) ->
-            SwedishGroup(id, rows.first().name.label, rows.distinctBy { it.stableKey })
+        variants.filter { it.name.identity !in hidden }.groupBy { it.name.identity }.mapNotNull { (id, rows) ->
+            // A name-only key occurring on different provider rows cannot identify a saved source.
+            val unambiguous = rows.groupBy { it.stableKey }.values.mapNotNull { it.distinctBy { row -> row.id }.singleOrNull() }
+            if (unambiguous.isEmpty()) null else SwedishGroup(id, unambiguous.first().name.label, unambiguous)
         }.sortedWith(compareBy<SwedishGroup> { order.indexOf(it.identity).takeIf { n -> n >= 0 } ?: (order.size + it.variants.first().name.order) }.thenBy { it.label })
 }

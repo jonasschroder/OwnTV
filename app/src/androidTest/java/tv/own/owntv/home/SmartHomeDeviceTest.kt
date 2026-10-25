@@ -111,13 +111,16 @@ class SmartHomeDeviceTest {
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("smart-hero-play").assertIsFocused(); true }.getOrDefault(false) }
         assertEquals(0, played)
     }
-    @Test fun eightLogicalChannelsFitAndRightScrollsToAdditionalChannel() {
+    @Test fun fiveLogicalChannelsFitAndRightScrollsToAdditionalChannel() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("smart-hero-play").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("smart-channel-SVT1").assertIsFocused()
-        for (name in names.take(8)) compose.onNodeWithTag("smart-channel-$name").assertIsDisplayed()
-        repeat(8) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        // Designlab 04 density: first five fit before scrolling; the sixth is reachable.
+        for (name in names.take(5)) compose.onNodeWithTag("smart-channel-$name").assertIsDisplayed()
+        repeat(5) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        compose.onNodeWithTag("smart-channel-TV6").assertIsFocused().assertIsDisplayed()
+        repeat(3) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
         compose.onNodeWithTag("smart-channel-Kanal 9").assertIsFocused().assertIsDisplayed()
         compose.runOnIdle { assertEquals(0, played) }
     }

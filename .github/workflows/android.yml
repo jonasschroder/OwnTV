@@ -203,7 +203,7 @@ jobs:
               ('tv.own.owntv.home.NativeV011PresentationTest', 'sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'libraryEntryUsesLatestStateWithoutRegistrationRecompositionLoop'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'fontScalingAt720KeepsBothEntriesAndSportsRowsReachable'),
-              ('tv.own.owntv.home.NativeV011PresentationTest', 'signedOutTwitchDoesNotClaimCachedLiveState'),
+              ('tv.own.owntv.home.NativeV011PresentationTest', 'signedOutTwitchShowsStatusAndPreservesIndependentAppEntry'),
               ('tv.own.owntv.home.ChannelGridDeviceTest', 'verticalMovesKeepColumnAcrossPartialRowAndHorizontalNeverWraps'),
               ('tv.own.owntv.home.ChannelGridDeviceTest', 'shortOkPlaysAndHeldOkOnlyOpensExistingSourceAction'),
               ('tv.own.owntv.home.SmartHomeDeviceTest', 'fiveLogicalChannelsFitAndRightScrollsToAdditionalChannel'),

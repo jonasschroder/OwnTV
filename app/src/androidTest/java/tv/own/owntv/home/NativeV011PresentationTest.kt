@@ -213,11 +213,16 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("sport-today-${fixture.id}").assertIsFocused().assertIsDisplayed()
     }
-    @Test fun signedOutTwitchDoesNotClaimCachedLiveState() {
-        compose.setContent { MaterialTheme { TwitchQuickCard(TwitchState.Live("Synthetic cached private title", 12), {}, authenticated = false) } }
-        compose.onNodeWithText("Synthetic cached private title").assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(tv.own.owntv.R.string.mintv_v08_live)).assertDoesNotExist()
+    @Test fun signedOutTwitchShowsStatusAndPreservesIndependentAppEntry() {
+        var launches = 0
+        val focus = FocusRequester()
+        compose.setContent { MaterialTheme { TwitchQuickCard(TwitchState.Unavailable, { launches++ }, Modifier.focusRequester(focus), authenticated = false) } }
+        compose.runOnIdle { focus.requestFocus() }
         compose.onNodeWithText(compose.activity.getString(tv.own.owntv.R.string.mintv_v011_signed_out)).assertExists()
+        compose.onNodeWithText(compose.activity.getString(tv.own.owntv.R.string.mintv_twitch_connect)).assertDoesNotExist()
+        compose.onNodeWithText(compose.activity.getString(tv.own.owntv.R.string.mintv_twitch_open_app)).assertExists()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.runOnIdle { assertEquals(1, launches) }
     }
     @Test fun emptyProfileKeepsBothVodEntriesReachableWithoutLeakingTitles() {
         mount(); enter(TopDestination.VOD)

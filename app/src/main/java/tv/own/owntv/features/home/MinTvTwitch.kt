@@ -133,7 +133,7 @@ internal fun TwitchCompanionUi(
                 (currentActive && openPlayer(player)).also { opened -> if (opened) { externalReturnPending = true; restore = true } }
             })
     }
-    else if (compact) TwitchQuickCard(fresh, if (connected && clientId.isNotBlank()) openApp else onOpenSettings ?: openSettings, modifier.focusRequester(entryFocus), authenticated = connected && clientId.isNotBlank())
+    else if (compact) TwitchQuickCard(fresh, openApp, modifier.focusRequester(entryFocus), authenticated = connected && clientId.isNotBlank())
     else {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
     TvCard({

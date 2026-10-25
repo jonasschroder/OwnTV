@@ -66,9 +66,9 @@ internal fun TwitchQuickCard(state: TwitchState, onOpen: () -> Unit, modifier: M
         Column(verticalArrangement = Arrangement.spacedBy(3.mpx)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 TvText(stringResource(R.string.mintv_ohnepixel), Modifier.weight(1f), size = 22, bold = true, lines = 1)
-                if (authenticated && state is TwitchState.Live) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)
+                if (state is TwitchState.Live) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)
             }
-            if (!authenticated) TvText(stringResource(R.string.mintv_v011_signed_out), size = 17, color = MinTvMuted, lines = 2)
+            if (!authenticated && state == TwitchState.Unavailable) TvText(stringResource(R.string.mintv_v011_signed_out), size = 17, color = MinTvMuted, lines = 2)
             else when (state) {
                 TwitchState.Offline -> TvText(stringResource(R.string.mintv_twitch_offline), size = 17, color = MinTvMuted, lines = 1)
                 TwitchState.Unavailable -> TvText(stringResource(R.string.mintv_companion_unavailable), size = 17, color = MinTvMuted, lines = 1)
@@ -79,6 +79,6 @@ internal fun TwitchQuickCard(state: TwitchState, onOpen: () -> Unit, modifier: M
                 }
             }
         }
-        TvText(stringResource(if (authenticated) R.string.mintv_twitch_open_app else R.string.mintv_twitch_connect), size = 16, color = MinTvTeal, bold = true, lines = 1)
+        TvText(stringResource(R.string.mintv_twitch_open_app), size = 16, color = MinTvTeal, bold = true, lines = 1)
     }
 }

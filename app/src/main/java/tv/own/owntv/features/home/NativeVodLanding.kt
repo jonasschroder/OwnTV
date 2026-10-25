@@ -78,8 +78,8 @@ private fun VodLandingRail(type: MetadataType, cards: List<DiscoveryCard>, nav: 
                 .testTag(if (movie) "vod-movie-${card.stableKey}" else "vod-series-${card.stableKey}").width(cardWidth)) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.mpx)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(16f / 6f).background(MinTvPanel), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                        if (card.poster == null) TvText(card.name, size = 25, color = MinTvMuted, lines = 2)
-                        else AsyncImage(card.poster, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        TvText(card.name, size = 25, color = MinTvMuted, lines = 2)
+                        card.poster?.let { AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
                     }
                     TvText(card.name, size = 24, bold = true, lines = 2)
                     card.year?.let { TvText(it.toString(), size = 18, color = MinTvMuted, lines = 1) }

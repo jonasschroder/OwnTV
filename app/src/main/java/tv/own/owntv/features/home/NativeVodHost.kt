@@ -20,6 +20,7 @@ import tv.own.owntv.core.customize.CustomizeKeys
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.core.metadata.MetadataType
 import tv.own.owntv.core.nav.MainSection
+import tv.own.owntv.core.model.MediaType
 import tv.own.owntv.core.repository.activeProfileSources
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.features.discovery.*
@@ -59,7 +60,10 @@ internal fun NativeVodHost(profile: Long?, section: MainSection, active: Boolean
     val foreground = active && lifecycle == Lifecycle.State.RESUMED && profile != null && access?.profileId == profile
     val movies = rememberDiscovery(MetadataType.MOVIE, mode == NativeVodMode.LANDING, foreground && mode == NativeVodMode.LANDING, profile ?: -1L)
     val series = rememberDiscovery(MetadataType.TV, mode == NativeVodMode.LANDING, foreground && mode == NativeVodMode.LANDING, profile ?: -1L)
-    var resumes by remember(profile, access) { mutableStateOf<List<SmartResume>>(emptyList()) }
+    val movieVisibility by remember(profile) { custom.observe(profile ?: -1, MediaType.MOVIE) }.collectAsStateWithLifecycle(initialValue = null)
+    val seriesVisibility by remember(profile) { custom.observe(profile ?: -1, MediaType.SERIES) }.collectAsStateWithLifecycle(initialValue = null)
+    // Clear immediately on ownership/visibility changes, before the bounded progress reread finishes.
+    var resumes by remember(profile, access, movieVisibility, seriesVisibility) { mutableStateOf<List<SmartResume>>(emptyList()) }
     val scope = rememberCoroutineScope()
     var variants by remember(profile) { mutableStateOf<DiscoveryCard?>(null) }
     val requestedMovie by movieVm.detailsRequest.collectAsStateWithLifecycle()
@@ -74,8 +78,8 @@ internal fun NativeVodHost(profile: Long?, section: MainSection, active: Boolean
             returnAfterPlayer = false; seriesVm.closeSeries(); mode = NativeVodMode.LANDING; restore = true
         }
     }
-    LaunchedEffect(profile, access, foreground, mode) {
-        if (!foreground || profile == null || access?.profileId != profile) return@LaunchedEffect
+    LaunchedEffect(profile, access, movieVisibility, seriesVisibility, foreground, mode) {
+        if (!foreground || access?.profileId != profile || movieVisibility == null || seriesVisibility == null) return@LaunchedEffect
         try { resumes = readSmartResumes(db, settings, custom, profile).take(3) }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { resumes = emptyList() }

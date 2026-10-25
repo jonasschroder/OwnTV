@@ -1285,6 +1285,8 @@ fun OwnTVShell(
                         )
 
                         selectedSection == MainSection.LIVE_TV -> LiveScreen(
+                            onHeader = { runCatching { sidebarFocus.requestFocus() } },
+                            onEntryHook = { guideEntry = it },
                             onFullscreen = { openFullscreen() },
                             onOpenGuide = { liveVm.setLiveView(tv.own.owntv.core.settings.SettingsRepository.LiveView.GUIDE) },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },

@@ -22,12 +22,22 @@ These are **real Android TV emulator renders of production Compose components wi
 | Sport | [native](../../images/v011/native/v011-native-sport-1080-synthetic.png) | [native](../../images/v011/native/v011-native-sport-720-synthetic.png) | [Designlab 04](https://github.com/jonasschroder/OwnTV/blob/a7f5f7c01d6d24c4d56f38854736355a973282b2/design/designlab04/preview/screenshots/iteration4-sport.jpg) |
 | Film & serier | [native](../../images/v011/native/v011-native-vod-1080-synthetic.png) | [native](../../images/v011/native/v011-native-vod-720-synthetic.png) | [Designlab 04](https://github.com/jonasschroder/OwnTV/blob/a7f5f7c01d6d24c4d56f38854736355a973282b2/design/designlab04/preview/screenshots/iteration4-film-series.jpg) |
 
+The following additional captures launch the **real QA Application/Koin/database/profile/shell**, seeded only through instrumentation. Home shows restored TV3 browsing; TV waits for actual channel loading; Sport deliberately exercises disabled/unmatched data; VOD preserves library entry when discovery has no eligible previews. They complement the populated component fixtures above.
+
+| Production shell | 1920×1080 | 1280×720 |
+|---|---|---|
+| Home | [native](../../images/v011/native-production/v011-production-home-1080-synthetic.png) | [native](../../images/v011/native-production/v011-production-home-720-synthetic.png) |
+| TV | [native](../../images/v011/native-production/v011-production-tv-1080-synthetic.png) | [native](../../images/v011/native-production/v011-production-tv-720-synthetic.png) |
+| Sport | [native](../../images/v011/native-production/v011-production-sport-1080-synthetic.png) | [native](../../images/v011/native-production/v011-production-sport-720-synthetic.png) |
+| Film & serier | [native](../../images/v011/native-production/v011-production-vod-1080-synthetic.png) | [native](../../images/v011/native-production/v011-production-vod-720-synthetic.png) |
+
 Visual review corrected a missing match CTA, oversized supporting content, deadlocked Sport entry waiting for a nonexistent horizontal rail, and empty VOD artwork placeholders. Home/TV density and hierarchy follow the reference; colours/gradients, actual content and retained native controls differ. Final visual owner approval remains separate from automated acceptance.
 
 ## Validation
 
 - **77 targeted JVM tests passed**, no failures/errors/skips: Home policy and fixture identity, shared row navigation, grid navigation, RemoteOkPress, source resolver, sports/EPG/match feed and discovery selection.
 - **26 targeted Android TV emulator tests passed**: Home/source focus, real key cycles and long OK, Sport entry/row removal, Film → Series/details/exact resume, empty/profile switch, stable latest-state entry registration, signed-out Twitch, official-app/store/Back launcher regressions, isolated persisted progress and visibility, screenshots at both resolutions, and 720p with 140% text.
+- Two additional populated production-QA journeys passed locally at 1080p/720p, including source persistence, retained legacy routes, rapid VOD → Home header browsing, pause/resume and Activity recreation with exact TV3 focus/scroll. Earlier cold-start/profile/locale executions also passed. The startup test now uses queued Compose frames to avoid reentrant test measurement; no assertions/jobs were dropped.
 - Standard debug app/test APK and separately packaged QA debug APK compiled successfully. Local development version supplied as `MINTV_VERSION_NAME=0.11.0-dev`; no release versionCode policy changed.
 - i18n merge-base ratchet, suite execution inventory and whitespace checks passed. Technical focus keys are classified; no hardcoded-string baseline growth. New product copy has English/Swedish resources.
 - Full required GitHub CI remains authoritative on PR #22: Android build/unit/lint, native device suites, startup, signing/upgrade and i18n. No checks were removed or weakened. New native cases are registered as required executed/non-skipped results. The old eight-card selector mismatch was corrected. Existing unauthenticated Twitch launcher behavior is preserved; account status does not block opening the official app.
@@ -39,7 +49,7 @@ Visual review corrected a missing match CTA, oversized supporting content, deadl
 - `features/live/SwedishLiveScreen`, `SwedishChannelCard`, `ChannelGridNavigation`, `LiveScreen`: grid presentation/entry, existing fullscreen/source callbacks and bounded EPG. `SwedishChannelStore`/canonical grouping unchanged.
 - `features/home/NativeSportDashboard`, `NativeSportScreen`, `MinTvCompanions`, `HockeyChannelOrder`: native dashboard; existing SHL/HA/broadcast/manual ownership unchanged.
 - `features/home/NativeVodLanding`, `NativeVodHost`, `NativeRowsNavigation`: shared stable row focus and presentation router. Existing `DiscoveryRepository`, Movies/Series VMs, details and player reused. `DiscoveryScreen` filters expected profile immediately and clears hidden/customized stale shelves. VOD continuation clears immediately when profile/source/visibility ownership changes.
-- `features/shell/NativeContentNavigation`, `OwnTVShell`, small optional close callbacks in `MoviesScreen`/`SeriesScreen`: shared VOD landing state, exact return and stable current-state entry registration. Legacy functions remain reachable; status/playlist controls remain on Profile and active mini/audio presentation.
+- `features/shell/NativeContentNavigation`, `OwnTVShell`, small optional close callbacks in `MoviesScreen`/`SeriesScreen`: shared VOD landing state, exact return and stable current-state entry registration. Header activation cancels pending submenu focus and clears an outgoing page’s restore request. Legacy functions remain reachable; status/playlist controls remain on Profile and active mini/audio presentation.
 - Focus/policy/native test files, English/Swedish v0.11 copy, technical i18n inventory and additive CI test selectors.
 
 No Core repository/pin, player engine, subtitle engine, database schema, credential storage, package identity, app permission, signing certificate, release workflow or installed owner data changed. No new dependency, polling interval, source integration or player instance.

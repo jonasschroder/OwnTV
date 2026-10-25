@@ -1014,7 +1014,12 @@ fun OwnTVShell(
               }
           }
           var nativeEntryRequest by remember(activeProfileId) { mutableStateOf(0) }
+          var nativeTabFocusJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+          DisposableEffect(activeProfileId) { onDispose { nativeTabFocusJob?.cancel() } }
           val activateNative: (TopDestination) -> Unit = { destination ->
+              nativeTabFocusJob?.cancel()
+              nativeTabFocusJob = null
+              restoreFocus = false // A new header selection must not inherit a previous page's entry request.
               val target = nativeEntry(destination, nativeVisible, lastVod, lastTv)
               selectFromNav(target ?: MainSection.MORE)
               presentation = destination.takeIf { it == TopDestination.SPORT || target == null }
@@ -1025,7 +1030,7 @@ fun OwnTVShell(
           NativeTopNavigation(primary, sidebarFocus, { destination ->
               nativeEntryRequest = 0
               activateNative(destination)
-              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) scope.launch {
+              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) nativeTabFocusJob = scope.launch {
                   withFrameNanos { }; withFrameNanos { }
                   runCatching { nativeSubFocus.requestFocus() }
               }

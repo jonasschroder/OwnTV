@@ -232,6 +232,9 @@ class NativeV011PresentationTest {
         compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
+        enter(TopDestination.SPORT)
+        compose.onNodeWithText("Inga hockeykanaler har identifierats", substring = true).assertIsDisplayed()
+        compose.onAllNodes(hasText("Bläddra bland hockeykanaler") and hasClickAction()).onFirst().assertIsDisplayed()
         assertEquals(0, played)
     }
 }

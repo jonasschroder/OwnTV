@@ -70,7 +70,7 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                         }
                         item { HomeButton(stringResource(R.string.mintv_v011_browse_hockey), actions.browse, nav.item("sport-browse").width(width)) }
                     }
-                    if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_no_channels), size = 21, color = MinTvMuted)
+                    if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_v011_no_hockey_channels), size = 21, color = MinTvMuted)
                 }
             }
         }

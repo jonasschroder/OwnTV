@@ -2,6 +2,13 @@
 
 Status: **owner approved DESIGNLABB 04 on 2026-10-25**. This branch starts at reviewed v0.10 main commit `10f02c658640457de86c926ebd95064b7c8b673d`, without touching Stable/QA or release/signing.
 
+## Current development checkpoint (2026-10-25)
+
+- **Implemented on this draft branch:** Home's existing real-data logical channel row now budgets exactly **five visible cards** before horizontal scrolling, with the existing M3 source selector and profile-owned order preserved.
+- **Native test updated:** D-pad verification asserts the first five visible channels, scroll to the sixth and continued traversal to the ninth.
+- **Not yet implemented:** Färjestad matchday hero, compact Twitch tile, new artwork-led Home cards, five-column TV destination, revised Sport/Film & serier compositions and real Chromecast validation.
+- **Validation pending:** required GitHub CI for this branch; no build or physical acceptance claim.
+
 ## Approved visual reference
 
 - [FROZEN Design Lab 04](https://github.com/jonasschroder/OwnTV/tree/design/v011-designlab-04/design/designlab04/preview) (commit `a7f5f7c01d6d24c4d56f38854736355a973282b2`).

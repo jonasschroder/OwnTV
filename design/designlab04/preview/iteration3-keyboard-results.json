@@ -1,0 +1,219 @@
+{
+  "suite": "Iteration3 real keyboard journeys",
+  "passed": 27,
+  "results": [
+    {
+      "name": "Home meaningful hero entry",
+      "pass": true,
+      "id": "home-hero",
+      "page": "0",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Home channels",
+      "pass": true,
+      "id": "home-ch0",
+      "page": "0",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Home next content row clamps to valid column",
+      "pass": true,
+      "id": "home-resume2",
+      "page": "0",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Home restores preferred channel column",
+      "pass": true,
+      "id": "home-ch4",
+      "page": "0",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "TV first entry",
+      "pass": true,
+      "id": "tv-ch0",
+      "page": "1",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "20 distinct channels traversed by arrows; all focus targets visible",
+      "pass": true,
+      "count": 20
+    },
+    {
+      "name": "TV fourth row",
+      "pass": true,
+      "id": "tv-ch15",
+      "page": "1",
+      "scroll": 614,
+      "visible": true
+    },
+    {
+      "name": "Channel detail",
+      "pass": true,
+      "id": "channel-play",
+      "page": "1",
+      "scroll": 614,
+      "visible": true
+    },
+    {
+      "name": "Channel detail Back restores exact channel",
+      "pass": true,
+      "id": "tv-ch15",
+      "page": "1",
+      "scroll": 614,
+      "visible": true
+    },
+    {
+      "name": "Channel playback entry",
+      "pass": true,
+      "id": "player-pause",
+      "page": "1",
+      "scroll": 614,
+      "visible": true
+    },
+    {
+      "name": "Player/detail Back restores channel",
+      "pass": true,
+      "id": "tv-ch15",
+      "page": "1",
+      "scroll": 614,
+      "visible": true
+    },
+    {
+      "name": "Sport favourite first",
+      "pass": true,
+      "id": "sport-hero",
+      "page": "2",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Sport hockey row",
+      "pass": true,
+      "id": "sport-hockey0",
+      "page": "2",
+      "scroll": 60.5,
+      "visible": true
+    },
+    {
+      "name": "Ordered hockey row",
+      "pass": true,
+      "id": "sport-hockey3",
+      "page": "2",
+      "scroll": 60.5,
+      "visible": true
+    },
+    {
+      "name": "Sport Up reaches active menu",
+      "pass": true,
+      "id": "nav2",
+      "page": "2",
+      "scroll": 60.5,
+      "visible": true
+    },
+    {
+      "name": "Movies reachable on entry",
+      "pass": true,
+      "id": "vod-movies",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "First Down reaches Series without Right",
+      "pass": true,
+      "id": "vod-series",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Series same column",
+      "pass": true,
+      "id": "vod-series1",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Series detail playback",
+      "pass": true,
+      "id": "player-pause",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Series detail Back restores same item",
+      "pass": true,
+      "id": "vod-series1",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Left/Right focus only",
+      "pass": true,
+      "id": "nav1",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Down activates TV and restores remembered channel",
+      "pass": true,
+      "id": "tv-ch15",
+      "page": "1",
+      "scroll": 614,
+      "visible": true
+    },
+    {
+      "name": "TV Up reaches active menu",
+      "pass": true,
+      "id": "nav1",
+      "page": "1",
+      "scroll": 134,
+      "visible": true
+    },
+    {
+      "name": "Hem Up returns to active menu",
+      "pass": true,
+      "id": "nav0",
+      "page": "0",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Sport Up returns to active menu",
+      "pass": true,
+      "id": "nav2",
+      "page": "2",
+      "scroll": 60.5,
+      "visible": true
+    },
+    {
+      "name": "Film & serier Up returns to active menu",
+      "pass": true,
+      "id": "nav3",
+      "page": "3",
+      "scroll": 0,
+      "visible": true
+    },
+    {
+      "name": "Profile Up returns to active menu",
+      "pass": true,
+      "id": "nav4",
+      "page": "4",
+      "scroll": 0,
+      "visible": true
+    }
+  ]
+}

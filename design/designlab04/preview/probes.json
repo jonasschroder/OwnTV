@@ -1,0 +1,125 @@
+{
+  "sportsdb": {
+    "source": "https://www.thesportsdb.com/api/v1/json/123/eventsnextleague.php?id=4419",
+    "fetchedAt": "2026-10-24T12:35:00.185713+00:00",
+    "http": 200,
+    "bytes": 1484,
+    "keys": [
+      "events"
+    ],
+    "data": {
+      "events": [
+        {
+          "idEvent": "2476570",
+          "idAPIfootball": "425280",
+          "strTimestamp": "2026-10-24T13:15:00",
+          "strEvent": "Malm\u00f6 Redhawks vs Timr\u00e5 IK",
+          "strEventAlternate": "Timr\u00e5 IK @ Malm\u00f6 Redhawks",
+          "strFilename": "Swedish Hockey League 2026-10-24 Malm\u00f6 Redhawks vs Timr\u00e5 IK",
+          "strSport": "Ice Hockey",
+          "idLeague": "4419",
+          "strLeague": "Swedish Hockey League",
+          "strLeagueBadge": "https://r2.thesportsdb.com/images/media/league/badge/3q8qpc1787927189.png",
+          "strSeason": "2026-2027",
+          "strDescriptionEN": null,
+          "strHomeTeam": "Malm\u00f6 Redhawks",
+          "strAwayTeam": "Timr\u00e5 IK",
+          "intHomeScore": null,
+          "intHomeScoreExtra": null,
+          "intAwayScoreExtra": null,
+          "intRound": "12",
+          "intAwayScore": null,
+          "intSpectators": null,
+          "strOfficial": null,
+          "strWeather": null,
+          "dateEvent": "2026-10-24",
+          "dateEventLocal": null,
+          "strTime": "13:15:00",
+          "strTimeLocal": null,
+          "strGroup": null,
+          "idHomeTeam": "135487",
+          "strHomeTeamBadge": "https://r2.thesportsdb.com/images/media/team/badge/j8gnby1644937928.png",
+          "idAwayTeam": "137305",
+          "strAwayTeamBadge": "https://r2.thesportsdb.com/images/media/team/badge/48lnn71624589534.png",
+          "intScore": null,
+          "intScoreVotes": null,
+          "strResult": null,
+          "idVenue": "31000",
+          "strVenue": "Malm\u00f6 Arena",
+          "strCountry": "Sweden",
+          "strCity": null,
+          "strPoster": "",
+          "strSquare": "",
+          "strFanart": null,
+          "strThumb": "https://r2.thesportsdb.com/images/media/event/thumb/6n8qjr1694599300.jpg",
+          "strThumbAlternate": null,
+          "strBanner": "",
+          "strMap": null,
+          "strTweet1": null,
+          "strVideo": null,
+          "strStatus": "NS",
+          "strPostponed": "no",
+          "strLocked": "unlocked"
+        }
+      ]
+    }
+  },
+  "sportsdb_tv": {
+    "source": "https://www.thesportsdb.com/api/v1/json/123/lookuptv.php?id=2476548",
+    "fetchedAt": "2026-10-24T12:35:00.297059+00:00",
+    "http": 200,
+    "bytes": 591,
+    "keys": [
+      "tvevent"
+    ],
+    "data": {
+      "tvevent": [
+        {
+          "id": "1233966",
+          "idEvent": "2476548",
+          "intDivision": "0",
+          "strSport": "Ice Hockey",
+          "strEvent": "Bryn\u00e4s IF vs Djurg\u00e5rdens IF",
+          "strEventThumb": "https://r2.thesportsdb.com/images/media/event/thumb/4wq5no1647463487.jpg",
+          "strEventPoster": "",
+          "strEventBanner": "",
+          "strEventSquare": "",
+          "idChannel": "4181",
+          "strCountry": "Sweden",
+          "strEventCountry": "Sweden",
+          "strLogo": "https://r2.thesportsdb.com/images/media/channel/logo/sprvtr1434542928.png",
+          "strChannel": "C More Extreme",
+          "strSeason": "2026-2027",
+          "strTime": "17:00:00",
+          "dateEvent": "2026-10-15",
+          "strTimeStamp": "2026-10-15 17:00:00"
+        }
+      ]
+    }
+  },
+  "twitch": {
+    "source": "https://api.twitch.tv/helix/streams?user_login=ohnepixel",
+    "fetchedAt": "2026-10-24T12:35:00.405707+00:00",
+    "http": 401,
+    "status": "AUTH_REQUIRED"
+  },
+  "tmdb": {
+    "source": "https://api.themoviedb.org/3/configuration",
+    "fetchedAt": "2026-10-24T12:35:00.629357+00:00",
+    "http": 401,
+    "status": "AUTH_REQUIRED"
+  },
+  "swehockey_robots": {
+    "source": "https://stats.swehockey.se/robots.txt",
+    "fetchedAt": "2026-10-24T12:35:00.810865+00:00",
+    "http": 404,
+    "status": "HTTP_RESPONSE"
+  },
+  "tvmatchen_robots": {
+    "source": "https://www.tvmatchen.nu/robots.txt",
+    "fetchedAt": "2026-10-24T12:35:00.906864+00:00",
+    "http": 200,
+    "bytes": 452,
+    "robots": "User-agent: *\nAllow: /wp-includes/js/jquery/jquery.min.js\nAllow: /wp-includes/js/jquery/jquery-migrate.min.js\nAllow: /wp-includes/css/dist/block-library/style.min.css\nAllow: /wp-includes/css/classic-themes.min.css\nAllow: /wp-admin/admin-ajax.php\nDisallow: /cgi-bin\nDisallow: /wp-admin/\nDisallow: /wp-includes/\nDisallow: /*/xmlrpc.php\nDisallow: /go/\nDisallow: /go?\nDisallow: /app/news\nDisallow: /api\n\nSitemap: https://www.tvmatchen.nu/sitemap_index.xml\n"
+  }
+}

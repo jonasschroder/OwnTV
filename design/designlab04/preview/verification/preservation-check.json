@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-25",
+  "frozenFilesVerified": 42,
+  "mismatches": [],
+  "runningServerCwd": "/Users/jonasschroder/Documents/Codex/OwnTV-v0.11/Design-Lab-04",
+  "temporaryServerStopped": true,
+  "standaloneKeyboardAssertions": 30,
+  "standaloneAdapterTests": 3,
+  "networkNeededForMock": false,
+  "androidBuildsRun": false
+}

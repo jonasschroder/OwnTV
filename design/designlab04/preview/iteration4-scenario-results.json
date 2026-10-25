@@ -1,0 +1,98 @@
+{
+  "suite": "Iteration4 deterministic data/empty-state regressions",
+  "passed": 23,
+  "results": [
+    {
+      "name": "Missing artwork retains EPG and channel focus",
+      "pass": true
+    },
+    {
+      "name": "Stale guide hides misleading current progress",
+      "pass": true
+    },
+    {
+      "name": "Incomplete metadata uses readable channel identity",
+      "pass": true
+    },
+    {
+      "name": "Absent EPG has no programme progress",
+      "pass": true
+    },
+    {
+      "name": "Twitch online distinct mock state",
+      "pass": true
+    },
+    {
+      "name": "Twitch offline distinct mock state",
+      "pass": true
+    },
+    {
+      "name": "Twitch auth distinct mock state",
+      "pass": true
+    },
+    {
+      "name": "Twitch error distinct mock state",
+      "pass": true
+    },
+    {
+      "name": "Selected favourite changes hero",
+      "pass": true
+    },
+    {
+      "name": "No match prioritizes relevant favourite TV",
+      "pass": true
+    },
+    {
+      "name": "No relevant TV uses eligible Continue Watching",
+      "pass": true
+    },
+    {
+      "name": "No match/no progress uses TV recommendation",
+      "pass": true
+    },
+    {
+      "name": "Sport contains no Twitch module",
+      "pass": true
+    },
+    {
+      "name": "Only configured mock channels offered",
+      "pass": true
+    },
+    {
+      "name": "TV uses same partial channel library",
+      "pass": true
+    },
+    {
+      "name": "Empty library has zero watch channel targets",
+      "pass": true
+    },
+    {
+      "name": "TV removes unavailable hockey channels",
+      "pass": true
+    },
+    {
+      "name": "Manual fallback has no invented channels",
+      "pass": true
+    },
+    {
+      "name": "Empty modal Back restores favourite match",
+      "pass": true
+    },
+    {
+      "name": "No IPTV source gives useful setup",
+      "pass": true
+    },
+    {
+      "name": "Missing sports source does not invent fixtures",
+      "pass": true
+    },
+    {
+      "name": "VOD missing artwork retains titles",
+      "pass": true
+    },
+    {
+      "name": "Unavailable does not masquerade as programme data",
+      "pass": true
+    }
+  ]
+}

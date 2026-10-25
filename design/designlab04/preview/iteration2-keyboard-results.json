@@ -1,0 +1,37 @@
+[
+  {
+    "case": "TV column 3 fourth row",
+    "focus": "tv-ch17",
+    "scroll": 614,
+    "visible": true
+  },
+  {
+    "case": "Player Back restores TV",
+    "focus": "tv-ch17"
+  },
+  {
+    "case": "Right only focuses nav",
+    "focus": "nav3",
+    "page": "1"
+  },
+  {
+    "case": "Enter Film content",
+    "focus": "vod-movies"
+  },
+  {
+    "case": "First Down reaches series",
+    "focus": "vod-series"
+  },
+  {
+    "case": "Catalog detail player Back chain",
+    "focus": "vod-series"
+  },
+  {
+    "case": "Film column 3 to series column 3",
+    "focus": "vod-series1"
+  },
+  {
+    "case": "TV restored fourth-row column",
+    "focus": "tv-ch17"
+  }
+]

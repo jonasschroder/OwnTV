@@ -1,0 +1,98 @@
+{
+  "suite": "Iteration4 profile persistence and product policy",
+  "passed": 23,
+  "results": [
+    {
+      "name": "Default profile starts with Färjestad",
+      "pass": true
+    },
+    {
+      "name": "Manual match choice plays actual provider name",
+      "pass": true
+    },
+    {
+      "name": "Manual choice remembered without verified broadcaster",
+      "pass": true
+    },
+    {
+      "name": "Chosen FHD source used by direct playback",
+      "pass": true
+    },
+    {
+      "name": "Last focused channel is channel7",
+      "pass": true
+    },
+    {
+      "name": "Reload restores last focused channel",
+      "pass": true
+    },
+    {
+      "name": "Reload restores selected source picker row",
+      "pass": true
+    },
+    {
+      "name": "Second profile has isolated favourite team",
+      "pass": true
+    },
+    {
+      "name": "Second profile has its own Continue Watching",
+      "pass": true
+    },
+    {
+      "name": "Second profile does not inherit channel focus",
+      "pass": true
+    },
+    {
+      "name": "Second profile does not inherit FHD source",
+      "pass": true
+    },
+    {
+      "name": "Second profile can save favourite TV4",
+      "pass": true
+    },
+    {
+      "name": "Second profile has no inherited manual sports assignment",
+      "pass": true
+    },
+    {
+      "name": "Active profile and team survive reload",
+      "pass": true
+    },
+    {
+      "name": "Original profile retains its Färjestad preference",
+      "pass": true
+    },
+    {
+      "name": "Original profile retains Continue Watching",
+      "pass": true
+    },
+    {
+      "name": "Original profile retains its own last channel",
+      "pass": true
+    },
+    {
+      "name": "Original FHD source not replaced by other profile4K",
+      "pass": true
+    },
+    {
+      "name": "Original manual choice survives reload",
+      "pass": true
+    },
+    {
+      "name": "Hero remains stable while navigating Home",
+      "pass": true
+    },
+    {
+      "name": "Controlled matching sorts main and numbered Live including10",
+      "pass": true
+    },
+    {
+      "name": "Reset returns default profile and team",
+      "pass": true
+    },
+    {
+      "name": "Reset clears persisted source preference",
+      "pass": true
+    }
+  ]
+}

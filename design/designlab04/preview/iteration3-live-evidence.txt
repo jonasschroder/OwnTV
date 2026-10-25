@@ -1,0 +1,39 @@
+{
+  "mode": "LIVE",
+  "status": "REACHABLE_VALIDATED",
+  "source": "TheSportsDB · SHL · free development API",
+  "sourceUrl": "https://www.thesportsdb.com/api/v1/json/123/eventsnextleague.php?id=4419",
+  "fetchedAt": "2026-10-24T22:41:09.094884+00:00",
+  "freshness": "fresh",
+  "maxAgeSeconds": 900,
+  "coverage": "Partial: free API limited to one upcoming event. Timezone unverified; time is displayed as supplied.",
+  "fixtures": [
+    {
+      "idEvent": "2476577",
+      "strHomeTeam": "Frölunda HC",
+      "strAwayTeam": "Rögle BK",
+      "dateEvent": "2026-10-27",
+      "strTime": "18:00:00",
+      "strStatus": "NS",
+      "intHomeScore": null,
+      "intAwayScore": null
+    }
+  ],
+  "broadcastAssignments": [],
+  "assignmentStatus": "UNAVAILABLE: no verified assignment for these fixtures",
+  "sports": {
+    "schedule": "VERIFIED RESPONSE: partial fixtures",
+    "liveScore": "UNAVAILABLE: not validated",
+    "broadcastAssignment": "UNAVAILABLE: no verified current assignment",
+    "iptvChannel": "UNAVAILABLE: private library not connected"
+  },
+  "twitch": "AUTH_REQUIRED (probe 2026-10-24)",
+  "epg": "UNTESTED: authorized source required",
+  "metadata": "AUTH_REQUIRED (probe 2026-10-24)"
+}
+
+IPTV/EPG/logotyper: ej anslutet · auktoriserad profilkälla krävs (värd okänd)
+Twitch: api.twitch.tv + id.twitch.tv · server-OAuth + Client-ID krävs (401 verifierat)
+TMDB: api.themoviedb.org · servernyckel/auktoriserad proxy krävs (401 verifierat); image.tmdb.org bilder ej testade
+Hockey: stats.swehockey.se / www.tvmatchen.nu · återanvändningsrätt ej klarlagd. SHL/HA full täckning och aktuella TV-kopplingar saknas
+Se SOURCE-READINESS.md för inventering.

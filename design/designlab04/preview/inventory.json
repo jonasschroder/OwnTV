@@ -1,0 +1,44 @@
+{
+  "sportsdb": {
+    "source": "https://www.thesportsdb.com/api/v1/json/123/eventsnextleague.php?id=4419",
+    "fetchedAt": "2026-10-24T12:35:00.185713+00:00",
+    "http": 200,
+    "bytes": 1484,
+    "keys": [
+      "events"
+    ]
+  },
+  "sportsdb_tv": {
+    "source": "https://www.thesportsdb.com/api/v1/json/123/lookuptv.php?id=2476548",
+    "fetchedAt": "2026-10-24T12:35:00.297059+00:00",
+    "http": 200,
+    "bytes": 591,
+    "keys": [
+      "tvevent"
+    ]
+  },
+  "twitch": {
+    "source": "https://api.twitch.tv/helix/streams?user_login=ohnepixel",
+    "fetchedAt": "2026-10-24T12:35:00.405707+00:00",
+    "http": 401,
+    "status": "AUTH_REQUIRED"
+  },
+  "tmdb": {
+    "source": "https://api.themoviedb.org/3/configuration",
+    "fetchedAt": "2026-10-24T12:35:00.629357+00:00",
+    "http": 401,
+    "status": "AUTH_REQUIRED"
+  },
+  "swehockey_robots": {
+    "source": "https://stats.swehockey.se/robots.txt",
+    "fetchedAt": "2026-10-24T12:35:00.810865+00:00",
+    "http": 404,
+    "status": "HTTP_RESPONSE"
+  },
+  "tvmatchen_robots": {
+    "source": "https://www.tvmatchen.nu/robots.txt",
+    "fetchedAt": "2026-10-24T12:35:00.906864+00:00",
+    "http": 200,
+    "bytes": 452
+  }
+}

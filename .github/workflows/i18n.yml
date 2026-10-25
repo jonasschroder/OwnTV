@@ -86,6 +86,7 @@ jobs:
         run: python3 tools/i18n/check_text_overflow.py
 
   pseudo:
+    timeout-minutes: 150
     # Release identities and native signer checks must also pass on the EXACT main commit before
     # protected signing. Prototype CI builds debug APKs; it does not replace this release check.
     if: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'bump/core-')) }}
@@ -105,10 +106,34 @@ jobs:
           # 'tools' is obsolete and Google removed it from the SDK repository; the
           # action still asks for it by default, which fails the whole setup step.
           packages: 'platform-tools'
-      - name: Assemble standard debug and both unsigned release identities
-        run: |
-          MINTV_VERSION_NAME=0.2.0 VERSION_CODE=1000001 ./gradlew :app:assembleStandardDebug :app:assembleStandardRelease :app:lintStandardRelease --max-workers=4 --console=plain
-          MINTV_VERSION_NAME=0.2.0-beta.1 VERSION_CODE=1000001 ./gradlew :app:assembleQaRelease :app:lintQaRelease --max-workers=4 --console=plain
+      - name: Set up Gradle output cache
+        uses: gradle/actions/setup-gradle@v6
+      # Separate compiler/minifier/lint processes. Every original task remains mandatory.
+      - name: Assemble standard debug identity
+        env:
+          MINTV_VERSION_NAME: 0.2.0
+          VERSION_CODE: "1000001"
+        run: bash tools/ci-i18n-gradle.sh :app:assembleStandardDebug
+      - name: Assemble standard release identity
+        env:
+          MINTV_VERSION_NAME: 0.2.0
+          VERSION_CODE: "1000001"
+        run: bash tools/ci-i18n-gradle.sh :app:assembleStandardRelease
+      - name: Lint standard release identity
+        env:
+          MINTV_VERSION_NAME: 0.2.0
+          VERSION_CODE: "1000001"
+        run: bash tools/ci-i18n-gradle.sh :app:lintStandardRelease
+      - name: Assemble QA release identity
+        env:
+          MINTV_VERSION_NAME: 0.2.0-beta.1
+          VERSION_CODE: "1000001"
+        run: bash tools/ci-i18n-gradle.sh :app:assembleQaRelease
+      - name: Lint QA release identity
+        env:
+          MINTV_VERSION_NAME: 0.2.0-beta.1
+          VERSION_CODE: "1000001"
+        run: bash tools/ci-i18n-gradle.sh :app:lintQaRelease
       - name: Verify pseudolocale packaging
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
@@ -122,3 +147,10 @@ jobs:
           python3 tools/verify-mintv-apk.py --qa --apk "$QA" --aapt2 "$ANDROID_HOME/build-tools/37.0.0/aapt2" --manifest app/build/intermediates/packaged_manifests/qaRelease/processQaReleaseManifestForPackage/AndroidManifest.xml --peer-manifest app/build/intermediates/packaged_manifests/standardRelease/processStandardReleaseManifestForPackage/AndroidManifest.xml
       - name: Native signing negative/positive checks (disposable keys, no artifacts or secrets)
         run: python3 tools/signing/test_signer.py --qa app/build/outputs/apk/qa/release/app-qa-release-unsigned.apk --stable app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk --tools "$ANDROID_HOME/build-tools/37.0.0"
+      - name: Upload bounded build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: i18n-build-evidence
+          path: i18n-build-evidence/
+          if-no-files-found: warn

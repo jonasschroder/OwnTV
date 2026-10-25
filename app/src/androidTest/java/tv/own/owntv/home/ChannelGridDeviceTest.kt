@@ -29,7 +29,10 @@ class ChannelGridDeviceTest {
     private var alternatives = 0
     @Before fun remote() { InstrumentationRegistry.getInstrumentation().setInTouchMode(false) }
     private fun press(code: Int) {
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(code)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val down = android.os.SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+        instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
         compose.waitForIdle()
     }
     private fun mount() { compose.setContent {
@@ -77,7 +80,7 @@ class ChannelGridDeviceTest {
         assertEquals(0, plays)
     }
     @Test fun shortOkPlaysAndHeldOkOnlyOpensExistingSourceAction() {
-        mount(); press(KeyEvent.KEYCODE_DPAD_CENTER)
+        mount(); compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("grid-0").assertIsFocused(); true }.getOrDefault(false) }; press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertEquals(1, plays)
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val down = android.os.SystemClock.uptimeMillis()

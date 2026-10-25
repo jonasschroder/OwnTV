@@ -30,9 +30,9 @@ class DesignLabHomePolicyTest {
     @Test fun everyOptionalRowCombinationHasStableLogicalFocusSections() {
         for (channels in listOf(false, true)) for (favorites in listOf(false, true)) for (resumes in listOf(false, true)) {
             val indices = smartHomeSectionIndices(channels, favorites, resumes)
-            assertEquals((0..listOf(channels, favorites, resumes).count { it }).toList(), indices.filter { it >= 0 })
+            assertEquals((0..listOf(channels, favorites, resumes).count { it }).toList(), indices.filter { it >= 0 }.sorted())
             assertEquals(0, indices.first())
-            val sections = indices.indices.filter { indices[it] >= 0 }
+            val sections = indices.indices.filter { indices[it] >= 0 }.sortedBy { indices[it] }
             sections.zipWithNext().forEach { (a, b) ->
                 assertEquals(b, nextHomeSection(a, 1, indices))
                 assertEquals(a, nextHomeSection(b, -1, indices))
@@ -47,6 +47,28 @@ class DesignLabHomePolicyTest {
         assertEquals(listOf(promoted, other), smartHomeResumeRows(promoted, listOf(other), true))
         assertEquals(listOf(other), smartHomeResumeRows(promoted, listOf(other), false))
         assertEquals(listOf(promoted), smartHomeResumeRows(promoted, listOf(promoted), true))
+    }
+    @Test fun manualOrIncompleteChannelEvidenceNeverCreatesHeroAutoplay() {
+        val channel = tv.own.owntv.core.database.entity.ChannelEntity(id = 1, sourceId = 10, name = "TV4 Hockey", streamUrl = "https://example.invalid")
+        assertEquals(channel, verifiedSportHeroChannel(channel, null, listOf(channel), true))
+        assertNull(verifiedSportHeroChannel(channel, channel, listOf(channel), true))
+        assertNull(verifiedSportHeroChannel(channel, null, listOf(channel), false))
+        assertNull(verifiedSportHeroChannel(channel, null, emptyList(), true))
+        assertNull(verifiedSportHeroChannel(channel, null, listOf(channel.copy(sourceId = 20)), true))
+    }
+    @Test fun frozenMatchDoesNotJumpAtMidnightOrWhenAnotherFixtureArrives() {
+        val saved = game()
+        assertEquals(saved, frozenHomeFixture(saved, listOf(saved, game("2026-10-25T17:00:00Z").copy(id = "next"))))
+        assertNull(frozenHomeFixture(saved, listOf(game("2026-10-25T17:00:00Z").copy(id = "next"))))
+        assertNull(frozenHomeFixture(saved, listOf(saved.copy(kickoff = saved.kickoff.plusSeconds(60)))))
+        assertNull(frozenHomeFixture(saved, listOf(saved.copy(homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!))))
+    }
+    @Test fun frozenMatchMayRefreshKnownResultButDuplicateIdsAreNotTrusted() {
+        val saved = game()
+        val result = saved.copy(status = MatchStatus.RESULT_SNAPSHOT, score = Score(2, 1))
+        assertEquals(result, frozenHomeFixture(saved, listOf(result)))
+        assertNull(frozenHomeFixture(saved, listOf(saved, saved)))
+        assertNull(frozenHomeFixture(null, listOf(saved)))
     }
     @Test fun hockeyOrderIsNumericAndNeverCreatesChannelsOrBroadcastEvidence() {
         val names = listOf("Unrelated", "TV4 Hockey Live 10 FHD", "TV Hockey Live 2", "TV4 Hockey", "TV4 Hockey Live 1", "TV4 Hockey Highlights")

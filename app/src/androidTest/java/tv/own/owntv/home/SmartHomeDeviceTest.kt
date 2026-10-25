@@ -33,6 +33,7 @@ class SmartHomeDeviceTest {
     private var snapshot by mutableStateOf<SmartHomeSnapshot?>(SmartHomeSnapshot(7, true, channels, channels[0].channel, now - 1, null, emptyList()))
     private var guide by mutableStateOf(HomeGuideState(now, channels.associate { it.channel.homeEpgKey() to
         SwedishRowInfo(null, SwedishProgramme(it.channel.id, "Synthetic current", now - 1000, now + 1000), null) }))
+    private var matchday by mutableStateOf(false)
     private var played = 0
     private var restoreSource by mutableStateOf(false)
     private var entered: (() -> Boolean)? = null
@@ -56,7 +57,8 @@ class SmartHomeDeviceTest {
                     SmartHomeContent(snapshot, guide, profile, { played++ }, { played++ }, {}, {}, {}, {},
                         first, { entered = it }, {}, false, {}, 64.mpx, 0.mpx,
                         Modifier.weight(1f).nativeContentNavigation(header, manager), onHeader = { header.requestFocus() }, onSource = onSource,
-                        restoreSourceFocus = restoreSource, onSourceRestored = { restoreSource = false })
+                        restoreSourceFocus = restoreSource, onSourceRestored = { restoreSource = false },
+                        matchday = if (matchday) { focus -> HomeButton("Synthetic match action", {}, focus) } else null)
                 }
             }
             LaunchedEffect(profile) { withFrameNanos { }; header.requestFocus() }
@@ -109,6 +111,22 @@ class SmartHomeDeviceTest {
         compose.onNodeWithTag("smart-hero-play").assertIsNotFocused()
         compose.runOnIdle { snapshot = snapshot!!.copy(heroResume = null); restoreSource = true }
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("smart-hero-play").assertIsFocused(); true }.getOrDefault(false) }
+        assertEquals(0, played)
+    }
+    @Test fun matchdayLastLiveSourceDismissRestoresExactAction() {
+        matchday = true
+        var opened = 0
+        mount { _, _ -> opened++ }
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-last-live").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val down = android.os.SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        Thread.sleep(650); compose.waitUntil(5000) { opened == 1 }
+        instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        compose.runOnIdle { restoreSource = true }
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("smart-last-live").assertIsFocused(); true }.getOrDefault(false) }
         assertEquals(0, played)
     }
     @Test fun fiveLogicalChannelsFitAndRightScrollsToAdditionalChannel() {

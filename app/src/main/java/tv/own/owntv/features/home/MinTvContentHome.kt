@@ -181,7 +181,7 @@ internal fun MinTvContentHome(
     }
     MinSportCompanion(previewEnabled, active, liveVm, activeProfileId,
         home.favoriteLive.takeIf { home.profileId == activeProfileId }.orEmpty(), onPlayChannel, contentStart, onSources,
-        reservedTop = reservedTop, compact = true, homeHero = true,
+        reservedTop = reservedTop, compact = true, homeHero = true, freezeHomeHero = homeInteracted,
         onHomeMatchday = { if (!homeInteracted) matchdayHero = it },
         onSettings = { onOpenSettings(MinTvSettingsDestination.SPORT) }, onMatchcenterEntry = { sportsEntry = it }) { hockey, details ->
     SideEffect { sportsOpen = details }

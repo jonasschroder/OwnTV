@@ -47,7 +47,9 @@ internal fun selectSmartHome(profile: Long, hasSources: Boolean, channels: List<
 /** Stable logical sections; absent rows have no focus target. */
 internal fun smartHomeSectionIndices(channels: Boolean, favorites: Boolean, resumes: Boolean): List<Int> {
     var index = 0
-    return listOf(0, if (channels) ++index else -1, if (favorites) ++index else -1, if (resumes) ++index else -1)
+    val channelIndex = if (channels) ++index else -1
+    val resumeIndex = if (resumes) ++index else -1
+    return listOf(0, channelIndex, if (favorites) ++index else -1, resumeIndex)
 }
 
 /** A schedule or specific EPG can justify matchday, never a channel name alone. */
@@ -59,3 +61,11 @@ internal fun homeMatchdayEligible(game: SportFixture?, preferences: SportPrefere
 /** A match hero must not hide the episode/movie previously promoted out of Continue Watching. */
 internal fun smartHomeResumeRows(promoted: SmartResume?, rows: List<SmartResume>, matchday: Boolean): List<SmartResume> =
     if (matchday) smartResumeOrder(listOfNotNull(promoted) + rows).take(3) else rows
+
+/** Keep the exact fixture while browsing; refresh its labels, never redirect a reused/rescheduled ID. */
+internal fun frozenHomeFixture(original: SportFixture?, current: List<SportFixture>): SportFixture? = original?.let { saved ->
+    current.singleOrNull { it.id == saved.id }?.takeIf {
+        it.competition.id == saved.competition.id && it.homeTeam.id == saved.homeTeam.id &&
+            it.awayTeam.id == saved.awayTeam.id && it.kickoff == saved.kickoff
+    }
+}

@@ -4,10 +4,10 @@ Status: **owner approved DESIGNLABB 04 on 2026-10-25**. This branch starts at re
 
 ## Current development checkpoint (2026-10-25)
 
-- **Implemented on this draft branch:** Home's existing real-data logical channel row now budgets exactly **five visible cards** before horizontal scrolling, with the existing M3 source selector and profile-owned order preserved.
-- **Native test updated:** D-pad verification asserts the first five visible channels, scroll to the sixth and continued traversal to the ninth.
-- **Not yet implemented:** Färjestad matchday hero, compact Twitch tile, new artwork-led Home cards, five-column TV destination, revised Sport/Film & serier compositions and real Chromecast validation.
-- **Validation pending:** required GitHub CI for this branch; no build or physical acceptance claim.
+- Native Home, TV grid, match-first Sport and combined Film/Series landing are implemented on existing draft PR #22, reusing the v0.10 data/player architecture.
+- Local validation: 77 targeted JVM tests and 20 Android TV emulator tests passed; eight native 1080p/720p captures reviewed. Full CI status is authoritative in the PR checks.
+- [Implementation comparison, captures, data gaps and physical acceptance](native-validation.md).
+- Physical Chromecast acceptance and separately approved QA signing/install remain outstanding. No production data, package/signing identity or Core pin changed.
 
 ## Approved visual reference
 
@@ -50,9 +50,9 @@ Status: **owner approved DESIGNLABB 04 on 2026-10-25**. This branch starts at re
 
 Improved complete SHL/HA fixture/results, verified broadcast assignments, program art/logos, provider channel association, authenticated Twitch status and TMDB image access must not gate the v0.11 layout release. Reuse current authorized owners; visible unavailable/text states are valid. Never scrape forbidden TVmatchen endpoints, expose IPTV credentials or add speculative provider tokens.
 
-## First coding PR target
+## Integration PR
 
-Implement **Home** as a small native Compose slice on a separate feature branch/PR, with policy tests and 1080p/720p native captures. Preserve v0.10 fallback, stable identity and source picker. Only after Home passes review tackle TV, Sport and VOD. Do not treat this planning commit as native UX implementation or a finished APK.
+Continue draft PR #22 on `feat/v011-native-ux`. Native code, policy/focus tests and emulator captures are integrated; review the linked validation report and complete required CI before any readiness decision. Physical acceptance and owner-approved QA distribution remain separate gates.
 
 ## Safety
 

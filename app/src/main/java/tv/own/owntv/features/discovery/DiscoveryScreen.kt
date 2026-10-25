@@ -54,7 +54,7 @@ import tv.own.owntv.ui.theme.mpx
 
 /** Visibility-scoped adapter, no always-on collector or network refresh on focus. */
 @Composable
-internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enabled: Boolean = true): DiscoveryShelf {
+internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enabled: Boolean = true, expectedProfile: Long? = null): DiscoveryShelf {
     val repository: DiscoveryRepository = koinInject()
     val settings: SettingsRepository = koinInject()
     val sourceDao: SourceDao = koinInject()
@@ -68,7 +68,7 @@ internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enab
     val custom by remember(context.profileId, type) { customize.observe(context.profileId,
         if (type == MetadataType.MOVIE) MediaType.MOVIE else MediaType.SERIES) }
         .collectAsStateWithLifecycle(SectionCustomizations())
-    var shelf by remember(context, type) { mutableStateOf(DiscoveryShelf()) }
+    var shelf by remember(context, type, custom, metadataMode) { mutableStateOf(DiscoveryShelf()) }
     val refreshes = remember(context, type, metadataMode) { MutableStateFlow(false) }
     LaunchedEffect(context, type, active, metadataMode, custom) {
         if (!active) return@LaunchedEffect
@@ -91,7 +91,7 @@ internal fun rememberDiscovery(type: MetadataType, visible: Boolean = true, enab
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { refreshes.value = true }
     }
-    return shelf
+    return if (expectedProfile != null && context.profileId != expectedProfile) DiscoveryShelf() else shelf
 }
 
 @Composable

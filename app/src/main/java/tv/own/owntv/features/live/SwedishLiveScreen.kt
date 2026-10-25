@@ -122,6 +122,9 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         reportEntry?.invoke { if (!loaded) false else { scope.launch { restoreChannel() }; true } }
         onDispose { reportEntry?.invoke(null) }
     }
+    // This destination has no preview surface. Returning from fullscreen must also silence Exo
+    // when the user's legacy preview preference is on; mini/audio modes keep previewEnabled=false.
+    LaunchedEffect(previewEnabled, vm) { if (previewEnabled) vm.stopPreview() }
     val browsing by rememberUpdatedState(previewEnabled)
     DisposableEffect(vm) {
         if (previewEnabled) vm.stopPreview()
@@ -212,8 +215,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         }, notice = {
         if (library.bounded || failed) TvText(stringResource(R.string.mintv_curated_partial), color = MinTvMuted)
         }, channels = {
-            LazyVerticalGrid(columns = GridCells.Fixed(CHANNEL_GRID_COLUMNS), modifier = Modifier.fillMaxSize().onFocusChanged { gridHasFocus = it.hasFocus }.focusGroup(), state = list,
-                contentPadding = PaddingValues(6.mpx), verticalArrangement = Arrangement.spacedBy(22.mpx), horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+            SwedishChannelGrid(list, Modifier.fillMaxSize().onFocusChanged { gridHasFocus = it.hasFocus }.focusGroup()) {
                 if (edit) {
                     item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(if (choices.showUhd) R.string.mintv_hide_uhd else R.string.mintv_show_uhd), { update(choices.copy(showUhd = !choices.showUhd)) }, Modifier.focusRequester(editFocus)) }
                     item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_restore_collection), { update(SwedishChoices()); focusId = null; variants = false }) }
@@ -279,7 +281,7 @@ private fun collectionLabel(collection: SwedishCollection) = when (collection) {
 
 /** Artwork-only grid: no hidden preview decoder; full provider library remains available. */
 @Composable
-private fun SwedishChannelGridFrame(modifier: Modifier, header: @Composable RowScope.() -> Unit,
+internal fun SwedishChannelGridFrame(modifier: Modifier, header: @Composable RowScope.() -> Unit,
     categories: @Composable () -> Unit, notice: @Composable () -> Unit, channels: @Composable () -> Unit) {
     Column(modifier.fillMaxSize().background(Color(0xFF081A19)).padding(horizontal = 40.mpx, vertical = 22.mpx),
         verticalArrangement = Arrangement.spacedBy(14.mpx)) {
@@ -287,4 +289,12 @@ private fun SwedishChannelGridFrame(modifier: Modifier, header: @Composable RowS
         categories(); notice()
         Box(Modifier.weight(1f)) { channels() }
     }
+}
+
+/** Shared production grid geometry, also exercised with synthetic data by native tests. */
+@Composable
+internal fun SwedishChannelGrid(state: LazyGridState, modifier: Modifier = Modifier, content: LazyGridScope.() -> Unit) {
+    LazyVerticalGrid(columns = GridCells.Fixed(CHANNEL_GRID_COLUMNS), modifier = modifier, state = state,
+        contentPadding = PaddingValues(6.mpx), verticalArrangement = Arrangement.spacedBy(22.mpx),
+        horizontalArrangement = Arrangement.spacedBy(18.mpx), content = content)
 }

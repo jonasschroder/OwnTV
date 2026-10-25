@@ -230,6 +230,11 @@ class NativeV011PresentationTest {
         compose.waitForIdle(); compose.runOnIdle { entry?.invoke() }; compose.waitForIdle()
         compose.onNodeWithTag("vod-movie-MOVIE:1").assertDoesNotExist()
         compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
+        // The fixture overrides density: compare pixels, not dp values from different owners.
+        val entryBounds = compose.onNodeWithTag("vod-movies-entry").fetchSemanticsNode()
+        val rootBounds = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue("Entry must retain both TV-safe gutters: ${entryBounds.positionInRoot} / ${entryBounds.size} in $rootBounds",
+            entryBounds.positionInRoot.x > rootBounds.left && entryBounds.positionInRoot.x + entryBounds.size.width < rootBounds.right)
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
         enter(TopDestination.SPORT)

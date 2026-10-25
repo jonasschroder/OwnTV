@@ -126,7 +126,7 @@ internal fun MinTvContentHome(
                 watched, watchedAt, resumes, System.currentTimeMillis()).copy(favorites = favoriteIds.take(16).mapNotNull { id ->
                     liveVm.homeChannel(id, profile)?.takeIf { channel ->
                         SwedishChannels.recognize(channel.name)?.identity !in choices.hidden
-                    }?.let { SmartChannel(tv.own.owntv.core.customize.CustomizeKeys.channel(it), it.name, it) }
+                    }?.let { smartHomeFavorite(it, logicalBySource) }
                 })
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {

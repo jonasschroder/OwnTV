@@ -62,8 +62,9 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
 
 @Composable
 internal fun TwitchQuickCard(state: TwitchState, onOpen: () -> Unit, modifier: Modifier = Modifier, authenticated: Boolean = true) {
-    HomeSurface(onOpen, modifier.fillMaxWidth().heightIn(min = 128.mpx)) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.mpx)) {
+    HomeSurface(onOpen, modifier.fillMaxWidth().heightIn(min = 190.mpx), surfaceColor = Color(0xFF221D32)) {
+        tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.HEADPHONES, Color(0xFFC1A8EE), Modifier.size(36.mpx))
+        Column(verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 TvText(stringResource(R.string.mintv_ohnepixel), Modifier.weight(1f), size = 22, bold = true, lines = 1)
                 if (state is TwitchState.Live) TvText(stringResource(R.string.mintv_v08_live), size = 13, color = MinTvTeal, lines = 1)

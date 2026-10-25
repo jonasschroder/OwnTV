@@ -69,3 +69,15 @@ internal fun frozenHomeFixture(original: SportFixture?, current: List<SportFixtu
             it.awayTeam.id == saved.awayTeam.id && it.kickoff == saved.kickoff
     }
 }
+
+/** Favourites already visible in Now keep their badge; only additional channels need a second rail. */
+internal fun smartHomeExtraFavorites(channels: List<SmartChannel>, favorites: List<SmartChannel>): List<SmartChannel> {
+    val shown = channels.mapTo(hashSetOf()) { it.key }
+    return favorites.distinctBy { it.key }.filterNot { it.key in shown }
+}
+
+/** Resolve only through the existing profile-owned M3 grouping, never by guessed name similarity. */
+internal fun smartHomeFavorite(channel: tv.own.owntv.core.database.entity.ChannelEntity, logicalBySource: Map<String, String>): SmartChannel {
+    val sourceKey = tv.own.owntv.core.customize.CustomizeKeys.channel(channel)
+    return SmartChannel(logicalBySource[sourceKey] ?: sourceKey, channel.name, channel)
+}

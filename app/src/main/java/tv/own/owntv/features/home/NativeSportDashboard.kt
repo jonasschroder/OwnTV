@@ -2,6 +2,8 @@ package tv.own.owntv.features.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.runtime.Composable
@@ -31,22 +33,23 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
         add(NativeRow("sport-hero", listOf("sport-hero-action", "sport-settings"), horizontalRail = false))
         if (data.today.isNotEmpty()) add(NativeRow("sport-today", data.today.take(16).map { "sport-today-${it.id}" }))
         if (data.upcoming.isNotEmpty()) add(NativeRow("sport-upcoming", data.upcoming.take(12).map { "sport-upcoming-${it.id}" }))
-        add(NativeRow("sport-channels", data.channels.take(48).map { "sport-channel-${it.id}" } + "sport-browse"))
+        if (data.channels.isNotEmpty()) add(NativeRow("sport-channels", data.channels.take(48).map { "sport-channel-${it.id}" } + "sport-browse"))
     }
     val nav = rememberNativeRowsNavigation(rows, data.profile, first, onEntry, onHeader)
     BoxWithConstraints(modifier.fillMaxSize().background(DesignLabBackground)) {
         val width = (maxWidth - 128.mpx - 54.mpx) / 4
         LazyColumn(state = nav.list, contentPadding = PaddingValues(horizontal = 64.mpx, vertical = 28.mpx),
-            verticalArrangement = Arrangement.spacedBy(22.mpx), modifier = Modifier.fillMaxSize().then(nav.modifier).focusGroup()) {
+            verticalArrangement = Arrangement.spacedBy(18.mpx), modifier = Modifier.fillMaxSize().then(nav.modifier).focusGroup()) {
             item(key = "sport-hero") {
-                Column(verticalArrangement = Arrangement.spacedBy(20.mpx)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                     TvText(stringResource(R.string.mintv_nav_sport), size = 34, bold = true)
-                    Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xFF183A35), Color(0xFF17252C)))).padding(30.mpx),
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.mpx)).neutralArtwork().padding(26.mpx),
                         verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                         TvText(data.hero?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 20, color = MinTvTeal, bold = true)
-                        TvText(data.hero?.let { pairLabel(it) } ?: sportsStatusText(SportsCatalog.shl, data.enabled, SportsLoadState(data.loading, data.issue)), size = 52, bold = true, lines = 2)
+                        TvText(data.hero?.let { pairLabel(it) } ?: sportsStatusText(SportsCatalog.shl, data.enabled, SportsLoadState(data.loading, data.issue)), size = if (data.hero == null) 30 else 48, bold = true, lines = 2)
                         data.hero?.let { TvText(fixtureWhen(it, data.now), size = 23, color = MinTvMuted) }
-                        TvText(data.heroChannel?.name ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 22, color = MinTvMuted)
+                        if (data.hero != null) TvText(data.heroChannel?.name ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 21, color = MinTvMuted)
+                        if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_v011_no_hockey_channels), size = 20, color = MinTvMuted, lines = 2)
                         Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                             SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.mintv_v011_browse_hockey),
                                 if (data.heroChannel != null) actions.watch else actions.browse, nav.item("sport-hero-action").testTag("sport-hero-action"), primary = true)
@@ -61,7 +64,7 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
             if (data.upcoming.isNotEmpty()) item(key = "sport-upcoming") {
                 SportFixtureRail(stringResource(R.string.mintv_shl_upcoming), data.upcoming.take(12), "sport-upcoming", data, nav, width * 1.3f, actions.details)
             }
-            item(key = "sport-channels") {
+            if (data.channels.isNotEmpty()) item(key = "sport-channels") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                     TvText(stringResource(R.string.mintv_v011_hockey_channels), size = 27, bold = true)
                     LazyRow(state = nav.rails.getValue("sport-channels"), horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(5.mpx)) {
@@ -70,7 +73,6 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                         }
                         item { HomeButton(stringResource(R.string.mintv_v011_browse_hockey), actions.browse, nav.item("sport-browse").width(width)) }
                     }
-                    if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_v011_no_hockey_channels), size = 21, color = MinTvMuted)
                 }
             }
         }
@@ -83,8 +85,8 @@ private fun SportFixtureRail(label: String, fixtures: List<SportFixture>, id: St
         TvText(label, size = 27, bold = true)
         LazyRow(state = nav.rails.getValue(id), horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(5.mpx)) {
             items(fixtures, key = { it.id }) { game ->
-                HomeSurface({ onDetails(game) }, nav.item("$id-${game.id}").width(width).heightIn(min = (if (id == "sport-upcoming") 108 else 180).mpx).testTag("$id-${game.id}")) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {
+                HomeSurface({ onDetails(game) }, nav.item("$id-${game.id}").width(width).heightIn(min = (if (id == "sport-upcoming") 108 else 178).mpx).testTag("$id-${game.id}")) {
+                    Column(Modifier.fillMaxWidth().heightIn(min = (if (id == "sport-upcoming") 80 else 150).mpx).neutralArtwork().padding(8.mpx), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                         TvText(fixtureWhen(game, data.now), size = 18, color = MinTvMuted, lines = 1)
                         TvText(pairLabel(game), size = if (id == "sport-upcoming") 23 else 28, bold = true, lines = if (id == "sport-upcoming") 1 else 2)
                         if (id != "sport-upcoming") TvText(game.result?.takeUnless { data.preferences.hideScores } ?: data.broadcastLabels[game.id]

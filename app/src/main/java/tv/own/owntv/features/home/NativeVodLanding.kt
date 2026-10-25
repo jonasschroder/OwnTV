@@ -10,6 +10,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import tv.own.owntv.ui.components.OwnTVIcon
 import coil3.compose.AsyncImage
 import tv.own.owntv.R
 import tv.own.owntv.core.metadata.MetadataType
@@ -66,10 +67,14 @@ private fun VodLandingRail(type: MetadataType, cards: List<DiscoveryCard>, nav: 
     val row = if (movie) "vod-movies" else "vod-series"
     LazyRow(state = nav.rails.getValue(row), horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(5.mpx)) {
         item {
-            HomeSurface({ onLibrary(type) }, nav.item("$row-entry").testTag("$row-entry").width(entryWidth).heightIn(min = 230.mpx)) {
-                Column(verticalArrangement = Arrangement.spacedBy(22.mpx)) {
+            HomeSurface({ onLibrary(type) }, nav.item("$row-entry").testTag("$row-entry").width(if (cards.isEmpty()) entryWidth + cardWidth * 3 + 54.mpx else entryWidth).heightIn(min = 205.mpx), focusedScale = if (cards.isEmpty()) 1f else 1.025f) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 177.mpx).neutralArtwork().padding(16.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                     TvText(stringResource(if (movie) R.string.common_nav_movies else R.string.common_nav_series), size = 37, bold = true)
                     TvText(stringResource(if (movie) R.string.mintv_all_movies else R.string.mintv_all_series), size = 21, color = MinTvTeal, lines = 2)
+                    if (cards.isEmpty()) TvText(stringResource(R.string.mintv_discovery_empty), size = 21, color = MinTvMuted, lines = 3)
+                }
+                if (cards.isEmpty()) OwnTVIcon(if (movie) OwnTVIcon.MOVIES else OwnTVIcon.SERIES, MinTvTeal.copy(alpha = .45f), Modifier.padding(24.mpx).size(64.mpx))
                 }
             }
         }
@@ -77,8 +82,8 @@ private fun VodLandingRail(type: MetadataType, cards: List<DiscoveryCard>, nav: 
             HomeSurface({ onTitle(card) }, nav.item(if (movie) "vod-movie-${card.stableKey}" else "vod-series-${card.stableKey}")
                 .testTag(if (movie) "vod-movie-${card.stableKey}" else "vod-series-${card.stableKey}").width(cardWidth)) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.mpx)) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 6f).background(MinTvPanel), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                        TvText(card.name, size = 25, color = MinTvMuted, lines = 2)
+                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 6f).neutralArtwork(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                        OwnTVIcon(if (movie) OwnTVIcon.MOVIES else OwnTVIcon.SERIES, MinTvTeal.copy(alpha = .6f), Modifier.size(44.mpx))
                         card.poster?.let { AsyncImage(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
                     }
                     TvText(card.name, size = 24, bold = true, lines = 2)
@@ -86,10 +91,6 @@ private fun VodLandingRail(type: MetadataType, cards: List<DiscoveryCard>, nav: 
                 }
             }
         }
-        if (cards.isEmpty()) item {
-            Box(Modifier.width(cardWidth).heightIn(min = 230.mpx).padding(24.mpx)) {
-                TvText(stringResource(R.string.mintv_discovery_empty), size = 24, color = MinTvMuted, lines = 3)
-            }
-        }
+
     }
 }

@@ -12,6 +12,20 @@ class DesignLabHomePolicyTest {
     private fun game(at: String = "2026-10-24T17:00:00Z", home: String = "Färjestad BK") =
         SportsCatalog.fixture(SportsCatalog.shl, ShlGame("synthetic", home, "Luleå HF", Instant.parse(at).toEpochMilli(), null))
 
+    @Test fun extraFavoriteRailExcludesLogicalDuplicatesWithoutChangingStoredChoices() {
+        val channel = tv.own.owntv.core.database.entity.ChannelEntity(id = 1, sourceId = 10, name = "Synthetic", streamUrl = "https://example.invalid")
+        val visible = SmartChannel("svt1", "SVT1", channel)
+        val otherSource = channel.copy(id = 2, sourceId = 20)
+        val sourceKey = tv.own.owntv.core.customize.CustomizeKeys.channel(otherSource)
+        val alternate = smartHomeFavorite(otherSource, mapOf(sourceKey to "svt1"))
+        assertEquals("svt1", alternate.key)
+        assertEquals(sourceKey, smartHomeFavorite(otherSource, emptyMap()).key)
+        val extra = visible.copy(key = "extra", channel = channel.copy(id = 3))
+        val favorites = listOf(alternate, extra, extra)
+        assertEquals(listOf(extra), smartHomeExtraFavorites(listOf(visible), favorites))
+        assertEquals(listOf(alternate, extra), smartHomeExtraFavorites(emptyList(), favorites))
+        assertEquals(3, favorites.size)
+    }
     @Test fun matchdayRequiresActualFreshFixtureAndProfileFavourite() {
         assertTrue(homeMatchdayEligible(game(), preferences, now, true, zone))
         assertFalse(homeMatchdayEligible(null, preferences, now, true, zone))

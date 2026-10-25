@@ -54,7 +54,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     val current = snapshot?.takeIf { it.profile == profile }
     val channels = current?.channels.orEmpty()
     val resumes = smartHomeResumeRows(current?.heroResume, current?.resumes.orEmpty(), matchday != null)
-    val favorites = current?.favorites.orEmpty()
+    val favorites = smartHomeExtraFavorites(channels, current?.favorites.orEmpty())
     val list = rememberLazyListState()
     val rail = rememberLazyListState()
     val favoritesRail = rememberLazyListState()
@@ -182,7 +182,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                             SmartChannelCard(item, guide.rows[item.channel.homeEpgKey()], guide.at, { onLive(item.channel) },
                                 Modifier.width(width).then(if (item.key == entryChannel) nav.section(1) else Modifier)
                                     .then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(item.channel) }, { sourceFromCompanion = false; onSource(item.channel, it) }, pendingSourcePress) else Modifier)
-                                    .testTag("smart-channel-${item.key}").onFocusChanged { if (it.isFocused) channelKey = item.key })
+                                    .testTag("smart-channel-${item.key}").onFocusChanged { if (it.isFocused) channelKey = item.key }, favorite = current?.favorites?.any { it.key == item.key } == true)
                         }
                     }
 
@@ -241,14 +241,14 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
     val info = live?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
     val time = rememberSystemTimeFormatter()
     val scale = maxOf(1f, LocalDensity.current.fontScale)
-    Row(Modifier.fillMaxWidth().heightIn(min = 302.mpx * scale).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 326.mpx * scale).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
         if (matchday != null) Column(Modifier.weight(3.8f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             matchday(first)
             if (live != null) SmartAction(stringResource(R.string.mintv_smart_last_tv), { onLive(live) },
                 Modifier.testTag("smart-last-live").focusRequester(companionFocus)
                     .then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(live) }, { onSource(live, it, true) }, pendingSourcePress) else Modifier), compact = true)
         }
-        else Column(Modifier.weight(3.8f).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).padding(30.mpx), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
+        else Column(Modifier.weight(3.8f).heightIn(min = 326.mpx * scale).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).clip(RoundedCornerShape(24.mpx)).neutralArtwork().padding(26.mpx), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             TvText(stringResource(when {
                 resume?.kind == SmartResumeKind.EPISODE -> R.string.mintv_smart_continue_series
                 resume != null -> R.string.search_continue
@@ -296,9 +296,9 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
 }
 
 @Composable
-private fun SmartChannelCard(item: SmartChannel, info: SwedishRowInfo?, at: Long, play: () -> Unit, modifier: Modifier) {
+private fun SmartChannelCard(item: SmartChannel, info: SwedishRowInfo?, at: Long, play: () -> Unit, modifier: Modifier, favorite: Boolean = false) {
     SwedishChannelCard(item.label, ChannelQuality.UNKNOWN, info ?: SwedishRowInfo(item.channel.displayLogoUrl, null, null), at,
-        play, modifier, compact = true)
+        play, modifier, compact = true, favorite = favorite)
 }
 
 @Composable

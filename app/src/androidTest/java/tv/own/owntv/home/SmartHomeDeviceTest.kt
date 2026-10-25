@@ -144,16 +144,22 @@ class SmartHomeDeviceTest {
     }
     @Test fun favoritesKeepExactFocusAcrossHeaderReturnAndDoNotLeakOnProfileChange() {
         snapshot = snapshot!!.copy(favorites = channels.take(6))
-        mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        mount()
+        compose.onNodeWithTag("smart-favorite-TV3").assertDoesNotExist()
+        compose.onNodeWithTag("smart-channel-SVT1").assert(hasContentDescription(compose.activity.getString(tv.own.owntv.R.string.mintv_favorites_title)))
+        compose.runOnIdle { snapshot = snapshot!!.copy(favorites = channels.take(6).map {
+            it.copy(key = "extra-${it.key}", label = "Extra ${it.label}", channel = it.channel.copy(id = it.channel.id + 1000, name = "Extra ${it.label}"))
+        }) }
+        press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        // Favorites and the Now rail intentionally share channel identity but have separate focus.
-        compose.onAllNodesWithTag("smart-favorite-TV3")[0].assertIsFocused()
+        // Additional favourites have their own stable rail; duplicates stay badged in Now.
+        compose.onAllNodesWithTag("smart-favorite-extra-TV3")[0].assertIsFocused()
         compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        compose.onNodeWithTag("smart-favorite-TV3").assertIsFocused().assertIsDisplayed()
+        compose.onNodeWithTag("smart-favorite-extra-TV3").assertIsFocused().assertIsDisplayed()
         compose.runOnIdle { profile = 8; snapshot = SmartHomeSnapshot(8, false, emptyList(), null, null, null, emptyList()) }
-        compose.onNodeWithTag("smart-favorite-TV3").assertDoesNotExist()
+        compose.onNodeWithTag("smart-favorite-extra-TV3").assertDoesNotExist()
         assertEquals(0, played)
     }
     @Test fun programmeRefreshAndMidnightDoNotMoveChannelFocusOrCreateHistory() {

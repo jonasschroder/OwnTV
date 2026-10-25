@@ -125,6 +125,8 @@ class ProductionStartupTest {
         for ((index, item) in listOf(MediaType.EPISODE to 6002L, MediaType.MOVIE to 5001L, MediaType.MOVIE to 5002L).withIndex())
             db.progressDao().save(PlaybackProgressEntity(profileId = 7, mediaType = item.first, itemId = item.second,
                 positionMs = (18 + index) * 60_000L, durationMs = 48 * 60_000L, updatedAt = now - 3_600_000 - index))
+        // Keep the fixture's recent-TV baseline even when refreshed hours after initial seeding.
+        db.historyDao().record(WatchHistoryEntity(profileId = 7, mediaType = MediaType.LIVE, itemId = 101001))
     }
 
     @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }
@@ -172,6 +174,24 @@ class ProductionStartupTest {
             File(pictures, "${if (premium) "premium" else "home"}-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
                 .outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             bitmap.recycle()
+            fun nativeCapture(name: String) {
+                compose.waitForIdle(); instrumentation.waitForIdleSync()
+                val frames = java.util.concurrent.CountDownLatch(1)
+                scenario.onActivity { activity ->
+                    activity.window.decorView.postOnAnimation {
+                        activity.window.decorView.postOnAnimation { frames.countDown() }
+                    }
+                }
+                assertTrue("Native capture waits for rendered frames", frames.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                instrumentation.waitForIdleSync()
+                val native = instrumentation.uiAutomation.takeScreenshot()
+                File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
+                    assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
+                }
+                native.recycle()
+            }
+            if (premium) nativeCapture("home")
+
             if (premium) {
                 fun press(code: Int) {
                     compose.waitForIdle()
@@ -201,22 +221,6 @@ class ProductionStartupTest {
                     instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
                     compose.waitForIdle()
                 }
-                fun nativeCapture(name: String) {
-                    compose.waitForIdle(); instrumentation.waitForIdleSync()
-                    val frames = java.util.concurrent.CountDownLatch(1)
-                    scenario.onActivity { activity ->
-                        activity.window.decorView.postOnAnimation {
-                            activity.window.decorView.postOnAnimation { frames.countDown() }
-                        }
-                    }
-                    assertTrue("Native capture waits for rendered frames", frames.await(3, java.util.concurrent.TimeUnit.SECONDS))
-                    instrumentation.waitForIdleSync()
-                    val native = instrumentation.uiAutomation.takeScreenshot()
-                    File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
-                        assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
-                    }
-                    native.recycle()
-                }
                 compose.onNodeWithTag("top-HOME").assertExists()
                 // Home overrides Compose density; compare raw root pixels, never unrelated dp units.
                 val viewport = compose.onRoot().fetchSemanticsNode().boundsInRoot
@@ -227,7 +231,7 @@ class ProductionStartupTest {
                     assertTrue("All three full resume cards fit above the fold: $top..$bottom in $viewport",
                         top >= viewport.top && bottom <= viewport.bottom)
                 }
-                nativeCapture("home")
+                nativeCapture("home-restored")
                 val sourceStore = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
                 val originalChoices = sourceStore.choices(7)
                 fun openSources(tag: String) {

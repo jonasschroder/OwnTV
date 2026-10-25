@@ -43,3 +43,19 @@ internal fun selectSmartHome(profile: Long, hasSources: Boolean, channels: List<
     return SmartHomeSnapshot(profile, true, channels, watched ?: if (promoted == null) channels.firstOrNull()?.channel else null,
         watchedAt, promoted, eligible.filter { it.key != promoted?.key }.take(3))
 }
+
+/** Stable logical sections; absent rows have no focus target. */
+internal fun smartHomeSectionIndices(channels: Boolean, favorites: Boolean, resumes: Boolean): List<Int> {
+    var index = 0
+    return listOf(0, if (channels) ++index else -1, if (favorites) ++index else -1, if (resumes) ++index else -1)
+}
+
+/** A schedule or specific EPG can justify matchday, never a channel name alone. */
+internal fun homeMatchdayEligible(game: SportFixture?, preferences: SportPreferences, now: Long,
+    evidenceFresh: Boolean, zone: java.time.ZoneId = java.time.ZoneId.of("Europe/Stockholm")): Boolean =
+    evidenceFresh && preferences.prominent && game != null && game.follows(preferences) &&
+        game.kickoff.atZone(zone).toLocalDate() == java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+
+/** A match hero must not hide the episode/movie previously promoted out of Continue Watching. */
+internal fun smartHomeResumeRows(promoted: SmartResume?, rows: List<SmartResume>, matchday: Boolean): List<SmartResume> =
+    if (matchday) smartResumeOrder(listOfNotNull(promoted) + rows).take(3) else rows

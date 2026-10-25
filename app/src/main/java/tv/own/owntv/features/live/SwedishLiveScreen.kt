@@ -38,7 +38,7 @@ import tv.own.owntv.features.live.source.*
 import tv.own.owntv.ui.theme.mpx
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
-/** Compact logical rows, bounded stored guides, and the SAME selected-channel preview/controller. */
+/** Native five-column logical channels, bounded stored guides and the existing fullscreen player. */
 @Composable
 internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFullscreen: () -> Unit,
     onOpenGuide: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, restoreFocus: Boolean, onRestored: () -> Unit, modifier: Modifier, onHeader: (() -> Unit)? = null,
@@ -63,7 +63,6 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val cache = remember(metadata, revision) { SwedishRowCache() }
     var rowData by remember(metadata, revision, collection) { mutableStateOf<Map<SwedishRowKey, SwedishRowInfo>>(emptyMap()) }
     var at by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var expectedGuideRevision by remember(metadata) { mutableIntStateOf(0) }
     var edit by rememberSaveable(profile) { mutableStateOf(false) }
     var variants by rememberSaveable(profile) { mutableStateOf(false) }
     var previewSuppressedFor by remember(context) { mutableStateOf<String?>(null) }
@@ -71,16 +70,17 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val list = key(profile, collection) { rememberLazyGridState() }
     var preferredColumn by rememberSaveable(profile, collection) { mutableIntStateOf(0) }
     var verticalTarget by remember(profile, collection) { mutableStateOf<String?>(null) }
+    var gridHasFocus by remember(profile, collection) { mutableStateOf(false) }
     val entry = remember { FocusRequester() }
+    val categoryFocus = remember { FocusRequester() }
+    val editFocus = remember { FocusRequester() }
+    var movement by remember(profile, collection) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val targets = remember(profile) { mutableMapOf<String, FocusRequester>() }
     var loaded by remember(profile) { mutableStateOf(false) }
-    val guide by vm.swedishGuide.collectAsStateWithLifecycle()
-    val blocked by vm.previewBlockedSingleSession.collectAsStateWithLifecycle()
-    val previewSetting by vm.livePreviewEnabled.collectAsStateWithLifecycle()
     val external by vm.externalPlayerOn.collectAsStateWithLifecycle()
     val providerNames by vm.providerNames.collectAsStateWithLifecycle()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
-    val active = lifecycle == Lifecycle.State.RESUMED
+    val active = previewEnabled && lifecycle == Lifecycle.State.RESUMED
     LaunchedEffect(context) { store.observeChoices(profile).collect { choices = it } }
     val access = metadata?.custom?.let { Triple(it.hiddenCategories, it.hiddenItems, it.customCategories) }
     LaunchedEffect(context, choices.order, choices.hidden, access) {
@@ -98,11 +98,13 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val focused = library.groups.firstOrNull { it.identity == focusId }
     val preferred = focused?.preferred(choices.preferred[focused.identity], choices.showUhd)
     val selected = resolved?.takeIf { it.first == preferred?.rowKey() }?.second
-    val editItems = if (!edit) 0 else 3 + if (focused == null) 0 else 5
+    val editItems = if (!edit) 0 else 2 + if (focused == null) 0 else 5
     suspend fun restoreChannel() {
         val index = groups.indexOfFirst { it.identity == focusId }.coerceAtLeast(0)
         val target = groups.getOrNull(index)?.identity
         if (target != null) {
+            verticalTarget = target
+            if (focusId != target) preferredColumn = index % CHANNEL_GRID_COLUMNS
             val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == target }
             if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
                 visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(index + editItems)
@@ -111,11 +113,21 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         }
         entry.requestSafely()
     }
-    DisposableEffect(onEntryHook, profile, loaded, groups) {
-        onEntryHook?.invoke { if (!loaded) false else { scope.launch { restoreChannel() }; true } }
-        onDispose { onEntryHook?.invoke(null) }
+    DisposableEffect(profile, collection) { onDispose { movement?.cancel() } }
+    LaunchedEffect(loaded, groups) {
+        if (loaded && gridHasFocus && groups.none { it.identity == focusId }) restoreChannel()
     }
-    DisposableEffect(vm) { vm.stopPreview(); onDispose { vm.stopPreview() } }
+    val reportEntry by rememberUpdatedState(onEntryHook)
+    DisposableEffect(profile, loaded, groups) {
+        reportEntry?.invoke { if (!loaded) false else { scope.launch { restoreChannel() }; true } }
+        onDispose { reportEntry?.invoke(null) }
+    }
+    val browsing by rememberUpdatedState(previewEnabled)
+    DisposableEffect(vm) {
+        if (previewEnabled) vm.stopPreview()
+        // The Live backend also owns fullscreen playback. Never stop it on a player transition.
+        onDispose { if (browsing) vm.stopPreview() }
+    }
     DisposableEffect(library.groups) {
         targets.keys.retainAll(library.groups.mapTo(HashSet()) { it.identity })
         onDispose { }
@@ -148,9 +160,6 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
             rowData = found
         }
     }
-    LaunchedEffect(selected?.id, metadata, revision, rowData[selected?.let { SwedishRowKey(it.id, it.sourceId, tv.own.owntv.core.customize.CustomizeKeys.channel(it)) }]?.let { it.now?.id to it.next?.id }) {
-        expectedGuideRevision = vm.refreshSwedishGuide(selected, profile)
-    }
     LaunchedEffect(restoreFocus, loaded, groups) {
         if (restoreFocus && loaded) {
             restoreChannel()
@@ -161,7 +170,6 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         val variant = preferred ?: return@LaunchedEffect
         val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
         resolved = channel?.let { variant.rowKey() to it }
-        if (sourceChoiceAllowsPreview(focusId, previewSuppressedFor, false)) channel?.let(vm::onChannelFocused)
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
     fun playChannel(original: ChannelEntity, logicalIdentity: String? = null) { scope.launch {
@@ -198,17 +206,16 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         }, categories = {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
             items(SwedishCollection.entries, key = { it.name }) { category ->
-                SwedishLiveAction(stringResource(collectionLabel(category)), { collection = category; variants = false }, selected = collection == category)
+                SwedishLiveAction(stringResource(collectionLabel(category)), { collection = category; variants = false }, Modifier.then(if (collection == category) Modifier.focusRequester(categoryFocus) else Modifier), selected = collection == category)
             }
         }
         }, notice = {
         if (library.bounded || failed) TvText(stringResource(R.string.mintv_curated_partial), color = MinTvMuted)
         }, channels = {
-            LazyVerticalGrid(columns = GridCells.Fixed(CHANNEL_GRID_COLUMNS), modifier = Modifier.fillMaxSize().focusGroup(), state = list,
+            LazyVerticalGrid(columns = GridCells.Fixed(CHANNEL_GRID_COLUMNS), modifier = Modifier.fillMaxSize().onFocusChanged { gridHasFocus = it.hasFocus }.focusGroup(), state = list,
                 contentPadding = PaddingValues(6.mpx), verticalArrangement = Arrangement.spacedBy(22.mpx), horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 if (edit) {
-                    item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(if (choices.showUhd) R.string.mintv_hide_uhd else R.string.mintv_show_uhd), { update(choices.copy(showUhd = !choices.showUhd)) }) }
-                    item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_show_variants), { update(choices.copy(showVariants = !choices.showVariants)) }) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(if (choices.showUhd) R.string.mintv_hide_uhd else R.string.mintv_show_uhd), { update(choices.copy(showUhd = !choices.showUhd)) }, Modifier.focusRequester(editFocus)) }
                     item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_restore_collection), { update(SwedishChoices()); focusId = null; variants = false }) }
                     focused?.let { group ->
                         item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_choose_variant), { openSources() }) }
@@ -233,33 +240,22 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
                             if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
                             else sourceActions.play(group.identity, null)
                         },
-                        modifier = Modifier.testTag("swedish-channel-${group.identity}").focusRequester(rowFocus).onPreviewKeyEvent { event ->
-                            val direction = when (event.key) {
-                                Key.DirectionLeft -> ChannelGridDirection.LEFT; Key.DirectionRight -> ChannelGridDirection.RIGHT
-                                Key.DirectionUp -> ChannelGridDirection.UP; Key.DirectionDown -> ChannelGridDirection.DOWN
-                                else -> null
-                            }
-                            if (direction == null) false else {
-                                if (event.type == KeyEventType.KeyDown) {
-                                    pendingSourcePress.cancel()
-                                    val index = groups.indexOfFirst { it.identity == group.identity }
-                                    if (index < CHANNEL_GRID_COLUMNS && direction == ChannelGridDirection.UP) {
-                                        if (onHeader != null) onHeader() else entry.requestSafely()
-                                    } else channelGridTarget(index, groups.size, preferredColumn, direction)?.let { next ->
-                                        if (direction == ChannelGridDirection.LEFT || direction == ChannelGridDirection.RIGHT) preferredColumn = next % CHANNEL_GRID_COLUMNS
-                                        val targetIdentity = groups[next].identity
-                                        verticalTarget = targetIdentity
-                                        scope.launch {
-                                            val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == targetIdentity }
-                                            if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset || visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(next + editItems)
-                                            repeat(2) { withFrameNanos { } }
-                                            targets[targetIdentity]?.requestSafely()
-                                        }
-                                    }
+                        modifier = Modifier.testTag("swedish-channel-${group.identity}").focusRequester(rowFocus)
+                            .channelGridNavigation(groupIndex, groups.size, { preferredColumn }, onMove = { next, direction ->
+                                if (direction == ChannelGridDirection.LEFT || direction == ChannelGridDirection.RIGHT) preferredColumn = next % CHANNEL_GRID_COLUMNS
+                                val targetIdentity = groups[next].identity
+                                verticalTarget = targetIdentity
+                                movement?.cancel()
+                                movement = scope.launch {
+                                    val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == targetIdentity }
+                                    if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset || visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(next + editItems)
+                                    repeat(2) { withFrameNanos { } }
+                                    targets[targetIdentity]?.requestSafely()
                                 }
-                                true
-                            }
-                        }.logicalChannelKeys({
+                            }, onFirstRowUp = {
+                                movement?.cancel()
+                                if (edit) editFocus.requestSafely() else categoryFocus.requestSafely()
+                            }, onNavigation = { pendingSourcePress.cancel() }).logicalChannelKeys({
                             if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
                             else sourceActions.play(group.identity, null)
                         }, { sourceActions.open(group.identity, it) }, pendingSourcePress).onFocusChanged { if (it.isFocused) {

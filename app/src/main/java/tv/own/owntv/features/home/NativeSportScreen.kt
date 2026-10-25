@@ -36,10 +36,6 @@ internal fun NativeSportScreen(liveVm: LiveViewModel, homeVm: HomeViewModel, pro
                 verticalArrangement = Arrangement.spacedBy(24.mpx)) {
                 TvText(stringResource(R.string.mintv_nav_sport), size = 36, bold = true)
                 hockey()
-                Box(Modifier.heightIn(max = 300.mpx)) {
-                    TwitchCompanion(true, usable, compact = true,
-                        onOpenSettings = { onSettings(MinTvSettingsDestination.TWITCH) })
-                }
                 HomeButton(stringResource(R.string.settings_title), { onSettings(MinTvSettingsDestination.SPORT) })
             }
         }

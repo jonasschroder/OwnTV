@@ -1,5 +1,8 @@
 package tv.own.owntv.features.live
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.*
+
 internal const val CHANNEL_GRID_COLUMNS = 5
 internal enum class ChannelGridDirection { LEFT, RIGHT, UP, DOWN }
 
@@ -18,3 +21,24 @@ internal fun channelGridTarget(index: Int, count: Int, preferredColumn: Int, dir
         }
     }
 }
+
+/** Consume both halves of a remote movement; source long-press cancellation belongs to the host. */
+internal fun Modifier.channelGridNavigation(index: Int, count: Int, column: () -> Int,
+    onMove: (Int, ChannelGridDirection) -> Unit, onFirstRowUp: () -> Unit, onNavigation: () -> Unit): Modifier =
+    onPreviewKeyEvent { event ->
+        val direction = when (event.key) {
+            Key.DirectionLeft -> ChannelGridDirection.LEFT
+            Key.DirectionRight -> ChannelGridDirection.RIGHT
+            Key.DirectionUp -> ChannelGridDirection.UP
+            Key.DirectionDown -> ChannelGridDirection.DOWN
+            else -> null
+        }
+        if (direction == null) false else {
+            if (event.type == KeyEventType.KeyDown) {
+                onNavigation()
+                if (index in 0 until CHANNEL_GRID_COLUMNS && direction == ChannelGridDirection.UP) onFirstRowUp()
+                else channelGridTarget(index, count, column(), direction)?.let { onMove(it, direction) }
+            }
+            true
+        }
+    }

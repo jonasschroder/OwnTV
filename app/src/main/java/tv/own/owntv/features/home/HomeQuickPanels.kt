@@ -16,12 +16,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 /** Supporting strips, not independent dashboard panels. Evidence/actions keep their existing owners. */
 @Composable
 internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, watch: Boolean,
-    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false, onDetails: () -> Unit = onOpen) {
+    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false, onDetails: () -> Unit = onOpen, hero: Boolean = false) {
     val imminent = game != null && game.faceoff - now in -3 * 60 * 60_000L..12 * 60 * 60_000L
     Row(Modifier.fillMaxWidth().background(if (imminent) Color(0xFF1B3034) else HomeSurfaceColor, RoundedCornerShape(HomeRadius))
         .padding(end = if (watch) 14.mpx else 0.mpx),
         horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-    HomeSurface(onDetails, modifier.weight(1f).heightIn(min = 128.mpx), highlighted = imminent) {
+    HomeSurface(onDetails, modifier.weight(1f).heightIn(min = (if (hero) 252 else 128).mpx), highlighted = imminent) {
     Row(Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(18.mpx), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.mpx)) {
@@ -29,7 +29,7 @@ internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, w
                 TvText(stringResource(R.string.mintv_my_hockey), Modifier.weight(1f), size = 15, color = MinTvTeal, bold = true, lines = 1)
                 game?.let { TvText(fixtureWhen(it, now), size = 15, color = MinTvMuted, lines = 1) }
             }
-            TvText(game?.let { pairLabel(it) } ?: teams.ifBlank { stringResource(R.string.mintv_choose_teams) }, size = 22, bold = true, lines = 1)
+            TvText(game?.let { pairLabel(it) } ?: teams.ifBlank { stringResource(R.string.mintv_choose_teams) }, size = if (hero) 34 else 22, bold = true, lines = if (hero) 2 else 1)
             TvText(channel ?: stringResource(if (game == null) R.string.mintv_v08_no_fixture else R.string.mintv_v08_channel_unconfirmed),
                 size = 18, color = if (channel == null) MinTvMuted else MinTvTeal, lines = 1)
             val evidence = buildList {

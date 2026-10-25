@@ -51,6 +51,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     reservedTop: Dp = 144.mpx,
     homeCardModifier: Modifier = Modifier,
     compact: Boolean = false,
+    homeHero: Boolean = false,
+    onHomeMatchday: (Boolean) -> Unit = {},
     onSettings: () -> Unit = {},
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
@@ -413,7 +415,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val categoryReady = categoryId?.let { categoryLoadedKey == (it to categoryPage) } ?: (categories != null)
     val pickerRows = (if (browsing && categoryId != null) categoryRows?.channels.orEmpty().takeIf { categoryReady }.orEmpty()
         else listOfNotNull(manualChannel) + reliableChannels + channels.takeIf { reliableChannels.isEmpty() || searchOpen }.orEmpty())
-        .distinctBy { it.id }.take(48)
+        .distinctBy { it.id }.let { rows -> if (browsing) sortHockeyChannels(rows) else rows }.take(48)
     // Keep category discovery out of page changes; the page reader still rechecks authorization.
     LaunchedEffect(active, screen, picker, browsing, profileId, libraryContext, libraryCount) {
         categories = null; categoriesFailed = false
@@ -467,6 +469,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         choiceVersion++; play(channel, pickerRows)
     }
 
+    val matchday = homeMatchdayEligible(gameToMatch, selectedTeams, now, scheduleFresh || localEvidence != null)
+    SideEffect { onHomeMatchday(matchday) }
     Box(Modifier.fillMaxSize()) {
         homeContent({
             val shown = manualChannel ?: reliableChannels.firstOrNull()
@@ -481,7 +485,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 openCard, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt },
                 manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true,
-                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() })
+                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() }, hero = homeHero)
             else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {

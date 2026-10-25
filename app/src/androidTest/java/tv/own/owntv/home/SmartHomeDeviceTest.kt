@@ -124,6 +124,20 @@ class SmartHomeDeviceTest {
         compose.onNodeWithTag("smart-channel-Kanal 9").assertIsFocused().assertIsDisplayed()
         compose.runOnIdle { assertEquals(0, played) }
     }
+    @Test fun favoritesKeepExactFocusAcrossHeaderReturnAndDoNotLeakOnProfileChange() {
+        snapshot = snapshot!!.copy(favorites = channels.take(6))
+        mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        // Favorites and the Now rail intentionally share channel identity but have separate focus.
+        compose.onAllNodesWithTag("smart-favorite-TV3")[0].assertIsFocused()
+        compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-favorite-TV3").assertIsFocused().assertIsDisplayed()
+        compose.runOnIdle { profile = 8; snapshot = SmartHomeSnapshot(8, false, emptyList(), null, null, null, emptyList()) }
+        compose.onNodeWithTag("smart-favorite-TV3").assertDoesNotExist()
+        assertEquals(0, played)
+    }
     @Test fun programmeRefreshAndMidnightDoNotMoveChannelFocusOrCreateHistory() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)

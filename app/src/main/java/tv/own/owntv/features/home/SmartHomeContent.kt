@@ -118,7 +118,8 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     } }
     LaunchedEffect(visible) { onVisibleChannels(visible) }
     BoxWithConstraints(modifier.fillMaxSize().background(MinTvNavy)) {
-        val width = ((maxWidth - contentStart - 64.mpx - 10.mpx - 16.mpx * 7) / 8).coerceAtLeast(140.mpx)
+        // DESIGNLABB 04: five visible native channels, with the rest available by horizontal D-pad scroll.
+        val width = ((maxWidth - contentStart - 64.mpx - 10.mpx - 16.mpx * 4) / 5).coerceAtLeast(140.mpx)
         LazyColumn(state = list, contentPadding = PaddingValues(start = contentStart, end = 64.mpx, bottom = 36.mpx),
             verticalArrangement = Arrangement.spacedBy(16.mpx),
             modifier = Modifier.fillMaxSize().padding(top = reservedTop).clip(androidx.compose.ui.graphics.RectangleShape)

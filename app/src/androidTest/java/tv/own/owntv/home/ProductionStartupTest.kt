@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.KeyEvent
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
@@ -340,7 +341,11 @@ class ProductionStartupTest {
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused(); true }.getOrDefault(false) }
                 compose.onNodeWithTag("top-TV").assertIsSelected()
                 press(KeyEvent.KEYCODE_DPAD_DOWN)
-                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused(); true }.getOrDefault(false) }
+                // Fresh entry uses available collection order; the exact in-page bookmark is tested above.
+                val channelCard = SemanticsMatcher("logical channel card") {
+                    it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)?.startsWith("swedish-channel-") == true
+                }
+                compose.waitUntil(5_000) { compose.onAllNodes(isFocused() and channelCard).fetchSemanticsNodes().size == 1 }
                 press(KeyEvent.KEYCODE_BACK)
                 compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused()
                 press(KeyEvent.KEYCODE_BACK)

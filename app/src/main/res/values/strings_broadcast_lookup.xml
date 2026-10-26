@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_broadcast_diagnostics">TV channel lookup · TVmatchen</string>
+    <string name="mintv_broadcast_outside_window">Outside the lookup window (today and the next two days). Local EPG and manual selection remain available.</string>
+    <string name="mintv_broadcast_not_found">No exact fixture was found in the reviewed listing. This does not mean that the match is not televised.</string>
+    <string name="mintv_broadcast_ambiguous">Multiple possible fixtures or assignments. Choose a channel manually.</string>
+    <string name="mintv_broadcast_fields_rejected">A fixture page was found, but exact match and linear-channel evidence could not be verified.</string>
+    <string name="mintv_broadcast_evidence_source">Broadcast information: %1$s</string>
+    <string name="mintv_broadcast_epg_checked">Local EPG checked: %1$s (scan time, not provider refresh time)</string>
+    <string name="mintv_broadcast_no_linear">Only a streaming service was verified, not a linear TV channel. Local EPG and manual selection remain available.</string>
+    <string name="mintv_broadcast_stage">Check stage: %1$s</string>
+</resources>

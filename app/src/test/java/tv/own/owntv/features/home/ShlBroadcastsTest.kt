@@ -34,6 +34,17 @@ class ShlBroadcastsTest {
         assertEquals(2, names.count { BroadcastResolver.matches(assignment.channels.first(), it) })
         assertEquals(listOf("TV4", "SPORT", "LIVE", "2"), BroadcastResolver.searchTokens(assignment.channels.first()))
     }
+    @Test fun reviewedHockeyAliasesMatchExactLinearIdentityAndAreSearchable() {
+        val channel = BroadcastChannel("TV4 Sport Live 2", true)
+        for (name in listOf("TV Hockey Live 2 HD", "TV4HockeyLive2", "SE | TV4 Sport Live 2 FHD"))
+            assertTrue(name, BroadcastResolver.matches(channel, name))
+        for (name in listOf("TV Hockey Live 12", "TV4 Play Hockey", "TV4 Hockey Live 2 Extra", "NO: TV Hockey Live 2"))
+            assertFalse(name, BroadcastResolver.matches(channel, name))
+        assertTrue(BroadcastResolver.matches(BroadcastChannel("TV4 Hockey", true), "TV Hockey HD"))
+        assertTrue("HockeyLive2" in BroadcastResolver.librarySearchTerms(channel))
+        assertTrue(BroadcastResolver.librarySearchTerms(channel).size <= 4)
+    }
+
     @Test fun channelNumbersNeverCollapse() {
         val channel = assignment.channels.first()
         listOf("TV4 Sport Live 1", "TV4 Sport Live 3 HD", "SE: TV4 Sport Live 4 FHD", "TV4 Sport Live", "TV4 Sport Live 12").forEach {

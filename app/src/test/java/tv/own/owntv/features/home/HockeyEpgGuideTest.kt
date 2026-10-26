@@ -22,6 +22,22 @@ class HockeyEpgGuideTest {
             error("Verified broadcast must not query EPG")
         })
     }
+    @Test fun exactLocalEvidenceWinsConflictingExternalAssignmentWithoutDuplicateReads() = runTest {
+        val game = fixture()
+        val rows = listOf(channel(1, "HD", name = "TV4 Sport Live 1"), channel(2, "HD"))
+        val external = BroadcastAssignment(game.broadcastFixture(), listOf(BroadcastChannel("TV4 Sport Live 2", true)),
+            Instant.ofEpochMilli(now), Instant.ofEpochMilli(now + 60_000), "Synthetic external")
+        val local = EpgHockeyMatch(game, listOf(1), mapOf(1L to start + 3 * 60 * 60_000), false,
+            channelStarts = mapOf(1L to start))
+        assertEquals(listOf(rows[0]), matchHockeyChannels(rows, game, favorites, listOf(game), external, now, local) {
+            error("Do not reread an already collected exact guide")
+        })
+        assertTrue(matchHockeyChannels(listOf(rows[1]), game, favorites, listOf(game), external, now, local) {
+            error("An absent local channel does not license a conflicting external substitution")
+        }.isEmpty())
+        assertEquals(listOf(rows[1]), matchHockeyChannels(rows, game, favorites, listOf(game), external, now,
+            local.copy(fixture = game.copy(kickoff = game.kickoff.plusSeconds(3600)) )) { emptyList() })
+    }
     @Test fun expiredBroadcastUsesSpecificFixtureEpgInsteadOfStaleChannelMetadata() = runTest {
         val game = fixture()
         val broadcast = BroadcastAssignment(game.broadcastFixture(), listOf(BroadcastChannel("TV4 Sport Live 2", true)),
@@ -35,6 +51,17 @@ class HockeyEpgGuideTest {
         assertTrue(matchHockeyChannels(listOf(row), game, favorites, listOf(game), broadcast, now) {
             listOf(programme("SHL studio"))
         }.isEmpty())
+    }
+    @Test fun streamingOnlyAssignmentDoesNotSuppressExactLocalEpgFallback() = runTest {
+        val game = fixture()
+        val assignment = BroadcastAssignment(game.broadcastFixture(), listOf(BroadcastChannel("TV4 Play Hockey", false)),
+            Instant.ofEpochMilli(now), Instant.ofEpochMilli(now + 60_000), "Synthetic streaming-only")
+        val row = channel(1, "HD")
+        var reads = 0
+        assertEquals(listOf(row), matchHockeyChannels(listOf(row), game, favorites, listOf(game), assignment, now) {
+            reads++; listOf(programme("SHL LIVE: FBK – LHF"))
+        })
+        assertEquals(1, reads)
     }
     @Test fun slowEpgLookupHasDeadlineAndCancelsRemainingReads() = runTest {
         val game = fixture(); var reads = 0; var finished = false

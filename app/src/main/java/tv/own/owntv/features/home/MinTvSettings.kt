@@ -75,7 +75,7 @@ internal fun HockeySettings(profile: Long?, modifier: Modifier) {
     })
     if (broadcasts.blocked) TvText(stringResource(R.string.mintv_broadcast_blocked), color = MinTvMuted, lines = 4)
     // Same local diagnostic/report/export component. Opening Settings never refreshes a sports source.
-    HockeyDiagnosticPanel(repository)
+    HockeyDiagnosticPanel(repository, broadcasts)
     if (teamsOpen && profile != null) SportsTeamPicker(profile) { teamsOpen = false }
 }
 

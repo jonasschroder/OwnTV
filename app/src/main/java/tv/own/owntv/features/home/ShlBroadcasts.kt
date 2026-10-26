@@ -60,11 +60,29 @@ internal object BroadcastResolver {
     fun searchTokens(broadcast: BroadcastChannel): List<String> =
         channelKey(broadcast.name).split(' ').filter { it.isNotEmpty() }.take(12)
 
+    /** Bounded alias queries; final identity matching still rejects Play, PPV and other numbers. */
+    fun librarySearchTerms(broadcast: BroadcastChannel): List<String> {
+        val name = tv.own.owntv.features.live.SwedishChannels.recognize(broadcast.name)
+        val canonical = channelKey(broadcast.name).split(' ').takeLast(2).joinToString(" ")
+        return when {
+            name?.identity == "tv4hockey" -> listOf(canonical, "TV Hockey", "TV4Hockey")
+            name?.identity?.startsWith("tv4sportlive") == true -> {
+                val number = name.identity.removePrefix("tv4sportlive").toIntOrNull() ?: return listOf(canonical)
+                listOf(canonical, "Hockey Live $number", "HockeyLive$number", "SportLive$number")
+            }
+            else -> listOf(canonical)
+        }.filter { it.isNotBlank() }.distinct()
+    }
+
     fun matches(broadcast: BroadcastChannel, libraryName: String): Boolean {
         // A streaming brand is never promoted to a linear service. A non-linear exact configured
         // entry may still be chosen manually, using the provider's existing URL and authorisation.
         return broadcast.linear && !eventPlaceholder(libraryName) &&
-            !channelKey(broadcast.name).startsWith("TV4 PLAY") && channelKey(broadcast.name) == channelKey(libraryName)
+            !channelKey(broadcast.name).startsWith("TV4 PLAY") &&
+            (channelKey(broadcast.name) == channelKey(libraryName) ||
+                tv.own.owntv.features.live.SwedishChannels.recognize(broadcast.name)?.let { expected ->
+                    tv.own.owntv.features.live.SwedishChannels.recognize(libraryName)?.identity == expected.identity
+                } == true)
     }
 
     private fun teamId(name: String): String? = ShlTeams.identity(name)

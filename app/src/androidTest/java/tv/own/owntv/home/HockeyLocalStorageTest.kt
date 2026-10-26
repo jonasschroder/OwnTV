@@ -16,6 +16,21 @@ import tv.own.owntv.core.database.entity.*
 import tv.own.owntv.features.home.*
 
 class HockeyLocalStorageTest {
+    @Test fun boundedAliasQueriesFindOnlyExactAuthorizedLinearChannels(): Unit = runBlocking {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.inMemoryDatabaseBuilder(app, OwnTVDatabase::class.java).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()
+        try {
+            for (id in listOf(101L, 102L)) db.sourceDao().insert(SourceEntity(id = id, name = "Synthetic", type = tv.own.owntv.core.model.SourceType.M3U, url = "http://127.0.0.1:9/unavailable"))
+            val names = listOf("TV Hockey Live 2 HD", "TV Hockey Live 12 HD", "TV4SportLive2 FHD", "TV4 Play Hockey", "NO: TV Hockey Live 2")
+            db.channelDao().insertAll(names.mapIndexed { i, name -> ChannelEntity(id = i + 1L, sourceId = 101, name = name, streamUrl = "http://127.0.0.1:9/unavailable") } +
+                ChannelEntity(id = 99, sourceId = 102, name = "TV Hockey Live 2 HD", streamUrl = "http://127.0.0.1:9/unavailable"))
+            val broadcaster = BroadcastChannel("TV4 Sport Live 2", true)
+            val found = BroadcastResolver.librarySearchTerms(broadcaster).flatMap { db.channelDao().searchList(it, listOf(101), 129) }
+                .distinctBy { it.id }.filter { BroadcastResolver.matches(broadcaster, it.name) }
+            assertEquals(setOf(1L, 3L), found.map { it.id }.toSet())
+        } finally { db.close() }
+    }
+
     @Test fun storedGuideHonorsManualMappingOffsetsProfileGuardAndChosenQuality(): Unit = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val preferences = "v07-hockey-fixture-" + java.util.UUID.randomUUID()

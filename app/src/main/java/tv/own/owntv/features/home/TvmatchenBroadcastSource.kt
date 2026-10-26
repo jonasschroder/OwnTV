@@ -5,6 +5,8 @@ import android.util.AtomicFile
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
@@ -22,15 +24,20 @@ internal class TvmatchenBroadcastSource(context: Context, client: OkHttpClient) 
     private val client = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
     private var reader: ExperimentalBroadcastReader? = null
     private val initialize = Mutex()
+    private val lookupStatus = MutableStateFlow(BroadcastLookupStatus())
+    val diagnostics = lookupStatus.asStateFlow()
     val blocked get() = preferences.getBoolean("broadcast-blocked", false)
 
     override suspend fun assignment(fixture: BroadcastFixture): BroadcastAssignment? = withContext(Dispatchers.IO) {
-        if (!enabled()) return@withContext null
+        if (!enabled()) { lookupStatus.value = BroadcastLookupStatus(BroadcastLookupOutcome.DISABLED, System.currentTimeMillis()); return@withContext null }
         try {
             val current = initialize.withLock { reader ?: createReader().also { reader = it } }
             current.assignment(fixture)
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { null } // A failed cache/journal write must not crash Home or playback.
+        catch (_: Exception) {
+            lookupStatus.value = BroadcastLookupStatus(BroadcastLookupOutcome.CACHE_ERROR, System.currentTimeMillis(), BroadcastLookupStage.CACHE)
+            null
+        } // A failed cache/journal write must not crash Home or playback.
     }
     private fun enabled() = preferences.getBoolean("shl-enabled", false) && preferences.getBoolean("broadcast-enabled", false)
     private fun createReader(): ExperimentalBroadcastReader {
@@ -83,6 +90,6 @@ internal class TvmatchenBroadcastSource(context: Context, client: OkHttpClient) 
             val bytes = root.toString().toByteArray(); require(bytes.size <= 100_000)
             val stream = cache.startWrite()
             try { stream.write(bytes); cache.finishWrite(stream) } catch (e: Exception) { cache.failWrite(stream); throw e }
-        })
+        }, report = { lookupStatus.value = it })
     }
 }

@@ -66,8 +66,16 @@ internal fun personalHockeyFeed(fixtures: List<SportFixture>, selection: SportPr
 /** Verified broadcast names need no database lookup; EPG-only confirmation remains exact and bounded. */
 internal suspend fun matchHockeyChannels(channels: List<ChannelEntity>, fixture: SportFixture,
     selection: SportPreferences, known: List<SportFixture>, assignment: BroadcastAssignment?, now: Long,
-    read: suspend (ChannelEntity) -> List<EpgProgrammeEntity>): List<ChannelEntity> = withTimeout(8_000) {
+    local: EpgHockeyMatch? = null, read: suspend (ChannelEntity) -> List<EpgProgrammeEntity>): List<ChannelEntity> = withTimeout(8_000) {
+    // The foreground collector already read exact, authorized EPG evidence. Never union a
+    // conflicting external assignment into it, or run those same guide reads a second time.
+    local?.takeIf { it.fixture == fixture }?.let { evidence ->
+        return@withTimeout channels.filter { it.id in evidence.channelIds &&
+            (evidence.channelStops[it.id] ?: 0L) > now &&
+            (evidence.channelStarts[it.id] ?: Long.MAX_VALUE) < (evidence.channelStops[it.id] ?: 0L) }
+    }
     val broadcast = BroadcastResolver.usable(fixture.broadcastFixture(), assignment, Instant.ofEpochMilli(now))
+        ?.takeIf { it.channels.any { channel -> channel.linear } }
     if (broadcast != null) return@withTimeout channels.filter { channel ->
         broadcast.channels.any { BroadcastResolver.matches(it, channel.name) }
     }

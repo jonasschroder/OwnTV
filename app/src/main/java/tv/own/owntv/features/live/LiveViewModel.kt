@@ -1068,8 +1068,10 @@ class LiveViewModel(
                 // FTS requires every identity token, so PPV TV4 rows cannot consume this limit.
                 val exact = channelDao.searchListDetailedFts(tokens.joinToString(" AND ") { "\"$it\"" }, current.sourceIds, 129)
                     .map { it.channel }
-                val fallback = channelDao.searchList(tokens.takeLast(2).joinToString(" "), current.sourceIds, 129)
-                if (exact.size == 129 || fallback.size == 129) truncated = true
+                val fallback = tv.own.owntv.features.home.BroadcastResolver.librarySearchTerms(broadcaster).flatMap { term ->
+                    channelDao.searchList(term, current.sourceIds, 129).also { if (it.size == 129) truncated = true }
+                }
+                if (exact.size == 129) truncated = true
                 exact + fallback
             }
         }

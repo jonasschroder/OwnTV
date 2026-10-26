@@ -3,6 +3,8 @@ package tv.own.owntv.home
 import android.content.ComponentName
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,6 +39,41 @@ class V07PresentationTest {
         val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
         File(dir, name).outputStream().use { assertTrue(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
     }
+    @Test fun broadcastDiagnosticsExplainWindowWithoutNetworkOrExtraNavigation() {
+        val suffix = "broadcast-diagnostic-fixture-" + java.util.UUID.randomUUID()
+        val isolated = object : android.content.ContextWrapper(compose.activity) {
+            override fun getApplicationContext(): android.content.Context = this
+            override fun getCacheDir() = File(super.getCacheDir(), suffix).apply { mkdirs() }
+            override fun getSharedPreferences(name: String, mode: Int) = super.getSharedPreferences(suffix + name, mode)
+        }
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        val client = okhttp3.OkHttpClient.Builder().addInterceptor {
+            calls.incrementAndGet(); throw java.io.IOException("Synthetic network must remain unused")
+        }.build()
+        val repository = ShlRepository(isolated, client)
+        val broadcasts = TvmatchenBroadcastSource(isolated, client)
+        repository.preferences.edit().putBoolean("shl-enabled", true).putBoolean("broadcast-enabled", true).commit()
+        val at = java.time.Instant.now().plusSeconds(5 * 86400)
+        kotlinx.coroutines.runBlocking {
+            assertNull(broadcasts.assignment(BroadcastFixture("SHL", "Brynäs IF", "Färjestad BK", at.atZone(Stockholm).toLocalDate(), at)))
+        }
+        assertEquals(BroadcastLookupOutcome.OUTSIDE_WINDOW, broadcasts.diagnostics.value.outcome)
+        compose.setContent { MaterialTheme {
+            Column(Modifier.fillMaxSize().background(MinTvNavy).verticalScroll(rememberScrollState()).padding(24.dp)) {
+                HockeyDiagnosticPanel(repository, broadcasts)
+            }
+        } }
+        val message = compose.activity.getString(R.string.mintv_broadcast_outside_window)
+        compose.onNodeWithText(message).performScrollTo().assertIsDisplayed()
+        assertEquals(0, calls.get())
+        screenshot("broadcast-diagnostic-window-synthetic.png")
+        compose.runOnIdle { repository.preferences.edit().putBoolean("broadcast-enabled", false).commit() }
+        val disabled = compose.activity.getString(R.string.mintv_v0111_broadcast_disabled)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(disabled).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText(disabled).performScrollTo().assertIsDisplayed()
+        assertEquals(0, calls.get())
+    }
+
     @Test fun featuredMoviesAndSeriesExposePlayAndInformationWithRemoteWithoutAutoplay() {
         var plays = 0; var information = 0
         compose.setContent { MaterialTheme {

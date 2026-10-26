@@ -314,24 +314,23 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             guideChoices = choices
             val rawPool = liveVm.homeMatchCandidates("", favorites, profileId, validBroadcast?.channels.orEmpty().map { it.name })
             val pool = rawPool.copy(channels = hockeyGuideChannels(rawPool.channels, choices))
-            val rawDiscovered = liveVm.homeBroadcastCandidates(validBroadcast?.channels.orEmpty(), profileId)
+            val local = localHockeyEvidence(unexpiredMatches, game)
+            val rawDiscovered = liveVm.homeBroadcastCandidates(if (local == null) validBroadcast?.channels.orEmpty() else emptyList(), profileId)
             val discovered = rawDiscovered.copy(channels = hockeyGuideChannels(rawDiscovered.channels, choices))
             val suggestions = if (query.isBlank()) pool else liveVm.homeMatchCandidates(query, emptyList(), profileId, emptyList()).let {
                 it.copy(channels = hockeyGuideChannels(it.channels, choices))
             }
-            val found = if (validBroadcast != null) discovered.channels else pool.channels
-            val matches = if (validBroadcast != null || scheduleFresh) withContext(Dispatchers.IO) {
+            val localSupport = local?.channelIds.orEmpty().mapNotNull { liveVm.homeChannel(it, profileId) }
+            val found = if (local != null) localSupport else if (validBroadcast != null) discovered.channels else pool.channels
+            val matches = if (local != null || validBroadcast != null || scheduleFresh) withContext(Dispatchers.IO) {
                 matchHockeyChannels(found, game, selectedTeams,
                     externalGames.filter { it.competition == game.competition && scheduleFresh },
-                    validBroadcast, System.currentTimeMillis()) { channel ->
+                    validBroadcast, System.currentTimeMillis(), local) { channel ->
                     liveVm.homeStoredProgrammes(channel, game.faceoff - 60 * 60_000, game.faceoff + 3 * 60 * 60_000, profileId)
                 }
             } else emptyList()
-            val local = localHockeyEvidence(localMatches, game)
-            val localSupport = local?.channelIds.orEmpty().filter { (local?.channelStops?.get(it) ?: 0) > System.currentTimeMillis() }
-                .mapNotNull { liveVm.homeChannel(it, profileId) }
             channels = suggestions.channels.filter { !BroadcastResolver.eventPlaceholder(it.name) || it in matches }
-            confirmed = hockeyGuideChannels((localSupport + matches).distinctBy { it.id }, choices); matchedGame = game
+            confirmed = hockeyGuideChannels(matches.distinctBy { it.id }, choices); matchedGame = game
             matchedBroadcast = validBroadcast
             candidatesComplete = if (local != null) !local.truncated else if (validBroadcast != null) !discovered.truncated else !pool.truncated
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -387,7 +386,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     val assignment = if (enabled && broadcastEnabled && game in known)
                         knownBroadcasts[fixtureKey(game.broadcastFixture())] else null
                     val valid = withContext(Dispatchers.IO) {
-                        matchHockeyChannels(listOf(actual), game, selectedTeams, known, assignment, at) {
+                        matchHockeyChannels(listOf(actual), game, selectedTeams, known,
+                            assignment.takeIf { localHockeyEvidence(unexpiredMatches, game) == null }, at) {
                             liveVm.homeHockeyProgrammes(it, at, profile)
                         }.isNotEmpty()
                     }
@@ -546,6 +546,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     HockeyHomeSummary(gameToMatch, now, shown?.name, when {
                         manualChannel != null -> HockeyChannelEvidence.MANUAL
                         shown == null -> HockeyChannelEvidence.UNKNOWN
+                        localEvidence != null -> HockeyChannelEvidence.SPECIFIC_EPG
                         validBroadcast != null -> HockeyChannelEvidence.BROADCAST_SCHEDULE
                         else -> HockeyChannelEvidence.SPECIFIC_EPG
                     }, localEvidence?.timeFromEpg == true, localLoading && localMatches.isEmpty(), localFailed,
@@ -697,12 +698,13 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(22.mpx)) {
                         item { TvText(pairLabel(selected), size = 38, bold = true); TvText(fixtureWhen(selected, now), size = 26, color = MinTvMuted) }
                         selected.result?.takeUnless { selectedTeams.hideScores }?.let { result -> item { TvText(stringResource(R.string.mintv_result_snapshot, result), size = 27, color = MinTvMuted) } }
-                        validBroadcast?.let { assignment -> item { TvText(assignment.channels.filter { it.linear }.joinToString { it.name }, size = 30, color = MinTvTeal, bold = true)
+                        validBroadcast?.takeIf { localEvidence == null }?.let { assignment -> item { TvText(assignment.channels.filter { it.linear }.joinToString { it.name }, size = 30, color = MinTvTeal, bold = true)
+                            TvText(stringResource(R.string.mintv_broadcast_evidence_source, assignment.source), size = 18, color = MinTvMuted)
                             TvText(stringResource(R.string.mintv_updated, updateLabel(assignment.checkedAt.toEpochMilli(), now)), size = 18, color = MinTvMuted) } }
                         if (manualChannel != null) item { TvText(stringResource(R.string.mintv_v0111_manual_channel, manualChannel.name), size = 25) }
                         if (localEvidence != null) item {
                             TvText(stringResource(R.string.mintv_hockey_epg_evidence), color = MinTvTeal, size = 21)
-                            if (localCheckedAt > 0) TvText(stringResource(R.string.mintv_updated, updateLabel(localCheckedAt, now)), size = 18, color = MinTvMuted)
+                            if (localCheckedAt > 0) TvText(stringResource(R.string.mintv_broadcast_epg_checked, updateLabel(localCheckedAt, now)), size = 18, color = MinTvMuted)
                             if (localEvidence.timeFromEpg) TvText(stringResource(R.string.mintv_hockey_epg_time), color = MinTvMuted, size = 18)
                         }
                         item {

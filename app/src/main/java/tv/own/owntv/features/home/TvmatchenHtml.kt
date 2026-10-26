@@ -48,6 +48,7 @@ internal object TvmatchenHtml {
         val anchors = fixtureLinks(html).toSet()
         val today = now.atZone(Stockholm).toLocalDate()
         val index = mutableMapOf<String, MutableList<String>>()
+        var validatedWindow = false
         scripts.findAll(html).take(160).forEach { script ->
             val chunk = JSONArray(script.groupValues[1]).optString(1)
             if (!chunk.contains("\"fixturesByTimeData\"") || (0L..2L).none { chunk.contains("\"${today.plusDays(it)}\"") }) return@forEach
@@ -56,6 +57,7 @@ internal object TvmatchenHtml {
             for (day in (0L..2L).map { today.plusDays(it) }) {
                 val group = groups.optJSONObject(day.toString()) ?: continue
                 require(group.getString("date") == day.toString())
+                validatedWindow = true
                 for (kind in listOf("oldFixtures", "newFixtures")) {
                     // Live SHL HTML contains a mixed hockey index (33 entries on 10 Oct).
                     // Bound the index, then retain SHL only; never fetch other league pages.
@@ -78,8 +80,9 @@ internal object TvmatchenHtml {
                 }
             }
         }
-        // Empty or changed indexed markup cannot validate a date/time before page discovery.
-        require(index.isNotEmpty())
+        // A validated mixed-sport window may legitimately contain no SHL games.
+        // Missing/changed window markup still fails closed instead of pretending coverage.
+        require(validatedWindow)
         return index.mapValues { it.value.distinct().take(3) }
     }
 

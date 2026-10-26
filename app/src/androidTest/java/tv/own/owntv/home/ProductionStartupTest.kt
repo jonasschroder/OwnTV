@@ -319,6 +319,9 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("tv-category-GENERAL").assertExists()
                 compose.onNodeWithTag("tv-category-SPORT").assertExists()
                 compose.onNodeWithTag("tv-category-OTHER").assertExists()
+                // Explicit bookmark: earlier source tests may have restored TV3.
+                compose.onNodeWithTag("swedish-channel-svt1").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused()
                 compose.onNodeWithTag("top-TV").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
                 press(KeyEvent.KEYCODE_DPAD_DOWN)
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused(); true }.getOrDefault(false) }

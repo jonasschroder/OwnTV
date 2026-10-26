@@ -55,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -158,7 +159,7 @@ internal val LocalSettingsRowTone = staticCompositionLocalOf { TileTone.PRIMARY 
 private fun Toned(tone: TileTone, content: @Composable () -> Unit) =
     CompositionLocalProvider(LocalSettingsRowTone provides tone, content = content)
 
-private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, MINTV_SPORT, MINTV_TWITCH, MINTV_HOME }
+private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, MINTV_SPORT, MINTV_TWITCH, MINTV_HOME, TV_COLLECTION, IPTV_LIBRARY }
 
 @Composable
 internal fun surroundModeLabel(mode: SurroundMode): String = stringResource(
@@ -219,6 +220,12 @@ fun SettingsScreen(
     onStartConsumed: () -> Unit = {},
     minTvStart: tv.own.owntv.features.home.MinTvSettingsDestination? = null,
     onMinTvStartConsumed: () -> Unit = {},
+    onCategoryEntryHook: (((() -> Boolean)?) -> Unit)? = null,
+    onTvFullscreen: () -> Unit = {},
+    onGuide: () -> Unit = {},
+    onLibrary: (() -> Unit)? = null,
+    onDownloads: (() -> Unit)? = null,
+    onSwitchProfile: (() -> Unit)? = null,
 ) {
     // A cross-script language change recreates the Activity so Android can apply the new script's
     // shaping and font fallback. Keep the open settings sub-screen across that configuration change
@@ -498,6 +505,13 @@ fun SettingsScreen(
             SettingsTab.MINTV_SPORT -> tv.own.owntv.features.home.MinTvSettingsPage(tv.own.owntv.features.home.MinTvSettingsDestination.SPORT, { tab = SettingsTab.ROOT }, modifier)
         SettingsTab.MINTV_TWITCH -> tv.own.owntv.features.home.MinTvSettingsPage(tv.own.owntv.features.home.MinTvSettingsDestination.TWITCH, { tab = SettingsTab.ROOT }, modifier)
         SettingsTab.MINTV_HOME -> tv.own.owntv.features.home.MinTvSettingsPage(tv.own.owntv.features.home.MinTvSettingsDestination.HOME, { tab = SettingsTab.ROOT }, modifier)
+        SettingsTab.TV_COLLECTION, SettingsTab.IPTV_LIBRARY -> {
+            BackHandler { tab = SettingsTab.ROOT }
+            tv.own.owntv.features.live.LiveScreen(
+                mode = if (tab == SettingsTab.TV_COLLECTION) tv.own.owntv.features.live.LiveScreenMode.COLLECTION else tv.own.owntv.features.live.LiveScreenMode.LIBRARY,
+                onFullscreen = onTvFullscreen, onChildFocused = {}, previewEnabled = false,
+                onHeader = onBack, onOpenGuide = onGuide, modifier = modifier)
+        }
         SettingsTab.ROOT -> Unit
     }
     }
@@ -576,6 +590,12 @@ fun SettingsScreen(
             focus = rowFocus.getValue(SettingsTab.EPG),
             onClick = { open(SettingsTab.EPG) },
         ),
+        RootRow(tabRowKey(SettingsTab.TV_COLLECTION), TileTone.PRIMARY, OwnTVIcon.LIVE_TV,
+            title = stringResource(R.string.mintv_collection_settings), desc = stringResource(R.string.mintv_v0112_collection_hint),
+            focus = rowFocus.getValue(SettingsTab.TV_COLLECTION), onClick = { open(SettingsTab.TV_COLLECTION) }),
+        RootRow(tabRowKey(SettingsTab.IPTV_LIBRARY), TileTone.PRIMARY, OwnTVIcon.PLAYLIST,
+            title = stringResource(R.string.mintv_full_library), desc = stringResource(R.string.mintv_v0112_library_hint),
+            focus = rowFocus.getValue(SettingsTab.IPTV_LIBRARY), onClick = { open(SettingsTab.IPTV_LIBRARY) }),
         // The guide's own settings, under a divider of their own: they tune the guide, they are not
         // sources, and sitting straight under the two source lists they read as if they were.
         RootRow(
@@ -1222,6 +1242,7 @@ fun SettingsScreen(
         fontCustomization, onSetFontCustomization, playlistSources,
     )
     val categoryTarget = remember { FocusRequester() }
+    tv.own.owntv.features.shell.NativeContentEntryHook(onCategoryEntryHook, categoryTarget) { runCatching { categoryTarget.requestFocus() }.getOrDefault(false) }
     var categoryRowsFocused by remember { mutableStateOf(false) }
     BackHandler(enabled = categoryRowsFocused && !searching && !anyDialogOpen) { runCatching { categoryTarget.requestFocus() } }
     // Shared with the dialogs below, so the simple ones open in the page's panel (owner, P12).
@@ -1244,7 +1265,9 @@ fun SettingsScreen(
             rowsFocus = rowsFocus,
             modifier = modifier,
             categories = if (searching) null else ({
-                SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, { runCatching { rowsFocus.requestFocus() } }, categoryTarget)
+                Box(Modifier.testTag("navigation-context")) {
+                    SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, { runCatching { rowsFocus.requestFocus() } }, categoryTarget)
+                }
             }),
             onRowsFocused = { categoryRowsFocused = it },
             searchAutoEdit = searchAutoEdit,
@@ -1264,7 +1287,10 @@ fun SettingsScreen(
                     )
                     if (group == SettingsGroup.WATCHING) tv.own.owntv.features.settings.RecordingSettingsRows(pageScroll)
                 }
-                group == SettingsGroup.PROFILE -> tv.own.owntv.features.settings.ProfileSettingsRows()
+                group == SettingsGroup.PROFILE -> {
+                    ProfileNavigationRows(onSwitchProfile, onLibrary, onDownloads)
+                    tv.own.owntv.features.settings.ProfileSettingsRows()
+                }
                 group == SettingsGroup.SPORT -> ProfileSportSettingsRows()
                 // Only Quick can be empty, and only because the user emptied it.
                 selectedRows.isEmpty() -> StageSettingsNote(stringResource(R.string.settings_quick_empty_title), stringResource(R.string.settings_quick_empty_hint))

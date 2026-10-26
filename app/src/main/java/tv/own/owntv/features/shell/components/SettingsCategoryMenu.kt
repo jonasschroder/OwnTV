@@ -44,3 +44,19 @@ internal fun ProfileSportSettingsRows() {
     val profile by settings.activeProfileId.collectAsStateWithLifecycle(initialValue = null)
     tv.own.owntv.features.home.HockeySettings(profile, Modifier)
 }
+
+/** Existing routes are content actions in Settings, not a second horizontal header menu. */
+@Composable
+internal fun ProfileNavigationRows(switchProfile: (() -> Unit)?, library: (() -> Unit)?, downloads: (() -> Unit)?) {
+    val actions = listOf(
+        Triple("settings-switch-profile", tv.own.owntv.R.string.mintv_v0112_switch_profile, switchProfile),
+        Triple("settings-library-history", tv.own.owntv.R.string.mintv_v0111_library_history, library),
+        Triple("settings-downloads", tv.own.owntv.R.string.common_nav_downloads, downloads),
+    )
+    actions.forEach { (tag, title, action) ->
+        if (action != null) tv.own.owntv.features.settings.StageSettingRow(
+            icon = tv.own.owntv.ui.components.OwnTVIcon.PERSON,
+            title = stringResource(title), desc = null, value = tv.own.owntv.features.settings.SettingValue.Opens(null),
+            onClick = action, modifier = Modifier.testTag(tag))
+    }
+}

@@ -21,4 +21,7 @@
     <string name="mintv_v0111_broadcast_disabled">Extern sändningsinformation är avstängd. Lokal EPG och manuellt kanalval finns kvar.</string>
     <string name="mintv_v0111_manual_channel">Manuellt vald kanal (obekräftad): %1$s</string>
     <string name="mintv_v0111_profile_switch">%1$s · Byt profil</string>
+    <string name="mintv_v0112_collection_hint">Ordning, synlighet och föredragna kanalkällor</string>
+    <string name="mintv_v0112_library_hint">Bläddra bland alla IPTV-kanaler och leverantörens mappar</string>
+    <string name="mintv_v0112_switch_profile">Byt profil</string>
 </resources>

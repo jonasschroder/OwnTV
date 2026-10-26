@@ -116,6 +116,8 @@ import tv.own.owntv.core.live.LiveKey
 import tv.own.owntv.core.live.EpgNowNext
 
 /** Live TV (Stage P4): the channel list, the stage beside it and the categories as a sheet or a column. */
+enum class LiveScreenMode { BROWSE, COLLECTION, LIBRARY }
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LiveScreen(
@@ -135,17 +137,18 @@ fun LiveScreen(
     onOpenGuide: () -> Unit = {},
     onHeader: (() -> Unit)? = null,
     onEntryHook: (((() -> Boolean)?) -> Unit)? = null,
-    onTools: ((List<() -> Unit>) -> Unit)? = null,
+    onCategoryEntryHook: (((() -> Boolean)?) -> Unit)? = null,
+    mode: LiveScreenMode = LiveScreenMode.BROWSE,
 ) {
     val vm: LiveViewModel = koinViewModel()
-    var fullLibrary by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var fullLibrary by androidx.compose.runtime.saveable.rememberSaveable(mode) { mutableStateOf(mode == LiveScreenMode.LIBRARY) }
     val curatedReveal by vm.reveal.collectAsStateWithLifecycle()
     LaunchedEffect(curatedReveal) { if (curatedReveal != null) fullLibrary = true }
     if (lockedKey == null && !fullLibrary && curatedReveal == null) {
-        SwedishLiveScreen(vm, { fullLibrary = true }, onFullscreen, onOpenGuide, onChildFocused, previewEnabled, restoreFocus, onRestored, modifier, onHeader, onEntryHook, onTools)
+        SwedishLiveScreen(vm, onFullscreen, onChildFocused, previewEnabled, restoreFocus, onRestored, modifier, onHeader, onEntryHook, onCategoryEntryHook, editing = mode == LiveScreenMode.COLLECTION)
         return
     }
-    androidx.activity.compose.BackHandler(enabled = fullLibrary && lockedKey == null) { fullLibrary = false }
+    androidx.activity.compose.BackHandler(enabled = fullLibrary && lockedKey == null && mode != LiveScreenMode.LIBRARY) { fullLibrary = false }
     // Locking and unlocking are one pair: the pin belongs to this screen's lifetime, not to the view
     // model's. On the television that view model is a single instance shared with the browse section,
     // so a pin left behind froze its category rail. `DisposableEffect` (not `LaunchedEffect`) also

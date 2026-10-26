@@ -1013,47 +1013,41 @@ fun OwnTVShell(
                   runCatching { sidebarFocus.requestFocus() }
               }
           }
+          var settingsCategoryEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+          var tvCategoryEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
           var nativeEntryRequest by remember(activeProfileId) { mutableStateOf(0) }
-          var nativeTabFocusJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-          DisposableEffect(activeProfileId) { onDispose { nativeTabFocusJob?.cancel() } }
           val activateNative: (TopDestination) -> Unit = { destination ->
-              nativeTabFocusJob?.cancel()
-              nativeTabFocusJob = null
               restoreFocus = false // A new header selection must not inherit a previous page's entry request.
               val target = nativeEntry(destination, nativeVisible, lastVod, lastTv)
               selectFromNav(target ?: MainSection.MORE)
               presentation = destination.takeIf { it == TopDestination.SPORT || target == null }
           }
           NativeContentEntry(nativeEntryRequest, nativePageKey(activeProfileId, selectedSection, presentation), {
-              tryEnterNativeContent()
+              when (selectedSection) {
+                  MainSection.LIVE_TV -> tvCategoryEntry?.invoke() == true
+                  MainSection.SETTINGS -> settingsCategoryEntry?.invoke() ?: tryEnterNativeContent()
+                  MainSection.MOVIES, MainSection.SERIES -> runCatching { nativeSubFocus.requestFocus() }.getOrDefault(false)
+                  else -> tryEnterNativeContent()
+              }
           }, { restoreFocus = false; runCatching { sidebarFocus.requestFocus() } }, { nativeEntryRequest = 0 })
-          val headerUtilityFocus = remember { FocusRequester() }
-          var tvTools by remember { mutableStateOf<List<() -> Unit>>(emptyList()) }
+
           NativeTopNavigation(primary, sidebarFocus, { destination ->
               nativeEntryRequest = 0
               activateNative(destination)
-              if (destination == TopDestination.VOD) nativeTabFocusJob = scope.launch {
-                  withFrameNanos { }; withFrameNanos { }
-                  runCatching { nativeSubFocus.requestFocus() }
-              }
+              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) nativeEntryRequest++
           }, { destination ->
               activateNative(destination)
               nativeEntryRequest++
-          }, { focusedLayer = ShellLayer.SIDEBAR }, Modifier, onUtilities = { runCatching { headerUtilityFocus.requestFocus() } })
-          NativeHeaderUtilities(epgVm, activeProfileId, primary, {
-              selectFromNav(MainSection.EPG)
-          }, { selectFromNav(MainSection.SEARCH) }, tvTools,
-              { selectFromNav(MainSection.MORE) }, { selectFromNav(MainSection.DOWNLOADS) },
-              { runCatching { sidebarFocus.requestFocus() } }, headerUtilityFocus, enterNativeContent, profileName.ifBlank { stringResource(R.string.common_own_tv_user) }, onSwitchProfile)
+          }, { focusedLayer = ShellLayer.SIDEBAR }, utilities = {
+              NativeHeaderActions(epgVm, activeProfileId, { selectFromNav(MainSection.EPG) },
+                  { selectFromNav(MainSection.SEARCH) },
+                  enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO })
+          }, onEnterUtilityContent = { nativeEntryRequest++ })
           if (primary == TopDestination.VOD) {
               NativeSubNavigation(nativeRoutes(primary, nativeVisible), selectedSection, { selectFromNav(it) },
-                  if (primary == TopDestination.PROFILE) null else ({ selectFromNav(MainSection.SEARCH) }),
                   { runCatching { sidebarFocus.requestFocus() } }, enterNativeContent,
-                  { focusedLayer = ShellLayer.RAIL }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO },
+                  { focusedLayer = ShellLayer.RAIL },
                   entryFocusRequester = nativeSubFocus)
-          } else androidx.compose.foundation.layout.Row(Modifier.height(if (playerMode == PlayerMode.NONE) 0.mpx else 64.mpx).padding(horizontal = 40.mpx)) {
-              if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
-                  tv.own.owntv.ui.stage.StagePill(stringResource(R.string.shell_now_playing), enterNowPlaying)
           }
           // Screens already redrawn for Stage own the whole canvas.
           val stageScreen = selectedSection in StageSections
@@ -1168,6 +1162,12 @@ fun OwnTVShell(
                             fontCustomization = fontCustomization,
                             onSetFontCustomization = onSetFontCustomization,
                             onOpenPlaylist = { /* Phase 6: open setup/playlist */ },
+                            onCategoryEntryHook = { settingsCategoryEntry = it },
+                            onTvFullscreen = { openFullscreen(MainSection.LIVE_TV) },
+                            onGuide = { selectFromNav(MainSection.EPG) },
+                            onLibrary = { selectFromNav(MainSection.MORE) },
+                            onDownloads = { selectFromNav(MainSection.DOWNLOADS) },
+                            onSwitchProfile = onSwitchProfile,
                             // Settings is reached through More now, so Back out of its root goes
                             // back there rather than to the rail — one level out, not two.
                             onBack = { restoreFocus = false; runCatching { sidebarFocus.requestFocus() } },
@@ -1301,7 +1301,7 @@ fun OwnTVShell(
                         selectedSection == MainSection.LIVE_TV -> LiveScreen(
                             onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             onEntryHook = { guideEntry = it },
-                            onTools = { tvTools = it },
+                            onCategoryEntryHook = { tvCategoryEntry = it },
                             onFullscreen = { openFullscreen() },
                             onOpenGuide = { selectFromNav(MainSection.EPG) },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },

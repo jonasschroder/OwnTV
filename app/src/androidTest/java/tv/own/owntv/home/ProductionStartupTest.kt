@@ -34,6 +34,19 @@ import java.io.File
 class ProductionStartupTest {
     // Queued test frames prevent reentrant measure/layout during real Activity recreation.
     @get:Rule val compose = createEmptyComposeRule()
+    /** Both production-shell journeys run at 1080p/720p; assert the actual composed hierarchy. */
+    private fun assertNavigationLevels(contextual: Boolean) {
+        compose.onAllNodesWithTag("navigation-global").assertCountEquals(1)
+        compose.onAllNodesWithTag("navigation-context").assertCountEquals(if (contextual) 1 else 0)
+        for (tag in listOf("header-all-channels", "header-collection", "header-library-history", "header-downloads", "nav-context-search", "sub-LIVE_TV", "sub-EPG"))
+            compose.onNodeWithTag(tag).assertDoesNotExist()
+        val bar = compose.onNodeWithTag("navigation-global").fetchSemanticsNode().boundsInRoot
+        for (tag in listOf("header-epg-refresh", "header-guide", "header-search")) {
+            compose.onNodeWithTag(tag).assertIsDisplayed().assert(hasAnyAncestor(hasTestTag("navigation-global")))
+            val action = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            assertTrue("Utility must remain inside the existing top bar: $tag", action.top >= bar.top && action.bottom <= bar.bottom)
+        }
+    }
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = instrumentation.targetContext
     private val db get() = GlobalContext.get().get<OwnTVDatabase>()
@@ -238,6 +251,7 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("external-se.telenor.stream").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_UP)
                 compose.onNodeWithTag("twitch-app-entry").assertIsFocused()
+                assertNavigationLevels(contextual = false)
                 nativeCapture("home-restored")
                 val sourceStore = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
                 val originalChoices = sourceStore.choices(7)
@@ -301,6 +315,33 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("sub-LIVE_TV").assertDoesNotExist()
                 compose.onNodeWithTag("sub-EPG").assertDoesNotExist()
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
+                assertNavigationLevels(contextual = true)
+                compose.onNodeWithTag("tv-category-GENERAL").assertExists()
+                compose.onNodeWithTag("tv-category-SPORT").assertExists()
+                compose.onNodeWithTag("tv-category-OTHER").assertExists()
+                compose.onNodeWithTag("top-TV").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithTag("top-TV").assertIsFocused()
+                // A focused different destination activates directly into its sole submenu.
+                compose.onNodeWithTag("top-HOME").performClick()
+                compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("top-HOME").assertIsSelected()
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused(); true }.getOrDefault(false) }
+                compose.onNodeWithTag("top-TV").assertIsSelected()
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_BACK)
+                compose.onNodeWithTag("tv-category-GENERAL").assertIsFocused()
+                press(KeyEvent.KEYCODE_BACK)
+                compose.onNodeWithTag("top-TV").assertIsFocused()
                 nativeCapture("tv")
                 compose.onNodeWithTag("top-PROFILE").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
                 press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -330,6 +371,7 @@ class ProductionStartupTest {
                 compose.waitForIdle()
                 compose.onNodeWithTag("top-SPORT").assertIsFocused()
                 compose.onNodeWithTag("top-SPORT").assertIsSelected()
+                assertNavigationLevels(contextual = false)
                 nativeCapture("sport")
                 compose.onNodeWithTag("top-VOD").performClick()
                 compose.onNodeWithTag("sub-MOVIES").assertExists()
@@ -350,17 +392,23 @@ class ProductionStartupTest {
                 compose.waitForIdle()
                 compose.onNodeWithTag("sub-SERIES").assertIsSelected()
                 compose.onNodeWithTag("top-VOD").assertIsNotFocused()
+                compose.onNodeWithTag("sub-SERIES").assertIsFocused()
+                assertNavigationLevels(contextual = true)
                 nativeCapture("series")
                 compose.onNodeWithTag("top-PROFILE").performClick()
                 compose.onNodeWithTag("sub-MORE").assertDoesNotExist()
                 compose.onNodeWithTag("settings-group-PROFILE").assertIsDisplayed()
-                compose.onNodeWithTag("header-library-history").performClick()
+                assertNavigationLevels(contextual = true)
+                compose.onNodeWithTag("settings-group-PROFILE").performClick()
+                compose.onNodeWithTag("settings-library-history").performScrollTo().performClick()
                 nativeCapture("profile")
                 for (page in listOf("FAVORITES", "HISTORY", "BACKUP", "LOCAL_SYNC", "ERROR_LOG", "ABOUT")) {
                     compose.onNodeWithTag("profile-page-$page").performClick()
                     compose.onNodeWithTag("profile-content-$page").assertIsDisplayed()
                 }
-                compose.onNodeWithTag("header-downloads").performClick()
+                compose.onNodeWithTag("top-PROFILE").performClick()
+                compose.onNodeWithTag("settings-group-PROFILE").performClick()
+                compose.onNodeWithTag("settings-downloads").performScrollTo().performClick()
                 compose.onNodeWithTag("top-PROFILE").assertIsSelected()
                 nativeCapture("downloads")
                 var recordingsLabel = ""
@@ -369,7 +417,30 @@ class ProductionStartupTest {
                 nativeCapture("recordings")
                 compose.onNodeWithTag("top-PROFILE").performClick()
                 compose.onNodeWithTag("settings-group-PROFILE").assertIsDisplayed()
+                assertNavigationLevels(contextual = true)
                 nativeCapture("settings")
+                // Management replaces the settings selector, never stacks another menu on it.
+                compose.onNodeWithTag("settings-group-SOURCES").performClick()
+                var collectionLabel = ""
+                var libraryLabel = ""
+                scenario.onActivity {
+                    collectionLabel = it.getString(R.string.mintv_collection_settings)
+                    libraryLabel = it.getString(R.string.mintv_full_library)
+                }
+                compose.onNode(hasText(collectionLabel) and hasClickAction()).performScrollTo().performClick()
+                compose.onNodeWithTag("settings-categories").assertDoesNotExist()
+                assertNavigationLevels(contextual = true)
+                compose.onNodeWithTag("tv-category-GENERAL").assertExists()
+                // Return from the editor to the same settings group without modifying choices.
+                compose.onNodeWithTag("tv-category-GENERAL").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                press(KeyEvent.KEYCODE_BACK)
+                compose.onNodeWithTag("settings-categories").assertExists()
+                compose.onNode(hasText(libraryLabel) and hasClickAction()).performScrollTo().performClick()
+                compose.onNodeWithTag("settings-categories").assertDoesNotExist()
+                compose.onNodeWithTag("tv-category-GENERAL").assertDoesNotExist()
+                press(KeyEvent.KEYCODE_BACK)
+                compose.onNodeWithTag("settings-categories").assertExists()
+                assertEquals(originalChoices, sourceStore.choices(7))
                 compose.onNodeWithTag("top-HOME").performClick()
             }
             // The populated journey intentionally leaves Home on TV3. Recreation must restore

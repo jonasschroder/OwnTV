@@ -23,15 +23,15 @@ internal val HomeSurfaceColor = Color(0xFF101C2A)
 internal val HomeRadius = 18.mpx
 
 @Composable
-internal fun HomeSurface(onClick: () -> Unit, modifier: Modifier = Modifier, highlighted: Boolean = false,
+internal fun HomeSurface(onClick: () -> Unit, modifier: Modifier = Modifier, highlighted: Boolean = false, surfaceColor: Color = HomeSurfaceColor, focusedScale: Float = 1.025f,
     content: @Composable ColumnScope.() -> Unit) {
     Button(onClick, modifier, contentPadding = PaddingValues(horizontal = 18.mpx, vertical = 14.mpx),
         shape = ButtonDefaults.shape(RoundedCornerShape(HomeRadius)),
         colors = ButtonDefaults.colors(
-            containerColor = if (highlighted) Color(0xFF152A32) else HomeSurfaceColor,
+            containerColor = if (highlighted) Color(0xFF152A32) else surfaceColor,
             contentColor = Color.White, focusedContainerColor = Color(0xFF243B4B), focusedContentColor = Color.White),
         border = ButtonDefaults.border(focusedBorder = Border(BorderStroke(2.mpx, MinTvTeal))),
-        scale = ButtonDefaults.scale(focusedScale = 1.025f)) {
+        scale = ButtonDefaults.scale(focusedScale = focusedScale)) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.mpx), content = content)
     }
 }

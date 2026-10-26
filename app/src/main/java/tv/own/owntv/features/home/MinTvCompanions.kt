@@ -51,7 +51,11 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     reservedTop: Dp = 144.mpx,
     homeCardModifier: Modifier = Modifier,
     compact: Boolean = false,
+    homeHero: Boolean = false,
+    freezeHomeHero: Boolean = false,
+    onHomeMatchday: (Boolean) -> Unit = {},
     onSettings: () -> Unit = {},
+    dashboard: (@Composable (NativeSportSnapshot, NativeSportActions, FocusRequester, ((() -> Boolean)?) -> Unit) -> Unit)? = null,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
@@ -125,6 +129,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         if (!enabled || !broadcastEnabled) { broadcast = null; knownBroadcasts.clear(); resolvedCards.clear(); directCards.clear() }
     }
     val entryFocus = remember { FocusRequester() }
+    var dashboardEntry by remember(profileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    val currentDashboardEntry by rememberUpdatedState(dashboardEntry)
+    var dashboardChannels by remember(profileId, libraryContext) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    LaunchedEffect(dashboard != null, active, profileId, libraryContext, libraryCount, guideChoices) {
+        if (dashboard == null || !active || profileId == null || libraryContext.first != profileId) return@LaunchedEffect
+        try {
+            val choices = swedishChannels.choices(profileId)
+            val rows = liveVm.homeSportsChannels("", favorites, profileId)
+            if (liveVm.homeLibraryContext.value == libraryContext) dashboardChannels = sortHockeyChannels(hockeyGuideChannels(rows, choices).filter { hockeyChannelNumber(it.name) != null }).take(48)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { dashboardChannels = emptyList() }
+    }
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
@@ -139,7 +155,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     DisposableEffect(tabFocus, profileId) {
         onMatchcenterEntry {
             if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
-            else currentEntryScreen && (currentEntryFocus.requestSafely() || backFocus.requestSafely())
+            else if (currentEntryScreen) currentEntryFocus.requestSafely() || backFocus.requestSafely()
+            else currentDashboardEntry?.invoke() ?: false
         }
         onDispose { onMatchcenterEntry(null) }
     }
@@ -160,7 +177,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         onDispose { }
     }
     val todaysGames = allGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it.faceoff })
-    val available = active && (visible && selectedTeams.prominent || screen) && selection != null && selectedTeams.teamIds.isNotEmpty()
+    val available = active && (dashboard != null || visible && selectedTeams.prominent || screen) && selection != null && selectedTeams.teamIds.isNotEmpty()
     val scheduleAvailable = available && sportsScheduleVisible(visible, screen, section, selectedId != null, teamsOpen)
     val selected = selectedId?.let { id -> allGames.firstOrNull { it.id == id } }
     val fetchedAt = currentData[selectedCompetition.id]?.fetchedAt
@@ -212,7 +229,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         }
     }
     val requestedCompetitions = if (scheduleAvailable && enabled)
-        sportsRequestCompetitions(selectedTeams, active, visible, screen, enabled, selectedCompetition) else emptyList()
+        sportsRequestCompetitions(selectedTeams, active, visible, screen || dashboard != null, enabled, if (dashboard != null && !screen) null else selectedCompetition) else emptyList()
     LaunchedEffect(profileId, available, requiredCompetitions, requestedCompetitions, retryRevision) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
@@ -240,8 +257,13 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
 
     val freshCompetitions = currentData.filter { (id, value) -> sportsSnapshotFresh(value, loadStates[id], now) }.keys
+    var savedHomeFixture by remember(profileId) { mutableStateOf<SportFixture?>(null) }
+    val automaticFixture = nextPersonalHockeyFixture(allGames, selectedTeams, unexpiredMatches, now)
+    SideEffect { if (homeHero && active && !freezeHomeHero) savedHomeFixture = automaticFixture }
+    LaunchedEffect(active) { if (!active) savedHomeFixture = null }
     val gameToMatch = if (teamsOpen || !broadcastContentVisible(visible, screen, section, selected != null, upcoming)) null
-        else if (selectedId != null) selected else nextPersonalHockeyFixture(allGames, selectedTeams, unexpiredMatches, now)
+        else if (selectedId != null) selected
+        else if (homeHero && freezeHomeHero) frozenHomeFixture(savedHomeFixture, allGames) else automaticFixture
     val scheduleFresh = gameToMatch?.competition?.id in freshCompetitions
     LaunchedEffect(available, enabled, broadcastEnabled, gameToMatch, scheduleFresh) {
         broadcast = null
@@ -321,7 +343,13 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             withFrameNanos { }; backFocus.requestSafely()
         }
     }
-    fun close() { screen = false; selectedId = null; picker = false; searchOpen = false; query = ""; restoreTarget = entryFocus }
+    fun close() {
+        screen = false; selectedId = null; picker = false; searchOpen = false; query = ""
+        if (dashboard == null) restoreTarget = entryFocus else {
+            restoreTarget = null
+            scope.launch { repeat(2) { withFrameNanos { } }; currentDashboardEntry?.invoke() }
+        }
+    }
     fun back() {
         keyboard?.hide()
         if (browsing) {
@@ -413,7 +441,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val categoryReady = categoryId?.let { categoryLoadedKey == (it to categoryPage) } ?: (categories != null)
     val pickerRows = (if (browsing && categoryId != null) categoryRows?.channels.orEmpty().takeIf { categoryReady }.orEmpty()
         else listOfNotNull(manualChannel) + reliableChannels + channels.takeIf { reliableChannels.isEmpty() || searchOpen }.orEmpty())
-        .distinctBy { it.id }.take(48)
+        .distinctBy { it.id }.let { rows -> if (browsing) sortHockeyChannels(rows) else rows }.take(48)
     // Keep category discovery out of page changes; the page reader still rechecks authorization.
     LaunchedEffect(active, screen, picker, browsing, profileId, libraryContext, libraryCount) {
         categories = null; categoriesFailed = false
@@ -467,21 +495,42 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         choiceVersion++; play(channel, pickerRows)
     }
 
+    val matchday = homeMatchdayEligible(gameToMatch, selectedTeams, now, scheduleFresh || localEvidence != null)
+    SideEffect { onHomeMatchday(matchday) }
     Box(Modifier.fillMaxSize()) {
         homeContent({
+            if (dashboard != null) {
+                val freshGames = allGames.filter { it.competition.id in freshCompetitions || localHockeyEvidence(unexpiredMatches, it) != null }
+                val labels = freshGames.mapNotNull { game ->
+                    val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[fixtureKey(game.broadcastFixture())], Instant.ofEpochMilli(now)) else null
+                    val label = assignment?.channels?.filter { it.linear }?.joinToString { it.name }?.takeIf { it.isNotBlank() }
+                    label?.let { game.id to it }
+                }.toMap()
+                val onAir = onAirHockeyFixtures(unexpiredMatches, now)
+                val todayRows = freshGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it !in onAir }.thenBy { it.faceoff })
+                val hero = nextPersonalHockeyFixture(freshGames, selectedTeams, unexpiredMatches, now)
+                val verified = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)?.takeIf { gameToMatch == hero }
+                dashboard(NativeSportSnapshot(profileId, now, selectedTeams, hero, todayRows,
+                    freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
+                    dashboardChannels, labels, verified, homeLoading, enabled, homeIssue),
+                    NativeSportActions(details = { game -> screen = true; choose(game) },
+                        channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
+                        watch = { verified?.let { play(it, reliableChannels) } }, settings = onSettings), entryFocus, { dashboardEntry = it })
+            } else {
             val shown = manualChannel ?: reliableChannels.firstOrNull()
+            val verifiedDirect = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)
             val openCard = {
-                if (directChannel != null) play(directChannel, reliableChannels.ifEmpty { listOf(directChannel) })
+                if (verifiedDirect != null) play(verifiedDirect, reliableChannels.ifEmpty { listOf(verifiedDirect) })
                 else if (reliableChannels.isNotEmpty()) browseChannels()
                 else if (selectedTeams.teamIds.isEmpty()) onSettings() else open()
             }
             if (compact) HockeyQuickCard(gameToMatch?.takeIf { scheduleFresh || localEvidence != null }, now, shown?.name ?: validBroadcast?.channels?.filter { it.linear }?.joinToString { it.name }?.takeIf { it.isNotBlank() },
-                directChannel != null || reliableChannels.isNotEmpty(),
+                verifiedDirect != null || reliableChannels.isNotEmpty(),
                 selectedTeams.teamIds.mapNotNull { SportsCatalog.team(it)?.name }.joinToString(stringResource(R.string.mintv_team_separator)),
                 openCard, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt },
                 manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true,
-                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() })
+                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() }, hero = homeHero)
             else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {
@@ -501,6 +550,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 }
             }
             HomeButton(stringResource(R.string.mintv_hockey_other_channels), ::browseChannels, Modifier.width(250.mpx))
+            }
             }
             }
         }, screen)

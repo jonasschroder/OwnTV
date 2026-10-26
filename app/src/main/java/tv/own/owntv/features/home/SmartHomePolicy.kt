@@ -43,3 +43,41 @@ internal fun selectSmartHome(profile: Long, hasSources: Boolean, channels: List<
     return SmartHomeSnapshot(profile, true, channels, watched ?: if (promoted == null) channels.firstOrNull()?.channel else null,
         watchedAt, promoted, eligible.filter { it.key != promoted?.key }.take(3))
 }
+
+/** Stable logical sections; absent rows have no focus target. */
+internal fun smartHomeSectionIndices(channels: Boolean, favorites: Boolean, resumes: Boolean): List<Int> {
+    var index = 0
+    val channelIndex = if (channels) ++index else -1
+    val resumeIndex = if (resumes) ++index else -1
+    return listOf(0, channelIndex, if (favorites) ++index else -1, resumeIndex)
+}
+
+/** A schedule or specific EPG can justify matchday, never a channel name alone. */
+internal fun homeMatchdayEligible(game: SportFixture?, preferences: SportPreferences, now: Long,
+    evidenceFresh: Boolean, zone: java.time.ZoneId = java.time.ZoneId.of("Europe/Stockholm")): Boolean =
+    evidenceFresh && preferences.prominent && game != null && game.follows(preferences) &&
+        game.kickoff.atZone(zone).toLocalDate() == java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+
+/** A match hero must not hide the episode/movie previously promoted out of Continue Watching. */
+internal fun smartHomeResumeRows(promoted: SmartResume?, rows: List<SmartResume>, matchday: Boolean): List<SmartResume> =
+    if (matchday) smartResumeOrder(listOfNotNull(promoted) + rows).take(3) else rows
+
+/** Keep the exact fixture while browsing; refresh its labels, never redirect a reused/rescheduled ID. */
+internal fun frozenHomeFixture(original: SportFixture?, current: List<SportFixture>): SportFixture? = original?.let { saved ->
+    current.singleOrNull { it.id == saved.id }?.takeIf {
+        it.competition.id == saved.competition.id && it.homeTeam.id == saved.homeTeam.id &&
+            it.awayTeam.id == saved.awayTeam.id && it.kickoff == saved.kickoff
+    }
+}
+
+/** Favourites already visible in Now keep their badge; only additional channels need a second rail. */
+internal fun smartHomeExtraFavorites(channels: List<SmartChannel>, favorites: List<SmartChannel>): List<SmartChannel> {
+    val shown = channels.mapTo(hashSetOf()) { it.key }
+    return favorites.distinctBy { it.key }.filterNot { it.key in shown }
+}
+
+/** Resolve only through the existing profile-owned M3 grouping, never by guessed name similarity. */
+internal fun smartHomeFavorite(channel: tv.own.owntv.core.database.entity.ChannelEntity, logicalBySource: Map<String, String>): SmartChannel {
+    val sourceKey = tv.own.owntv.core.customize.CustomizeKeys.channel(channel)
+    return SmartChannel(logicalBySource[sourceKey] ?: sourceKey, channel.name, channel)
+}

@@ -1,7 +1,10 @@
 package tv.own.owntv.features.live
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,10 +38,11 @@ import tv.own.owntv.features.live.source.*
 import tv.own.owntv.ui.theme.mpx
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
-/** Compact logical rows, bounded stored guides, and the SAME selected-channel preview/controller. */
+/** Native five-column logical channels, bounded stored guides and the existing fullscreen player. */
 @Composable
 internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFullscreen: () -> Unit,
-    onOpenGuide: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, restoreFocus: Boolean, onRestored: () -> Unit, modifier: Modifier) {
+    onOpenGuide: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, restoreFocus: Boolean, onRestored: () -> Unit, modifier: Modifier, onHeader: (() -> Unit)? = null,
+    onEntryHook: (((() -> Boolean)?) -> Unit)? = null) {
     val store: SwedishChannelStore = koinInject()
     val db: OwnTVDatabase = koinInject()
     val context by vm.homeLibraryContext.collectAsStateWithLifecycle()
@@ -59,22 +63,24 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val cache = remember(metadata, revision) { SwedishRowCache() }
     var rowData by remember(metadata, revision, collection) { mutableStateOf<Map<SwedishRowKey, SwedishRowInfo>>(emptyMap()) }
     var at by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var expectedGuideRevision by remember(metadata) { mutableIntStateOf(0) }
     var edit by rememberSaveable(profile) { mutableStateOf(false) }
     var variants by rememberSaveable(profile) { mutableStateOf(false) }
     var previewSuppressedFor by remember(context) { mutableStateOf<String?>(null) }
     var failed by remember(profile) { mutableStateOf(false) }
-    val list = rememberLazyListState()
+    val list = key(profile, collection) { rememberLazyGridState() }
+    var preferredColumn by rememberSaveable(profile, collection) { mutableIntStateOf(0) }
+    var verticalTarget by remember(profile, collection) { mutableStateOf<String?>(null) }
+    var gridHasFocus by remember(profile, collection) { mutableStateOf(false) }
     val entry = remember { FocusRequester() }
+    val categoryFocus = remember { FocusRequester() }
+    val editFocus = remember { FocusRequester() }
+    var movement by remember(profile, collection) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val targets = remember(profile) { mutableMapOf<String, FocusRequester>() }
     var loaded by remember(profile) { mutableStateOf(false) }
-    val guide by vm.swedishGuide.collectAsStateWithLifecycle()
-    val blocked by vm.previewBlockedSingleSession.collectAsStateWithLifecycle()
-    val previewSetting by vm.livePreviewEnabled.collectAsStateWithLifecycle()
     val external by vm.externalPlayerOn.collectAsStateWithLifecycle()
     val providerNames by vm.providerNames.collectAsStateWithLifecycle()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
-    val active = lifecycle == Lifecycle.State.RESUMED
+    val active = previewEnabled && lifecycle == Lifecycle.State.RESUMED
     LaunchedEffect(context) { store.observeChoices(profile).collect { choices = it } }
     val access = metadata?.custom?.let { Triple(it.hiddenCategories, it.hiddenItems, it.customCategories) }
     LaunchedEffect(context, choices.order, choices.hidden, access) {
@@ -92,11 +98,39 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val focused = library.groups.firstOrNull { it.identity == focusId }
     val preferred = focused?.preferred(choices.preferred[focused.identity], choices.showUhd)
     val selected = resolved?.takeIf { it.first == preferred?.rowKey() }?.second
-    val editItems = if (!edit) 0 else 3 + if (focused == null) 0 else 5
+    val editItems = if (!edit) 0 else 2 + if (focused == null) 0 else 5
     suspend fun restoreChannel() {
-        restoreSwedishChannel(list, groups.map { it.identity }, focusId, editItems, targets, entry)
+        val index = groups.indexOfFirst { it.identity == focusId }.coerceAtLeast(0)
+        val target = groups.getOrNull(index)?.identity
+        if (target != null) {
+            verticalTarget = target
+            if (focusId != target) preferredColumn = index % CHANNEL_GRID_COLUMNS
+            val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == target }
+            if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
+                visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(index + editItems)
+            repeat(2) { withFrameNanos { } }
+            if (targets[target]?.requestSafely() == true) return
+        }
+        entry.requestSafely()
     }
-    LaunchedEffect(collection, profile) { list.scrollToItem(0) }
+    DisposableEffect(profile, collection) { onDispose { movement?.cancel() } }
+    LaunchedEffect(loaded, groups) {
+        if (loaded && gridHasFocus && groups.none { it.identity == focusId }) restoreChannel()
+    }
+    val reportEntry by rememberUpdatedState(onEntryHook)
+    DisposableEffect(profile, loaded, groups) {
+        reportEntry?.invoke { if (!loaded) false else { scope.launch { restoreChannel() }; true } }
+        onDispose { reportEntry?.invoke(null) }
+    }
+    // This destination has no preview surface. Returning from fullscreen must also silence Exo
+    // when the user's legacy preview preference is on; mini/audio modes keep previewEnabled=false.
+    LaunchedEffect(previewEnabled, vm) { if (previewEnabled) vm.stopPreview() }
+    val browsing by rememberUpdatedState(previewEnabled)
+    DisposableEffect(vm) {
+        if (previewEnabled) vm.stopPreview()
+        // The Live backend also owns fullscreen playback. Never stop it on a player transition.
+        onDispose { if (browsing) vm.stopPreview() }
+    }
     DisposableEffect(library.groups) {
         targets.keys.retainAll(library.groups.mapTo(HashSet()) { it.identity })
         onDispose { }
@@ -129,9 +163,6 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
             rowData = found
         }
     }
-    LaunchedEffect(selected?.id, metadata, revision, rowData[selected?.let { SwedishRowKey(it.id, it.sourceId, tv.own.owntv.core.customize.CustomizeKeys.channel(it)) }]?.let { it.now?.id to it.next?.id }) {
-        expectedGuideRevision = vm.refreshSwedishGuide(selected, profile)
-    }
     LaunchedEffect(restoreFocus, loaded, groups) {
         if (restoreFocus && loaded) {
             restoreChannel()
@@ -142,7 +173,6 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         val variant = preferred ?: return@LaunchedEffect
         val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
         resolved = channel?.let { variant.rowKey() to it }
-        if (sourceChoiceAllowsPreview(focusId, previewSuppressedFor, false)) channel?.let(vm::onChannelFocused)
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
     fun playChannel(original: ChannelEntity, logicalIdentity: String? = null) { scope.launch {
@@ -167,12 +197,8 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val sourceActions = rememberChannelSourceSelection(store, db, vm, profile, context.second,
         onPlay = { channel, identity -> playChannel(channel, identity) }, onClosed = { scope.launch { restoreChannel() } })
     LaunchedEffect(sourceActions.isOpen) { if (sourceActions.isOpen) previewSuppressedFor = focusId }
-    LaunchedEffect(selected?.id, focusId, active, previewEnabled, previewSetting, sourceActions.isOpen, previewSuppressedFor) {
-        if (active && previewEnabled && previewSetting && sourceChoiceAllowsPreview(focusId, previewSuppressedFor, sourceActions.isOpen))
-            selected?.let { delay(700); vm.playPreview(it) }
-    }
     fun openSources() { focused?.let { sourceActions.open(it.identity, null) } }
-    SwedishLiveFrame(modifier.onPreviewKeyEvent { event ->
+    SwedishChannelGridFrame(modifier.onPreviewKeyEvent { event ->
         if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
         false
     }.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
@@ -183,22 +209,21 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         }, categories = {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
             items(SwedishCollection.entries, key = { it.name }) { category ->
-                SwedishLiveAction(stringResource(collectionLabel(category)), { collection = category; variants = false }, selected = collection == category)
+                SwedishLiveAction(stringResource(collectionLabel(category)), { collection = category; variants = false }, Modifier.then(if (collection == category) Modifier.focusRequester(categoryFocus) else Modifier), selected = collection == category)
             }
         }
         }, notice = {
         if (library.bounded || failed) TvText(stringResource(R.string.mintv_curated_partial), color = MinTvMuted)
         }, channels = {
-            LazyColumn(Modifier.fillMaxSize(), state = list, verticalArrangement = Arrangement.spacedBy(6.mpx)) {
+            SwedishChannelGrid(list, Modifier.fillMaxSize().onFocusChanged { gridHasFocus = it.hasFocus }.focusGroup()) {
                 if (edit) {
-                    item { HomeButton(stringResource(if (choices.showUhd) R.string.mintv_hide_uhd else R.string.mintv_show_uhd), { update(choices.copy(showUhd = !choices.showUhd)) }) }
-                    item { HomeButton(stringResource(R.string.mintv_show_variants), { update(choices.copy(showVariants = !choices.showVariants)) }) }
-                    item { HomeButton(stringResource(R.string.mintv_restore_collection), { update(SwedishChoices()); focusId = null; variants = false }) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(if (choices.showUhd) R.string.mintv_hide_uhd else R.string.mintv_show_uhd), { update(choices.copy(showUhd = !choices.showUhd)) }, Modifier.focusRequester(editFocus)) }
+                    item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_restore_collection), { update(SwedishChoices()); focusId = null; variants = false }) }
                     focused?.let { group ->
-                        item { HomeButton(stringResource(R.string.mintv_choose_variant), { openSources() }) }
-                        item { HomeButton(stringResource(R.string.mintv_pin_channel), { selected?.let(vm::toggleFavorite) }) }
-                        item { HomeButton(stringResource(R.string.mintv_hide_channel), { update(choices.copy(hidden = choices.hidden + group.identity)); focusId = null }) }
-                        for (offset in listOf(-1, 1)) item {
+                        item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_choose_variant), { openSources() }) }
+                        item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_pin_channel), { selected?.let(vm::toggleFavorite) }) }
+                        item(span = { GridItemSpan(maxLineSpan) }) { HomeButton(stringResource(R.string.mintv_hide_channel), { update(choices.copy(hidden = choices.hidden + group.identity)); focusId = null }) }
+                        for (offset in listOf(-1, 1)) item(span = { GridItemSpan(maxLineSpan) }) {
                             HomeButton(stringResource(if (offset < 0) R.string.mintv_move_up else R.string.mintv_move_down), {
                                 val order = library.groups.map { it.identity }.toMutableList()
                                 val i = order.indexOf(group.identity); val target = i + offset
@@ -207,31 +232,42 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
                         }
                     }
                 }
-                if (groups.isEmpty()) item { TvText(stringResource(R.string.mintv_curated_empty), color = MinTvMuted, lines = 3) }
-                items(groups, key = { it.identity }) { group ->
+                if (groups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { TvText(stringResource(R.string.mintv_curated_empty), color = MinTvMuted, lines = 3) }
+                items(count = groups.size, key = { groups[it].identity }) { groupIndex ->
+                    val group = groups[groupIndex]
                     val preferred = group.preferred(choices.preferred[group.identity], choices.showUhd)!!
                     val rowFocus = remember(profile, group.identity) { targets.getOrPut(group.identity) { FocusRequester() } }
-                    SwedishChannelRow(group.label, preferred.name.quality, rowData[preferred.rowKey()], at,
-                        selected = focusId == group.identity, onPlay = {
+                    SwedishChannelCard(group.label, preferred.name.quality, rowData[preferred.rowKey()], at,
+                        onPlay = {
                             if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
                             else sourceActions.play(group.identity, null)
                         },
-                        modifier = Modifier.testTag("swedish-channel-${group.identity}").focusRequester(rowFocus).logicalChannelKeys({
+                        modifier = Modifier.testTag("swedish-channel-${group.identity}").focusRequester(rowFocus)
+                            .channelGridNavigation(groupIndex, groups.size, { preferredColumn }, onMove = { next, direction ->
+                                if (direction == ChannelGridDirection.LEFT || direction == ChannelGridDirection.RIGHT) preferredColumn = next % CHANNEL_GRID_COLUMNS
+                                val targetIdentity = groups[next].identity
+                                verticalTarget = targetIdentity
+                                movement?.cancel()
+                                movement = scope.launch {
+                                    val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == targetIdentity }
+                                    if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset || visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(next + editItems)
+                                    repeat(2) { withFrameNanos { } }
+                                    targets[targetIdentity]?.requestSafely()
+                                }
+                            }, onFirstRowUp = {
+                                movement?.cancel()
+                                if (edit) editFocus.requestSafely() else categoryFocus.requestSafely()
+                            }, onNavigation = { pendingSourcePress.cancel() }).logicalChannelKeys({
                             if (preferred.name.collection == SwedishCollection.OTHER) play(preferred)
                             else sourceActions.play(group.identity, null)
-                        }, { sourceActions.open(group.identity, it) }, pendingSourcePress).onFocusChanged { if (it.isFocused) focusId = group.identity })
-                    if (choices.showVariants) {
-                        HomeButton(stringResource(R.string.mintv_source_title), { sourceActions.open(group.identity, null) }, Modifier.padding(start = 24.mpx))
-                    }
+                        }, { sourceActions.open(group.identity, it) }, pendingSourcePress).onFocusChanged { if (it.isFocused) {
+                            focusId = group.identity
+                            if (verticalTarget != group.identity) preferredColumn = groups.indexOf(group).coerceAtLeast(0) % CHANNEL_GRID_COLUMNS
+                            verticalTarget = null
+                        } })
+
                 }
             }
-        }, preview = {
-                SwedishLiveAction(stringResource(R.string.mintv_choose_variant), { openSources() })
-                val epg = guide?.takeIf { it.revision >= expectedGuideRevision }?.forChannel(selected, metadata, at)
-                LiveStagePane(selected, focused?.label, epg, vm.previewEngine,
-                    showVideo = active && previewEnabled && previewSetting && selected != null,
-                    singleSessionBlocked = blocked, scheduleFocus = remember { FocusRequester() },
-                    onOpenProgramme = { onOpenGuide() }, onBackToList = { scope.launch { restoreChannel() } }, modifier = Modifier.fillMaxWidth())
         })
 }
 
@@ -241,4 +277,24 @@ private fun collectionLabel(collection: SwedishCollection) = when (collection) {
     SwedishCollection.NEWS -> R.string.mintv_news
     SwedishCollection.CHILDREN -> R.string.mintv_children
     SwedishCollection.OTHER -> R.string.mintv_other_swedish
+}
+
+/** Artwork-only grid: no hidden preview decoder; full provider library remains available. */
+@Composable
+internal fun SwedishChannelGridFrame(modifier: Modifier, header: @Composable RowScope.() -> Unit,
+    categories: @Composable () -> Unit, notice: @Composable () -> Unit, channels: @Composable () -> Unit) {
+    Column(modifier.fillMaxSize().background(Color(0xFF081A19)).padding(horizontal = 40.mpx, vertical = 22.mpx),
+        verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.mpx), content = header)
+        categories(); notice()
+        Box(Modifier.weight(1f)) { channels() }
+    }
+}
+
+/** Shared production grid geometry, also exercised with synthetic data by native tests. */
+@Composable
+internal fun SwedishChannelGrid(state: LazyGridState, modifier: Modifier = Modifier, content: LazyGridScope.() -> Unit) {
+    LazyVerticalGrid(columns = GridCells.Fixed(CHANNEL_GRID_COLUMNS), modifier = modifier, state = state,
+        contentPadding = PaddingValues(6.mpx), verticalArrangement = Arrangement.spacedBy(22.mpx),
+        horizontalArrangement = Arrangement.spacedBy(18.mpx), content = content)
 }

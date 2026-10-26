@@ -1014,7 +1014,12 @@ fun OwnTVShell(
               }
           }
           var nativeEntryRequest by remember(activeProfileId) { mutableStateOf(0) }
+          var nativeTabFocusJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+          DisposableEffect(activeProfileId) { onDispose { nativeTabFocusJob?.cancel() } }
           val activateNative: (TopDestination) -> Unit = { destination ->
+              nativeTabFocusJob?.cancel()
+              nativeTabFocusJob = null
+              restoreFocus = false // A new header selection must not inherit a previous page's entry request.
               val target = nativeEntry(destination, nativeVisible, lastVod, lastTv)
               selectFromNav(target ?: MainSection.MORE)
               presentation = destination.takeIf { it == TopDestination.SPORT || target == null }
@@ -1025,7 +1030,7 @@ fun OwnTVShell(
           NativeTopNavigation(primary, sidebarFocus, { destination ->
               nativeEntryRequest = 0
               activateNative(destination)
-              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) scope.launch {
+              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) nativeTabFocusJob = scope.launch {
                   withFrameNanos { }; withFrameNanos { }
                   runCatching { nativeSubFocus.requestFocus() }
               }
@@ -1101,7 +1106,7 @@ fun OwnTVShell(
                         )
                         .then(if (stageScreen) Modifier else Modifier.padding(end = 6.dp, bottom = 6.dp)),
                 ) {
-                    pageStateHolder.SaveableStateProvider(nativePageKey(activeProfileId, selectedSection, presentation)) {
+                    pageStateHolder.SaveableStateProvider(if (selectedSection in listOf(MainSection.MOVIES, MainSection.SERIES) && searchReturn == null) "$activeProfileId:v011-vod" else nativePageKey(activeProfileId, selectedSection, presentation)) {
                     when {
                         presentation == TopDestination.SPORT -> tv.own.owntv.features.home.NativeSportScreen(
                             liveVm, homeVm, activeProfileId, playerMode == PlayerMode.NONE,
@@ -1114,7 +1119,8 @@ fun OwnTVShell(
                             } },
                             { openHomeSources = true; onSelectSection(MainSection.SETTINGS) },
                             { settingsFromHome = false; minTvSettingsStart = it; onSelectSection(MainSection.SETTINGS) },
-                            { sportEntry = it }, { focusedLayer = ShellLayer.CONTENT }, Modifier.fillMaxSize())
+                            { sportEntry = it }, onChildFocused = { focusedLayer = ShellLayer.CONTENT }, modifier = Modifier.fillMaxSize(),
+                            onHeader = { runCatching { sidebarFocus.requestFocus() } })
                         presentation != null -> Column(Modifier.padding(64.mpx)) {
                             Text(stringResource(R.string.mintv_nav_unavailable), style = tv.own.owntv.ui.theme.stageText(28, 600))
                             tv.own.owntv.ui.stage.StagePill(stringResource(R.string.settings_title), { onSelectSection(MainSection.SETTINGS) })
@@ -1224,7 +1230,7 @@ fun OwnTVShell(
                             onEntryHook = { homeEntry = it },
                             onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             contentStart = 64.mpx,
-                            reservedTop = homeStatusHeight + 8.mpx,
+                            reservedTop = 24.mpx,
                             statusWidth = homeStatusWidth,
                             modifier = Modifier.fillMaxSize(),
                         ) }
@@ -1285,6 +1291,8 @@ fun OwnTVShell(
                         )
 
                         selectedSection == MainSection.LIVE_TV -> LiveScreen(
+                            onHeader = { runCatching { sidebarFocus.requestFocus() } },
+                            onEntryHook = { guideEntry = it },
                             onFullscreen = { openFullscreen() },
                             onOpenGuide = { liveVm.setLiveView(tv.own.owntv.core.settings.SettingsRepository.LiveView.GUIDE) },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
@@ -1294,6 +1302,12 @@ fun OwnTVShell(
                             onContentScrolled = { contentScrolled = it },
                             modifier = Modifier.fillMaxSize(),
                         )
+
+                        selectedSection in listOf(MainSection.MOVIES, MainSection.SERIES) && searchReturn == null ->
+                            tv.own.owntv.features.home.NativeVodHost(activeProfileId, selectedSection, playerMode == PlayerMode.NONE,
+                                movieVm, seriesVm, { onSelectSection(it) }, { openFullscreen(it) },
+                                { focusedLayer = ShellLayer.CONTENT }, { runCatching { sidebarFocus.requestFocus() } },
+                                { vodEntry = it }, Modifier.fillMaxSize())
 
                         selectedSection == MainSection.MOVIES -> MoviesScreen(
                             onFullscreen = { openFullscreen() },
@@ -1377,6 +1391,7 @@ fun OwnTVShell(
                 }
             }
           }
+            if (primary == TopDestination.PROFILE || playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
             tv.own.owntv.features.shell.components.StageStatusCluster(
                 continuePill = continueTarget?.let { target ->
                     val live = target.kind == tv.own.owntv.features.home.ContinueKind.LIVE

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_v011_browse_hockey">Bläddra bland hockeykanaler</string>
+    <string name="mintv_v011_hockey_channels">Dina hockeykanaler</string>
+    <string name="mintv_v011_signed_out">Inloggning saknas</string>
+    <string name="mintv_v011_vod_hint">Filmer och serier har varsin ingång. OK öppnar detaljer; Fortsätt titta spelar direkt.</string>
+    <string name="mintv_v011_no_hockey_channels">Inga hockeykanaler har identifierats i dina tillgängliga TV-källor. Du kan välja kanal manuellt.</string>
+</resources>

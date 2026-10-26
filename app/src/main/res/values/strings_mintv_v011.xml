@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_v011_browse_hockey">Browse hockey channels</string>
+    <string name="mintv_v011_hockey_channels">Your hockey channels</string>
+    <string name="mintv_v011_signed_out">Not signed in</string>
+    <string name="mintv_v011_vod_hint">Movies and series have separate entries. OK opens details; Continue Watching resumes directly.</string>
+    <string name="mintv_v011_no_hockey_channels">No hockey channels were identified in your available TV sources. You can choose a channel manually.</string>
+</resources>

@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.KeyEvent
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
@@ -32,6 +32,7 @@ import java.io.File
 
 /** Production Application/Koin/database/Activity/shell/Home. Never supplies setContent or fake VMs. */
 class ProductionStartupTest {
+    // Queued test frames prevent reentrant measure/layout during real Activity recreation.
     @get:Rule val compose = createEmptyComposeRule()
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = instrumentation.targetContext
@@ -124,6 +125,8 @@ class ProductionStartupTest {
         for ((index, item) in listOf(MediaType.EPISODE to 6002L, MediaType.MOVIE to 5001L, MediaType.MOVIE to 5002L).withIndex())
             db.progressDao().save(PlaybackProgressEntity(profileId = 7, mediaType = item.first, itemId = item.second,
                 positionMs = (18 + index) * 60_000L, durationMs = 48 * 60_000L, updatedAt = now - 3_600_000 - index))
+        // Keep the fixture's recent-TV baseline even when refreshed hours after initial seeding.
+        db.historyDao().record(WatchHistoryEntity(profileId = 7, mediaType = MediaType.LIVE, itemId = 101001))
     }
 
     @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }
@@ -171,8 +174,32 @@ class ProductionStartupTest {
             File(pictures, "${if (premium) "premium" else "home"}-${bitmap.width}x${bitmap.height}-${java.util.Locale.getDefault().language}-profile-$selectedProfile.png")
                 .outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
             bitmap.recycle()
+            fun nativeCapture(name: String) {
+                compose.waitForIdle(); instrumentation.waitForIdleSync()
+                val frames = java.util.concurrent.CountDownLatch(1)
+                scenario.onActivity { activity ->
+                    activity.window.decorView.postOnAnimation {
+                        activity.window.decorView.postOnAnimation { frames.countDown() }
+                    }
+                }
+                assertTrue("Native capture waits for rendered frames", frames.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                instrumentation.waitForIdleSync()
+                val native = instrumentation.uiAutomation.takeScreenshot()
+                File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
+                    assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
+                }
+                native.recycle()
+            }
+            if (premium) nativeCapture("home")
+
             if (premium) {
-                fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+                fun press(code: Int) {
+                    compose.waitForIdle()
+                    val down = android.os.SystemClock.uptimeMillis()
+                    instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+                    instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+                    compose.waitForIdle()
+                }
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("smart-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("smart-hero-play").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
                 compose.onNodeWithTag("smart-hero-play").assertIsFocused()
@@ -187,22 +214,12 @@ class ProductionStartupTest {
             }
             if (premium) {
                 // Real application owners and persisted data, not a replacement setContent fixture.
-                fun press(code: Int) { compose.waitForIdle(); instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
-                fun nativeCapture(name: String) {
-                    compose.waitForIdle(); instrumentation.waitForIdleSync()
-                    val frames = java.util.concurrent.CountDownLatch(1)
-                    scenario.onActivity { activity ->
-                        activity.window.decorView.postOnAnimation {
-                            activity.window.decorView.postOnAnimation { frames.countDown() }
-                        }
-                    }
-                    assertTrue("Native capture waits for rendered frames", frames.await(3, java.util.concurrent.TimeUnit.SECONDS))
-                    instrumentation.waitForIdleSync()
-                    val native = instrumentation.uiAutomation.takeScreenshot()
-                    File(pictures, "v010-$name-${native.width}x${native.height}.png").outputStream().use {
-                        assertTrue(native.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
-                    }
-                    native.recycle()
+                fun press(code: Int) {
+                    compose.waitForIdle()
+                    val down = android.os.SystemClock.uptimeMillis()
+                    instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+                    instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+                    compose.waitForIdle()
                 }
                 compose.onNodeWithTag("top-HOME").assertExists()
                 // Home overrides Compose density; compare raw root pixels, never unrelated dp units.
@@ -214,7 +231,7 @@ class ProductionStartupTest {
                     assertTrue("All three full resume cards fit above the fold: $top..$bottom in $viewport",
                         top >= viewport.top && bottom <= viewport.bottom)
                 }
-                nativeCapture("home")
+                nativeCapture("home-restored")
                 val sourceStore = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
                 val originalChoices = sourceStore.choices(7)
                 fun openSources(tag: String) {
@@ -275,6 +292,7 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-TV").assertIsSelected()
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sub-LIVE_TV").assertIsFocused(); true }.getOrDefault(false) }
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
                 nativeCapture("tv")
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -311,7 +329,11 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
                 compose.waitForIdle()
                 compose.onNodeWithTag("top-HOME").assertIsFocused()
-                repeat(3) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+                for (destination in listOf("TV", "SPORT", "VOD")) {
+                    press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                    compose.onNodeWithTag("top-$destination").assertIsFocused()
+                    compose.onNodeWithTag("top-HOME").assertIsSelected()
+                }
                 compose.onNodeWithTag("top-VOD").assertIsFocused()
                 compose.onNodeWithTag("top-HOME").assertIsSelected()
                 press(KeyEvent.KEYCODE_DPAD_DOWN)
@@ -338,12 +360,31 @@ class ProductionStartupTest {
                 nativeCapture("settings")
                 compose.onNodeWithTag("top-HOME").performClick()
             }
+            // The populated journey intentionally leaves Home on TV3. Recreation must restore
+            // that card/scroll, rather than force the hero heading back onto the screen.
+            if (premium) {
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("smart-channel-tv3").fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("smart-channel-tv3").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("smart-channel-tv3").assertIsFocused().assertIsDisplayed(); true }.getOrDefault(false) }
+            }
+            val anchorBefore = if (premium) compose.onNodeWithTag("smart-channel-tv3").fetchSemanticsNode().positionInRoot else null
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)
             scenario.recreate()
-            compose.waitUntil(15_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText(homeLabel).assertIsDisplayed()
+            compose.waitUntil(15_000) {
+                runCatching {
+                    if (premium) compose.onNodeWithTag("smart-channel-tv3").assertIsFocused().assertIsDisplayed()
+                    else compose.onNodeWithText(homeLabel).assertIsDisplayed()
+                    true
+                }.getOrDefault(false)
+            }
+            compose.onNodeWithTag("top-HOME").assertIsSelected()
+            if (premium) {
+                val anchorAfter = compose.onNodeWithTag("smart-channel-tv3").fetchSemanticsNode().positionInRoot
+                assertEquals(anchorBefore!!.x, anchorAfter.x, 2f)
+                assertEquals(anchorBefore.y, anchorAfter.y, 2f)
+            } else compose.onNodeWithText(homeLabel).assertIsDisplayed()
             assertEquals(Lifecycle.State.RESUMED, scenario.state)
         }
         assertEquals(profileName, db.profileDao().getById(7)!!.name)

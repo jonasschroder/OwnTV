@@ -3,6 +3,7 @@ package tv.own.owntv.features.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
@@ -33,7 +34,7 @@ import tv.own.owntv.features.live.source.*
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageText
 
-/** Snapshot per profile/visit; EPG stays live. No metadata discovery, sports fetch or preview surface. */
+/** Profile-owned snapshots with bounded guides and the existing opt-in sports/Twitch companions. No preview surface. */
 @Composable
 internal fun MinTvContentHome(
     vm: HomeViewModel, liveVm: LiveViewModel, activeProfileId: Long?, previewEnabled: Boolean,
@@ -67,13 +68,29 @@ internal fun MinTvContentHome(
     val active = previewEnabled && lifecycle == Lifecycle.State.RESUMED
     var snapshot by remember(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, sourceAccess) { mutableStateOf<SmartHomeSnapshot?>(null) }
     var visible by remember(activeProfileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    val home by vm.uiState.collectAsStateWithLifecycle()
+    val favoriteIds = home.favoriteLive.takeIf { home.profileId == activeProfileId }.orEmpty().map { it.id }
+    var homeInteracted by rememberSaveable(activeProfileId) { mutableStateOf(false) }
+    var matchdayHero by rememberSaveable(activeProfileId) { mutableStateOf(false) }
+    var homeEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    var sportsEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    var sportsOpen by remember(activeProfileId) { mutableStateOf(false) }
+    val enterHome by rememberUpdatedState(homeEntry)
+    val enterSports by rememberUpdatedState(sportsEntry)
+    val isSportsOpen by rememberUpdatedState(sportsOpen)
+    val reportHomeEntry by rememberUpdatedState(onEntryHook)
+    DisposableEffect(firstRowFocusRequester, activeProfileId) {
+        reportHomeEntry { (if (isSportsOpen) enterSports else enterHome)?.invoke() ?: false }
+        onDispose { reportHomeEntry(null) }
+    }
+    LaunchedEffect(active) { if (active) homeInteracted = false }
     val scope = rememberCoroutineScope()
     var logicalBySource by remember(activeProfileId, context) { mutableStateOf<Map<String, String>>(emptyMap()) }
     DisposableEffect(vm, liveVm) {
         vm.setPreviewEnabled(false); vm.stopPreview(); liveVm.homePreview.setActive(false)
         onDispose { onPauseOrDispose(); liveVm.homePreview.setActive(false) }
     }
-    LaunchedEffect(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, sourceAccess, active) {
+    LaunchedEffect(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, sourceAccess, active, favoriteIds) {
         if (!active) return@LaunchedEffect
         val profile = activeProfileId ?: return@LaunchedEffect
         if (profileSettings == null || movieVisibility == null || seriesVisibility == null || sourceAccess?.profile != profile) return@LaunchedEffect
@@ -106,7 +123,11 @@ internal fun MinTvContentHome(
             val access = sourceAccess ?: return@LaunchedEffect
             val hasSources = access.live.isNotEmpty() || access.movies.isNotEmpty() || access.series.isNotEmpty()
             if (liveVm.swedishContextCurrent(expected)) snapshot = selectSmartHome(profile, hasSources, channels,
-                watched, watchedAt, resumes, System.currentTimeMillis())
+                watched, watchedAt, resumes, System.currentTimeMillis()).copy(favorites = favoriteIds.take(16).mapNotNull { id ->
+                    liveVm.homeChannel(id, profile)?.takeIf { channel ->
+                        SwedishChannels.recognize(channel.name)?.identity !in choices.hidden
+                    }?.let { smartHomeFavorite(it, logicalBySource) }
+                })
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
             // A failed local read cannot invent a channel or progress. Existing TV remains reachable.
@@ -114,7 +135,7 @@ internal fun MinTvContentHome(
         }
     }
     val current = snapshot?.takeIf { it.profile == activeProfileId && context.first == activeProfileId }
-    val keys = (listOfNotNull(current?.live) + visible).map { it.homeEpgKey() }.distinct().take(SWEDISH_EPG_WINDOW)
+    val keys = (listOfNotNull(current?.live) + visible + current?.favorites.orEmpty().map { it.channel }).map { it.homeEpgKey() }.distinct().take(SWEDISH_EPG_WINDOW)
     val guide = rememberHomeDashboardGuide(liveVm, activeProfileId, active, keys, current?.live)
     val profile = activeProfileId ?: -1L
     val savedChoices by remember(profile) { store.observeChoices(profile) }.collectAsStateWithLifecycle(initialValue = null)
@@ -158,11 +179,21 @@ internal fun MinTvContentHome(
             }
         }
     }
+    MinSportCompanion(previewEnabled, active, liveVm, activeProfileId,
+        home.favoriteLive.takeIf { home.profileId == activeProfileId }.orEmpty(), onPlayChannel, contentStart, onSources,
+        reservedTop = reservedTop, compact = true, homeHero = true, freezeHomeHero = homeInteracted,
+        onHomeMatchday = { if (!homeInteracted) matchdayHero = it },
+        onSettings = { onOpenSettings(MinTvSettingsDestination.SPORT) }, onMatchcenterEntry = { sportsEntry = it }) { hockey, details ->
+    SideEffect { sportsOpen = details }
     SmartHomeContent(current, guide, activeProfileId, ::play, ::resume, onOpenSeries, onLiveTv, onGuide, onSources,
-        firstRowFocusRequester, onEntryHook, onChildFocused, restoreFocus, onRestored, contentStart, reservedTop, modifier,
+        firstRowFocusRequester, { homeEntry = it }, { homeInteracted = true; onChildFocused() }, restoreFocus, onRestored, contentStart, reservedTop, modifier,
         onVisibleChannels = { visible = it }, onHeader = onHeader,
         onSource = { channel, downTime -> sourceActions.open(logical(channel), downTime) },
-        restoreSourceFocus = restoreAfterPicker, onSourceRestored = { restoreAfterPicker = false })
+        restoreSourceFocus = restoreAfterPicker, onSourceRestored = { restoreAfterPicker = false },
+        matchday = if (matchdayHero) { focus -> Box(focus) { hockey() } } else null,
+        companion = { TwitchCompanion(!details, active && !details, compact = true,
+            onOpenSettings = { onOpenSettings(MinTvSettingsDestination.TWITCH) }) })
+    }
 }
 
 @Composable

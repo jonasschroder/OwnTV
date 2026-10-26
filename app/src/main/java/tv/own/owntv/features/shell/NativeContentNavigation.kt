@@ -48,3 +48,14 @@ internal fun NativeContentEntry(request: Int, pageKey: String, enter: () -> Bool
         currentFinished.value()
     }
 }
+
+/** Register once per presentation, while the action reads the latest asynchronous page state. */
+@androidx.compose.runtime.Composable
+internal fun NativeContentEntryHook(report: (((() -> Boolean)?) -> Unit)?, owner: Any?, action: () -> Boolean) {
+    val currentReport = androidx.compose.runtime.rememberUpdatedState(report)
+    val currentAction = androidx.compose.runtime.rememberUpdatedState(action)
+    androidx.compose.runtime.DisposableEffect(owner) {
+        currentReport.value?.invoke { currentAction.value() }
+        onDispose { currentReport.value?.invoke(null) }
+    }
+}

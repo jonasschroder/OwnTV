@@ -9,7 +9,7 @@ import org.junit.runners.Suite
     SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, HomeContentViewportTest::class,
     ChannelPickerNavigationTest::class, SportsLoadingNavigationTest::class, SportsArrivalNavigationTest::class, VodPresentationTest::class,
     HomePresentationTest::class, TwitchOnboardingTest::class, TwitchPlaybackIntentTest::class, SetupOnceHomeTest::class, DiscoveryStorageIntegrationTest::class, DiscoveryPresentationTest::class, TwitchTokenStorageTest::class, HockeyLocalStorageTest::class, V07PresentationTest::class,
-    SwedishRowStorageTest::class, SwedishLivePresentationTest::class, ChannelSourceDeviceTest::class, ChannelSourceStorageTest::class,
+    SwedishRowStorageTest::class, SwedishLivePresentationTest::class, ChannelGridDeviceTest::class, NativeV011PresentationTest::class, ChannelSourceDeviceTest::class, ChannelSourceStorageTest::class,
     HomeDashboardStorageTest::class, HomeDashboardPresentationTest::class, NativeNavigationDeviceTest::class, SmartHomeDeviceTest::class, SmartHomeStorageTest::class,
     MinTvIdentityBackupTest::class, MinTvRoutingTest::class, BackupScreenDateTest::class, PlaybackErrorLogDateTest::class, GuideSelectionTest::class,
     tv.own.owntv.core.database.ChannelDaoBoundedWindowTest::class,

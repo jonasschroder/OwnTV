@@ -33,6 +33,7 @@ class SmartHomeDeviceTest {
     private var snapshot by mutableStateOf<SmartHomeSnapshot?>(SmartHomeSnapshot(7, true, channels, channels[0].channel, now - 1, null, emptyList()))
     private var guide by mutableStateOf(HomeGuideState(now, channels.associate { it.channel.homeEpgKey() to
         SwedishRowInfo(null, SwedishProgramme(it.channel.id, "Synthetic current", now - 1000, now + 1000), null) }))
+    private var matchday by mutableStateOf(false)
     private var played = 0
     private var restoreSource by mutableStateOf(false)
     private var entered: (() -> Boolean)? = null
@@ -56,7 +57,8 @@ class SmartHomeDeviceTest {
                     SmartHomeContent(snapshot, guide, profile, { played++ }, { played++ }, {}, {}, {}, {},
                         first, { entered = it }, {}, false, {}, 64.mpx, 0.mpx,
                         Modifier.weight(1f).nativeContentNavigation(header, manager), onHeader = { header.requestFocus() }, onSource = onSource,
-                        restoreSourceFocus = restoreSource, onSourceRestored = { restoreSource = false })
+                        restoreSourceFocus = restoreSource, onSourceRestored = { restoreSource = false },
+                        matchday = if (matchday) { focus -> HomeButton("Synthetic match action", {}, focus) } else null)
                 }
             }
             LaunchedEffect(profile) { withFrameNanos { }; header.requestFocus() }
@@ -111,15 +113,54 @@ class SmartHomeDeviceTest {
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("smart-hero-play").assertIsFocused(); true }.getOrDefault(false) }
         assertEquals(0, played)
     }
-    @Test fun eightLogicalChannelsFitAndRightScrollsToAdditionalChannel() {
+    @Test fun matchdayLastLiveSourceDismissRestoresExactAction() {
+        matchday = true
+        var opened = 0
+        mount { _, _ -> opened++ }
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-last-live").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val down = android.os.SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        Thread.sleep(650); compose.waitUntil(5000) { opened == 1 }
+        instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        compose.runOnIdle { restoreSource = true }
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("smart-last-live").assertIsFocused(); true }.getOrDefault(false) }
+        assertEquals(0, played)
+    }
+    @Test fun fiveLogicalChannelsFitAndRightScrollsToAdditionalChannel() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("smart-hero-play").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("smart-channel-SVT1").assertIsFocused()
-        for (name in names.take(8)) compose.onNodeWithTag("smart-channel-$name").assertIsDisplayed()
-        repeat(8) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        // Designlab 04 density: first five fit before scrolling; the sixth is reachable.
+        for (name in names.take(5)) compose.onNodeWithTag("smart-channel-$name").assertIsDisplayed()
+        repeat(5) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        compose.onNodeWithTag("smart-channel-TV6").assertIsFocused().assertIsDisplayed()
+        repeat(3) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
         compose.onNodeWithTag("smart-channel-Kanal 9").assertIsFocused().assertIsDisplayed()
         compose.runOnIdle { assertEquals(0, played) }
+    }
+    @Test fun favoritesKeepExactFocusAcrossHeaderReturnAndDoNotLeakOnProfileChange() {
+        snapshot = snapshot!!.copy(favorites = channels.take(6))
+        mount()
+        compose.onNodeWithTag("smart-favorite-TV3").assertDoesNotExist()
+        compose.onNodeWithTag("smart-channel-SVT1").assert(hasContentDescription(compose.activity.getString(tv.own.owntv.R.string.mintv_favorites_title)))
+        compose.runOnIdle { snapshot = snapshot!!.copy(favorites = channels.take(6).map {
+            it.copy(key = "extra-${it.key}", label = "Extra ${it.label}", channel = it.channel.copy(id = it.channel.id + 1000, name = "Extra ${it.label}"))
+        }) }
+        press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        // Additional favourites have their own stable rail; duplicates stay badged in Now.
+        compose.onAllNodesWithTag("smart-favorite-extra-TV3")[0].assertIsFocused()
+        compose.onNodeWithTag("top-HOME").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("smart-favorite-extra-TV3").assertIsFocused().assertIsDisplayed()
+        compose.runOnIdle { profile = 8; snapshot = SmartHomeSnapshot(8, false, emptyList(), null, null, null, emptyList()) }
+        compose.onNodeWithTag("smart-favorite-extra-TV3").assertDoesNotExist()
+        assertEquals(0, played)
     }
     @Test fun programmeRefreshAndMidnightDoNotMoveChannelFocusOrCreateHistory() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)

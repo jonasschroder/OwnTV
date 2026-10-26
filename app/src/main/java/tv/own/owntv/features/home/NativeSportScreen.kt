@@ -21,7 +21,7 @@ import tv.own.owntv.ui.theme.mpx
 internal fun NativeSportScreen(liveVm: LiveViewModel, homeVm: HomeViewModel, profileId: Long?, active: Boolean,
     onPlay: (ChannelEntity, List<ChannelEntity>) -> Unit,
     onSources: () -> Unit, onSettings: (MinTvSettingsDestination) -> Unit,
-    onEntryHook: ((() -> Boolean)?) -> Unit, onChildFocused: () -> Unit, modifier: Modifier = Modifier) {
+    onEntryHook: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit = {}, onChildFocused: () -> Unit, modifier: Modifier = Modifier) {
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val usable = active && lifecycle == Lifecycle.State.RESUMED
     val home by homeVm.uiState.collectAsStateWithLifecycle()
@@ -31,17 +31,8 @@ internal fun NativeSportScreen(liveVm: LiveViewModel, homeVm: HomeViewModel, pro
     Box(modifier.fillMaxSize().onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup()) {
         MinSportCompanion(true, usable, liveVm, profileId, favorites, onPlay, 64.mpx, onSources,
             reservedTop = 32.mpx, compact = false, onSettings = { onSettings(MinTvSettingsDestination.SPORT) },
-            onMatchcenterEntry = onEntryHook) { hockey, details ->
-            if (!details) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 64.mpx, vertical = 32.mpx),
-                verticalArrangement = Arrangement.spacedBy(24.mpx)) {
-                TvText(stringResource(R.string.mintv_nav_sport), size = 36, bold = true)
-                hockey()
-                Box(Modifier.heightIn(max = 300.mpx)) {
-                    TwitchCompanion(true, usable, compact = true,
-                        onOpenSettings = { onSettings(MinTvSettingsDestination.TWITCH) })
-                }
-                HomeButton(stringResource(R.string.settings_title), { onSettings(MinTvSettingsDestination.SPORT) })
-            }
-        }
+            dashboard = { data, actions, first, entry -> NativeSportDashboard(data, actions, first, entry, onHeader) },
+            onMatchcenterEntry = onEntryHook) { hockey, _ -> hockey() }
+
     }
 }

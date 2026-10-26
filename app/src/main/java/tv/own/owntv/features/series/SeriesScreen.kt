@@ -182,6 +182,7 @@ fun SeriesScreen(
     lockedKey: LiveKey? = null,
     /** Hands the shell this screen's way in from the rail (Separate: the open category; Cinematic: the title). */
     onEntryHook: (((() -> Boolean)?) -> Unit)? = null,
+    onSeriesClosed: (() -> Unit)? = null,
 ) {
     val vm: SeriesViewModel = koinViewModel()
     // Locking and unlocking are one pair: the pin belongs to this screen's lifetime, not to the view
@@ -200,7 +201,10 @@ fun SeriesScreen(
     // Track leaving a show so the grid can put focus back on the poster you came from (the episode
     // view that held focus is unmounted on Back — focus would otherwise die and land on the sidebar).
     var returnFromShow by remember { mutableStateOf(false) }
-    LaunchedEffect(openedSeries) { if (openedSeries != null) returnFromShow = true }
+    LaunchedEffect(openedSeries) {
+        if (openedSeries != null) returnFromShow = true
+        else if (returnFromShow) onSeriesClosed?.invoke()
+    }
 
     if (openedSeries != null) {
         EpisodeView(
@@ -468,12 +472,9 @@ private fun SeriesGrid(
     // The way in from the rail: Separate lands on the open category in the column (as Live TV's
     // Separate panels), Cinematic on the title the hero shows. The shell's focus restorer would
     // otherwise return to whatever had focus last, such as the search field.
-    DisposableEffect(onEntryHook, cinematic) {
-        onEntryHook?.invoke {
-            // The column's own row path (scrolls to it if needed), not the list's first child: the search field.
-            if (!cinematic && lockedKey == null) { railFocusRow = selectedIndex; true } else focusCurrentTitle()
-        }
-        onDispose { onEntryHook?.invoke(null) }
+    tv.own.owntv.features.shell.NativeContentEntryHook(onEntryHook, cinematic to lockedKey) {
+        // The actual current category/title, including updates while this page stays composed.
+        if (!cinematic && lockedKey == null) { railFocusRow = selectedIndex; true } else focusCurrentTitle()
     }
 
     // Manual panel widths (Settings → Panel Width Adjustment), mapped onto Stage: Separate = the column,

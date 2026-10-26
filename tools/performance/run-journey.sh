@@ -13,7 +13,7 @@ run() {
   python3 - "$out/$label.txt" <<'PY'
 import pathlib,sys
 s=pathlib.Path(sys.argv[1]).read_text()
-if 'OK (1 test)' not in s or 'FAILURES' in s or 'INSTRUMENTATION_FAILED' in s:
+if 'OK (1 test)' not in s or 'FAILURES' in s or 'INSTRUMENTATION_FAILED' in s or 'INSTRUMENTATION_STATUS_CODE: -3' in s:
     print(s[-5000:]); raise SystemExit(1)
 PY
 }

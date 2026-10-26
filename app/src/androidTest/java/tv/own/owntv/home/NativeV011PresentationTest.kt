@@ -182,6 +182,8 @@ class NativeV011PresentationTest {
     @Test fun sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus() {
         mount(); enter(TopDestination.SPORT)
         compose.onNodeWithTag("sport-hero-action").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-hero-action").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-today-${fixture.id}").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-upcoming-fixture-next").assertIsFocused()

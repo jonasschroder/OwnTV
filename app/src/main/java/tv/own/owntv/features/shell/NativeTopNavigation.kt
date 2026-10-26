@@ -44,8 +44,6 @@ internal fun NativeTopNavigation(
     BoxWithConstraints(modifier.fillMaxWidth().height(88.mpx * maxOf(1f, LocalDensity.current.fontScale)).background(OwnTVTheme.colors.background)) {
         val brand = maxWidth > 850.dp
         Row(Modifier.fillMaxSize().padding(horizontal = 32.mpx, vertical = 16.mpx)
-            .focusRequester(selectedFocus)
-            .focusProperties { onEnter = { targets.getValue(selected).requestFocus() } }
             .onFocusChanged { if (it.hasFocus) onFocused() }
             .onPreviewKeyEvent { event ->
                 if (event.key == Key.DirectionRight && focused == TopDestination.PROFILE && onUtilities != null) {
@@ -63,11 +61,11 @@ internal fun NativeTopNavigation(
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                 TopDestination.entries.filter { it != TopDestination.PROFILE }.forEach { destination ->
                     NativeTopItem(destination, stringResource(labels.getValue(destination)), selected,
-                        targets.getValue(destination), onSelect) { focused = destination }
+                        if (destination == selected) selectedFocus else targets.getValue(destination), onSelect) { focused = destination }
                 }
             }
             NativeTopItem(TopDestination.PROFILE, stringResource(labels.getValue(TopDestination.PROFILE)),
-                selected, targets.getValue(TopDestination.PROFILE), onSelect) { focused = TopDestination.PROFILE }
+                selected, if (selected == TopDestination.PROFILE) selectedFocus else targets.getValue(TopDestination.PROFILE), onSelect) { focused = TopDestination.PROFILE }
 
         }
     }

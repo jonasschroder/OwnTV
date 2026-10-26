@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.focus.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
@@ -28,8 +29,10 @@ internal fun NativeHeaderUtilities(epg: EpgViewModel, profile: Long?, destinatio
     val observed by epg.manualRefresh.collectAsStateWithLifecycle()
     val status = observed.takeIf { it.profile == profile }
     val time = rememberSystemTimeFormatter()
+    var ownsFocus by remember { mutableStateOf(false) }
+    BackHandler(enabled = ownsFocus) { header() }
     Row(Modifier.fillMaxWidth().heightIn(min = 42.mpx).padding(horizontal = 40.mpx)
-        .focusRequester(entry).onPreviewKeyEvent { event ->
+        .focusRequester(entry).onFocusChanged { ownsFocus = it.hasFocus }.onPreviewKeyEvent { event ->
             when (event.key) {
                 Key.DirectionUp -> { if (event.type == KeyEventType.KeyDown) header(); true }
                 Key.DirectionDown -> { if (event.type == KeyEventType.KeyDown) enterContent(); true }

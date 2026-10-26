@@ -19,4 +19,5 @@
     <string name="mintv_v0111_library_history">Bibliotek och historik</string>
     <string name="mintv_v0111_no_epg_match">Ingen matchande EPG hittades i dina kanaler. Välj kanal manuellt.</string>
     <string name="mintv_v0111_broadcast_disabled">Extern sändningsinformation är avstängd. Lokal EPG och manuellt kanalval finns kvar.</string>
+    <string name="mintv_v0111_manual_channel">Manuellt vald kanal (obekräftad): %1$s</string>
 </resources>

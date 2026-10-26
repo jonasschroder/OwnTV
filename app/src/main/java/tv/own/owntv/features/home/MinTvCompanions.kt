@@ -699,7 +699,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         selected.result?.takeUnless { selectedTeams.hideScores }?.let { result -> item { TvText(stringResource(R.string.mintv_result_snapshot, result), size = 27, color = MinTvMuted) } }
                         validBroadcast?.let { assignment -> item { TvText(assignment.channels.filter { it.linear }.joinToString { it.name }, size = 30, color = MinTvTeal, bold = true)
                             TvText(stringResource(R.string.mintv_updated, updateLabel(assignment.checkedAt.toEpochMilli(), now)), size = 18, color = MinTvMuted) } }
-                        if (manualChannel != null) item { TvText(stringResource(R.string.mintv_saved_channel, manualChannel.name), size = 25) }
+                        if (manualChannel != null) item { TvText(stringResource(R.string.mintv_v0111_manual_channel, manualChannel.name), size = 25) }
                         if (localEvidence != null) item {
                             TvText(stringResource(R.string.mintv_hockey_epg_evidence), color = MinTvTeal, size = 21)
                             if (localCheckedAt > 0) TvText(stringResource(R.string.mintv_updated, updateLabel(localCheckedAt, now)), size = 18, color = MinTvMuted)

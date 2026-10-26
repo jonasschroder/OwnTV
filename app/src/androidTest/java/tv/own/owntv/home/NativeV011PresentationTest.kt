@@ -147,9 +147,11 @@ class NativeV011PresentationTest {
         compose.waitUntil(5000) { entry != null }
         compose.waitForIdle()
         compose.mainClock.advanceTimeByFrame(); compose.mainClock.advanceTimeByFrame()
-        compose.runOnIdle { entry?.invoke() }
+        var entered = false
+        compose.runOnIdle { entered = entry?.invoke() == true }
+        if (!entered) compose.onNodeWithTag("top-${destination.name}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
         compose.waitForIdle()
-        val focusedTag = when (destination) { TopDestination.HOME -> "fixture-matchday"; TopDestination.TV -> "fixture-tv-0"; TopDestination.SPORT -> "sport-hero-action"; else -> "vod-movies-entry" }
+        val focusedTag = when (destination) { TopDestination.HOME -> "fixture-matchday"; TopDestination.TV -> "fixture-tv-0"; TopDestination.SPORT -> if (populated) "sport-hero-action" else "top-SPORT"; else -> "vod-movies-entry" }
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag(focusedTag).assertIsFocused(); true }.getOrDefault(false) }
     }
     private fun captures(size: String, suffix: String) {

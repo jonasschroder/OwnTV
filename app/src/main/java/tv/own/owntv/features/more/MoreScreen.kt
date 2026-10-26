@@ -79,6 +79,7 @@ private enum class MoreItem { SETTINGS, FAVORITES, HISTORY, BACKUP, LOCAL_SYNC, 
 @Composable
 fun MoreScreen(
     profileName: String,
+    nativeLibrary: Boolean = false,
     playlistLabel: String,
     avatarId: Int,
     avatarPath: String,
@@ -99,7 +100,7 @@ fun MoreScreen(
     vm: MoreCountsViewModel = koinViewModel(),
     settingsVm: SettingsViewModel = koinViewModel(),
 ) {
-    var selected by rememberSaveable { mutableStateOf(MoreItem.SETTINGS) }
+    var selected by rememberSaveable(nativeLibrary) { mutableStateOf(if (nativeLibrary) MoreItem.FAVORITES else MoreItem.SETTINGS) }
     val itemFocus = remember { MoreItem.entries.associateWith { FocusRequester() } }
     // What OK / ▶ focuses on the page: a fixed target, or the page's own choice (its first row).
     val pageTarget = remember { FocusRequester() }
@@ -161,7 +162,7 @@ fun MoreScreen(
                     modifier = Modifier.focusRequester(itemFocus.getValue(it)).testTag("profile-page-${it.name}"),
                 )
             }
-            item(MoreItem.SETTINGS, OwnTVIcon.SETTINGS, stringResource(R.string.common_nav_settings), null, false)
+            if (!nativeLibrary) item(MoreItem.SETTINGS, OwnTVIcon.SETTINGS, stringResource(R.string.common_nav_settings), null, false)
             GroupLabel(stringResource(R.string.more_group_your_things))
             item(MoreItem.FAVORITES, OwnTVIcon.FAVORITE, stringResource(R.string.content_category_favorites), favorites.total.toString(), false)
             item(MoreItem.HISTORY, OwnTVIcon.HISTORY, stringResource(R.string.content_category_history), history.total.toString(), false)

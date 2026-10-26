@@ -95,7 +95,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val candidates = library.groups.filter { g ->
         (g.variants.first().name.collection == collection || collection == SwedishCollection.OTHER && g.variants.first().name.collection in listOf(SwedishCollection.NEWS, SwedishCollection.CHILDREN)) && g.preferred(choices.preferred[g.identity], choices.showUhd) != null
     }
-    val knownGuide = remember(profile) { linkedMapOf<String, SwedishRowInfo>() }
+    val knownGuide = remember(profile, metadata) { linkedMapOf<String, SwedishRowInfo>() }
     var order by remember(profile, collection) { mutableStateOf<List<String>>(emptyList()) }
     val candidateIds = candidates.map { it.identity }
     LaunchedEffect(candidateIds, collection, gridHasFocus) {

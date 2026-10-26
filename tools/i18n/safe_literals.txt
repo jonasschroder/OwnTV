@@ -1549,6 +1549,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	—
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	◀ ▶
 1	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsCategoryMenu.kt	settings-categories
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsCategoryMenu.kt	settings-group-${group.name}
 20	empty	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#%06X

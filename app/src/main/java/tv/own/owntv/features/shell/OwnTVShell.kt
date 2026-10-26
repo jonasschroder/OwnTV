@@ -1134,6 +1134,7 @@ fun OwnTVShell(
                         }
                         // Plan Z — the hub the rail's last item now opens. Settings is a row in it.
                         selectedSection == MainSection.MORE -> tv.own.owntv.features.more.MoreScreen(
+                            nativeLibrary = true,
                             profileName = profileName.ifBlank { stringResource(R.string.common_own_tv_user) },
                             playlistLabel = playlistLabel,
                             avatarId = avatarId,

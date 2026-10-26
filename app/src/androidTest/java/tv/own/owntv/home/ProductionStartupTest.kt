@@ -368,7 +368,7 @@ class ProductionStartupTest {
                 compose.onNode(hasText(recordingsLabel) and hasClickAction()).performClick()
                 nativeCapture("recordings")
                 compose.onNodeWithTag("top-PROFILE").performClick()
-                compose.onNodeWithTag("settings-group-APP").assertIsDisplayed()
+                compose.onNodeWithTag("settings-group-PROFILE").assertIsDisplayed()
                 nativeCapture("settings")
                 compose.onNodeWithTag("top-HOME").performClick()
             }

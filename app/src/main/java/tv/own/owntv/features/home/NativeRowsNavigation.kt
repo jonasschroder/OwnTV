@@ -17,6 +17,8 @@ internal fun nativeRowTarget(rows: List<NativeRow>, key: String?, vertical: Int,
         .firstOrNull { rows[it].keys.isNotEmpty() } ?: return null
     return rows[target].keys.getOrNull(column.coerceIn(0, rows[target].keys.lastIndex.coerceAtLeast(0)))
 }
+private class CommittedRowsFocus(var keys: Set<String>, var selected: String?, var owned: Boolean)
+
 internal class NativeRowsNavigation(val list: LazyListState, val rails: Map<String, LazyListState>,
     val modifier: Modifier, val item: (String) -> Modifier)
 
@@ -64,7 +66,10 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
     SideEffect { targets.keys.retainAll(rows.flatMap { it.keys }.toSet()) }
     // Capture ownership before the commit disposes a removed card's focus target. Reading it
     // inside the effect is too late: the empty destination has already cleared focus by then.
-    val removedOwnedTarget = ownsFocus && rows.none { selected in it.keys }
+    val committed = remember(profile) { CommittedRowsFocus(emptySet(), null, false) }
+    val keys = rows.flatMap { it.keys }.toSet()
+    val removedOwnedTarget = committed.owned && committed.selected in committed.keys && committed.selected !in keys
+    SideEffect { committed.keys = keys; committed.selected = selected; committed.owned = ownsFocus }
     LaunchedEffect(rows, restoreRemoved) {
         if ((removedOwnedTarget || restoreRemoved) && rows.none { selected in it.keys }) {
             val fallback = rows.firstOrNull { it.keys.isNotEmpty() }?.keys?.firstOrNull()
@@ -97,6 +102,7 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         targets[id] = requester
         Modifier.focusRequester(requester).onFocusChanged { if (it.isFocused) {
             selected = id
+            ownsFocus = true
             if (pending != id) column = currentRows.firstOrNull { id in it.keys }?.keys?.indexOf(id)?.coerceAtLeast(0) ?: 0
         } }
     }

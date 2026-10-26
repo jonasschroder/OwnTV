@@ -172,7 +172,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                 Column(verticalArrangement = Arrangement.spacedBy(20.mpx)) {
                 TvText(stringResource(R.string.mintv_smart_evening), size = 34, bold = true)
                 SmartHomeHero(current, guide, onLive, onResume, onEpisodes, onTv, onGuide, onSources,
-                    nav.section(0), heroSource, pendingSourcePress, companionFocus, matchday, companion, { utilityRow = it }, utilityFocus)
+                    nav.section(0), heroSource, pendingSourcePress, companionFocus, matchday, companion, { utilityRow = it; nav.selected = 0 }, utilityFocus)
                 }
             }
             if (channels.isNotEmpty()) item(key = "smart-now") {

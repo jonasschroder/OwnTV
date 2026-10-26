@@ -1124,8 +1124,8 @@ class LiveViewModel(
     suspend fun homeSportsChannels(query: String, favorites: List<ChannelEntity>, expectedProfileId: Long): List<ChannelEntity> = withContext(Dispatchers.IO) {
         val current = ctx.value
         if (current.profileId != expectedProfileId || current.sourceIds.isEmpty()) return@withContext emptyList()
-        val terms = if (query.isNotBlank()) listOf(query.take(80)) else listOf("sport", "hockey", "SHL", "TV4", "C More")
-        val candidates = (favorites + terms.flatMap { channelDao.searchList(it, current.sourceIds, 24) }).distinctBy { it.id }.take(128)
+        val terms = if (query.isNotBlank()) listOf(query.take(80)) else listOf("TV4 Sport Live", "TV4 Hockey", "TV Hockey", "sport", "hockey", "SHL", "C More")
+        val candidates = (favorites + terms.flatMap { channelDao.searchList(it, current.sourceIds, 128) }).distinctBy { it.id }.take(128)
         candidates.filter { isVisibleToActiveProfile(it) }
     }
 

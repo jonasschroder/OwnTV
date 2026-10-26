@@ -30,10 +30,10 @@ internal class NativeSportActions(val details: (SportFixture) -> Unit, val chann
 internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSportActions, first: FocusRequester,
     onEntry: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit, modifier: Modifier = Modifier) {
     val rows = buildList {
-        add(NativeRow("sport-hero", listOf("sport-hero-action", "sport-settings"), horizontalRail = false))
+        add(NativeRow("sport-hero", if (data.hero != null) listOf("sport-hero-action") else emptyList(), horizontalRail = false))
         if (data.today.isNotEmpty()) add(NativeRow("sport-today", data.today.take(16).map { "sport-today-${it.id}" }))
         if (data.upcoming.isNotEmpty()) add(NativeRow("sport-upcoming", data.upcoming.take(12).map { "sport-upcoming-${it.id}" }))
-        if (data.channels.isNotEmpty()) add(NativeRow("sport-channels", data.channels.take(48).map { "sport-channel-${it.id}" } + "sport-browse"))
+        if (data.channels.isNotEmpty()) add(NativeRow("sport-channels", data.channels.take(48).map { "sport-channel-${it.id}" }))
     }
     val nav = rememberNativeRowsNavigation(rows, data.profile, first, onEntry, onHeader)
     BoxWithConstraints(modifier.fillMaxSize().background(DesignLabBackground)) {
@@ -50,10 +50,10 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                         data.hero?.let { TvText(fixtureWhen(it, data.now), size = 23, color = MinTvMuted) }
                         if (data.hero != null) TvText(data.heroChannel?.name ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 21, color = MinTvMuted)
                         if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_v011_no_hockey_channels), size = 20, color = MinTvMuted, lines = 2)
-                        Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
-                            SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.mintv_v011_browse_hockey),
-                                if (data.heroChannel != null) actions.watch else actions.browse, nav.item("sport-hero-action").testTag("sport-hero-action"), primary = true)
-                            SmartAction(stringResource(R.string.settings_title), actions.settings, nav.item("sport-settings"))
+                        data.hero?.let { game ->
+                            SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.mintv_v0111_match_details),
+                                if (data.heroChannel != null) actions.watch else ({ actions.details(game) }),
+                                nav.item("sport-hero-action").testTag("sport-hero-action"), primary = true)
                         }
                     }
                 }
@@ -71,7 +71,6 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                         items(data.channels.take(48), key = { it.id }) { channel ->
                             HomeButton(channel.name, { actions.channel(channel) }, nav.item("sport-channel-${channel.id}").width(width), logo = channel.displayLogoUrl)
                         }
-                        item { HomeButton(stringResource(R.string.mintv_v011_browse_hockey), actions.browse, nav.item("sport-browse").width(width)) }
                     }
                 }
             }
@@ -89,7 +88,7 @@ private fun SportFixtureRail(label: String, fixtures: List<SportFixture>, id: St
                     Column(Modifier.fillMaxWidth().heightIn(min = (if (id == "sport-upcoming") 80 else 150).mpx).neutralArtwork().padding(8.mpx), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                         TvText(fixtureWhen(game, data.now), size = 18, color = MinTvMuted, lines = 1)
                         TvText(pairLabel(game), size = if (id == "sport-upcoming") 23 else 28, bold = true, lines = if (id == "sport-upcoming") 1 else 2)
-                        if (id != "sport-upcoming") TvText(game.result?.takeUnless { data.preferences.hideScores } ?: data.broadcastLabels[game.id]
+                        TvText(game.result?.takeUnless { data.preferences.hideScores } ?: data.broadcastLabels[game.id]
                             ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 19, color = MinTvMuted, lines = 2)
                         if (game.result != null && !data.preferences.hideScores) TvText(stringResource(R.string.mintv_saved_result), size = 16, color = MinTvMuted)
                     }

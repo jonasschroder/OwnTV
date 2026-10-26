@@ -102,6 +102,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var page by rememberSaveable(profileId) { mutableIntStateOf(0) }
     var data by remember(profileId) { mutableStateOf<Map<String, SportSnapshot>>(emptyMap()) }
     var localMatches by remember(profileId) { mutableStateOf<List<EpgHockeyMatch>>(emptyList()) }
+    var localCheckedAt by remember(profileId) { mutableLongStateOf(0L) }
     var localChannels by remember(profileId) { mutableStateOf<Map<Long, ChannelEntity>>(emptyMap()) }
     var localLoading by remember(profileId) { mutableStateOf(false) }
     var localFailed by remember(profileId) { mutableStateOf(false) }
@@ -137,7 +138,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         try {
             val choices = swedishChannels.choices(profileId)
             val rows = liveVm.homeSportsChannels("", favorites, profileId)
-            if (liveVm.homeLibraryContext.value == libraryContext) dashboardChannels = sortHockeyChannels(hockeyGuideChannels(rows, choices).filter { hockeyChannelNumber(it.name) != null }).take(48)
+            if (liveVm.homeLibraryContext.value == libraryContext) dashboardChannels = logicalHockeyChannels(rows, choices).take(48)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { dashboardChannels = emptyList() }
     }
@@ -218,7 +219,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     }
                     Triple(collector.result(pool.truncated || eligible.size > 64), eligible.take(64).associateBy { it.id }, choices)
                 } }
-                localChannels = loaded.second; localMatches = loaded.first; guideChoices = loaded.third
+                localChannels = loaded.second; localMatches = loaded.first; localCheckedAt = System.currentTimeMillis(); guideChoices = loaded.third
             } catch (timeout: TimeoutCancellationException) {
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 localFailed = true; SportsDiagnostics.failure(timeout, HockeyStage.CACHE)
@@ -503,7 +504,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 val freshGames = allGames.filter { it.competition.id in freshCompetitions || localHockeyEvidence(unexpiredMatches, it) != null }
                 val labels = freshGames.mapNotNull { game ->
                     val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[fixtureKey(game.broadcastFixture())], Instant.ofEpochMilli(now)) else null
-                    val label = assignment?.channels?.filter { it.linear }?.joinToString { it.name }?.takeIf { it.isNotBlank() }
+                    val local = localHockeyEvidence(unexpiredMatches, game)?.takeUnless { it.truncated }
+                    val localLabel = local?.channelIds?.mapNotNull { localChannels[it]?.name }?.distinct()?.joinToString()?.takeIf { it.isNotBlank() }
+                    val label = localLabel ?: assignment?.channels?.filter { it.linear }?.joinToString { it.name }?.takeIf { it.isNotBlank() }
                     label?.let { game.id to it }
                 }.toMap()
                 val onAir = onAirHockeyFixtures(unexpiredMatches, now)
@@ -696,9 +699,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         selected.result?.takeUnless { selectedTeams.hideScores }?.let { result -> item { TvText(stringResource(R.string.mintv_result_snapshot, result), size = 27, color = MinTvMuted) } }
                         validBroadcast?.let { assignment -> item { TvText(assignment.channels.filter { it.linear }.joinToString { it.name }, size = 30, color = MinTvTeal, bold = true)
                             TvText(stringResource(R.string.mintv_updated, updateLabel(assignment.checkedAt.toEpochMilli(), now)), size = 18, color = MinTvMuted) } }
-                        if (manualChannel != null) item { TvText(stringResource(R.string.mintv_saved_channel, manualChannel.name), size = 25) }
+                        if (manualChannel != null) item { TvText(stringResource(R.string.mintv_v0111_manual_channel, manualChannel.name), size = 25) }
                         if (localEvidence != null) item {
                             TvText(stringResource(R.string.mintv_hockey_epg_evidence), color = MinTvTeal, size = 21)
+                            if (localCheckedAt > 0) TvText(stringResource(R.string.mintv_updated, updateLabel(localCheckedAt, now)), size = 18, color = MinTvMuted)
                             if (localEvidence.timeFromEpg) TvText(stringResource(R.string.mintv_hockey_epg_time), color = MinTvMuted, size = 18)
                         }
                         item {
@@ -710,7 +714,10 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                         }
                         if (hasChannels == false) item { TvText(stringResource(R.string.mintv_no_channels), color = MinTvMuted, lines = 3) }
                         if (validBroadcast != null && reliableChannels.isEmpty() && !matching) item { TvText(stringResource(R.string.mintv_channel_missing), color = MinTvMuted) }
-                        if (validBroadcast == null && manualChannel == null && !matching && reliableChannels.isEmpty() && hasChannels == true) item { TvText(stringResource(R.string.mintv_broadcast_unavailable), color = MinTvMuted) }
+                        if (validBroadcast == null && manualChannel == null && !matching && reliableChannels.isEmpty() && hasChannels == true) item {
+                            TvText(stringResource(R.string.mintv_v0111_no_epg_match), color = MinTvMuted, lines = 3)
+                            TvText(stringResource(if (!broadcastEnabled) R.string.mintv_v0111_broadcast_disabled else R.string.mintv_broadcast_unavailable), color = MinTvMuted, lines = 3)
+                        }
                         if (directChannel != null) item { HomeButton(stringResource(R.string.mintv_change_channel), { picker = true; searchOpen = false; restoreTarget = pickerFocus }) }
                         if (manualChannel != null) item { HomeButton(stringResource(R.string.mintv_forget_channel), {
                             profileId?.let { overrides.clear(it, selected.broadcastFixture()) }; choiceVersion++

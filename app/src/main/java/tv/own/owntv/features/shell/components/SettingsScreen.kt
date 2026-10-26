@@ -1221,6 +1221,9 @@ fun SettingsScreen(
         onOpenZoom = { saveScroll(); dialogReturn = zoomRowFocus; showZoom = true },
         fontCustomization, onSetFontCustomization, playlistSources,
     )
+    val categoryTarget = remember { FocusRequester() }
+    var categoryRowsFocused by remember { mutableStateOf(false) }
+    BackHandler(enabled = categoryRowsFocused && !searching && !anyDialogOpen) { runCatching { categoryTarget.requestFocus() } }
     // Shared with the dialogs below, so the simple ones open in the page's panel (owner, P12).
     val panel = remember { tv.own.owntv.features.settings.SettingsPanelState() }
     CompositionLocalProvider(
@@ -1240,6 +1243,10 @@ fun SettingsScreen(
             searchFocus = searchFieldFocus,
             rowsFocus = rowsFocus,
             modifier = modifier,
+            categories = if (searching) null else ({
+                SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, { runCatching { rowsFocus.requestFocus() } }, categoryTarget)
+            }),
+            onRowsFocused = { categoryRowsFocused = it },
             searchAutoEdit = searchAutoEdit,
             panelTop = if (group == SettingsGroup.APPEARANCE && !searching) ({ tv.own.owntv.features.settings.SettingsLivePreview() }) else null,
         ) {
@@ -1258,6 +1265,7 @@ fun SettingsScreen(
                     if (group == SettingsGroup.WATCHING) tv.own.owntv.features.settings.RecordingSettingsRows(pageScroll)
                 }
                 group == SettingsGroup.PROFILE -> tv.own.owntv.features.settings.ProfileSettingsRows()
+                group == SettingsGroup.SPORT -> ProfileSportSettingsRows()
                 // Only Quick can be empty, and only because the user emptied it.
                 selectedRows.isEmpty() -> StageSettingsNote(stringResource(R.string.settings_quick_empty_title), stringResource(R.string.settings_quick_empty_hint))
                 else -> {

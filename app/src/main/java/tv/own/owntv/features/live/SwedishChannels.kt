@@ -52,21 +52,37 @@ internal object SwedishChannels {
         value = suffix.replace(value, "").trim()
         val compact = value.lowercase(Locale.ROOT).replace(" ", "")
         val exact = known.firstOrNull { it.lowercase(Locale.ROOT).replace(" ", "") == compact }
-            ?: if (compact == "tv7") "Sjuan" else null
+            ?: when {
+                compact in listOf("svt1värmland", "svt1varmland", "svt2värmland", "svt2varmland") ->
+                    "${if (compact.startsWith("svt1")) "SVT1" else "SVT2"} Värmland"
+                compact == "tv7" -> "Sjuan"
+                compact == "tvhockey" -> "TV4 Hockey"
+                Regex("tv4sportlive[1-9][0-9]{0,2}").matches(compact) -> "TV4 Sport Live ${compact.removePrefix("tv4sportlive").toInt()}"
+                Regex("(?:tv4|tv)hockeylive[1-9][0-9]{0,2}").matches(compact) -> "TV4 Sport Live ${compact.substringAfter("hockeylive").toInt()}"
+                else -> null
+            }
         // Unknown suffixes (regions, +1, audio, alternate broadcasts) stay in a distinct identity.
         // Only country-tagged unknown names enter Other; untagged uncertain names stay in All.
         if (exact == null && !tagged) return null
         if (compact.isEmpty() || compact == "tv4playhockey") return null // An OTT service is not a linear channel.
         val label = exact ?: value
         val collection = when {
-            label in general -> SwedishCollection.GENERAL
+            label in general || label.endsWith(" Värmland") -> SwedishCollection.GENERAL
             exact?.contains("Sport", true) == true || exact?.contains("Hockey", true) == true || exact?.startsWith("Eurosport") == true || exact == "TV4 Fotboll" -> SwedishCollection.SPORT
             exact in listOf("BBC News", "CNN", "Al Jazeera") -> SwedishCollection.NEWS
             exact in listOf("Nickelodeon", "Nick Jr", "Disney Channel", "Cartoon Network") -> SwedishCollection.CHILDREN
             else -> SwedishCollection.OTHER
         }
-        return SwedishName(label.lowercase(Locale.ROOT).replace(" ", ""), label, q, collection,
-            general.indexOf(label).takeIf { it >= 0 } ?: 100)
+        return SwedishName(label.lowercase(Locale.ROOT).replace(" ", "").replace("värmland", "varmland"), label, q, collection,
+            general.indexOf(label.substringBefore(" Värmland")).takeIf { it >= 0 } ?: sportOrder(label))
+    }
+    private fun sportOrder(label: String): Int = when {
+        label == "TV4 Hockey" -> 100
+        label.startsWith("TV4 Sport Live ") -> 100 + (label.substringAfterLast(' ').toIntOrNull() ?: 999)
+        label == "TV4 Sportkanalen" -> 1200
+        label.startsWith("TV4 ") -> 1201
+        label.startsWith("Eurosport ") -> 1300 + (label.substringAfterLast(' ').toIntOrNull() ?: 9)
+        else -> 1400
     }
     fun group(variants: List<SwedishVariant>, order: List<String> = emptyList(), hidden: Set<String> = emptySet()): List<SwedishGroup> =
         variants.filter { it.name.identity !in hidden }.groupBy { it.name.identity }.mapNotNull { (id, rows) ->

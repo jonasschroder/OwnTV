@@ -12,6 +12,11 @@ class NativeRowsNavigationTest {
         assertEquals("film-3", nativeRowTarget(rows, "series-1", -1, 3))
         assertEquals("episode-9", nativeRowTarget(rows, "series-1", 1, 3))
     }
+    @Test fun nonInteractiveEmptyRowsDoNotTrapDirectionalNavigation() {
+        val sparse = listOf(rows.first(), NativeRow("empty", emptyList()), rows.last())
+        assertEquals("episode-8", nativeRowTarget(sparse, "film-entry", 1, 0))
+        assertEquals("film-2", nativeRowTarget(sparse, "episode-9", -1, 2))
+    }
     @Test fun removedRowsAndUnavailableContentDoNotInventTargets() {
         assertNull(nativeRowTarget(rows, "removed", 1, 0))
         assertNull(nativeRowTarget(emptyList(), "film-entry", 1, 0))

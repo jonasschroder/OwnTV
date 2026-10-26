@@ -19,13 +19,13 @@ internal fun nativeRoutes(destination: TopDestination, visible: Set<MainSection>
     TopDestination.TV -> listOf(MainSection.LIVE_TV, MainSection.EPG).filter { it in visible }
     TopDestination.SPORT -> emptyList() // the existing companion owns this presentation-only route
     TopDestination.VOD -> listOf(MainSection.MOVIES, MainSection.SERIES).filter { it in visible }
-    TopDestination.PROFILE -> listOf(MainSection.MORE, MainSection.DOWNLOADS, MainSection.SETTINGS)
+    TopDestination.PROFILE -> listOf(MainSection.SETTINGS, MainSection.MORE, MainSection.DOWNLOADS)
 }
 
 internal fun nativeEntry(destination: TopDestination, visible: Set<MainSection>, lastVod: MainSection, lastTv: MainSection = MainSection.LIVE_TV): MainSection? =
     when (destination) {
         TopDestination.SPORT -> MainSection.HOME
-        TopDestination.TV -> nativeRoutes(destination, visible).let { lastTv.takeIf(it::contains) ?: it.firstOrNull() }
+        TopDestination.TV -> nativeRoutes(destination, visible).firstOrNull()
         TopDestination.VOD -> nativeRoutes(destination, visible).let { lastVod.takeIf(it::contains) ?: it.firstOrNull() }
         else -> nativeRoutes(destination, visible).firstOrNull()
     }

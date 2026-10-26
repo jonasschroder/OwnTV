@@ -6,4 +6,19 @@
     <string name="mintv_export_crash">Export crash report</string>
     <string name="mintv_provider_rating">Provider rating</string>
     <string name="mintv_tmdb_rating">TMDB rating</string>
+    <string name="mintv_v0111_svt_play">SVT Play</string>
+    <string name="mintv_v0111_telenor">Telenor Stream</string>
+    <string name="mintv_v0111_open_store">Open store</string>
+    <string name="mintv_v0111_app_unavailable">This app or store cannot be opened on this device.</string>
+    <string name="mintv_v0111_match_details">Match details</string>
+    <string name="mintv_v0111_epg_refresh">Refresh EPG</string>
+    <string name="mintv_v0111_epg_running">Refreshing EPG…</string>
+    <string name="mintv_v0111_epg_done">EPG refreshed %1$s</string>
+    <string name="mintv_v0111_epg_failed">EPG refresh failed. See IPTV and EPG in Settings.</string>
+    <string name="mintv_v0111_epg_empty">No EPG source for this profile.</string>
+    <string name="mintv_v0111_library_history">Library and history</string>
+    <string name="mintv_v0111_no_epg_match">No matching EPG found in your channels. Choose a channel manually.</string>
+    <string name="mintv_v0111_broadcast_disabled">Broadcast metadata is disabled. Local EPG and manual selection remain available.</string>
+    <string name="mintv_v0111_manual_channel">Manual channel (unverified): %1$s</string>
+    <string name="mintv_v0111_profile_switch">%1$s · Switch profile</string>
 </resources>

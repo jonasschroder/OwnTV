@@ -30,9 +30,9 @@ class NativeNavigationTest {
         assertEquals(MainSection.SERIES, nativeEntry(TopDestination.VOD, all, MainSection.SERIES))
         assertEquals(MainSection.MOVIES, nativeEntry(TopDestination.VOD, all - MainSection.SERIES, MainSection.SERIES))
     }
-    @Test fun guideSubviewIsRestoredWithoutReplacingLiveGuidePreference() {
+    @Test fun tvAlwaysEntersGridAndGuideRemainsAvailableWithoutReplacingPreference() {
         assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all, MainSection.MOVIES))
-        assertEquals(MainSection.EPG, nativeEntry(TopDestination.TV, all, MainSection.MOVIES, MainSection.EPG))
+        assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all, MainSection.MOVIES, MainSection.EPG))
         assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all - MainSection.EPG, MainSection.MOVIES, MainSection.EPG))
     }
     @Test fun guideOnlyAndEmptyTvDoNotUnhideLive() {
@@ -41,9 +41,9 @@ class NativeNavigationTest {
         assertNull(nativeEntry(TopDestination.VOD, emptySet(), MainSection.MOVIES))
     }
     @Test fun profileAndSettingsRemainReachableWithNoContentOrNetwork() {
-        assertEquals(listOf(MainSection.MORE, MainSection.DOWNLOADS, MainSection.SETTINGS),
+        assertEquals(listOf(MainSection.SETTINGS, MainSection.MORE, MainSection.DOWNLOADS),
             nativeRoutes(TopDestination.PROFILE, emptySet()))
-        assertEquals(MainSection.MORE, nativeEntry(TopDestination.PROFILE, emptySet(), MainSection.MOVIES))
+        assertEquals(MainSection.SETTINGS, nativeEntry(TopDestination.PROFILE, emptySet(), MainSection.MOVIES))
     }
     @Test fun backHierarchyTerminatesAndDoesNotSkipContentLevel() {
         for (destination in TopDestination.entries) assertEquals(NativeBack.HEADER, nativeBack(false, destination))

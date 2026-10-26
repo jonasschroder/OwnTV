@@ -32,7 +32,7 @@ class PackageVisibilityTest(unittest.TestCase):
     def test_missing_clients_or_documented_uri_queries_are_rejected(self):
         original = self.manifest()
         targets = [n for n in original.findall("queries/package")
-                   if n.get(policy.ANDROID + "name") in {"com.s0und.s0undtv", "com.fgl27.twitch", "tv.twitch.android.app"}]
+                   if n.get(policy.ANDROID + "name") in {"com.s0und.s0undtv", "com.fgl27.twitch", "tv.twitch.android.app", "se.svt.android.svtplay", "se.telenor.stream"}]
         targets += original.findall("queries/intent")
         for target in targets:
             root = copy.deepcopy(original)

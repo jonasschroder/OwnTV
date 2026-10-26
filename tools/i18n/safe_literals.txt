@@ -170,7 +170,9 @@
 2	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	_
 1	assertion	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	broadcast access requires review
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	|
-1	regex	app/src/main/java/tv/own/owntv/features/home/HockeyChannelOrder.kt	^(?:TV4|TV)\\s+Hockey(?:\\s+Live\\s+([0-9]{1,2}))?(?:\\s+(?:HD|FHD|UHD|4K|SD))?$
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ExternalTvShortcuts.kt	external-$pkg
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HockeyChannelOrder.kt	TV4 Hockey
+1	regex	app/src/main/java/tv/own/owntv/features/home/HockeyChannelOrder.kt	^TV4 Sport Live ([1-9][0-9]{0,2})$
 2	empty	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	\0
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	hockey-trace:
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	shl-access-blocked
@@ -283,6 +285,7 @@
 1	room-schema	app/src/main/java/tv/own/owntv/features/home/HomeDashboardGuide.kt	epg_programmes
 1	room-schema	app/src/main/java/tv/own/owntv/features/home/HomeDashboardGuide.kt	profiles
 1	room-schema	app/src/main/java/tv/own/owntv/features/home/HomeDashboardGuide.kt	sources
+1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeQuickPanels.kt	twitch-app-entry
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	episode:${episode.id}
@@ -319,16 +322,14 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-public-client-id
 1	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-watch
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	$id-${game.id}
-2	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-browse
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channel-${channel.id}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channel-${it.id}
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channels
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-hero
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-hero-action
-2	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-settings
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-today
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-today-${it.id}
-8	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-upcoming
+7	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-upcoming
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-upcoming-${it.id}
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	$row-entry
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-continue
@@ -852,7 +853,10 @@
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	SHL
-2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	TV4
+1	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	TV Hockey
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	TV4
+1	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	TV4 Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	TV4 Sport Live
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
@@ -881,6 +885,8 @@
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	uhd
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	variants
 13	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	${if (compact.startsWith("svt1")) "SVT1" else "SVT2"} Värmland
+1	regex	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	(?:tv4|tv)hockeylive[1-9][0-9]{0,2}
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	(?i)(?<![a-z0-9])(?:ultra[ -]?hd|3840[x×]2160|2160p|1080p|720p|576p|480p|4k|uhd|fhd|hd|sd)(?![a-z0-9])
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	-
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	1080p
@@ -896,7 +902,7 @@
 2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	CNN
 2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Cartoon Network
 2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Disney Channel
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport 1
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Eurosport 2
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Hockey
@@ -909,8 +915,8 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SE
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVERIGE
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT Barn
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT1
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT2
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT1
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT2
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SVT24
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SWE
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	SWEDEN
@@ -919,14 +925,17 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV10
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV12
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV3
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4
 2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Fotboll
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Hockey
+3	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live ${compact.removePrefix("tv4sportlive").toInt()}
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live ${compact.substringAfter("hockeylive").toInt()}
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 1
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 2
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 3
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sport Live 4
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sportkanalen
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV4 Sportkanalen
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV6
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	TV8
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport 1
@@ -937,18 +946,31 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Motor
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Premium
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	V Sport Vinter
+2	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	Värmland
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\\s+
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\\s+(SE|SWE|SVERIGE|SWEDEN)$
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	^(SE|SWE|SVERIGE|SWEDEN|[A-Z]{2})\\s*[:|]\\s*
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	fhd
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	hd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	hockeylive
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	sd
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	svt1
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	svt1varmland
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	svt1värmland
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	svt2varmland
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	svt2värmland
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tv4playhockey
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tv4sportlive
+1	regex	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tv4sportlive[1-9][0-9]{0,2}
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tv7
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	tvhockey
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	uhd
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	ultrahd
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	SVT Barn
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	SVT24
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	varmland
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	värmland
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishCollectionPolicy.kt	${national}varmland
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishCollectionPolicy.kt	svt1
+1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishCollectionPolicy.kt	svt2
 2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	categories
 2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	channels
 1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	epg_channels
@@ -1468,6 +1490,14 @@
 5	empty	app/src/main/java/tv/own/owntv/features/setup/SetupWizard.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/setup/SetupWizard.kt	+
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeContentNavigation.kt	${profileId}:${section.name}:${presentation?.name.orEmpty()}
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-all-channels
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-collection
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-downloads
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-epg-refresh
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-guide
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-library-history
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-search
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-switch-profile
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	nav-context-search
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	sub-${route.name}
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	top-${destination.name}
@@ -1520,6 +1550,8 @@
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	—
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/GlassEffectPage.kt	◀ ▶
 1	empty	app/src/main/java/tv/own/owntv/features/shell/components/MediaDetailsScreen.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsCategoryMenu.kt	settings-categories
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/components/SettingsCategoryMenu.kt	settings-group-${group.name}
 20	empty	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#%06X
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	#F5B400
@@ -1782,6 +1814,7 @@
 1	technical	app/src/main/java/tv/own/owntv/home/MinTvExternalApps.kt	org.smarttube.beta
 1	technical	app/src/main/java/tv/own/owntv/home/MinTvExternalApps.kt	org.smarttube.stable
 1	technical	app/src/main/java/tv/own/owntv/home/MinTvExternalApps.kt	se.svt.android.svtplay
+1	protocol	app/src/main/java/tv/own/owntv/home/MinTvExternalApps.kt	se.telenor.stream
 1	protocol	app/src/main/java/tv/own/owntv/home/MinTvExternalApps.kt	tv.twitch.android.app
 1	uri	app/src/main/java/tv/own/owntv/home/MinTvIntents.kt	live
 1	uri	app/src/main/java/tv/own/owntv/home/MinTvIntents.kt	open

@@ -13,6 +13,7 @@ object MinTvExternalApps {
     // Twitch-maintained Android package reference: twitchdev/deeplink-unity, DeepLinkTest.cs.
     const val TWITCH = "tv.twitch.android.app"
     const val SVT_PLAY = "se.svt.android.svtplay"
+    const val TELENOR_STREAM = "se.telenor.stream"
 
     fun launch(context: Context, packages: List<String>): Intent? = packages.firstNotNullOfOrNull { pkg ->
         context.packageManager.getLeanbackLaunchIntentForPackage(pkg)

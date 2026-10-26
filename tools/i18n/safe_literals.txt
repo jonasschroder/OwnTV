@@ -1497,6 +1497,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-guide
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-library-history
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-search
+1	protocol	app/src/main/java/tv/own/owntv/features/shell/NativeHeaderUtilities.kt	header-switch-profile
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	nav-context-search
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	sub-${route.name}
 1	technical	app/src/main/java/tv/own/owntv/features/shell/NativeTopNavigation.kt	top-${destination.name}

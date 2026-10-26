@@ -20,4 +20,5 @@
     <string name="mintv_v0111_no_epg_match">No matching EPG found in your channels. Choose a channel manually.</string>
     <string name="mintv_v0111_broadcast_disabled">Broadcast metadata is disabled. Local EPG and manual selection remain available.</string>
     <string name="mintv_v0111_manual_channel">Manual channel (unverified): %1$s</string>
+    <string name="mintv_v0111_profile_switch">%1$s · Switch profile</string>
 </resources>

@@ -1044,7 +1044,7 @@ fun OwnTVShell(
               selectFromNav(MainSection.EPG)
           }, { selectFromNav(MainSection.SEARCH) }, tvTools,
               { selectFromNav(MainSection.MORE) }, { selectFromNav(MainSection.DOWNLOADS) },
-              { runCatching { sidebarFocus.requestFocus() } }, headerUtilityFocus, enterNativeContent)
+              { runCatching { sidebarFocus.requestFocus() } }, headerUtilityFocus, enterNativeContent, profileName.ifBlank { stringResource(R.string.common_own_tv_user) }, onSwitchProfile)
           if (primary == TopDestination.VOD) {
               NativeSubNavigation(nativeRoutes(primary, nativeVisible), selectedSection, { selectFromNav(it) },
                   if (primary == TopDestination.PROFILE) null else ({ selectFromNav(MainSection.SEARCH) }),

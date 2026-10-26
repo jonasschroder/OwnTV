@@ -25,7 +25,7 @@ import tv.own.owntv.ui.format.rememberSystemTimeFormatter
 @Composable
 internal fun NativeHeaderUtilities(epg: EpgViewModel, profile: Long?, destination: TopDestination,
     guide: () -> Unit, search: () -> Unit, tvTools: List<() -> Unit>, library: () -> Unit,
-    downloads: () -> Unit, header: () -> Unit, entry: FocusRequester, enterContent: () -> Unit) {
+    downloads: () -> Unit, header: () -> Unit, entry: FocusRequester, enterContent: () -> Unit, profileName: String, switchProfile: () -> Unit) {
     val observed by epg.manualRefresh.collectAsStateWithLifecycle()
     val status = observed.takeIf { it.profile == profile }
     val time = rememberSystemTimeFormatter()
@@ -49,6 +49,7 @@ internal fun NativeHeaderUtilities(epg: EpgViewModel, profile: Long?, destinatio
                 tvTools.getOrNull(1)?.let { StagePill(stringResource(R.string.mintv_collection_settings), it, Modifier.testTag("header-collection")) }
             }
             if (destination == TopDestination.PROFILE) {
+                StagePill(stringResource(R.string.mintv_v0111_profile_switch, profileName), switchProfile, Modifier.testTag("header-switch-profile"))
                 StagePill(stringResource(R.string.mintv_v0111_library_history), library, Modifier.testTag("header-library-history"))
                 StagePill(stringResource(R.string.common_nav_downloads), downloads, Modifier.testTag("header-downloads"))
             }

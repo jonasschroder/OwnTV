@@ -32,7 +32,7 @@ internal fun ExternalTvShortcuts() {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.mpx)) {
                     if (icon != null) AsyncImage(icon, null, Modifier.size(30.mpx))
                     Column(Modifier.weight(1f)) {
-                        TvText(stringResource(label), size = 19, bold = true, lines = 1)
+                        TvText(stringResource(label), size = 19, bold = true, lines = 2)
                         if (launch == null) TvText(stringResource(R.string.mintv_v0111_open_store), size = 16, color = MinTvMuted, lines = 1)
                     }
                 }

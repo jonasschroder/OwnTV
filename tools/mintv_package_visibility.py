@@ -10,7 +10,7 @@ TV_PACKAGES = frozenset({
     "com.s0und.s0undtv", "com.fgl27.twitch", "tv.twitch.android.app",
     "org.smarttube.stable", "org.smarttube.beta", "app.smarttube.fdroid",
     "com.teamsmart.videomanager.tv", "com.liskovsoft.smarttubetv.beta",
-    "se.svt.android.svtplay", "com.android.vending",
+    "se.svt.android.svtplay", "se.telenor.stream", "com.android.vending",
 })
 
 

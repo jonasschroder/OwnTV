@@ -41,7 +41,7 @@ internal fun NativeTopNavigation(
     val labels = mapOf(TopDestination.HOME to R.string.mintv_nav_home,
         TopDestination.TV to R.string.mintv_nav_tv, TopDestination.SPORT to R.string.mintv_nav_sport,
         TopDestination.VOD to R.string.mintv_nav_vod, TopDestination.PROFILE to R.string.mintv_nav_profile)
-    BoxWithConstraints(modifier.fillMaxWidth().height(100.mpx * maxOf(1f, LocalDensity.current.fontScale)).background(OwnTVTheme.colors.background)) {
+    BoxWithConstraints(modifier.fillMaxWidth().height(88.mpx * maxOf(1f, LocalDensity.current.fontScale)).background(OwnTVTheme.colors.background)) {
         val brand = maxWidth > 850.dp
         Row(Modifier.fillMaxSize().padding(horizontal = 32.mpx, vertical = 16.mpx)
             .focusRequester(selectedFocus)

@@ -1027,24 +1027,31 @@ fun OwnTVShell(
           NativeContentEntry(nativeEntryRequest, nativePageKey(activeProfileId, selectedSection, presentation), {
               tryEnterNativeContent()
           }, { restoreFocus = false; runCatching { sidebarFocus.requestFocus() } }, { nativeEntryRequest = 0 })
+          val headerUtilityFocus = remember { FocusRequester() }
+          var tvTools by remember { mutableStateOf<List<() -> Unit>>(emptyList()) }
           NativeTopNavigation(primary, sidebarFocus, { destination ->
               nativeEntryRequest = 0
               activateNative(destination)
-              if (destination in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) nativeTabFocusJob = scope.launch {
+              if (destination == TopDestination.VOD) nativeTabFocusJob = scope.launch {
                   withFrameNanos { }; withFrameNanos { }
                   runCatching { nativeSubFocus.requestFocus() }
               }
           }, { destination ->
               activateNative(destination)
               nativeEntryRequest++
-          }, { focusedLayer = ShellLayer.SIDEBAR }, Modifier)
-          if (primary in listOf(TopDestination.TV, TopDestination.VOD, TopDestination.PROFILE)) {
+          }, { focusedLayer = ShellLayer.SIDEBAR }, Modifier, onUtilities = { runCatching { headerUtilityFocus.requestFocus() } })
+          NativeHeaderUtilities(epgVm, activeProfileId, primary, {
+              selectFromNav(MainSection.EPG)
+          }, { selectFromNav(MainSection.SEARCH) }, tvTools,
+              { selectFromNav(MainSection.MORE) }, { selectFromNav(MainSection.DOWNLOADS) },
+              { runCatching { sidebarFocus.requestFocus() } }, headerUtilityFocus, enterNativeContent)
+          if (primary == TopDestination.VOD) {
               NativeSubNavigation(nativeRoutes(primary, nativeVisible), selectedSection, { selectFromNav(it) },
                   if (primary == TopDestination.PROFILE) null else ({ selectFromNav(MainSection.SEARCH) }),
                   { runCatching { sidebarFocus.requestFocus() } }, enterNativeContent,
                   { focusedLayer = ShellLayer.RAIL }, onNowPlaying = enterNowPlaying.takeIf { playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO },
                   entryFocusRequester = nativeSubFocus)
-          } else androidx.compose.foundation.layout.Row(Modifier.height(if (primary == TopDestination.HOME && playerMode == PlayerMode.NONE) 0.mpx else 64.mpx).padding(horizontal = 40.mpx)) {
+          } else androidx.compose.foundation.layout.Row(Modifier.height(if (playerMode == PlayerMode.NONE) 0.mpx else 64.mpx).padding(horizontal = 40.mpx)) {
               if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
                   tv.own.owntv.ui.stage.StagePill(stringResource(R.string.shell_now_playing), enterNowPlaying)
           }
@@ -1162,7 +1169,7 @@ fun OwnTVShell(
                             onOpenPlaylist = { /* Phase 6: open setup/playlist */ },
                             // Settings is reached through More now, so Back out of its root goes
                             // back there rather than to the rail — one level out, not two.
-                            onBack = { restoreFocus = true; onSelectSection(if (settingsFromHome) MainSection.HOME else MainSection.MORE) },
+                            onBack = { restoreFocus = false; runCatching { sidebarFocus.requestFocus() } },
                             openEpgAdd = openEpgAdd,
                             openSources = openHomeSources,
                             onSourcesConsumed = { openHomeSources = false },
@@ -1293,8 +1300,9 @@ fun OwnTVShell(
                         selectedSection == MainSection.LIVE_TV -> LiveScreen(
                             onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             onEntryHook = { guideEntry = it },
+                            onTools = { tvTools = it },
                             onFullscreen = { openFullscreen() },
-                            onOpenGuide = { liveVm.setLiveView(tv.own.owntv.core.settings.SettingsRepository.LiveView.GUIDE) },
+                            onOpenGuide = { selectFromNav(MainSection.EPG) },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             previewEnabled = playerMode == PlayerMode.NONE,
                             restoreFocus = restoreFocus,

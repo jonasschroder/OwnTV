@@ -13,7 +13,8 @@ internal data class NativeRow(val id: String, val keys: List<String>, val horizo
 internal fun nativeRowTarget(rows: List<NativeRow>, key: String?, vertical: Int, column: Int): String? {
     val row = rows.indexOfFirst { key in it.keys }
     if (row < 0 || vertical !in listOf(-1, 1)) return null
-    val target = (row + vertical).takeIf { it in rows.indices } ?: return null
+    val target = generateSequence(row + vertical) { it + vertical }.takeWhile { it in rows.indices }
+        .firstOrNull { rows[it].keys.isNotEmpty() } ?: return null
     return rows[target].keys.getOrNull(column.coerceIn(0, rows[target].keys.lastIndex.coerceAtLeast(0)))
 }
 internal class NativeRowsNavigation(val list: LazyListState, val rails: Map<String, LazyListState>,
@@ -36,7 +37,7 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
     val report by rememberUpdatedState(onEntry)
     var ownsFocus by remember(profile) { mutableStateOf(false) }
     var restoreRemoved by remember(profile) { mutableStateOf(false) }
-    val firstKey = rows.firstOrNull()?.keys?.firstOrNull()
+    val firstKey = rows.firstOrNull { it.keys.isNotEmpty() }?.keys?.firstOrNull()
     fun move(target: String): Boolean {
         val row = currentRows.indexOfFirst { target in it.keys }
         if (row < 0) return false
@@ -57,13 +58,15 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         return true
     }
     DisposableEffect(profile, first) {
-        report { val key = selected?.takeIf { id -> currentRows.any { id in it.keys } } ?: currentRows.firstOrNull()?.keys?.firstOrNull(); key?.let(::move) ?: false }
+        report { val key = selected?.takeIf { id -> currentRows.any { id in it.keys } } ?: currentRows.firstOrNull { it.keys.isNotEmpty() }?.keys?.firstOrNull(); key?.let(::move) ?: false }
         onDispose { movement?.cancel(); report(null) }
     }
     SideEffect { targets.keys.retainAll(rows.flatMap { it.keys }.toSet()) }
     LaunchedEffect(rows, restoreRemoved) {
         if ((ownsFocus || restoreRemoved) && rows.none { selected in it.keys }) {
-            rows.firstOrNull()?.keys?.firstOrNull()?.let(::move); restoreRemoved = false
+            val fallback = rows.firstOrNull { it.keys.isNotEmpty() }?.keys?.firstOrNull()
+            if (fallback != null) move(fallback) else onHeader()
+            restoreRemoved = false
         }
     }
     val modifier = Modifier.onFocusChanged {
@@ -77,7 +80,7 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
                 val row = currentRows.firstOrNull { selected in it.keys }
                 if (delta != 0) {
                     val target = nativeRowTarget(currentRows, selected, delta, column)
-                    if (target != null) move(target) else if (delta < 0 && row == currentRows.firstOrNull()) { movement?.cancel(); onHeader() }
+                    if (target != null) move(target) else if (delta < 0 && row == currentRows.firstOrNull { it.keys.isNotEmpty() }) { movement?.cancel(); onHeader() }
                 } else if (row != null) {
                     val col = row.keys.indexOf(selected) + horizontal
                     row.keys.getOrNull(col)?.let { column = col; move(it) }

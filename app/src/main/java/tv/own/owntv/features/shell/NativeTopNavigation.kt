@@ -34,6 +34,7 @@ internal fun NativeTopNavigation(
     onEnterContent: (TopDestination) -> Unit,
     onFocused: () -> Unit,
     modifier: Modifier = Modifier,
+    onUtilities: (() -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(selected) }
     val targets = remember { TopDestination.entries.associateWith { FocusRequester() } }
@@ -47,7 +48,10 @@ internal fun NativeTopNavigation(
             .focusProperties { onEnter = { targets.getValue(selected).requestFocus() } }
             .onFocusChanged { if (it.hasFocus) onFocused() }
             .onPreviewKeyEvent { event ->
-                if (event.key == Key.DirectionDown) {
+                if (event.key == Key.DirectionRight && focused == TopDestination.PROFILE && onUtilities != null) {
+                    if (event.type == KeyEventType.KeyDown) onUtilities()
+                    true
+                } else if (event.key == Key.DirectionDown) {
                     if (event.type == KeyEventType.KeyDown) onEnterContent(focused)
                     true
                 } else false

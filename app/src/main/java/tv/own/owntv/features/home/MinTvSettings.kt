@@ -57,7 +57,7 @@ internal fun MinTvSettingsPage(destination: MinTvSettingsDestination, onBack: ()
 }
 
 @Composable
-private fun HockeySettings(profile: Long?, modifier: Modifier) {
+internal fun HockeySettings(profile: Long?, modifier: Modifier) {
     val repository = koinInject<ShlRepository>()
     val broadcasts = koinInject<TvmatchenBroadcastSource>()
     val flags = rememberCompanionFlags(repository.preferences)

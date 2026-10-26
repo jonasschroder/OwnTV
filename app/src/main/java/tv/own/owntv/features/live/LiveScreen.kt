@@ -135,13 +135,14 @@ fun LiveScreen(
     onOpenGuide: () -> Unit = {},
     onHeader: (() -> Unit)? = null,
     onEntryHook: (((() -> Boolean)?) -> Unit)? = null,
+    onTools: ((List<() -> Unit>) -> Unit)? = null,
 ) {
     val vm: LiveViewModel = koinViewModel()
     var fullLibrary by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val curatedReveal by vm.reveal.collectAsStateWithLifecycle()
     LaunchedEffect(curatedReveal) { if (curatedReveal != null) fullLibrary = true }
     if (lockedKey == null && !fullLibrary && curatedReveal == null) {
-        SwedishLiveScreen(vm, { fullLibrary = true }, onFullscreen, onOpenGuide, onChildFocused, previewEnabled, restoreFocus, onRestored, modifier, onHeader, onEntryHook)
+        SwedishLiveScreen(vm, { fullLibrary = true }, onFullscreen, onOpenGuide, onChildFocused, previewEnabled, restoreFocus, onRestored, modifier, onHeader, onEntryHook, onTools)
         return
     }
     androidx.activity.compose.BackHandler(enabled = fullLibrary && lockedKey == null) { fullLibrary = false }

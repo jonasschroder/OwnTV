@@ -247,6 +247,8 @@ fun StageSettingsPage(
     settingsRoot: Boolean = true,
     /** Off where there is no Settings to search (the setup wizard reuses the Add a source pages). */
     showSearch: Boolean = true,
+    categories: (@Composable () -> Unit)? = null,
+    onRowsFocused: (Boolean) -> Unit = {},
     rows: @Composable ColumnScope.() -> Unit = {},
 ) {
     val searching = searchQuery.isNotBlank()
@@ -294,6 +296,9 @@ fun StageSettingsPage(
                     onActivate = onSearchActivate,
                 )
             }
+            if (categories != null) Box(Modifier.padding(start = w * 50, top = 210.mpx).width(w * 370).fillMaxHeight()) { categories() }
+            val rowsLeft = if (categories == null) w * 50 else w * 450
+            val rowsWidth = if (categories == null) w * 1060 else w * 1000
             val rowsTop = if (toolbar != null) 300.mpx else 210.mpx
             if (toolbar != null) {
                 Row(
@@ -303,14 +308,15 @@ fun StageSettingsPage(
                     content = toolbar,
                 )
             }
-            if (list != null) list(Modifier.padding(start = w * 50, top = rowsTop).width(w * 1060).fillMaxHeight())
+            if (list != null) list(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight())
             else CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
                 Column(
                     Modifier
-                        .padding(start = w * 50, top = rowsTop)
-                        .width(w * 1060)
+                        .padding(start = rowsLeft, top = rowsTop)
+                        .width(rowsWidth)
                         .fillMaxHeight()
                         .focusRequester(rowsFocus)
+                        .onFocusChanged { onRowsFocused(it.hasFocus) }
                         .focusGroup()
                         .verticalScroll(scroll)
                         .padding(bottom = 40.mpx),
@@ -323,8 +329,8 @@ fun StageSettingsPage(
             if (help != null || panelTop != null || editor != null) {
                 Column(
                     Modifier
-                        .padding(start = w * 1160, top = 240.mpx)
-                        .width(w * 696)
+                        .padding(start = if (categories == null) w * 1160 else w * 1480, top = 240.mpx)
+                        .width(if (categories == null) w * 696 else w * 376)
                         .heightIn(max = maxHeight - 280.mpx)
                         .stageGlass(30.mpx)
                         .padding(26.mpx),

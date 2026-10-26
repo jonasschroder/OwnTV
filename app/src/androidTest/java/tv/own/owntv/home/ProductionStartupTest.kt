@@ -231,6 +231,13 @@ class ProductionStartupTest {
                     assertTrue("All three full resume cards fit above the fold: $top..$bottom in $viewport",
                         top >= viewport.top && bottom <= viewport.bottom)
                 }
+                compose.onNodeWithTag("twitch-app-entry").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("external-se.svt.android.svtplay").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("external-se.telenor.stream").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithTag("twitch-app-entry").assertIsFocused()
                 nativeCapture("home-restored")
                 val sourceStore = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
                 val originalChoices = sourceStore.choices(7)
@@ -291,20 +298,23 @@ class ProductionStartupTest {
                 compose.waitUntil(10_000) { compose.onAllNodesWithText(homeLabel).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.onNodeWithTag("top-TV").assertIsSelected()
-                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sub-LIVE_TV").assertIsFocused(); true }.getOrDefault(false) }
+                compose.onNodeWithTag("sub-LIVE_TV").assertDoesNotExist()
+                compose.onNodeWithTag("sub-EPG").assertDoesNotExist()
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
                 nativeCapture("tv")
-                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
-                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.onNodeWithTag("top-PROFILE").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("header-epg-refresh").assertIsFocused(); true }.getOrDefault(false) }
+                compose.onNodeWithTag("header-guide").performClick()
                 compose.waitForIdle()
-                compose.onNodeWithTag("sub-EPG").assertIsSelected()
+                compose.onNodeWithTag("top-TV").assertIsSelected()
                 nativeCapture("guide")
                 val livePreference = settings.liveView.first()
                 settings.setLiveView(SettingsRepository.LiveView.GUIDE)
                 compose.onNodeWithTag("top-HOME").performClick()
                 compose.onNodeWithTag("top-TV").performClick()
                 // The explicit EPG subview is remembered; LIVE's guide-first preference is also retained.
-                compose.onNodeWithTag("sub-LIVE_TV").performClick()
+                compose.onNodeWithTag("header-guide").performClick()
                 var nowLabel = ""
                 scenario.onActivity { nowLabel = it.getString(R.string.content_epg_now_short) }
                 compose.waitUntil(5_000) { compose.onAllNodesWithText(nowLabel).fetchSemanticsNodes().isNotEmpty() }
@@ -318,7 +328,7 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-TV").assertIsSelected()
                 press(KeyEvent.KEYCODE_DPAD_DOWN)
                 compose.waitForIdle()
-                compose.onNodeWithTag("top-SPORT").assertIsNotFocused()
+                compose.onNodeWithTag("top-SPORT").assertIsFocused()
                 compose.onNodeWithTag("top-SPORT").assertIsSelected()
                 nativeCapture("sport")
                 compose.onNodeWithTag("top-VOD").performClick()
@@ -342,21 +352,23 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-VOD").assertIsNotFocused()
                 nativeCapture("series")
                 compose.onNodeWithTag("top-PROFILE").performClick()
-                compose.onNodeWithTag("sub-MORE").assertExists()
+                compose.onNodeWithTag("sub-MORE").assertDoesNotExist()
+                compose.onNodeWithTag("settings-group-PROFILE").assertIsDisplayed()
+                compose.onNodeWithTag("header-library-history").performClick()
                 nativeCapture("profile")
                 for (page in listOf("FAVORITES", "HISTORY", "BACKUP", "LOCAL_SYNC", "ERROR_LOG", "ABOUT")) {
                     compose.onNodeWithTag("profile-page-$page").performClick()
                     compose.onNodeWithTag("profile-content-$page").assertIsDisplayed()
                 }
-                compose.onNodeWithTag("sub-DOWNLOADS").performClick()
-                compose.onNodeWithTag("sub-DOWNLOADS").assertIsSelected()
+                compose.onNodeWithTag("header-downloads").performClick()
+                compose.onNodeWithTag("top-PROFILE").assertIsSelected()
                 nativeCapture("downloads")
                 var recordingsLabel = ""
                 scenario.onActivity { recordingsLabel = it.getString(R.string.recording_title) }
                 compose.onNode(hasText(recordingsLabel) and hasClickAction()).performClick()
                 nativeCapture("recordings")
-                compose.onNodeWithTag("sub-SETTINGS").performClick()
-                compose.onNodeWithTag("sub-SETTINGS").assertIsSelected()
+                compose.onNodeWithTag("top-PROFILE").performClick()
+                compose.onNodeWithTag("settings-group-APP").assertIsDisplayed()
                 nativeCapture("settings")
                 compose.onNodeWithTag("top-HOME").performClick()
             }

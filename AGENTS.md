@@ -19,3 +19,5 @@
 - Never disable, bypass or weaken existing GitHub CI requirements or reduce mandatory test coverage. Full required GitHub CI must pass before merging or releasing.
 - Preserve signing, update and user-data safeguards.
 - Never merge, sign, publish or install without authorization.
+
+- Author substantive Swedish release notes from verified merged changes and tests for every QA/Stable proposal. Prepare a reviewed notes file for the protected workflow; never use placeholders or ask the owner to write release copy.

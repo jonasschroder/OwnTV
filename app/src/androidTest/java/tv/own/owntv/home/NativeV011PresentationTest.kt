@@ -186,7 +186,8 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, details); assertEquals(0, played)
         compose.runOnIdle { populated = false }
-        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("sport-hero-action").assertIsFocused(); true }.getOrDefault(false) }
+        compose.waitUntil(5000) { runCatching { compose.onNodeWithTag("top-SPORT").assertIsFocused(); true }.getOrDefault(false) }
+        compose.onNodeWithTag("sport-hero-action").assertDoesNotExist()
         compose.onNodeWithTag("sport-today-${fixture.id}").assertDoesNotExist()
     }
     @Test fun libraryEntryUsesLatestStateWithoutRegistrationRecompositionLoop() {
@@ -239,7 +240,9 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
         enter(TopDestination.SPORT)
         compose.onNodeWithText("Inga hockeykanaler har identifierats", substring = true).assertIsDisplayed()
-        compose.onAllNodes(hasText("Bläddra bland hockeykanaler") and hasClickAction()).onFirst().assertIsDisplayed()
+        compose.onAllNodes(hasText("Bläddra bland hockeykanaler") and hasClickAction()).assertCountEquals(0)
+        compose.onNodeWithTag("sport-settings").assertDoesNotExist()
+        compose.onNodeWithTag("sport-browse").assertDoesNotExist()
         assertEquals(0, played)
     }
 }

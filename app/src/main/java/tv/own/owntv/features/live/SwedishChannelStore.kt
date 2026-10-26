@@ -117,6 +117,6 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
             }
             if (count < 400) { ended = true; break }
         }
-        SwedishLibrary(SwedishChannels.group(candidates, choices.order, choices.hidden), !ended)
+        SwedishLibrary(preferVarmland(SwedishChannels.group(candidates, choices.order, choices.hidden), choices), !ended)
     }
 }

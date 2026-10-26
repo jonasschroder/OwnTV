@@ -65,6 +65,8 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     DisposableEffect(profile) { onDispose { movement?.cancel() } }
     val pendingSourcePress = remember(profile) { SourcePressCancellation() }
     val companionFocus = remember(profile) { FocusRequester() }
+    var utilityRow by remember(profile) { mutableIntStateOf(0) }
+    val utilityFocus = remember(profile) { List(2) { FocusRequester() } }
     var sourceFromCompanion by remember(profile) { mutableStateOf(false) }
     val heroSource: ((ChannelEntity, Long, Boolean) -> Unit)? = if (onSource == null) null else { channel, down, companion ->
         sourceFromCompanion = companion; onSource(channel, down)
@@ -146,7 +148,10 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                     if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
                     val delta = when (event.key) { Key.DirectionDown -> 1; Key.DirectionUp -> -1; else -> 0 }
                     val target = nextHomeSection(nav.selected, delta, indices)
-                    if (delta == -1 && nav.selected == 0) {
+                    if (nav.selected == 0 && (delta == 1 && utilityRow == 1 || delta == -1 && utilityRow == 2)) {
+                        if (event.type == KeyEventType.KeyDown) utilityFocus[if (delta > 0) 1 else 0].requestSafely()
+                        true
+                    } else if (delta == -1 && nav.selected == 0) {
                         if (event.type == KeyEventType.KeyDown) { movement?.cancel(); onHeader() }
                         true
                     } else if (target == null) false else {
@@ -167,7 +172,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                 Column(verticalArrangement = Arrangement.spacedBy(20.mpx)) {
                 TvText(stringResource(R.string.mintv_smart_evening), size = 34, bold = true)
                 SmartHomeHero(current, guide, onLive, onResume, onEpisodes, onTv, onGuide, onSources,
-                    nav.section(0), heroSource, pendingSourcePress, companionFocus, matchday, companion)
+                    nav.section(0), heroSource, pendingSourcePress, companionFocus, matchday, companion, { utilityRow = it }, utilityFocus)
                 }
             }
             if (channels.isNotEmpty()) item(key = "smart-now") {
@@ -235,20 +240,20 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
     onLive: (ChannelEntity) -> Unit, onResume: (SmartResume) -> Unit, onEpisodes: (Long) -> Unit,
     onTv: () -> Unit, onGuide: () -> Unit, onSources: () -> Unit, first: Modifier,
     onSource: ((ChannelEntity, Long, Boolean) -> Unit)?, pendingSourcePress: SourcePressCancellation, companionFocus: FocusRequester,
-    matchday: (@Composable (Modifier) -> Unit)?, companion: @Composable () -> Unit) {
+    matchday: (@Composable (Modifier) -> Unit)?, companion: @Composable () -> Unit, onUtilityFocus: (Int) -> Unit, utilityFocus: List<FocusRequester>) {
     val live = snapshot?.live
     val resume = snapshot?.heroResume
     val info = live?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
     val time = rememberSystemTimeFormatter()
     val scale = maxOf(1f, LocalDensity.current.fontScale)
     Row(Modifier.fillMaxWidth().heightIn(min = 326.mpx * scale).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
-        if (matchday != null) Column(Modifier.weight(3.8f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+        if (matchday != null) Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             matchday(first)
             if (live != null) SmartAction(stringResource(R.string.mintv_smart_last_tv), { onLive(live) },
                 Modifier.testTag("smart-last-live").focusRequester(companionFocus)
                     .then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(live) }, { onSource(live, it, true) }, pendingSourcePress) else Modifier), compact = true)
         }
-        else Column(Modifier.weight(3.8f).heightIn(min = 326.mpx * scale).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).clip(RoundedCornerShape(24.mpx)).neutralArtwork().padding(26.mpx), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+        else Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f).heightIn(min = 326.mpx * scale).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).clip(RoundedCornerShape(24.mpx)).neutralArtwork().padding(26.mpx), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             TvText(stringResource(when {
                 resume?.kind == SmartResumeKind.EPISODE -> R.string.mintv_smart_continue_series
                 resume != null -> R.string.search_continue
@@ -289,8 +294,8 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
             }
         }
         Column(Modifier.weight(1f).padding(8.mpx), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
-            companion()
-            TvText(stringResource(R.string.mintv_v08_version_chip, tv.own.owntv.BuildConfig.VERSION_NAME), size = 15, color = MinTvMuted, lines = 1)
+            Box(Modifier.focusRequester(utilityFocus[0]).onFocusChanged { if (it.hasFocus) onUtilityFocus(1) }.focusGroup()) { companion() }
+            Box(Modifier.focusRequester(utilityFocus[1]).onFocusChanged { if (it.hasFocus) onUtilityFocus(2) }.focusGroup()) { ExternalTvShortcuts() }
         }
     }
 }

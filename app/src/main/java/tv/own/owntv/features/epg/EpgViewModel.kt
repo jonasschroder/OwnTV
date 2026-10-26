@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -655,6 +656,59 @@ class EpgViewModel(
         }
     }
 
+
+    private val manualThrottle = ManualEpgThrottle()
+    private val _manualRefresh = MutableStateFlow(ManualEpgStatus())
+    internal val manualRefresh = _manualRefresh.asStateFlow()
+
+    /** Explicit user request, using the same repository/importer and selected profile as Guide.
+     * No raw exception messages: provider errors may contain private URLs or credentials.
+     */
+    internal fun refreshManually() {
+        if (epgActivity.active.value.isNotEmpty() || !manualThrottle.begin(android.os.SystemClock.elapsedRealtime())) return
+        viewModelScope.launch {
+            val pid = settings.activeProfileId.first()
+            _manualRefresh.value = ManualEpgStatus(pid, ManualEpgResult.RUNNING, _manualRefresh.value.takeIf { it.profile == pid }?.lastSuccess)
+            try {
+                withContext(Dispatchers.IO) {
+                    val sources = if (pid < 0) emptyList() else sourceRepository.observeSources(pid).first().filter { it.syncLive && epgRepository.hasGuide(it) }
+                    val standalone = if (pid < 0) emptyList() else epgSourceStore.getAll()
+                    var count = 0
+                    var failed = false
+                    suspend fun read(action: suspend () -> Unit) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        check(settings.activeProfileId.first() == pid && epgActivity.active.value.isEmpty())
+                        try { action(); count++ }
+                        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                        catch (_: Exception) { failed = true }
+                    }
+                    kotlinx.coroutines.withTimeout(120_000) {
+                        for (source in sources) {
+                            // Re-read ownership before each source, including removal during refresh.
+                            if (sourceRepository.observeSources(pid).first().none { it.id == source.id && it.syncLive }) continue
+                            read { epgRepository.refresh(source) }
+                        }
+                        for (source in standalone) {
+                            if (epgSourceStore.getAll().none { it.id == source.id }) continue
+                            read { epgRepository.refreshUrl(source.id, source.url, source.userAgent) }
+                        }
+                    }
+                    val result = when {
+                        settings.activeProfileId.first() != pid -> ManualEpgResult.PROFILE_CHANGED
+                        failed -> ManualEpgResult.FAILED
+                        count == 0 -> ManualEpgResult.EMPTY
+                        else -> ManualEpgResult.SUCCESS
+                    }
+                    _manualRefresh.value = ManualEpgStatus(pid, result,
+                        if (result == ManualEpgResult.SUCCESS) System.currentTimeMillis() else _manualRefresh.value.lastSuccess)
+                }
+            } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                _manualRefresh.value = _manualRefresh.value.copy(result = ManualEpgResult.FAILED)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { _manualRefresh.value = _manualRefresh.value.copy(result = ManualEpgResult.FAILED) }
+            finally { manualThrottle.finish() }
+        }
+    }
 
     private suspend fun refreshAllEpgFromNetwork() {
         val pid = settings.activeProfileId.first()

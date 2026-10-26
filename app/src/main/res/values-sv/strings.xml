@@ -6,4 +6,17 @@
     <string name="mintv_export_crash">Exportera kraschrapport</string>
     <string name="mintv_provider_rating">Leverantörsbetyg</string>
     <string name="mintv_tmdb_rating">Betyg från TMDB</string>
+    <string name="mintv_v0111_svt_play">SVT Play</string>
+    <string name="mintv_v0111_telenor">Telenor Stream</string>
+    <string name="mintv_v0111_open_store">Öppna butik</string>
+    <string name="mintv_v0111_app_unavailable">Appen eller butiken kan inte öppnas på den här enheten.</string>
+    <string name="mintv_v0111_match_details">Matchinformation</string>
+    <string name="mintv_v0111_epg_refresh">Uppdatera EPG</string>
+    <string name="mintv_v0111_epg_running">EPG uppdateras…</string>
+    <string name="mintv_v0111_epg_done">EPG uppdaterad %1$s</string>
+    <string name="mintv_v0111_epg_failed">EPG kunde inte uppdateras. Se IPTV och EPG i inställningar.</string>
+    <string name="mintv_v0111_epg_empty">Ingen EPG-källa för den här profilen.</string>
+    <string name="mintv_v0111_library_history">Bibliotek och historik</string>
+    <string name="mintv_v0111_no_epg_match">Ingen matchande EPG hittades i dina kanaler. Välj kanal manuellt.</string>
+    <string name="mintv_v0111_broadcast_disabled">Extern sändningsinformation är avstängd. Lokal EPG och manuellt kanalval finns kvar.</string>
 </resources>

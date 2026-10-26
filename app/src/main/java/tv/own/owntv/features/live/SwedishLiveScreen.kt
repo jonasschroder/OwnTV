@@ -72,6 +72,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
     var gridHasFocus by remember(profile, collection) { mutableStateOf(false) }
     val entry = remember { FocusRequester() }
     val categoryFocus = remember { FocusRequester() }
+    var categoryEntryRequest by remember(profile, collection) { mutableIntStateOf(0) }
     val editFocus = remember { FocusRequester() }
     var movement by remember(profile, collection) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val targets = remember(profile) { mutableMapOf<String, FocusRequester>() }
@@ -105,7 +106,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
     val preferred = focused?.preferred(choices.preferred[focused.identity], choices.showUhd)
     val selected = resolved?.takeIf { it.first == preferred?.rowKey() }?.second
     val editItems = if (!edit) 0 else 2 + if (focused == null) 0 else 5
-    suspend fun restoreChannel() {
+    suspend fun restoreChannel(): Boolean {
         val index = groups.indexOfFirst { it.identity == focusId }.coerceAtLeast(0)
         val target = groups.getOrNull(index)?.identity
         if (target != null) {
@@ -115,9 +116,20 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
             if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
                 visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(index + editItems)
             repeat(2) { withFrameNanos { } }
-            if (targets[target]?.requestSafely() == true) return
+            if (targets[target]?.requestSafely() == true) return true
         }
         categoryFocus.requestSafely()
+        return false
+    }
+    // Down may arrive before the database reader/grid is ready. Keep the intent profile/category
+    // scoped; a subsequent navigation key cancels it instead of stealing focus on data arrival.
+    LaunchedEffect(categoryEntryRequest, loaded, groups) {
+        if (categoryEntryRequest == 0 || !loaded) return@LaunchedEffect
+        if (groups.isNotEmpty()) repeat(30) {
+            if (restoreChannel()) { categoryEntryRequest = 0; return@LaunchedEffect }
+            withFrameNanos { }
+        }
+        categoryEntryRequest = 0 // A genuinely empty collection stays safely on its selector.
     }
     DisposableEffect(profile, collection) { onDispose { movement?.cancel() } }
     LaunchedEffect(loaded, groups) {
@@ -213,6 +225,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
     androidx.activity.compose.BackHandler(enabled = gridHasFocus && !sourceActions.isOpen) { categoryFocus.requestSafely() }
     androidx.activity.compose.BackHandler(enabled = categoryHasFocus && !editing && onHeader != null) { onHeader?.invoke() }
     SwedishChannelGridFrame(modifier.onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyDown && event.key != Key.DirectionDown) categoryEntryRequest = 0
         if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
         false
     }.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
@@ -223,7 +236,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
             .onPreviewKeyEvent { event ->
                 when (event.key) {
                     Key.DirectionUp -> { if (event.type == KeyEventType.KeyDown) onHeader?.invoke(); onHeader != null }
-                    Key.DirectionDown -> { if (event.type == KeyEventType.KeyDown) scope.launch { restoreChannel() }; true }
+                    Key.DirectionDown -> { if (event.type == KeyEventType.KeyDown) categoryEntryRequest++; true }
                     else -> false
                 }
             }, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {

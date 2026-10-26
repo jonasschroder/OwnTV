@@ -231,6 +231,7 @@ fun SettingsScreen(
     // shaping and font fallback. Keep the open settings sub-screen across that configuration change
     // instead of dropping back to the Settings root/sidebar.
     var tab by rememberSaveable { mutableStateOf(SettingsTab.ROOT) }
+    var rootHasFocus by remember { mutableStateOf(false) }
     // Deep-link from the Guide's "Add EPG" button: jump straight to EPG Sources in add mode.
     var consumeEpgAdd by remember { mutableStateOf(false) }
     var showZoom by remember { mutableStateOf(false) }
@@ -520,7 +521,7 @@ fun SettingsScreen(
 
     // Only at the root: every sub-screen registers its own handler, which is nested deeper and
     // therefore wins while one is open.
-    if (onBack != null) BackHandler { onBack() }
+    if (onBack != null) BackHandler(enabled = rootHasFocus) { onBack() }
 
     val colors = OwnTVTheme.colors
 
@@ -1263,7 +1264,7 @@ fun SettingsScreen(
             crumb = !searching,
             searchFocus = searchFieldFocus,
             rowsFocus = rowsFocus,
-            modifier = modifier,
+            modifier = modifier.onFocusChanged { rootHasFocus = it.hasFocus },
             categories = if (searching) null else ({
                 Box(Modifier.testTag("navigation-context")) {
                     SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, { runCatching { rowsFocus.requestFocus() } }, categoryTarget)

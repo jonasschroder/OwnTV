@@ -803,15 +803,9 @@ fun OwnTVShell(
             showAvatarPicker -> showAvatarPicker = false
             showPlaylistPicker -> showPlaylistPicker = false
             showExit -> showExit = false
-            // Settings is reached through More now, so Back out of its root goes back there — one
-            // level out, not two. `SettingsScreen` passes its own `onBack` for the same purpose, but
-            // its root handler does not always win against this one, which left Back looking dead on
-            // the first press: the fallback below simply moved focus to the rail and nothing else
-            // happened. Handled here as well so the answer is the same whichever handler fires; a
-            // sub-screen of Settings still wins, because its handler is composed deeper than this.
-            selectedSection == MainSection.SETTINGS -> { restoreFocus = true; onSelectSection(if (settingsFromHome) MainSection.HOME else MainSection.MORE) }
             // Reached from a Search result: Back returns to Search once, its query, tab and row kept.
             searchReturn == selectedSection && focusedLayer != ShellLayer.SIDEBAR -> returnToSearch()
+            primary == TopDestination.VOD && focusedLayer == ShellLayer.CONTENT -> runCatching { nativeSubFocus.requestFocus() }
             nativeBack(focusedLayer == ShellLayer.SIDEBAR, primary) == NativeBack.HOME -> {
                 onSelectSection(MainSection.HOME)
                 scope.launch { withFrameNanos { }; sidebarFocus.requestFocus() }
@@ -1100,7 +1094,7 @@ fun OwnTVShell(
                                     start = 0.dp,
                                     top = if (stageScreen) 0.dp else tv.own.owntv.features.shell.components.StageContentTop,
                                 )
-                                .nativeContentNavigation(sidebarFocus, contentFocusManager)
+                                .nativeContentNavigation(if (primary == TopDestination.VOD) nativeSubFocus else sidebarFocus, contentFocusManager)
                                 .focusRequester(contentAreaFocus)
                                 .focusRestorer()
                                 .focusGroup(),
@@ -1315,7 +1309,7 @@ fun OwnTVShell(
                         selectedSection in listOf(MainSection.MOVIES, MainSection.SERIES) && searchReturn == null ->
                             tv.own.owntv.features.home.NativeVodHost(activeProfileId, selectedSection, playerMode == PlayerMode.NONE,
                                 movieVm, seriesVm, { onSelectSection(it) }, { openFullscreen(it) },
-                                { focusedLayer = ShellLayer.CONTENT }, { runCatching { sidebarFocus.requestFocus() } },
+                                { focusedLayer = ShellLayer.CONTENT }, { runCatching { nativeSubFocus.requestFocus() } },
                                 { vodEntry = it }, Modifier.fillMaxSize())
 
                         selectedSection == MainSection.MOVIES -> MoviesScreen(

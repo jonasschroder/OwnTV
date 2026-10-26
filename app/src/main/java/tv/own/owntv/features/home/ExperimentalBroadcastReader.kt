@@ -37,8 +37,15 @@ internal class ExperimentalBroadcastReader(private val pages: BroadcastPageReade
         if (!enabled()) { status(BroadcastLookupOutcome.DISABLED); return@withLock null }
         if (state.blocked) { status(BroadcastLookupOutcome.ACCESS_BLOCKED); return@withLock null }
         val now = clock(); val instant = Instant.ofEpochMilli(now)
+        stage = BroadcastLookupStage.CACHE
         state.assignments.removeAll { !it.expiresAt.isAfter(instant) }
-        state.assignments.firstNotNullOfOrNull { BroadcastResolver.usable(fixture, it, instant) }?.let { status(BroadcastLookupOutcome.CACHE_HIT); return@withLock it }
+        state.assignments.firstNotNullOfOrNull { BroadcastResolver.usable(fixture, it, instant) }?.let { cached ->
+            if (cached.channels.none { it.linear }) {
+                status(BroadcastLookupOutcome.NO_LINEAR_CHANNEL); return@withLock null
+            }
+            status(BroadcastLookupOutcome.CACHE_HIT); return@withLock cached
+        }
+        stage = BroadcastLookupStage.ELIGIBILITY
         val today = instant.atZone(Stockholm).toLocalDate()
         if (fixture.league != "SHL" || fixture.date != fixture.faceoff.atZone(Stockholm).toLocalDate() ||
             ShlTeams.identity(fixture.home) == null || ShlTeams.identity(fixture.away) == null ||

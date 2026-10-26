@@ -22,7 +22,8 @@ Public checks: 26 October 2026. No private IPTV snapshots, credentials or downlo
   same channel windows or unioning conflicting channels. Click-time playback still rereads local
   EPG and rechecks source/profile access; reschedules invalidate fixture identity.
 - A streaming-only TV4 Play assignment previously stopped local EPG fallback despite naming no
-  linear channel. It now leaves the local pathway available and has a distinct diagnostic state.
+  linear channel. This included already persisted streaming-only cache entries (reproduced separately).
+  It now leaves the local pathway available and has a distinct diagnostic state.
 - Reuse Swedish channel identities for TV Hockey / TV4 Hockey and numbered Hockey Live aliases.
   Bounded alias queries make those identities discoverable; final exact matching still separates
   1/2/12, Play, PPV, foreign services and unknown suffixes. Truncation/ambiguous sources prevent
@@ -61,7 +62,7 @@ no HTTP. These dated examples are research fixtures, not a floating production d
 
 ## Validation and remaining blockers
 
-Local validation: **62 focused JVM tests PASS**, QA app/instrumentation builds PASS,
+Local validation: **63 focused JVM tests PASS**, QA app/instrumentation builds PASS,
 **3 native Room/diagnostic tests PASS at 1080p**, diagnostic preference-update test PASS at 720p;
 i18n ratchet and executed-test inventory PASS. The final production parser also returns a valid
 empty index for the downloaded current listing and verifies both requested fixture pages.

@@ -28,6 +28,13 @@ class ExperimentalBroadcastReaderTest {
     @Test fun disabledMeansNoRequestsIncludingRobotsAndCachedAnswers() = runTest {
         enabled = false; assertNull(reader().assignment(fixture)); assertTrue(calls.isEmpty()); assertEquals(0, saved)
     }
+    @Test fun existingStreamingOnlyCacheCannotBeReturnedAsLinearEvidence() = runTest {
+        state.assignments += BroadcastAssignment(fixture, listOf(BroadcastChannel("TV4 Play Hockey", false)),
+            Instant.ofEpochMilli(now), Instant.ofEpochMilli(now + 60_000), "TVmatchen")
+        assertNull(reader().assignment(fixture))
+        assertEquals(BroadcastLookupOutcome.NO_LINEAR_CHANNEL, diagnostics.last().outcome)
+        assertTrue(calls.isEmpty())
+    }
     @Test fun verifiedResultCachedWithoutRequestsOrParsingOnEveryOpening() = runTest {
         assertNotNull(reader().assignment(fixture)); assertEquals(4, calls.size)
         assertNotNull(reader().assignment(fixture)); assertEquals(4, calls.size)

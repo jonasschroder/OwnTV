@@ -62,8 +62,11 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         onDispose { movement?.cancel(); report(null) }
     }
     SideEffect { targets.keys.retainAll(rows.flatMap { it.keys }.toSet()) }
+    // Capture ownership before the commit disposes a removed card's focus target. Reading it
+    // inside the effect is too late: the empty destination has already cleared focus by then.
+    val removedOwnedTarget = ownsFocus && rows.none { selected in it.keys }
     LaunchedEffect(rows, restoreRemoved) {
-        if ((ownsFocus || restoreRemoved) && rows.none { selected in it.keys }) {
+        if ((removedOwnedTarget || restoreRemoved) && rows.none { selected in it.keys }) {
             val fallback = rows.firstOrNull { it.keys.isNotEmpty() }?.keys?.firstOrNull()
             if (fallback != null) move(fallback) else onHeader()
             restoreRemoved = false

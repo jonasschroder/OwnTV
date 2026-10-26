@@ -40,9 +40,8 @@ import tv.own.owntv.ui.theme.mpx
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 /** Native five-column logical channels, bounded stored guides and the existing fullscreen player. */
 @Composable
-internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFullscreen: () -> Unit,
-    onOpenGuide: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, restoreFocus: Boolean, onRestored: () -> Unit, modifier: Modifier, onHeader: (() -> Unit)? = null,
-    onEntryHook: (((() -> Boolean)?) -> Unit)? = null, onTools: ((List<() -> Unit>) -> Unit)? = null) {
+internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onChildFocused: () -> Unit, previewEnabled: Boolean, restoreFocus: Boolean, onRestored: () -> Unit, modifier: Modifier, onHeader: (() -> Unit)? = null,
+    onEntryHook: (((() -> Boolean)?) -> Unit)? = null, onCategoryEntryHook: (((() -> Boolean)?) -> Unit)? = null, editing: Boolean = false) {
     val store: SwedishChannelStore = koinInject()
     val db: OwnTVDatabase = koinInject()
     val context by vm.homeLibraryContext.collectAsStateWithLifecycle()
@@ -63,7 +62,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val cache = remember(metadata, revision) { SwedishRowCache() }
     var rowData by remember(metadata, revision, collection) { mutableStateOf<Map<SwedishRowKey, SwedishRowInfo>>(emptyMap()) }
     var at by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var edit by rememberSaveable(profile) { mutableStateOf(false) }
+    val edit = editing
     var variants by rememberSaveable(profile) { mutableStateOf(false) }
     var previewSuppressedFor by remember(context) { mutableStateOf<String?>(null) }
     var failed by remember(profile) { mutableStateOf(false) }
@@ -73,6 +72,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     var gridHasFocus by remember(profile, collection) { mutableStateOf(false) }
     val entry = remember { FocusRequester() }
     val categoryFocus = remember { FocusRequester() }
+    var categoryEntryRequest by remember(profile, collection) { mutableIntStateOf(0) }
     val editFocus = remember { FocusRequester() }
     var movement by remember(profile, collection) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val targets = remember(profile) { mutableMapOf<String, FocusRequester>() }
@@ -106,7 +106,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
     val preferred = focused?.preferred(choices.preferred[focused.identity], choices.showUhd)
     val selected = resolved?.takeIf { it.first == preferred?.rowKey() }?.second
     val editItems = if (!edit) 0 else 2 + if (focused == null) 0 else 5
-    suspend fun restoreChannel() {
+    suspend fun restoreChannel(): Boolean {
         val index = groups.indexOfFirst { it.identity == focusId }.coerceAtLeast(0)
         val target = groups.getOrNull(index)?.identity
         if (target != null) {
@@ -116,14 +116,27 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
             if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
                 visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(index + editItems)
             repeat(2) { withFrameNanos { } }
-            if (targets[target]?.requestSafely() == true) return
+            if (targets[target]?.requestSafely() == true) return true
         }
         categoryFocus.requestSafely()
+        return false
+    }
+    // Down may arrive before the database reader/grid is ready. Keep the intent profile/category
+    // scoped; a subsequent navigation key cancels it instead of stealing focus on data arrival.
+    LaunchedEffect(categoryEntryRequest, loaded, groups) {
+        if (categoryEntryRequest == 0 || !loaded) return@LaunchedEffect
+        if (groups.isNotEmpty()) repeat(30) {
+            if (restoreChannel()) { categoryEntryRequest = 0; return@LaunchedEffect }
+            withFrameNanos { }
+        }
+        categoryEntryRequest = 0 // A genuinely empty collection stays safely on its selector.
     }
     DisposableEffect(profile, collection) { onDispose { movement?.cancel() } }
     LaunchedEffect(loaded, groups) {
         if (loaded && gridHasFocus && groups.none { it.identity == focusId }) restoreChannel()
     }
+    tv.own.owntv.features.shell.NativeContentEntryHook(onCategoryEntryHook, profile) { categoryFocus.requestSafely() }
+    var categoryHasFocus by remember { mutableStateOf(false) }
     val reportEntry by rememberUpdatedState(onEntryHook)
     DisposableEffect(profile, loaded, groups) {
         reportEntry?.invoke { if (!loaded) false else { scope.launch { restoreChannel() }; true } }
@@ -209,22 +222,26 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onLibrary: () -> Unit, onFulls
         onPlay = { channel, identity -> playChannel(channel, identity) }, onClosed = { scope.launch { restoreChannel() } })
     LaunchedEffect(sourceActions.isOpen) { if (sourceActions.isOpen) previewSuppressedFor = focusId }
     fun openSources() { focused?.let { sourceActions.open(it.identity, null) } }
-    val currentTools by rememberUpdatedState(onTools)
-    val tools = rememberUpdatedState(listOf(onLibrary, { edit = !edit }))
-    DisposableEffect(profile) {
-        currentTools?.invoke(listOf({ tools.value[0]() }, { tools.value[1]() }))
-        onDispose { currentTools?.invoke(emptyList()) }
-    }
+    androidx.activity.compose.BackHandler(enabled = gridHasFocus && !sourceActions.isOpen) { categoryFocus.requestSafely() }
+    androidx.activity.compose.BackHandler(enabled = categoryHasFocus && !editing && onHeader != null) { onHeader?.invoke() }
     SwedishChannelGridFrame(modifier.onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyDown && event.key != Key.DirectionDown) categoryEntryRequest = 0
         if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
         false
     }.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
             TvText(stringResource(R.string.mintv_swedish_channels), Modifier.weight(1f), size = 34, bold = true)
 
         }, categories = {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+        LazyRow(Modifier.testTag("navigation-context").onFocusChanged { categoryHasFocus = it.hasFocus }
+            .onPreviewKeyEvent { event ->
+                when (event.key) {
+                    Key.DirectionUp -> { if (event.type == KeyEventType.KeyDown) onHeader?.invoke(); onHeader != null }
+                    Key.DirectionDown -> { if (event.type == KeyEventType.KeyDown) categoryEntryRequest++; true }
+                    else -> false
+                }
+            }, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
             items(listOf(SwedishCollection.GENERAL, SwedishCollection.SPORT, SwedishCollection.OTHER), key = { it.name }) { category ->
-                SwedishLiveAction(stringResource(collectionLabel(category)), { collection = category; variants = false }, Modifier.then(if (collection == category) Modifier.focusRequester(categoryFocus) else Modifier), selected = collection == category)
+                SwedishLiveAction(stringResource(collectionLabel(category)), { collection = category; variants = false }, Modifier.testTag("tv-category-${category.name}").then(if (collection == category) Modifier.focusRequester(categoryFocus) else Modifier), selected = collection == category)
             }
         }
         }, notice = {

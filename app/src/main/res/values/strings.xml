@@ -21,4 +21,7 @@
     <string name="mintv_v0111_broadcast_disabled">Broadcast metadata is disabled. Local EPG and manual selection remain available.</string>
     <string name="mintv_v0111_manual_channel">Manual channel (unverified): %1$s</string>
     <string name="mintv_v0111_profile_switch">%1$s · Switch profile</string>
+    <string name="mintv_v0112_collection_hint">Order, visibility and preferred channel sources</string>
+    <string name="mintv_v0112_library_hint">Browse all IPTV channels and provider folders</string>
+    <string name="mintv_v0112_switch_profile">Switch profile</string>
 </resources>

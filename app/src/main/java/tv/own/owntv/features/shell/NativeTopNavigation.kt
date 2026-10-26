@@ -34,23 +34,25 @@ internal fun NativeTopNavigation(
     onEnterContent: (TopDestination) -> Unit,
     onFocused: () -> Unit,
     modifier: Modifier = Modifier,
-    onUtilities: (() -> Unit)? = null,
+    utilities: @Composable () -> Unit = {},
+    onEnterUtilityContent: (() -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(selected) }
     val targets = remember { TopDestination.entries.associateWith { FocusRequester() } }
+    var utilityFocused by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = utilityFocused) { selectedFocus.requestFocus() }
     val labels = mapOf(TopDestination.HOME to R.string.mintv_nav_home,
         TopDestination.TV to R.string.mintv_nav_tv, TopDestination.SPORT to R.string.mintv_nav_sport,
         TopDestination.VOD to R.string.mintv_nav_vod, TopDestination.PROFILE to R.string.mintv_nav_profile)
-    BoxWithConstraints(modifier.fillMaxWidth().height(88.mpx * maxOf(1f, LocalDensity.current.fontScale)).background(OwnTVTheme.colors.background)) {
+    BoxWithConstraints(modifier.testTag("navigation-global").fillMaxWidth().height(88.mpx * maxOf(1f, LocalDensity.current.fontScale)).background(OwnTVTheme.colors.background)) {
         val brand = maxWidth > 850.dp
         Row(Modifier.fillMaxSize().padding(horizontal = 32.mpx, vertical = 16.mpx)
             .onFocusChanged { if (it.hasFocus) onFocused() }
             .onPreviewKeyEvent { event ->
-                if (event.key == Key.DirectionRight && focused == TopDestination.PROFILE && onUtilities != null) {
-                    if (event.type == KeyEventType.KeyDown) onUtilities()
-                    true
-                } else if (event.key == Key.DirectionDown) {
-                    if (event.type == KeyEventType.KeyDown) onEnterContent(focused)
+                if (event.key == Key.DirectionDown) {
+                    if (event.type == KeyEventType.KeyDown) {
+                        if (utilityFocused && onEnterUtilityContent != null) onEnterUtilityContent() else onEnterContent(focused)
+                    }
                     true
                 } else false
             }.focusGroup(),
@@ -66,6 +68,8 @@ internal fun NativeTopNavigation(
             }
             NativeTopItem(TopDestination.PROFILE, stringResource(labels.getValue(TopDestination.PROFILE)),
                 selected, if (selected == TopDestination.PROFILE) selectedFocus else targets.getValue(TopDestination.PROFILE), onSelect) { focused = TopDestination.PROFILE }
+            Row(Modifier.onFocusChanged { utilityFocused = it.hasFocus },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.mpx)) { utilities() }
 
         }
     }
@@ -93,11 +97,10 @@ private fun NativeTopItem(destination: TopDestination, label: String, active: To
 /** Aliases to existing screen owners; OK-only activation and no new preference store. */
 @Composable
 internal fun NativeSubNavigation(routes: List<MainSection>, selected: MainSection,
-    onSelect: (MainSection) -> Unit, onSearch: (() -> Unit)?, onHeader: () -> Unit,
-    onEnterContent: () -> Unit, onFocused: () -> Unit, modifier: Modifier = Modifier, onNowPlaying: (() -> Unit)? = null, entryFocusRequester: FocusRequester) {
+    onSelect: (MainSection) -> Unit, onHeader: () -> Unit,
+    onEnterContent: () -> Unit, onFocused: () -> Unit, modifier: Modifier = Modifier, entryFocusRequester: FocusRequester) {
     val targets = remember(routes) { routes.associateWith { FocusRequester() } }
-    Row(modifier.fillMaxWidth().height(64.mpx).focusRequester(entryFocusRequester)
-        .focusProperties { onEnter = { (targets[selected] ?: targets.values.firstOrNull())?.requestFocus() } }.padding(horizontal = 40.mpx)
+    Row(modifier.testTag("navigation-context").fillMaxWidth().height(64.mpx).padding(horizontal = 40.mpx)
         .horizontalScroll(rememberScrollState()).onFocusChanged { if (it.hasFocus) onFocused() }
         .onPreviewKeyEvent { event ->
             when(event.key) {
@@ -112,11 +115,8 @@ internal fun NativeSubNavigation(routes: List<MainSection>, selected: MainSectio
                 MainSection.MORE -> R.string.mintv_nav_library
                 else -> route.labelRes
             }), { onSelect(route) },
-                Modifier.focusRequester(targets.getValue(route)).testTag("sub-${route.name}").semantics { this.selected = route == selected },
+                Modifier.focusRequester(if (route == (selected.takeIf { it in routes } ?: routes.firstOrNull())) entryFocusRequester else targets.getValue(route)).testTag("sub-${route.name}").semantics { this.selected = route == selected },
                 dimmed = route != selected)
         }
-        if (onNowPlaying != null) StagePill(stringResource(R.string.shell_now_playing), onNowPlaying)
-        if (onSearch != null) StagePill(stringResource(R.string.common_nav_search), onSearch,
-            Modifier.testTag("nav-context-search"))
     }
 }

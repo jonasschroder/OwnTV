@@ -26,6 +26,31 @@ import java.io.File
 /** Never reads/writes the installed user's database, settings or favorite claims. */
 @RunWith(AndroidJUnit4::class)
 class HomeChannelDefaultsStorageTest {
+    @Test fun nativeHomeBatchRejectsSourceRevocationWithoutChangingFavorites(): Unit = runBlocking {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.inMemoryDatabaseBuilder(app, OwnTVDatabase::class.java)
+            .setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()
+        try {
+            val profile = ProfileEntity(id = 101, name = "Synthetic", avatarColor = 0, createdAt = 101)
+            db.profileDao().insert(profile)
+            val source = SourceEntity(id = 101, name = "Synthetic", type = SourceType.M3U, url = "http://127.0.0.1:9/unavailable")
+            db.sourceDao().insert(source); db.sourceDao().link(ProfileSourceCrossRef(101, 101))
+            val row = ChannelEntity(id = 1, sourceId = 101, name = "SVT1", streamUrl = source.url)
+            db.channelDao().insertAll(listOf(row))
+            db.favoriteDao().add(FavoriteEntity(profileId = 101, mediaType = MediaType.LIVE, itemId = 1))
+            val before = db.favoriteDao().getAllOnce()
+            suspend fun access() = tv.own.owntv.features.live.HomeChannelAccess(
+                db.profileDao().getById(101)!!,
+                db.sourceDao().observeForProfile(101).first().filter { it.syncLive }.map { it.id }.toSet(),
+                tv.own.owntv.core.customize.SectionCustomizations())
+            val result = tv.own.owntv.features.live.readHomeChannels(listOf(1), ::access,
+                { id -> db.channelDao().getById(id).also { db.sourceDao().update(source.copy(syncLive = false)) } },
+                db.categoryDao()::getById, { emptyList() })
+            assertTrue(result.isEmpty())
+            assertEquals(before, db.favoriteDao().getAllOnce())
+        } finally { db.close() }
+    }
+
     @Test fun preservesFavoritesRemovalRestartSyncAndProfileIsolation(): Unit = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val directory = File(app.cacheDir, "default-favorite-test-" + java.util.UUID.randomUUID()).apply { mkdirs() }

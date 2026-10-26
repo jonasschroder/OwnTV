@@ -776,11 +776,6 @@ fun OwnTVShell(
         if (selectedSection != MainSection.HOME || presentation != null || playerMode != PlayerMode.NONE) homeVm.stopPreview()
     }
 
-    LaunchedEffect(selectedSection, presentation, playerMode, activeProfileId, activePlaylistId) {
-        if (selectedSection == MainSection.HOME && presentation == null && playerMode == PlayerMode.NONE && (activeProfileId?.let { it >= 0 } == true)) {
-            homeVm.refresh(activeProfileId)
-        }
-    }
 
     // The section a Search result opened ("Go to"), so the first Back there returns to Search. Leaving
     // that section any other way forgets it. The series page closes itself on Back (its own handler),

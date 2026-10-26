@@ -68,8 +68,8 @@ internal fun MinTvContentHome(
     val active = previewEnabled && lifecycle == Lifecycle.State.RESUMED
     var snapshot by remember(activeProfileId, context, metadata, movieVisibility, seriesVisibility, profileSettings, sourceAccess) { mutableStateOf<SmartHomeSnapshot?>(null) }
     var visible by remember(activeProfileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
-    val home by vm.uiState.collectAsStateWithLifecycle()
-    val favoriteIds = home.favoriteLive.takeIf { home.profileId == activeProfileId }.orEmpty().map { it.id }
+    val home by liveVm.nativeHomeFavorites.collectAsStateWithLifecycle()
+    val favoriteIds = home.channels.takeIf { home.profileId == activeProfileId }.orEmpty().map { it.id }
     var homeInteracted by rememberSaveable(activeProfileId) { mutableStateOf(false) }
     var matchdayHero by rememberSaveable(activeProfileId) { mutableStateOf(false) }
     var homeEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
@@ -85,6 +85,7 @@ internal fun MinTvContentHome(
     }
     LaunchedEffect(active) { if (active) homeInteracted = false }
     val scope = rememberCoroutineScope()
+    var appliedChoices by remember(activeProfileId) { mutableStateOf<tv.own.owntv.features.live.SwedishChoices?>(null) }
     var logicalBySource by remember(activeProfileId, context) { mutableStateOf<Map<String, String>>(emptyMap()) }
     DisposableEffect(vm, liveVm) {
         vm.setPreviewEnabled(false); vm.stopPreview(); liveVm.homePreview.setActive(false)
@@ -101,33 +102,39 @@ internal fun MinTvContentHome(
             val allGroups = store.library(profile, expected.sourceIds, choices.copy(hidden = emptySet())).groups
             logicalBySource = allGroups.flatMap { g -> g.variants.map { it.stableKey to g.identity } }.toMap()
             val groups = allGroups.filterNot { it.identity in choices.hidden }.take(48)
+            val recent = db.channelDao().recentlyWatchedWithTimestampFiltered(profile, expected.sourceIds, 20).first()
+            val selectedIds = (groups + recent.mapNotNull { row -> allGroups.firstOrNull { g -> g.variants.any { it.id == row.channel.id } } })
+                .mapNotNull { it.preferred(choices.preferred[it.identity], choices.showUhd)?.id }
+            val authorized = liveVm.homeChannels(selectedIds + recent.map { it.channel.id } + favoriteIds.take(16), profile)
             val channels = groups.mapNotNull { group ->
                 group.preferred(choices.preferred[group.identity], choices.showUhd)?.let { variant ->
-                    liveVm.homeChannel(variant.id, profile)?.let { SmartChannel(group.identity, group.label, it) }
+                    authorized[variant.id]?.let { SmartChannel(group.identity, group.label, it) }
                 }
             }
-            val recent = db.channelDao().recentlyWatchedWithTimestampFiltered(profile, expected.sourceIds, 20).first()
             var watched: ChannelEntity? = null
             var watchedAt: Long? = null
             for (row in recent) {
-                val actual = liveVm.homeChannel(row.channel.id, profile) ?: continue
+                val actual = authorized[row.channel.id] ?: continue
                 if (SwedishChannels.recognize(actual.name)?.identity in choices.hidden) continue
                 val group = allGroups.firstOrNull { g -> g.variants.any { it.id == actual.id } }
                 if (group != null && group.identity in choices.hidden) continue
                 val preference = group?.let { choices.preferred[it.identity] }
-                watched = if (preference == null) actual else group.preferred(preference, choices.showUhd)?.let { liveVm.homeChannel(it.id, profile) } ?: actual
+                watched = if (preference == null) actual else group.preferred(preference, choices.showUhd)?.let { authorized[it.id] } ?: actual
                 watchedAt = row.watchedAt
                 break
             }
             val resumes = readSmartResumes(db, settings, custom, profile)
             val access = sourceAccess ?: return@LaunchedEffect
             val hasSources = access.live.isNotEmpty() || access.movies.isNotEmpty() || access.series.isNotEmpty()
-            if (liveVm.swedishContextCurrent(expected)) snapshot = selectSmartHome(profile, hasSources, channels,
+            if (liveVm.swedishContextCurrent(expected)) {
+                appliedChoices = choices
+                snapshot = selectSmartHome(profile, hasSources, channels,
                 watched, watchedAt, resumes, System.currentTimeMillis()).copy(favorites = favoriteIds.take(16).mapNotNull { id ->
-                    liveVm.homeChannel(id, profile)?.takeIf { channel ->
+                    authorized[id]?.takeIf { channel ->
                         SwedishChannels.recognize(channel.name)?.identity !in choices.hidden
                     }?.let { smartHomeFavorite(it, logicalBySource) }
                 })
+            }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
             // A failed local read cannot invent a channel or progress. Existing TV remains reachable.
@@ -151,6 +158,7 @@ internal fun MinTvContentHome(
         try {
             val before = current ?: return@LaunchedEffect
             val choices = savedChoices ?: return@LaunchedEffect
+            if (choices == appliedChoices) return@LaunchedEffect
             val groups = store.library(profile, context.second, choices).groups
             suspend fun selected(identity: String, exact: ChannelEntity): ChannelEntity {
                 val group = groups.singleOrNull { it.identity == identity } ?: return exact
@@ -163,7 +171,10 @@ internal fun MinTvContentHome(
                     ?: groups.firstOrNull { it.identity == logical(old) }
                 if (group == null) old else selected(group.identity, old)
             }
-            if (liveVm.homeLibraryContext.value == context && snapshot == before) snapshot = before.copy(channels = rows, live = live)
+            if (liveVm.homeLibraryContext.value == context && snapshot == before) {
+                snapshot = before.copy(channels = rows, live = live)
+                appliedChoices = choices
+            }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* Retain the current snapshot; playback still revalidates availability. */ }
     }
@@ -180,7 +191,7 @@ internal fun MinTvContentHome(
         }
     }
     MinSportCompanion(previewEnabled, active, liveVm, activeProfileId,
-        home.favoriteLive.takeIf { home.profileId == activeProfileId }.orEmpty(), onPlayChannel, contentStart, onSources,
+        home.channels.takeIf { home.profileId == activeProfileId }.orEmpty(), onPlayChannel, contentStart, onSources,
         reservedTop = reservedTop, compact = true, homeHero = true, freezeHomeHero = homeInteracted,
         onHomeMatchday = { if (!homeInteracted) matchdayHero = it },
         onSettings = { onOpenSettings(MinTvSettingsDestination.SPORT) }, onMatchcenterEntry = { sportsEntry = it }) { hockey, details ->

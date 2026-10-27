@@ -1,0 +1,46 @@
+{
+  "checked_at": "2026-10-27T10:59:29.883242+00:00",
+  "research_only": true,
+  "fixtures": [
+    {
+      "url": "https://www.tvmatchen.nu/match/brynas-if-farjestad-bk-1896219",
+      "status": "200",
+      "transport_ok": true,
+      "bytes": 650068,
+      "sha256": "ac91460353edd8d0368f1b72ac23a91f5294ed624a46962e45e8f6fb612044df",
+      "production_parser": "TvmatchenHtml.assignment",
+      "verified_fixture": "Brynäs IF–Färjestad BK",
+      "kickoff_utc": "2026-10-29T18:00:00Z",
+      "channels": [
+        {
+          "name": "TV4 Sport Live 1",
+          "linear": true
+        },
+        {
+          "name": "TV4 Play Hockey",
+          "linear": false
+        }
+      ]
+    },
+    {
+      "url": "https://www.tvmatchen.nu/match/vaxjo-lakers-farjestad-bk-1893256",
+      "status": "200",
+      "transport_ok": true,
+      "bytes": 650143,
+      "sha256": "13d325344596db91ec3069351d6a8d3445109930485cbdfab05468a3b3a07bc5",
+      "production_parser": "TvmatchenHtml.assignment",
+      "verified_fixture": "Växjö Lakers–Färjestad BK",
+      "kickoff_utc": "2026-10-31T14:15:00Z",
+      "channels": [
+        {
+          "name": "TV4 Sport Live 3",
+          "linear": true
+        },
+        {
+          "name": "TV4 Play Hockey",
+          "linear": false
+        }
+      ]
+    }
+  ]
+}

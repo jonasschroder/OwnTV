@@ -67,20 +67,21 @@ internal fun personalHockeyFeed(fixtures: List<SportFixture>, selection: SportPr
 internal suspend fun matchHockeyChannels(channels: List<ChannelEntity>, fixture: SportFixture,
     selection: SportPreferences, known: List<SportFixture>, assignment: BroadcastAssignment?, now: Long,
     local: EpgHockeyMatch? = null, read: suspend (ChannelEntity) -> List<EpgProgrammeEntity>): List<ChannelEntity> = withTimeout(8_000) {
+    val linearChannels = channels.filterNot { BroadcastResolver.streamingBrand(it.name) }
     // The foreground collector already read exact, authorized EPG evidence. Never union a
     // conflicting external assignment into it, or run those same guide reads a second time.
     local?.takeIf { it.fixture == fixture }?.let { evidence ->
-        return@withTimeout channels.filter { it.id in evidence.channelIds &&
+        return@withTimeout linearChannels.filter { it.id in evidence.channelIds &&
             (evidence.channelStops[it.id] ?: 0L) > now &&
             (evidence.channelStarts[it.id] ?: Long.MAX_VALUE) < (evidence.channelStops[it.id] ?: 0L) }
     }
     val broadcast = BroadcastResolver.usable(fixture.broadcastFixture(), assignment, Instant.ofEpochMilli(now))
         ?.takeIf { it.channels.any { channel -> channel.linear } }
-    if (broadcast != null) return@withTimeout channels.filter { channel ->
+    if (broadcast != null) return@withTimeout linearChannels.filter { channel ->
         broadcast.channels.any { BroadcastResolver.matches(it, channel.name) }
     }
-    val parser = HockeyEpgParser(selection, now, known)
-    channels.filter { channel ->
+    val parser = HockeyEpgParser(selection.copy(teamIds = (selection.teamIds + listOf(fixture.homeTeam.id, fixture.awayTeam.id)).distinct()), now, known)
+    linearChannels.filter { channel ->
         currentCoroutineContext().ensureActive()
         read(channel).any { parser.parse(it)?.fixture == fixture }
     }

@@ -74,11 +74,13 @@ internal object BroadcastResolver {
         }.filter { it.isNotBlank() }.distinct()
     }
 
+    fun streamingBrand(name: String): Boolean = channelKey(name).replace(" ", "").startsWith("TV4PLAY")
+
     fun matches(broadcast: BroadcastChannel, libraryName: String): Boolean {
         // A streaming brand is never promoted to a linear service. A non-linear exact configured
         // entry may still be chosen manually, using the provider's existing URL and authorisation.
         return broadcast.linear && !eventPlaceholder(libraryName) &&
-            !channelKey(broadcast.name).startsWith("TV4 PLAY") &&
+            !streamingBrand(broadcast.name) &&
             (channelKey(broadcast.name) == channelKey(libraryName) ||
                 tv.own.owntv.features.live.SwedishChannels.recognize(broadcast.name)?.let { expected ->
                     tv.own.owntv.features.live.SwedishChannels.recognize(libraryName)?.identity == expected.identity

@@ -1,0 +1,16 @@
+[
+  {
+    "file": "docs/sport/v013-images/sport-broadcast-1920x1080.png",
+    "width": 1920,
+    "height": 1080,
+    "sha256": "319ef4d5faea0d9febc99ec8b962c276bbffdc77bd9a28a56602cbda7bb86c59",
+    "scenario": "synthetic native Sport with global header; no live stream"
+  },
+  {
+    "file": "docs/sport/v013-images/sport-broadcast-1280x720.png",
+    "width": 1280,
+    "height": 720,
+    "sha256": "678822ac06f7f9fb1e7b519e12a101327db78099b012b72a3a9b2801bb8cab04",
+    "scenario": "synthetic native Sport with global header; no live stream"
+  }
+]

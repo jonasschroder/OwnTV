@@ -17,13 +17,16 @@ import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.features.live.source.logicalChannelKeys
 
 internal data class NativeSportSnapshot(val profile: Long?, val now: Long, val preferences: SportPreferences,
     val hero: SportFixture?, val today: List<SportFixture>, val upcoming: List<SportFixture>,
     val channels: List<ChannelEntity>, val broadcastLabels: Map<String, String> = emptyMap(),
-    val heroChannel: ChannelEntity? = null, val loading: Boolean = false, val enabled: Boolean = true, val issue: HockeyIssue? = null)
+    val heroChannel: ChannelEntity? = null, val loading: Boolean = false, val enabled: Boolean = true, val issue: HockeyIssue? = null,
+    val playableFixtures: Map<String, ChannelEntity> = emptyMap())
 internal class NativeSportActions(val details: (SportFixture) -> Unit, val channel: (ChannelEntity) -> Unit,
-    val browse: () -> Unit, val watch: () -> Unit, val settings: () -> Unit)
+    val browse: () -> Unit, val watch: () -> Unit, val settings: () -> Unit,
+    val fixtureWatch: ((SportFixture, ChannelEntity) -> Unit)? = null)
 
 /** Presentation only; every fixture, result and playable assignment comes from existing owners. */
 @Composable
@@ -48,7 +51,7 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                         TvText(data.hero?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 20, color = MinTvTeal, bold = true)
                         TvText(data.hero?.let { pairLabel(it) } ?: sportsStatusText(SportsCatalog.shl, data.enabled, SportsLoadState(data.loading, data.issue)), size = if (data.hero == null) 30 else 48, bold = true, lines = 2)
                         data.hero?.let { TvText(fixtureWhen(it, data.now), size = 23, color = MinTvMuted) }
-                        if (data.hero != null) TvText(data.heroChannel?.name ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 21, color = MinTvMuted)
+                        if (data.hero != null) TvText(data.broadcastLabels[data.hero.id] ?: data.heroChannel?.name ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 21, color = MinTvMuted)
                         if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_v011_no_hockey_channels), size = 20, color = MinTvMuted, lines = 2)
                         data.hero?.let { game ->
                             SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.mintv_v0111_match_details),
@@ -59,10 +62,10 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                 }
             }
             if (data.today.isNotEmpty()) item(key = "sport-today") {
-                SportFixtureRail(stringResource(R.string.mintv_today), data.today.take(16), "sport-today", data, nav, width, actions.details)
+                SportFixtureRail(stringResource(R.string.mintv_today), data.today.take(16), "sport-today", data, nav, width, actions)
             }
             if (data.upcoming.isNotEmpty()) item(key = "sport-upcoming") {
-                SportFixtureRail(stringResource(R.string.mintv_shl_upcoming), data.upcoming.take(12), "sport-upcoming", data, nav, width * 1.3f, actions.details)
+                SportFixtureRail(stringResource(R.string.mintv_shl_upcoming), data.upcoming.take(12), "sport-upcoming", data, nav, width * 1.3f, actions)
             }
             if (data.channels.isNotEmpty()) item(key = "sport-channels") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {
@@ -79,12 +82,15 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
 }
 @Composable
 private fun SportFixtureRail(label: String, fixtures: List<SportFixture>, id: String, data: NativeSportSnapshot,
-    nav: NativeRowsNavigation, width: androidx.compose.ui.unit.Dp, onDetails: (SportFixture) -> Unit) {
+    nav: NativeRowsNavigation, width: androidx.compose.ui.unit.Dp, actions: NativeSportActions) {
     Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {
         TvText(label, size = 27, bold = true)
         LazyRow(state = nav.rails.getValue(id), horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(5.mpx)) {
             items(fixtures, key = { it.id }) { game ->
-                HomeSurface({ onDetails(game) }, nav.item("$id-${game.id}").width(width).heightIn(min = (if (id == "sport-upcoming") 108 else 178).mpx).testTag("$id-${game.id}")) {
+                val playable = data.playableFixtures[game.id]?.takeIf { game.status == MatchStatus.SCHEDULED }
+                val activate = { if (playable != null && actions.fixtureWatch != null) actions.fixtureWatch.invoke(game, playable) else actions.details(game) }
+                HomeSurface(activate, nav.item("$id-${game.id}")
+                    .then(if (playable != null) Modifier.logicalChannelKeys(activate, { actions.details(game) }) else Modifier).width(width).heightIn(min = (if (id == "sport-upcoming") 108 else 178).mpx).testTag("$id-${game.id}")) {
                     Column(Modifier.fillMaxWidth().heightIn(min = (if (id == "sport-upcoming") 80 else 150).mpx).neutralArtwork().padding(8.mpx), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                         TvText(fixtureWhen(game, data.now), size = 18, color = MinTvMuted, lines = 1)
                         TvText(pairLabel(game), size = if (id == "sport-upcoming") 23 else 28, bold = true, lines = if (id == "sport-upcoming") 1 else 2)

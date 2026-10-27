@@ -185,6 +185,9 @@ jobs:
           import xml.etree.ElementTree as E
           required = {
               ('tv.own.owntv.home.HockeyLocalStorageTest', 'boundedAliasQueriesFindOnlyExactAuthorizedLinearChannels'),
+              ('tv.own.owntv.home.HockeyLocalStorageTest', 'lookaheadFindsStoredFixtureBeyond128RowsAndInvalidatesChangedGuide'),
+              ('tv.own.owntv.home.NativeV011PresentationTest', 'automaticBroadcastCardPlaysOnlyUniqueSourceAt1080'),
+              ('tv.own.owntv.home.NativeV011PresentationTest', 'automaticBroadcastCardPlaysOnlyUniqueSourceAt720'),
               ('tv.own.owntv.home.V07PresentationTest', 'broadcastDiagnosticsExplainWindowWithoutNetworkOrExtraNavigation'),
               ('tv.own.owntv.home.HomeChannelDefaultsStorageTest', 'nativeHomeBatchRejectsSourceRevocationWithoutChangingFavorites'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'scrollingReentryPreservesSavedRowAndProfileDoesNotReuseIt'),

@@ -344,7 +344,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${card.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${it.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-entry
-2	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
+4	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	4K
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	8K
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	EVENT
@@ -363,8 +363,8 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SWEDEN
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SportLive$number
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV Hockey
-1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV4 PLAY
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV4Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV4PLAY
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	UHD
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	[^A-Z0-9]+
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	bif

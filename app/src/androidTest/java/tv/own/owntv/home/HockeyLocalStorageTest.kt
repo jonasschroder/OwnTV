@@ -16,6 +16,36 @@ import tv.own.owntv.core.database.entity.*
 import tv.own.owntv.features.home.*
 
 class HockeyLocalStorageTest {
+    @Test fun lookaheadFindsStoredFixtureBeyond128RowsAndInvalidatesChangedGuide(): Unit = runBlocking {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.inMemoryDatabaseBuilder(app, OwnTVDatabase::class.java).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()
+        try {
+            val now = java.time.Instant.parse("2026-10-27T12:00:00Z").toEpochMilli()
+            val start = java.time.Instant.parse("2026-10-31T14:15:00Z").toEpochMilli()
+            val game = SportsCatalog.fixture(SportsCatalog.shl, ShlGame("synthetic-lookahead", "Växjö Lakers", "Färjestad BK", start, null))
+            val channel = ChannelEntity(id = 10, sourceId = 101, name = "TV4 Sport Live 3 HD", streamUrl = "http://127.0.0.1:9/unavailable", epgChannelId = "mapped-sports")
+            val initial = (1L..128L).map { EpgProgrammeEntity(id = it, sourceId = 101, epgChannelId = "mapped-sports", startMs = now + (it - 1) * 1_800_000,
+                stopMs = now + it * 1_800_000, title = "Synthetic programme") }
+            val target = EpgProgrammeEntity(id = 999, sourceId = 101, epgChannelId = "mapped-sports", startMs = start, stopMs = start + 3 * 3_600_000, title = "SHL LIVE: Växjö – Färjestad")
+            db.epgDao().upsertProgrammes(initial + target)
+            val custom = SectionCustomizations()
+            val first = storedHockeyProgrammes(db.epgDao(), channel, custom, 0, now) { true }
+            assertEquals(128, first.size); assertFalse(first.any { it.id == 999L })
+            suspend fun scan(access: Boolean = true): List<EpgHockeyMatch> {
+                val rows = hockeyEpgWithLookahead(first, hockeyEpgLookahead(listOf(game), now)) { from, to ->
+                    storedHockeyWindow(db.epgDao(), channel, custom, 0, from, to) { access }
+                }
+                val collector = HockeyEpgCollector(SportPreferences(listOf(SportsCatalog.farjestadId)), now, listOf(game))
+                rows.rows.forEach { collector.add(channel.id, it) }
+                return collector.result(rows.truncated)
+            }
+            assertEquals(listOf(channel.id), scan().single().channelIds)
+            assertTrue(scan(false).isEmpty())
+            db.epgDao().upsertProgrammes(listOf(target.copy(title = "SHL highlights: Växjö – Färjestad")))
+            assertTrue(scan().isEmpty())
+        } finally { db.close() }
+    }
+
     @Test fun boundedAliasQueriesFindOnlyExactAuthorizedLinearChannels(): Unit = runBlocking {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val db = Room.inMemoryDatabaseBuilder(app, OwnTVDatabase::class.java).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()

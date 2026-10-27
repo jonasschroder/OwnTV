@@ -186,6 +186,7 @@ jobs:
           required = {
               ('tv.own.owntv.home.HockeyLocalStorageTest', 'boundedAliasQueriesFindOnlyExactAuthorizedLinearChannels'),
               ('tv.own.owntv.home.V07PresentationTest', 'broadcastDiagnosticsExplainWindowWithoutNetworkOrExtraNavigation'),
+              ('tv.own.owntv.home.HomeChannelDefaultsStorageTest', 'nativeHomeBatchRejectsSourceRevocationWithoutChangingFavorites'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'scrollingReentryPreservesSavedRowAndProfileDoesNotReuseIt'),
               ('tv.own.owntv.home.NativeNavigationDeviceTest', 'fullLabelsFitAndFocusDoesNotResizeHeader'),
               ('tv.own.owntv.home.SmartHomeDeviceTest', 'companionSourceDismissRestoresExactLiveActionAndRemovedCompanionFallsBackSafely'),

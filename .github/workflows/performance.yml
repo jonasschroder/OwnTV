@@ -1,0 +1,49 @@
+name: Synthetic performance journey
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/**'
+      - 'tools/performance/**'
+      - '.github/workflows/performance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  performance-journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash tools/prepare-core.sh
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :app:assembleQaDebug :app:assembleQaDebugAndroidTest -Pmintv.upgradeTestAbi=x86_64 --max-workers=4 --console=plain
+      - name: Enable emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          profile: tv_1080p
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install app/build/outputs/apk/qa/debug/app-qa-debug.apk
+            adb install app/build/outputs/apk/androidTest/qa/debug/app-qa-debug-androidTest.apk
+            ANDROID_SERIAL=$(adb get-serialno) bash tools/performance/run-journey.sh
+            python3 tools/performance/summarize.py performance-evidence/journey-*.json > performance-evidence/summary.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mintv-synthetic-performance
+          path: performance-evidence/
+          if-no-files-found: error

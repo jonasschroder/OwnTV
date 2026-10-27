@@ -1056,6 +1056,30 @@ class LiveViewModel(
         channelDao.getById(channelId)?.takeIf { isVisibleToActiveProfile(it) }
     }
 
+    /** One operation-scoped access snapshot, never a persistent authorization cache. */
+    internal suspend fun homeChannels(ids: List<Long>, expectedProfileId: Long): Map<Long, ChannelEntity> = withContext(Dispatchers.IO) {
+        suspend fun access(): HomeChannelAccess? {
+            if (settings.activeProfileIdNow() != expectedProfileId || ctx.value.profileId != expectedProfileId) return null
+            val profile = profileDao.getById(expectedProfileId) ?: return null
+            val sources = sourceDao.observeForProfile(expectedProfileId).first().filter { it.syncLive }.map { it.id }.toSet()
+            if (sources != ctx.value.sourceIds.toSet()) return null
+            return HomeChannelAccess(profile, sources, customize.observe(expectedProfileId, MediaType.LIVE).first())
+        }
+        readHomeChannels(ids, ::access, channelDao::getById, categoryDao::getById) { id ->
+            customCategoryDao.contextsOf(expectedProfileId, MediaType.LIVE, id)
+        }
+    }
+
+    /** Native Home/Sport need live favourites, not the legacy movie/series/trending feed. */
+    internal val nativeHomeFavorites = ctx.flatMapLatest { c ->
+        if (c.profileId < 0) flowOf(NativeHomeFavorites()) else combine(
+            channelDao.favoritesListAlpha(c.profileId), customize.observe(c.profileId, MediaType.LIVE),
+            profileDao.observeById(c.profileId), categoryDao.observe(c.sourceIds, MediaType.LIVE),
+        ) { rows, custom, profile, categories ->
+            NativeHomeFavorites(c.profileId, nativeHomeFavorites(rows, c.sourceIds.toSet(), profile, custom, categories))
+        }
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.WhileSubscribed(0), NativeHomeFavorites())
+
     data class HomeChannelCandidates(val channels: List<ChannelEntity>, val truncated: Boolean)
 
     internal suspend fun homeBroadcastCandidates(broadcasters: List<tv.own.owntv.features.home.BroadcastChannel>, expectedProfileId: Long): HomeChannelCandidates = withContext(Dispatchers.IO) {

@@ -154,32 +154,24 @@ class HomeViewModel(
     )
 
     init {
+        // Keep the cheap privacy reset active even when no legacy screen is observing the feed.
+        viewModelScope.launch { settings.activeProfileId.collect { _uiState.value = HomeUiState() } }
+        // The native dashboard has its own bounded readers. Retain the legacy feed for its actual
+        // consumers only; stop its Room observers and in-flight load when the last consumer leaves.
         viewModelScope.launch {
-            reloadRequests.collectLatest { known ->
-                (known ?: currentProfileId())?.let { profileId ->
-                    loadHomeData(profileId)
+            whileHomeObserved(_uiState.subscriptionCount) {
+                launch {
+                    reloadRequests.collectLatest { known ->
+                        (known ?: currentProfileId())?.let { loadHomeData(it) }
+                    }
                 }
-            }
-        }
-        // Room invalidates this after the worker atomically replaces a snapshot, so Home updates even
-        // when the user stays on the screen throughout a background post-sync refresh.
-        //
-        // drop(1) discards Room's *initial* emission, which carries no news: it fires the moment this
-        // flow is collected, and loadHomeData reads the trending table itself anyway, so acting on it
-        // only duplicated the load the shell already asks for when Home becomes the selected section.
-        // On a cold start that duplicate was the single largest delay on the screen — the two triggers
-        // arrived hundreds of milliseconds apart, so no amount of coalescing could merge them without
-        // holding the first one back. Only genuine post-first invalidations reach here now.
-        viewModelScope.launch {
-            trendingDao.observeAllItems().drop(1).collect {
-                reloadRequests.emit(null)
-            }
-        }
-        viewModelScope.launch {
-            settings.activeProfileId.collectLatest { pid ->
-                _uiState.value = HomeUiState()
-                if (pid >= 0) {
-                    channelDao.favoritesListAlpha(pid).collect { reloadRequests.emit(pid) }
+                launch {
+                    trendingDao.observeAllItems().drop(1).collect { reloadRequests.emit(null) }
+                }
+                launch {
+                    settings.activeProfileId.collectLatest { pid ->
+                        if (pid >= 0) channelDao.favoritesListAlpha(pid).collect { reloadRequests.emit(pid) }
+                    }
                 }
             }
         }

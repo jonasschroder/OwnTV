@@ -24,9 +24,9 @@ internal fun NativeSportScreen(liveVm: LiveViewModel, homeVm: HomeViewModel, pro
     onEntryHook: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit = {}, onChildFocused: () -> Unit, modifier: Modifier = Modifier) {
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val usable = active && lifecycle == Lifecycle.State.RESUMED
-    val home by homeVm.uiState.collectAsStateWithLifecycle()
+    val home by liveVm.nativeHomeFavorites.collectAsStateWithLifecycle()
     val library by liveVm.homeLibraryState.collectAsStateWithLifecycle()
-    val favorites = home.favoriteLive.takeIf { home.profileId == profileId && library.profileId == profileId }.orEmpty()
+    val favorites = home.channels.takeIf { home.profileId == profileId && library.profileId == profileId }.orEmpty()
         .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false }
     Box(modifier.fillMaxSize().onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup()) {
         MinSportCompanion(true, usable, liveVm, profileId, favorites, onPlay, 64.mpx, onSources,

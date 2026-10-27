@@ -24,7 +24,8 @@ class TvSuiteInventoryTest(unittest.TestCase):
                      'tv.own.owntv.update.SameSignerUpgradeTest',
                      'tv.own.owntv.update.UpdateInstallReceiverTest',
                      'tv.own.owntv.update.UpdateDialogNavigationTest'}
-        self.assertEqual(set(cases), selected | dedicated, 'Device tests must be selected by the Home or dedicated startup/upgrade runner')
+        performance = {'tv.own.owntv.performance.PerformanceJourneyTest'}
+        self.assertEqual(set(cases), selected | dedicated | performance, 'Device tests must be selected by a real CI runner')
         workflow = (ROOT / '.github/workflows/android.yml').read_text()
         required = set(re.findall(r"\('([\w.]+)', '([\w]+)'\)", workflow))
         self.assertEqual({(name, method) for name in selected for method in cases[name]}, required,
@@ -33,3 +34,14 @@ class TvSuiteInventoryTest(unittest.TestCase):
         upgrades = (ROOT / 'tools/signing/test_upgrade.py').read_text()
         for name in dedicated:
             self.assertIn(name, startup if name.endswith('ProductionStartupTest') else upgrades)
+
+        performance_script = (ROOT / 'tools/performance/run-journey.sh').read_text()
+        performance_workflow = (ROOT / '.github/workflows/performance.yml').read_text()
+        for name in performance:
+            self.assertIn(name, performance_script)
+            for method in cases[name]:
+                self.assertIn('run ' + method + ' ', performance_script)
+        self.assertIn('OK (1 test)', performance_script)
+        self.assertIn('INSTRUMENTATION_STATUS_CODE: -3', performance_script)
+        self.assertIn('bash tools/performance/run-journey.sh', performance_workflow)
+        self.assertIn('mintv-synthetic-performance', performance_workflow)

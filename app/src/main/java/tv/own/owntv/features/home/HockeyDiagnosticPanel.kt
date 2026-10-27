@@ -2,6 +2,7 @@ package tv.own.owntv.features.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -15,14 +16,14 @@ private data class HockeyDiagnosticStatus(val league: Competition, val event: Ho
 
 /** Observes only local preference changes while composed; no polling, HTTP or background refresh. */
 @Composable
-internal fun HockeyDiagnosticPanel(repository: ShlRepository) {
+internal fun HockeyDiagnosticPanel(repository: ShlRepository, broadcasts: TvmatchenBroadcastSource) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<List<HockeyDiagnosticStatus>>(emptyList()) }
     var revision by remember { mutableIntStateOf(0) }
     DisposableEffect(repository) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key?.startsWith("hockey-trace:") == true || key in listOf("shl-enabled", "shl-access-blocked")) revision++
+            if (key?.startsWith("hockey-trace:") == true || key in listOf("shl-enabled", "shl-access-blocked", "broadcast-enabled", "broadcast-blocked")) revision++
         }
         repository.preferences.registerOnSharedPreferenceChangeListener(listener)
         onDispose { repository.preferences.unregisterOnSharedPreferenceChangeListener(listener) }
@@ -56,6 +57,20 @@ internal fun HockeyDiagnosticPanel(repository: ShlRepository) {
                 event?.retryAt?.let { TvText(stringResource(R.string.mintv_sports_retry_at, stockholmTime(it)), color = MinTvMuted) }
             }
         }
+        val lookup by broadcasts.diagnostics.collectAsStateWithLifecycle()
+        val outcome = when {
+            !repository.preferences.getBoolean("shl-enabled", false) || !repository.preferences.getBoolean("broadcast-enabled", false) -> BroadcastLookupOutcome.DISABLED
+            broadcasts.blocked -> BroadcastLookupOutcome.ACCESS_BLOCKED
+            else -> lookup.outcome
+        }
+        FocusPanel {
+            TvText(stringResource(R.string.mintv_broadcast_diagnostics), bold = true)
+            TvText(stringResource(broadcastOutcomeLabel(outcome)), lines = 3)
+            lookup.at?.let { TvText(stringResource(R.string.mintv_updated, updateLabel(it, System.currentTimeMillis())), color = MinTvMuted) }
+            TvText(stringResource(R.string.mintv_broadcast_stage, lookup.stage.name), color = MinTvMuted)
+            lookup.http?.let { TvText(stringResource(R.string.mintv_hockey_http_stage, it, lookup.stage.name), color = MinTvMuted) }
+            lookup.retryAt?.let { TvText(stringResource(R.string.mintv_sports_retry_at, stockholmTime(it)), color = MinTvMuted) }
+        }
         HomeButton(stringResource(R.string.mintv_hockey_export), { scope.launch {
             val path = withContext(Dispatchers.IO) { SportsDiagnostics.export(context, repository.diagnostics.report()) }
             exported = path != null; exportFailed = path == null
@@ -83,4 +98,24 @@ internal fun hockeyOutcomeLabel(outcome: HockeyOutcome?): Int = when (outcome) {
     HockeyOutcome.CANCELLED -> R.string.mintv_hockey_status_cancelled
     HockeyOutcome.REQUESTED -> R.string.mintv_sports_loading
     else -> R.string.mintv_hockey_status_not_requested
+}
+
+internal fun broadcastOutcomeLabel(outcome: BroadcastLookupOutcome): Int = when (outcome) {
+    BroadcastLookupOutcome.OUTSIDE_WINDOW -> R.string.mintv_broadcast_outside_window
+    BroadcastLookupOutcome.INVALID_FIXTURE -> R.string.mintv_hockey_status_rejected
+    BroadcastLookupOutcome.NO_LINEAR_CHANNEL -> R.string.mintv_broadcast_no_linear
+    BroadcastLookupOutcome.NOT_FOUND -> R.string.mintv_broadcast_not_found
+    BroadcastLookupOutcome.AMBIGUOUS -> R.string.mintv_broadcast_ambiguous
+    BroadcastLookupOutcome.FIELDS_REJECTED -> R.string.mintv_broadcast_fields_rejected
+    BroadcastLookupOutcome.DISABLED -> R.string.mintv_v0111_broadcast_disabled
+    BroadcastLookupOutcome.ACCESS_BLOCKED -> R.string.mintv_broadcast_blocked
+    BroadcastLookupOutcome.BACKOFF -> R.string.mintv_hockey_status_backoff
+    BroadcastLookupOutcome.RATE_LIMITED -> R.string.mintv_hockey_status_limited
+    BroadcastLookupOutcome.CACHE_HIT, BroadcastLookupOutcome.VERIFIED -> R.string.mintv_hockey_status_success
+    BroadcastLookupOutcome.HTTP_ERROR -> R.string.mintv_hockey_status_http
+    BroadcastLookupOutcome.NETWORK_ERROR -> R.string.mintv_hockey_status_network
+    BroadcastLookupOutcome.FORMAT_ERROR -> R.string.mintv_hockey_status_format
+    BroadcastLookupOutcome.CACHE_ERROR -> R.string.mintv_hockey_status_cache_write
+    BroadcastLookupOutcome.CANCELLED -> R.string.mintv_hockey_status_cancelled
+    BroadcastLookupOutcome.NOT_REQUESTED -> R.string.mintv_hockey_status_not_requested
 }

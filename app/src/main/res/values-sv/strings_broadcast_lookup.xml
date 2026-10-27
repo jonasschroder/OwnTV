@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_broadcast_diagnostics">TV-kanalsökning · TVmatchen</string>
+    <string name="mintv_broadcast_outside_window">Utanför sökfönstret (idag och de närmaste två dagarna). Lokal EPG och manuellt val finns kvar.</string>
+    <string name="mintv_broadcast_not_found">Ingen exakt match hittades i den granskade listan. Det betyder inte att matchen saknar TV-sändning.</string>
+    <string name="mintv_broadcast_ambiguous">Flera möjliga matcher eller kanaluppgifter. Välj kanal manuellt.</string>
+    <string name="mintv_broadcast_fields_rejected">En matchsida hittades, men exakt match och linjär TV-kanal kunde inte verifieras.</string>
+    <string name="mintv_broadcast_evidence_source">Sändningsinformation: %1$s</string>
+    <string name="mintv_broadcast_epg_checked">Lokal EPG kontrollerad: %1$s (söktid, inte leverantörens uppdatering)</string>
+    <string name="mintv_broadcast_no_linear">Endast en streamingtjänst verifierades, ingen linjär TV-kanal. Lokal EPG och manuellt val finns kvar.</string>
+    <string name="mintv_broadcast_stage">Kontrollsteg: %1$s</string>
+</resources>

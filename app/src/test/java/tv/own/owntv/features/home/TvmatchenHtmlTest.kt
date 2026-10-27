@@ -12,6 +12,11 @@ class TvmatchenHtmlTest {
     private val fixture = BroadcastFixture("SHL", "Färjestad BK", "IF Malmö Redhawks", LocalDate.parse("2026-10-10"), Instant.parse("2026-10-10T13:15:00Z"))
     private fun parse(value: String = html, game: BroadcastFixture = fixture) = runCatching { TvmatchenHtml.assignment(value, path, game, now) }.getOrNull()
 
+    @Test fun validWindowWithOnlyOtherCompetitionsIsEmptyRatherThanMalformed() {
+        val listing = javaClass.getResource("/shl-broadcast/tvmatchen-listing.html")!!.readText()
+        assertTrue(TvmatchenHtml.fixtureIndex(listing.replace("SHL", "HockeyAllsvenskan"),
+            Instant.parse("2026-10-10T10:00:00Z")).isEmpty())
+    }
     @Test fun savedPublicHtmlResolvesExplicitUtcAndSeparatesStreaming() {
         val value = parse()!!
         assertEquals(listOf(BroadcastChannel("TV4 Play Hockey", false), BroadcastChannel("TV4 Sport Live 2", true)), value.channels)

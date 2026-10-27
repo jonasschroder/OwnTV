@@ -161,22 +161,23 @@
 1	log	app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt	Response exceeds source budget
 2	protocol	app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt	Retry-After
 1	empty	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	\0
-3	url	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/ishockey/shl
+4	uri	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/ishockey/shl
 1	url	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/match/
 1	regex	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/match/[a-z0-9-]{1,140}-[0-9]{1,10}
-3	url	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/page/anvandarvillkor
-2	url	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/robots.txt
+4	uri	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/page/anvandarvillkor
+3	uri	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	/robots.txt
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	SHL
 2	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	_
-1	assertion	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	broadcast access requires review
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ExperimentalBroadcastReader.kt	|
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ExternalTvShortcuts.kt	external-$pkg
 1	protocol	app/src/main/java/tv/own/owntv/features/home/HockeyChannelOrder.kt	TV4 Hockey
 1	regex	app/src/main/java/tv/own/owntv/features/home/HockeyChannelOrder.kt	^TV4 Sport Live ([1-9][0-9]{0,2})$
 2	empty	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	\0
+1	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	broadcast-blocked
+2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	broadcast-enabled
 1	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	hockey-trace:
 2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	shl-access-blocked
-2	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	shl-enabled
+3	preference-key	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnosticPanel.kt	shl-enabled
 1	empty	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	\0
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	age
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyDiagnostics.kt	at
@@ -343,13 +344,15 @@
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${card.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${it.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-entry
-1	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
+2	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	4K
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	8K
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	EVENT
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	EXCLUSIVE
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	FHD
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	HD
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	Hockey Live $number
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	HockeyLive$number
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	NO
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	PPV
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SD
@@ -358,7 +361,10 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	STREAMING
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SWE
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SWEDEN
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	SportLive$number
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV Hockey
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV4 PLAY
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	TV4Hockey
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	UHD
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	[^A-Z0-9]+
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	bif
@@ -390,6 +396,8 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	skelleftea
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	tik
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	timra
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	tv4hockey
+2	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	tv4sportlive
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	vaxjo
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlChannelOverrides.kt	channel
 2	json	app/src/main/java/tv/own/owntv/features/home/ShlChannelOverrides.kt	choices
@@ -845,7 +853,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	tnum
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	· $left
-7	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
+6	empty	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
 1	sql	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	"$it"
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	#$it
 1	sql	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	AND

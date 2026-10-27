@@ -70,6 +70,9 @@ class NativeV011PresentationTest {
     private var entry: (() -> Boolean)? = null
     private var details = 0
     private var played = 0
+    private var broadcastReady by mutableStateOf(false)
+    private var broadcastLabels by mutableStateOf(false)
+    private val broadcastChannel = ChannelEntity(id = 401, sourceId = 101, name = "TV4 Sport Live 1 HD", streamUrl = "http://127.0.0.1:9/unavailable")
     private var resumed: String? = null
     private fun shell(command: String): String = android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).bufferedReader().use { it.readText() }
     @Before fun disposableOnly() {
@@ -110,8 +113,13 @@ class NativeV011PresentationTest {
                                 TopDestination.SPORT -> NativeSportDashboard(NativeSportSnapshot(profile, now, preferences, if (populated) fixture else null,
                                     if (populated) listOf(fixture, fixture.copy(id = "fixture-2", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!, awayTeam = SportsCatalog.identity("Luleå HF", Sport.ICE_HOCKEY)!!, status = MatchStatus.RESULT_SNAPSHOT, score = Score(3, 1))) else emptyList(),
                                     if (populated) listOf(fixture.copy(id = "fixture-next", kickoff = fixture.kickoff.plusSeconds(86_400))) else emptyList(),
-                                    if (populated) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList()),
-                                    NativeSportActions({ details++ }, { played++ }, {}, {}, {}), first, { entry = it }, { header.requestFocus() })
+                                    if (populated) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
+                                    heroChannel = if (broadcastReady) broadcastChannel else null,
+                                    broadcastLabels = if (broadcastLabels) mapOf(fixture.id to broadcastChannel.name) else emptyMap(),
+                                    playableFixtures = if (broadcastReady) mapOf(fixture.id to broadcastChannel) else emptyMap()),
+                                    NativeSportActions({ details++ }, { played++ }, {}, {}, {}, { game, channel ->
+                                        assertEquals(fixture, game); assertEquals(broadcastChannel, channel); played++
+                                    }), first, { entry = it }, { header.requestFocus() })
                                 TopDestination.VOD -> NativeVodLanding(NativeVodSnapshot(profile, if (populated) cards(MetadataType.MOVIE) else emptyList(),
                                     if (populated) cards(MetadataType.TV) else emptyList(), if (populated) resumes else emptyList()), first, { entry = it },
                                     { header.requestFocus() }, {}, { details++ }, { resumed = it.key })
@@ -169,6 +177,33 @@ class NativeV011PresentationTest {
     }
     @Test fun capturesFourProductionScreensAt1080WithHonestFallbacks() { captures("1920x1080", "1080") }
     @Test fun capturesFourProductionScreensAt720WithHonestFallbacks() { captures("1280x720", "720") }
+    private fun automaticBroadcastCard(size: String) {
+        broadcastReady = true; broadcastLabels = true
+        mount(); enter(TopDestination.SPORT)
+        compose.onAllNodesWithText(broadcastChannel.name).assertCountEquals(2)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        val card = compose.onNodeWithTag("sport-today-${fixture.id}")
+        card.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, played); assertEquals(0, details)
+        // A status update preserves the existing focus key; long OK opens details, never playback.
+        compose.runOnIdle { broadcastReady = false }
+        card.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, details); assertEquals(1, played)
+        compose.runOnIdle { broadcastReady = true }
+        val down = android.os.SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        instrumentation.sendKeySync(KeyEvent(down, down + 600, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        compose.waitForIdle(); assertEquals(2, details); assertEquals(1, played)
+        val bitmap = instrumentation.uiAutomation.takeScreenshot()
+        assertEquals(size.substringBefore('x').toInt(), bitmap.width); assertEquals(size.substringAfter('x').toInt(), bitmap.height)
+        val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
+        File(dir, "v013-sport-broadcast-$size-synthetic.png").outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+        bitmap.recycle()
+        compose.runOnIdle { profile = 8; populated = false; broadcastReady = false; broadcastLabels = false }
+        compose.waitForIdle(); compose.onNodeWithTag("sport-today-${fixture.id}").assertDoesNotExist()
+    }
+    @Test fun automaticBroadcastCardPlaysOnlyUniqueSourceAt1080() { automaticBroadcastCard("1920x1080") }
+    @Test fun automaticBroadcastCardPlaysOnlyUniqueSourceAt720() { automaticBroadcastCard("1280x720") }
     @Test fun filmSeriesRowsUseDirectionalEntryDetailsAndExactResume() {
         mount(); enter(TopDestination.VOD)
         compose.onNodeWithTag("vod-movies-entry").assertIsFocused()

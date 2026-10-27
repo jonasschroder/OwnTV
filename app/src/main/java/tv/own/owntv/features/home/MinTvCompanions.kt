@@ -102,6 +102,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var page by rememberSaveable(profileId) { mutableIntStateOf(0) }
     var data by remember(profileId) { mutableStateOf<Map<String, SportSnapshot>>(emptyMap()) }
     var localMatches by remember(profileId) { mutableStateOf<List<EpgHockeyMatch>>(emptyList()) }
+    var localContext by remember(profileId) { mutableStateOf<Pair<Long, List<Long>>?>(null) }
     var localCheckedAt by remember(profileId) { mutableLongStateOf(0L) }
     var localChannels by remember(profileId) { mutableStateOf<Map<Long, ChannelEntity>>(emptyMap()) }
     var localLoading by remember(profileId) { mutableStateOf(false) }
@@ -112,6 +113,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var query by rememberSaveable(profileId) { mutableStateOf("") }
     var channels by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var confirmed by remember(profileId) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    var matchedAt by remember(profileId) { mutableLongStateOf(0L) }
     var matchedGame by remember(profileId) { mutableStateOf<SportFixture?>(null) }
     var matching by remember(profileId) { mutableStateOf(false) }
     var matchFailed by remember(profileId) { mutableStateOf(false) }
@@ -168,7 +170,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val currentData = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
     val currentSnapshotData by rememberUpdatedState(currentData)
     val externalGames = remember(currentData) { currentData.values.flatMap { it.fixtures }.sortedBy { it.faceoff } }
-    val unexpiredMatches = remember(localMatches, now) { unexpiredHockeyMatches(localMatches, now) }
+    val unexpiredMatches = remember(localMatches, now, localContext, libraryContext, localCheckedAt) { freshHockeyGuide(localMatches.takeIf { localContext == libraryContext }.orEmpty(), localCheckedAt, now) }
     val allGames = remember(externalGames, unexpiredMatches) { (externalGames + unexpiredMatches.map { it.fixture }).distinctBy { it.id }.sortedBy { it.faceoff } }
     val currentAllGames by rememberUpdatedState(allGames)
     LaunchedEffect(profileId) { SportsDiagnostics.record(SportsDiagnostics.Event.PROFILE_CHANGED) }
@@ -203,6 +205,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val localGuideVisible = available && !teamsOpen && (!screen || section in listOf(MatchcenterSection.FARJESTAD, MatchcenterSection.MATCHES) || selectedId != null)
     LaunchedEffect(localGuideVisible, profileId, libraryContext, libraryCount, favorites, selectedTeams, externalGames) {
         if (!localGuideVisible || profileId == null) { localLoading = false; return@LaunchedEffect }
+        localMatches = emptyList(); localChannels = emptyMap(); localCheckedAt = 0L; localContext = null
         while (true) {
             localLoading = true; localFailed = false
             try {
@@ -212,14 +215,25 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     val choices = swedishChannels.choices(profileId)
                     val pool = liveVm.homeMatchCandidates("", favorites, profileId, listOf("TV12"))
                     val eligible = hockeyGuideChannels(pool.channels, choices)
-                    val collector = HockeyEpgCollector(selectedTeams, at, known)
+                    val scanTeams = selectedTeams.copy(teamIds = (selectedTeams.teamIds + known.flatMap { listOf(it.homeTeam.id, it.awayTeam.id) }).distinct())
+                    val windows = hockeyEpgLookahead(known, at)
+                    val collector = HockeyEpgCollector(scanTeams, at, known)
+                    var readTruncated = false
                     for (channel in eligible.take(64)) {
                         kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                        for (programme in liveVm.homeHockeyProgrammes(channel, at, profileId)) collector.add(channel.id, programme)
+                        if (BroadcastResolver.streamingBrand(channel.name)) continue
+                        val rows = hockeyEpgWithLookahead(liveVm.homeHockeyProgrammes(channel, at, profileId), windows) { from, to ->
+                            liveVm.homeStoredProgrammes(channel, from, to, profileId)
+                        }
+                        readTruncated = readTruncated || rows.truncated
+                        for (programme in rows.rows) collector.add(channel.id, programme)
                     }
-                    Triple(collector.result(pool.truncated || eligible.size > 64), eligible.take(64).associateBy { it.id }, choices)
+                    Triple(collector.result(pool.truncated || eligible.size > 64 || windows.size > 12 || readTruncated), eligible.take(64).associateBy { it.id }, choices)
                 } }
-                localChannels = loaded.second; localMatches = loaded.first; localCheckedAt = System.currentTimeMillis(); guideChoices = loaded.third
+                if (currentProfile == profileId && liveVm.homeLibraryContext.value == libraryContext) {
+                    localChannels = loaded.second; localMatches = loaded.first; localCheckedAt = System.currentTimeMillis()
+                    localContext = libraryContext; guideChoices = loaded.third; now = localCheckedAt
+                }
             } catch (timeout: TimeoutCancellationException) {
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 localFailed = true; SportsDiagnostics.failure(timeout, HockeyStage.CACHE)
@@ -297,7 +311,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         finally { matching = false }
     }
     LaunchedEffect(available, profileId, gameToMatch, query, favorites, scheduleFresh, validBroadcast, libraryContext, libraryCount, choiceVersion, localMatches) {
-        channels = emptyList(); confirmed = emptyList(); matchedGame = null; matchFailed = false
+        channels = emptyList(); confirmed = emptyList(); matchedGame = null; matchedAt = 0L; matchFailed = false
         chosenChannel = null; manualChoice = null; matchedBroadcast = null; candidatesComplete = false
         if (!available || gameToMatch == null || profileId == null) { matching = false; return@LaunchedEffect }
         val game = gameToMatch
@@ -330,7 +344,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 }
             } else emptyList()
             channels = suggestions.channels.filter { !BroadcastResolver.eventPlaceholder(it.name) || it in matches }
-            confirmed = hockeyGuideChannels(matches.distinctBy { it.id }, choices); matchedGame = game
+            confirmed = hockeyGuideChannels(matches.distinctBy { it.id }, choices); matchedGame = game; matchedAt = System.currentTimeMillis(); now = matchedAt
             matchedBroadcast = validBroadcast
             candidatesComplete = if (local != null) !local.truncated else if (validBroadcast != null) !discovered.truncated else !pool.truncated
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -388,7 +402,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     val valid = withContext(Dispatchers.IO) {
                         matchHockeyChannels(listOf(actual), game, selectedTeams, known,
                             assignment.takeIf { localHockeyEvidence(unexpiredMatches, game) == null }, at) {
-                            liveVm.homeHockeyProgrammes(it, at, profile)
+                            liveVm.homeStoredProgrammes(it, game.faceoff - 60 * 60_000L, game.faceoff + 3 * 60 * 60_000L, profile)
                         }.isNotEmpty()
                     }
                     if (!valid) {
@@ -414,9 +428,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 hockeyFixtureStillCurrent(game, currentAllGames)) onPlay(actual, list)
         }
     }
-    val localEvidence = localHockeyEvidence(localMatches, gameToMatch)
+    val localEvidence = localHockeyEvidence(unexpiredMatches, gameToMatch)
     val reliableChannels = confirmed.takeIf { matchedGame == gameToMatch && matchedBroadcast == validBroadcast &&
-        (scheduleFresh || localEvidence != null) && !matching }.orEmpty().filter { channel ->
+        (scheduleFresh || localEvidence != null) && matchedAt > 0 && now >= matchedAt && now - matchedAt <= 2 * 60_000L && !matching }.orEmpty().filter { channel ->
         localEvidence == null || (localEvidence.channelStops[channel.id] ?: 0) > now
     }
     val manualChannel = chosenChannel.takeIf { matchedGame == gameToMatch && !matching && now < (manualChoice?.expiresAt ?: 0L) }
@@ -502,23 +516,26 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         homeContent({
             if (dashboard != null) {
                 val freshGames = allGames.filter { it.competition.id in freshCompetitions || localHockeyEvidence(unexpiredMatches, it) != null }
-                val labels = freshGames.mapNotNull { game ->
-                    val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[fixtureKey(game.broadcastFixture())], Instant.ofEpochMilli(now)) else null
-                    val local = localHockeyEvidence(unexpiredMatches, game)?.takeUnless { it.truncated }
-                    val localLabel = local?.channelIds?.mapNotNull { localChannels[it]?.name }?.distinct()?.joinToString()?.takeIf { it.isNotBlank() }
-                    val label = localLabel ?: assignment?.channels?.filter { it.linear }?.joinToString { it.name }?.takeIf { it.isNotBlank() }
-                    label?.let { game.id to it }
-                }.toMap()
+                val cards = freshGames.associate { game ->
+                    val key = fixtureKey(game.broadcastFixture())
+                    val cached = resolvedCards[key]?.takeIf { it.first > now }
+                    val assignment = if (enabled && broadcastEnabled) knownBroadcasts[key] else null
+                    game.id to hockeyCardBroadcast(game, localHockeyEvidence(unexpiredMatches, game), localChannels,
+                        assignment, cached?.second.orEmpty(), cached != null, guideChoices, now)
+                }
+                val labels = cards.mapNotNull { (id, card) -> card.label?.let { id to it } }.toMap()
+                val playable = cards.mapNotNull { (id, card) -> card.playable?.let { id to it } }.toMap()
                 val onAir = onAirHockeyFixtures(unexpiredMatches, now)
                 val todayRows = freshGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it !in onAir }.thenBy { it.faceoff })
                 val hero = nextPersonalHockeyFixture(freshGames, selectedTeams, unexpiredMatches, now)
-                val verified = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)?.takeIf { gameToMatch == hero }
+                val verified = cards[hero?.id]?.playable
                 dashboard(NativeSportSnapshot(profileId, now, selectedTeams, hero, todayRows,
                     freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
-                    dashboardChannels, labels, verified, homeLoading, enabled, homeIssue),
+                    dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable),
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
-                        watch = { verified?.let { play(it, reliableChannels) } }, settings = onSettings), entryFocus, { dashboardEntry = it })
+                        watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
+                        fixtureWatch = { game, channel -> play(channel, listOf(channel), game) }), entryFocus, { dashboardEntry = it })
             } else {
             val shown = manualChannel ?: reliableChannels.firstOrNull()
             val verifiedDirect = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)
@@ -643,7 +660,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                     val key = fixtureKey(game.broadcastFixture())
                                     val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
                                     val cached = resolvedCards[key]?.takeIf { now < it.first && game.competition.id in freshCompetitions }
-                                    val epg = localHockeyEvidence(localMatches, game)
+                                    val epg = localHockeyEvidence(unexpiredMatches, game)
                                     val epgChannels = epg?.channelIds.orEmpty().filter { (epg?.channelStops?.get(it) ?: 0) > now }.mapNotNull { localChannels[it] }
                                     val direct = if (game == gameToMatch) directChannel else directCards[key].takeIf { cached != null } ?: preferredHockeyChannel(epgChannels, guideChoices).takeIf { epg?.truncated == false }
                                     MatchScorecard(game, now, selectedTeams.hideScores, game.follows(selectedTeams), direct?.name ?: epgChannels.firstOrNull()?.name ?: assignment?.channels?.filter { it.linear }?.joinToString { it.name }, { choose(game) },

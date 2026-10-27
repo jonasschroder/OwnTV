@@ -19,7 +19,7 @@ internal suspend fun storedHockeyWindow(dao: EpgDao, channel: ChannelEntity,
         ?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() } ?: return@withContext emptyList()
     val shift = EpgShift.minutesFor(custom, channel, globalShift)
     val rows = dao.programmesForChannel(key, EpgShift.toStored(from, shift), EpgShift.toStored(to, shift))
-        .take(12).map { EpgShift.apply(it, shift) }
+        .take(128).map { EpgShift.apply(it, shift) }
     if (accessible()) rows else emptyList()
 }
 

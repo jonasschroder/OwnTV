@@ -14,6 +14,11 @@ capture() {
   adb shell wm size reset >/dev/null 2>&1 || true
   adb shell wm density reset >/dev/null 2>&1 || true
   adb logcat -d -b crash > startup-evidence/crash-logcat.txt || true
+  if [ "$result" -ne 0 ]; then
+    # Only synthetic data exists on this guarded disposable emulator. Keep a bounded decoder
+    # excerpt for an actual playback failure, rather than gathering every successful device log.
+    adb logcat -d -s 'LiveEngine:I' 'OwnTV-LivePreviewEngine:I' '*:S' | tail -n 180 > startup-evidence/decoder-failure-logcat.txt || true
+  fi
   adb shell dumpsys activity activities > startup-evidence/activities.txt || true
   python3 - <<'PYCRASH'
 from pathlib import Path

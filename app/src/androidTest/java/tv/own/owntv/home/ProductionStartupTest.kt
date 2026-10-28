@@ -183,12 +183,17 @@ class ProductionStartupTest {
                 // Complete the shell's normal-entry reset and open its real video surface. Home
                 // intentionally has no preview surface: VM dispatch there is not a fullscreen test.
                 compose.waitUntil(30_000) { compose.onAllNodesWithTag("smart-hero-play").fetchSemanticsNodes().isNotEmpty() }
+                fun entryEvidence(label: String) {
+                    val data = "$label: channel=${vm.previewChannel.value?.id}; state=${vm.previewEngine.state.value}; onExo=${vm.liveOnExo.value}; notice=${vm.liveEntryNotice.value}; context=${vm.homeLibraryContext.value}; metadata=${vm.swedishRowContext.value?.profileId}\n" + tv.own.owntv.player.LiveEntryDiagnostics.trace.report()
+                    // println goes to Android logcat, not the instrument -w result. Retain the
+                    // bounded, synthetic-only context in the actual CI case output.
+                    instrumentation.sendStatus(2, android.os.Bundle().apply { putString("stream", data) })
+                }
                 fun awaitPlaying(label: String) {
                     try {
                         compose.waitUntil(10_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
                     } catch (failure: Throwable) {
-                        println("Decoder fixture $label: state=${vm.previewEngine.state.value}; onExo=${vm.liveOnExo.value}")
-                        println(tv.own.owntv.player.LiveEntryDiagnostics.trace.report())
+                        entryEvidence("Decoder fixture $label")
                         throw failure
                     }
                 }
@@ -200,8 +205,7 @@ class ProductionStartupTest {
                 try {
                     compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
                 } catch (failure: Throwable) {
-                    println("TV entry fixture: channel=${vm.previewChannel.value?.id}; state=${vm.previewEngine.state.value}; onExo=${vm.liveOnExo.value}; notice=${vm.liveEntryNotice.value}")
-                    println(tv.own.owntv.player.LiveEntryDiagnostics.trace.report())
+                    entryEvidence("TV entry fixture")
                     val failed = instrumentation.uiAutomation.takeScreenshot()
                     val directory = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
                     File(directory, "v014-entry-failed.png").outputStream().use { failed.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }; failed.recycle()

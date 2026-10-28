@@ -164,6 +164,9 @@ class ProductionStartupTest {
         }
         db.channelDao().insertAll(channels)
         store.save(7, choices.copy(preferred = choices.preferred + ("svt1" to tv.own.owntv.core.customize.CustomizeKeys.channel(channels[0]))))
+        val fixtureChoices = store.choices(7)
+        assertEquals(channels[0].id, store.library(7, listOf(101, 102, source.id, portal.id), fixtureChoices)
+            .groups.single { it.identity == "svt1" }.preferred(fixtureChoices.preferred["svt1"], fixtureChoices.showUhd)?.id)
         settings.setActiveProfile(7)
         try {
             ActivityScenario.launch<MainActivity>(app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!).use { scenario ->
@@ -191,8 +194,19 @@ class ProductionStartupTest {
                 }
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithTag("swedish-channel-svt1").performClick()
-                compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
+                compose.onNodeWithTag("swedish-channel-svt1").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+                compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused()
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                try {
+                    compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
+                } catch (failure: Throwable) {
+                    println("TV entry fixture: channel=${vm.previewChannel.value?.id}; state=${vm.previewEngine.state.value}; onExo=${vm.liveOnExo.value}; notice=${vm.liveEntryNotice.value}")
+                    println(tv.own.owntv.player.LiveEntryDiagnostics.trace.report())
+                    val failed = instrumentation.uiAutomation.takeScreenshot()
+                    val directory = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
+                    File(directory, "v014-entry-failed.png").outputStream().use { failed.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }; failed.recycle()
+                    throw failure
+                }
                 awaitPlaying("TV grid disposal")
                 assertEquals(channels[0].id, vm.previewChannel.value?.id)
                 // Wait real frames past disposal, not just synchronous engine-command acknowledgement.

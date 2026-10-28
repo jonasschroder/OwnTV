@@ -81,10 +81,13 @@ Added a **real QA Activity/Koin/Room/Exo** matrix using an original local H.264/
 through a real native TV-grid OK → fullscreen disposal → origin matrix → Back journey.
 The matrix runs with the actual fullscreen video surface; Home deliberately has no preview surface.
 Remote events share a physical press's downTime, as in the existing short/long-OK tests.
-SVT2 additionally uses Core's asynchronous Stalker path with a local file and no portal or credentials. Existing startup CI requires it at
+SVT2 additionally uses Core's asynchronous Stalker path with loopback HTTP and no portal or credentials. Existing startup CI requires it at
 1080p and 720p **in addition to all eight previous executions**. It refuses non-CI, physical devices
 and preinstalled QA before any mutation. The video is synthetic, not SVT/IPTV broadcast evidence.
-The native capture must still show running media after browse disposal. No owner-device installation.
+The native capture must still show running media after browse disposal. The HTTP fixture has
+a separate passing JDK GET/HEAD/range/invalid-range smoke test. File-URI trials were rejected by
+Core's HTTP-only Exo source, so the native fixture uses HTTP without changing production engines.
+An OPENED_MPV event is a Core outcome signal, not proof of decoded frames; this test asserts pixels. No owner-device installation.
 
 Required CI still includes Android builds/unit/lint, navigation/source/profile storage, Core MPV/Exo
 regressions, upgrade/signing safeguards, i18n and the additional performance journey. No required

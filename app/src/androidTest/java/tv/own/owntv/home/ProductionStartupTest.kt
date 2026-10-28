@@ -156,20 +156,19 @@ class ProductionStartupTest {
         }
         val store = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
         val choices = store.choices(7)
+        val video = LoopbackVideoFixture(instrumentation.context.assets.open("live-entry-bars.mp4").use { it.readBytes() })
         val source = SourceEntity(id = 99014, name = "Synthetic decoder fixture", type = SourceType.M3U,
             url = "http://127.0.0.1:9/unavailable.m3u", lastSyncAt = System.currentTimeMillis(),
             syncMovies = false, syncSeries = false, liveEnginePreference = "EXO_FIRST")
         db.sourceDao().insert(source); db.sourceDao().link(ProfileSourceCrossRef(7, source.id))
         settings.setPlaylistAutoRefresh(source.id, PlaylistRefresh(PlaylistAutoRefresh.OFF))
-        // No portal or credentials: null MAC resolves the local command through Core's real
+        // No portal or credentials: null MAC resolves the loopback command through Core's real
         // asynchronous Stalker path, protecting acceptance from an early false rejection.
         val portal = source.copy(id = 99015, name = "Synthetic asynchronous fixture", type = SourceType.STALKER)
         db.sourceDao().insert(portal); db.sourceDao().link(ProfileSourceCrossRef(7, portal.id))
         settings.setPlaylistAutoRefresh(portal.id, PlaylistRefresh(PlaylistAutoRefresh.OFF))
         val channels = listOf("SVT1 HD", "SVT2 FHD", "TV4 HD").mapIndexed { index, name ->
-            val file = File(app.filesDir, "v014-video-$index.mp4")
-            instrumentation.context.assets.open("live-entry-bars.mp4").use { input -> file.outputStream().use(input::copyTo) }
-            ChannelEntity(id = 9901401L + index, sourceId = if (index == 1) portal.id else source.id, remoteId = "v014-$index", name = name, streamUrl = file.toURI().toString())
+            ChannelEntity(id = 9901401L + index, sourceId = if (index == 1) portal.id else source.id, remoteId = "v014-$index", name = name, streamUrl = video.url(index))
         }
         db.channelDao().insertAll(channels)
         store.save(7, choices.copy(preferred = choices.preferred + ("svt1" to tv.own.owntv.core.customize.CustomizeKeys.channel(channels[0]))))
@@ -251,7 +250,7 @@ class ProductionStartupTest {
                 // until its UI receives IN_APP and navigates. The fullscreen matrix above tests frames.
                 kotlinx.coroutines.withContext(Dispatchers.Main) { vm.stopPreview() }
             }
-        } finally { store.save(7, choices); db.sourceDao().delete(source); db.sourceDao().delete(portal); channels.indices.forEach { File(app.filesDir, "v014-video-$it.mp4").delete() } }
+        } finally { video.close(); store.save(7, choices); db.sourceDao().delete(source); db.sourceDao().delete(portal) }
     }
 
     @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }

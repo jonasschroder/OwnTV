@@ -144,12 +144,12 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
     }
     // This destination has no preview surface. Returning from fullscreen must also silence Exo
     // when the user's legacy preview preference is on; mini/audio modes keep previewEnabled=false.
-    LaunchedEffect(previewEnabled, vm) { if (previewEnabled) vm.stopPreview() }
+    LaunchedEffect(previewEnabled, vm) { if (previewEnabled) vm.stopBrowsePreview() }
     val browsing by rememberUpdatedState(previewEnabled)
     DisposableEffect(vm) {
-        if (previewEnabled) vm.stopPreview()
+        if (previewEnabled) vm.stopBrowsePreview()
         // The Live backend also owns fullscreen playback. Never stop it on a player transition.
-        onDispose { if (browsing) vm.stopPreview() }
+        onDispose { if (browsing) vm.stopBrowsePreview() }
     }
     DisposableEffect(library.groups) {
         targets.keys.retainAll(library.groups.mapTo(HashSet()) { it.identity })
@@ -199,25 +199,33 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
         resolved = channel?.let { variant.rowKey() to it }
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
-    fun playChannel(original: ChannelEntity, logicalIdentity: String? = null) { scope.launch {
-        val channel = vm.homeChannel(original.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == tv.own.owntv.core.customize.CustomizeKeys.channel(original) && it.sourceId == original.sourceId && it.streamUrl.isNotBlank() } ?: return@launch
+    suspend fun tuneChannel(original: ChannelEntity, logicalIdentity: String? = null, origin: tv.own.owntv.player.LiveEntryOrigin = tv.own.owntv.player.LiveEntryOrigin.TV_GRID) {
+        val channel = vm.homeChannel(original.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == tv.own.owntv.core.customize.CustomizeKeys.channel(original) && it.sourceId == original.sourceId && it.streamUrl.isNotBlank() } ?: return
         // Fresh entity retains all provider authorization, DRM, catch-up and EPG context.
         val latestChoices = store.choices(profile)
         val zap = groups.mapNotNull { it.preferred(latestChoices.preferred[it.identity], latestChoices.showUhd) }
             .take(200).mapNotNull { row -> vm.homeChannel(row.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == row.stableKey && it.sourceId == row.sourceId } }
-        val expected = metadata ?: return@launch
-        if (currentMetadata != expected || expected.profileId != profile || !vm.swedishContextCurrent(expected)) return@launch
+        val expected = metadata ?: return
+        if (currentMetadata != expected || expected.profileId != profile || !vm.swedishContextCurrent(expected)) return
         val selectedIdentity = logicalIdentity ?: library.groups.firstOrNull { group -> group.variants.any { it.id == channel.id } }?.identity
         val consistentZap = zap.map { row ->
             val identity = library.groups.firstOrNull { group -> group.variants.any { it.id == row.id } }?.identity
             if (identity != null && identity == selectedIdentity) channel else row
         }.distinctBy { it.id }
-        vm.watchFullscreen(channel, consistentZap)
-        if (!external || channel.drmConfig != null) onFullscreen()
-    } }
-    fun play(variant: SwedishVariant) { scope.launch {
-        vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }?.let { playChannel(it, variant.name.identity) }
-    } }
+        if (vm.watchFullscreenAsync(channel, consistentZap, origin) == LiveViewModel.HomePlayback.IN_APP) onFullscreen()
+    }
+    var pendingPlayback by remember(profile) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun playChannel(channel: ChannelEntity, identity: String? = null) {
+        pendingPlayback?.cancel()
+        pendingPlayback = scope.launch { tuneChannel(channel, identity) }
+    }
+    fun play(variant: SwedishVariant) {
+        pendingPlayback?.cancel()
+        pendingPlayback = scope.launch {
+            vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
+                ?.let { tuneChannel(it, variant.name.identity) }
+        }
+    }
     val sourceActions = rememberChannelSourceSelection(store, db, vm, profile, context.second,
         onPlay = { channel, identity -> playChannel(channel, identity) }, onClosed = { scope.launch { restoreChannel() } })
     LaunchedEffect(sourceActions.isOpen) { if (sourceActions.isOpen) previewSuppressedFor = focusId }

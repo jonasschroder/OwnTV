@@ -858,6 +858,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	#$it
 1	sql	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	AND
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	C More
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	Live history write failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	SHL
@@ -867,11 +868,10 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	TV4 Sport Live
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history record failed channelId=${channel.id} profile=$pid
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	hockey
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	sport
-1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
+2	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	svt1
+2	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	svt2
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	LiveZapList
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	direct tune: zap rebuild failed
@@ -1843,7 +1843,9 @@
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: video ${fps}fps -> display mode ${target.modeId} (${target.physicalWidth}x${target.physicalHeight} ${target.refreshRate}Hz, seamless=${choice.seamless})
 1	compiler	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	DEPRECATION
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	FrameRate
-1	empty	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	\0
+1	empty	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	LIVE_ENTRY request=$id elapsedMs=${at.coerceAtLeast(0)} origin=$origin logical=$logical event=$event
+2	empty	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	\0
 1	log	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	LIVE_TRACE elapsedMs=${it.elapsedMs} event=${it.kind} engine=${it.engine} cause=${it.cause}
 1	protocol	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	— no decodable audio track
 1	empty	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	\0

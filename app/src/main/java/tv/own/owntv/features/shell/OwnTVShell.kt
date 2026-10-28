@@ -529,6 +529,14 @@ fun OwnTVShell(
         runCatching { sidebarFocus.requestFocus() }
         Unit
     }
+    val liveEntryNotice by liveVm.liveEntryNotice.collectAsStateWithLifecycle()
+    LaunchedEffect(liveEntryNotice) {
+        val notice = liveEntryNotice ?: return@LaunchedEffect
+        if (playerMode != PlayerMode.NONE && zapSource == MainSection.LIVE_TV) exitPlayer()
+        if (notice.second == LiveViewModel.HomePlayback.UNAVAILABLE) localSubToast.show(homeChannelUnavailable)
+        liveVm.consumeLiveEntryNotice(notice.first)
+    }
+
     /**
      * Turn the channel on screen into tile 1 of the grid, with [extra] filling the tiles after it.
      *
@@ -740,8 +748,7 @@ fun OwnTVShell(
                     onSelectSection(MainSection.LIVE_TV)
                     // A launcher tile has no browse rail, so arm the channel's provider context before
                     // opening the player. A bare ensurePlaying() leaves CH+/CH- with no list to step through.
-                    liveVm.watchFullscreen(launch.channel, emptyList())
-                    openFullscreen(MainSection.LIVE_TV)
+                    if (liveVm.watchFullscreenAsync(launch.channel, emptyList(), tv.own.owntv.player.LiveEntryOrigin.DEEP_LINK) == LiveViewModel.HomePlayback.IN_APP) openFullscreen(MainSection.LIVE_TV)
                     onDeepLinkConsumed()
                 }
                 is LauncherLaunch.Series -> {
@@ -772,7 +779,7 @@ fun OwnTVShell(
     // The preview runs on the ExoPlayer live engine, not mpv: stopping only mpv here (as when the preview
     // was mpv) left it decoding and holding a provider connection after a shortcut or deep link out.
     LaunchedEffect(selectedSection, presentation, playerMode) {
-        if ((selectedSection != MainSection.HOME || presentation != null) && selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopPreview()
+        if ((selectedSection != MainSection.HOME || presentation != null) && selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopBrowsePreview()
         if (selectedSection != MainSection.HOME || presentation != null || playerMode != PlayerMode.NONE) homeVm.stopPreview()
     }
 
@@ -1064,12 +1071,7 @@ fun OwnTVShell(
                 val liveView by liveVm.liveView.collectAsStateWithLifecycle()
                 val guidePlayChannel: (ChannelEntity, List<ChannelEntity>) -> Unit = { ch, _ ->
                     restoreFocus = false
-                    liveVm.watchFromGuide(ch)
-                    zapSource = MainSection.LIVE_TV
-                    homeVm.stopPreview()
-                    // Live TV set to play externally → the channel went to another app;
-                    // don't mount the fullscreen player over it.
-                    if (playerMode != PlayerMode.MINI && !liveVm.externalPlayerOn.value) playerMode = PlayerMode.FULLSCREEN
+                    scope.launch { if (liveVm.watchFromGuideAsync(ch) == LiveViewModel.HomePlayback.IN_APP) openFullscreen(MainSection.LIVE_TV) }
                 }
                 val guidePlayCatchup: (ChannelEntity, tv.own.owntv.core.database.entity.EpgProgrammeEntity) -> Unit = { ch, prog ->
                     restoreFocus = false
@@ -1101,10 +1103,10 @@ fun OwnTVShell(
                         presentation == TopDestination.SPORT -> tv.own.owntv.features.home.NativeSportScreen(
                             liveVm, homeVm, activeProfileId, playerMode == PlayerMode.NONE,
                             { channel, favorites -> scope.launch {
-                                when (liveVm.playHomeChannel(channel.id, favorites)) {
+                                when (liveVm.requestLivePlayback(channel.id, favorites, tv.own.owntv.player.LiveEntryOrigin.SPORT, channel)) {
                                     LiveViewModel.HomePlayback.IN_APP -> openFullscreen(MainSection.LIVE_TV)
                                     LiveViewModel.HomePlayback.EXTERNAL -> Unit
-                                    LiveViewModel.HomePlayback.UNAVAILABLE -> localSubToast.show(homeChannelUnavailable)
+                                    LiveViewModel.HomePlayback.UNAVAILABLE, LiveViewModel.HomePlayback.SUPERSEDED -> Unit
                                 }
                             } },
                             { openHomeSources = true; onSelectSection(MainSection.SETTINGS) },
@@ -1191,13 +1193,11 @@ fun OwnTVShell(
                                 homeTuneJob?.cancel()
                                 liveVm.homePreview.beginPromotion()
                                 homeTuneJob = scope.launch {
-                                    when (liveVm.playHomeChannel(channel.id, favorites)) {
+                                    when (liveVm.playHomeChannel(channel.id, favorites, channel)) {
                                         LiveViewModel.HomePlayback.IN_APP -> openFullscreen(MainSection.LIVE_TV)
                                         LiveViewModel.HomePlayback.EXTERNAL -> liveVm.homePreview.endPromotion()
-                                        LiveViewModel.HomePlayback.UNAVAILABLE -> {
-                                            liveVm.homePreview.endPromotion()
-                                            localSubToast.show(homeChannelUnavailable)
-                                        }
+                                        LiveViewModel.HomePlayback.UNAVAILABLE -> liveVm.homePreview.endPromotion()
+                                        LiveViewModel.HomePlayback.SUPERSEDED -> Unit
                                     }
                                 }
                             },
@@ -1463,8 +1463,7 @@ fun OwnTVShell(
                   grid.releaseAll()
                   multiview = null
                   multiviewPickFor = null
-                  liveVm.ensurePlaying(channel)
-                  playerMode = PlayerMode.FULLSCREEN
+                  scope.launch { if (liveVm.watchFullscreenAsync(channel, emptyList(), tv.own.owntv.player.LiveEntryOrigin.MULTIVIEW) == LiveViewModel.HomePlayback.IN_APP) openFullscreen(MainSection.LIVE_TV) }
               },
               // Leaving the grid leaves *playback*, by the owner's decision (2026-09-13).
               //

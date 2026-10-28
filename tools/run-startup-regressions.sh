@@ -65,10 +65,19 @@ adb shell wm size 1280x720
 # Native 720p TV scale (213 dpi). The original 720p/320 dpi stress cold start above stays mandatory.
 adb shell wm density 213
 run_case productionHomeSurvivesPersistedColdStartAndActivityRecreation premium-sv-720p 7 true
+# Actual decoder fixture; both resolutions, same installed disposable QA identity.
+adb shell am force-stop "$qa"
+adb shell wm size reset
+adb shell wm density reset
+run_case liveEntryMatrixKeepsRealDecoderAliveAcrossFullscreenDisposal playback-entry-1080p
+adb shell am force-stop "$qa"
+adb shell wm size 1280x720
+adb shell wm density 213
+run_case liveEntryMatrixKeepsRealDecoderAliveAcrossFullscreenDisposal playback-entry-720p
 python3 - <<'PYREQUIRED'
 from pathlib import Path
-required=['seedPersistedQaData','cold-en-1080p-profile7','cold-en-720p-profile8','selectSwedishLocale','cold-sv-1080p-profile7','populatePremiumHomeFixture','premium-sv-1080p','premium-sv-720p']
+required=['seedPersistedQaData','cold-en-1080p-profile7','cold-en-720p-profile8','selectSwedishLocale','cold-sv-1080p-profile7','populatePremiumHomeFixture','premium-sv-1080p','premium-sv-720p','playback-entry-1080p','playback-entry-720p']
 for name in required:
     assert 'OK (1 test)' in Path('startup-evidence',name+'.txt').read_text(), name
-print('PASS: 8 real QA instrumentation executions; five cold starts, two profiles, 1080p/720p, English/Swedish; persistent data verified; no owner device.')
+print('PASS: 10 real QA instrumentation executions; actual playback entry matrix, five cold starts, two profiles, 1080p/720p, English/Swedish; persistent data verified; no owner device.')
 PYREQUIRED

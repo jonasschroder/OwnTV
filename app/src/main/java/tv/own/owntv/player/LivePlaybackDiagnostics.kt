@@ -25,11 +25,11 @@ internal class LivePlaybackTrace {
 
 internal object LivePlaybackDiagnostics {
     val trace = LivePlaybackTrace()
-    fun report() = trace.report()
+    fun report() = trace.report() + "\n" + LiveEntryDiagnostics.trace.report()
 }
 
 /** Observe existing Core callbacks; delegate every playback decision and lifecycle call unchanged. */
-internal class DiagnosticLiveHost(private val delegate: LiveTuneController.Host) : LiveTuneController.Host by delegate {
+internal class DiagnosticLiveHost(private val delegate: LiveTuneController.Host, private val started: () -> Unit = {}, private val exhausted: () -> Unit = {}, private val fallback: () -> Unit = {}) : LiveTuneController.Host by delegate {
     override fun recordLadderEvent(onExo: Boolean, reason: PlayerFailureReason, detail: String) {
         if (reason == PlayerFailureReason.LIVE_FALLBACK || reason == PlayerFailureReason.LIVE_NO_FALLBACK) {
             LivePlaybackDiagnostics.trace.record(
@@ -39,11 +39,14 @@ internal class DiagnosticLiveHost(private val delegate: LiveTuneController.Host)
                 LivePlaybackTrace.cause(detail),
             )
         }
+        if (reason == PlayerFailureReason.LIVE_NO_FALLBACK) exhausted()
+        if (reason == PlayerFailureReason.LIVE_FALLBACK) fallback()
         delegate.recordLadderEvent(onExo, reason, detail)
     }
 
     override fun onEngineStarted() {
         LivePlaybackDiagnostics.trace.record(delegate.nowMs(), LivePlaybackTrace.Kind.ENGINE_STARTED)
+        started()
         delegate.onEngineStarted()
     }
 

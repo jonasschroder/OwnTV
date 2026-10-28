@@ -381,13 +381,15 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     fun choose(game: SportFixture) { selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
     fun open() { screen = true; restoreTarget = tabFocus }
+    var playbackValidationJob by remember(profileId) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun play(channel: ChannelEntity, list: List<ChannelEntity>, expected: SportFixture? = gameToMatch) {
         // Shell saves this destination during fullscreen; Back returns to the match/picker.
         // An unavailable/external-player handoff also keeps the user's selection intact.
         val profile = profileId ?: return
         if (!active) return
         val game = expected
-        scope.launch {
+        playbackValidationJob?.cancel()
+        playbackValidationJob = scope.launch {
             val actual = liveVm.homeChannel(channel.id, profile) ?: return@launch
             if (tv.own.owntv.core.customize.CustomizeKeys.channel(actual) != tv.own.owntv.core.customize.CustomizeKeys.channel(channel)) return@launch
             val manualForGame = game?.let { target -> overrides.read(profile, target.broadcastFixture(), System.currentTimeMillis())

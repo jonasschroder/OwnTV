@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -84,6 +85,15 @@ import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.player.LiveExoWatchdog
 import tv.own.owntv.player.LiveProgramme
 import tv.own.owntv.player.OwnTVPlayer
+import tv.own.owntv.player.LiveEntryGate
+import tv.own.owntv.player.LiveEntryOrigin
+import tv.own.owntv.player.LiveEntryOutcome
+import tv.own.owntv.player.LiveEntryEvent
+import tv.own.owntv.player.LiveLogicalChannel
+import tv.own.owntv.player.LiveEntryDiagnostics
+import tv.own.owntv.player.sameLiveSelection
+import tv.own.owntv.player.sameLiveStream
+import tv.own.owntv.player.sameLiveSource
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.core.live.LiveTimeshift
 import tv.own.owntv.core.live.LiveKey
@@ -942,9 +952,15 @@ class LiveViewModel(
      * the preview pane's engine — core's, the same code the phone runs. What stays here is the
      * television's own: which channel is on screen, the zap list, history, catch-up and the HUD state.
      */
-    private val live = tv.own.owntv.player.LiveTuneController(
+    private var engineStartRevision = 0L
+    private val _liveEntryNotice = MutableStateFlow<Pair<Long, HomePlayback>?>(null)
+    val liveEntryNotice: StateFlow<Pair<Long, HomePlayback>?> = _liveEntryNotice
+    fun consumeLiveEntryNotice(id: Long) { if (_liveEntryNotice.value?.first == id) _liveEntryNotice.value = null }
+    private val entry: LiveEntryGate = LiveEntryGate(viewModelScope, { live.cancelTune() }, { live.stop(); _previewChannel.value = null },
+        { android.os.SystemClock.elapsedRealtime() }, LiveEntryDiagnostics.trace, { _liveEntryNotice.value = it to HomePlayback.UNAVAILABLE })
+    private val live: tv.own.owntv.player.LiveTuneController = tv.own.owntv.player.LiveTuneController(
         scope = viewModelScope,
-        engines = tv.own.owntv.player.EnginePair(previewEngine, player),
+        engines = tv.own.owntv.player.EntryDiagnosticEngines(tv.own.owntv.player.EnginePair(previewEngine, player), { entry.requestId }),
         host = tv.own.owntv.player.DiagnosticLiveHost(tv.own.owntv.player.LiveTuneController.CoreHost(
             context = appContext,
             settings = settings,
@@ -956,7 +972,9 @@ class LiveViewModel(
             sourceLookup = { id -> sourceById[id] },
             // A handover re-opens the channel at its live edge: the rewind is over.
             backToLiveEdge = { clearTimeshift() },
-        )),
+        ), started = { engineStartRevision++ }, exhausted = {
+            LiveEntryDiagnostics.trace.record(entry.requestId, android.os.SystemClock.elapsedRealtime(), event = LiveEntryEvent.EXHAUSTED)
+        }, fallback = { LiveEntryDiagnostics.trace.record(entry.requestId, android.os.SystemClock.elapsedRealtime(), event = LiveEntryEvent.FALLBACK) }),
     )
 
     // True while the in-pane preview is suppressed because the provider allows one stream at a time and
@@ -966,6 +984,7 @@ class LiveViewModel(
 
     /** In-pane preview playback (no history) — triggered by the UI after the focus settles. */
     fun playPreview(channel: ChannelEntity) {
+        if (entry.protectsPlayback) return
         if (channel.categoryId != null && channel.categoryId in hiddenCategoryIds.value) return
         // Core keeps the preview off a promoted full-screen stream, re-mutes on a re-focus instead of
         // reloading, mints a Stalker link, and holds back on a one-session panel while mpv plays.
@@ -984,7 +1003,7 @@ class LiveViewModel(
         },
         stop = {
             homeOwnsPreviewAudio = false
-            live.stop()
+            stopBrowsePreview()
         },
     )
 
@@ -998,7 +1017,7 @@ class LiveViewModel(
         return guide
     }
 
-    enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE }
+    enum class HomePlayback { IN_APP, EXTERNAL, UNAVAILABLE, SUPERSEDED }
 
     internal val homeLibraryState = homeDefaults.observe(ctx.flatMapLatest { c -> combine(customize.observe(c.profileId, MediaType.LIVE), profileDao.observeById(c.profileId)) { _, _ -> Unit } }) { profileId, sourceIds ->
         val snapshot = ctx.value
@@ -1180,16 +1199,96 @@ class LiveViewModel(
         }
     }
 
-    suspend fun playHomeChannel(channelId: Long, favorites: List<ChannelEntity>): HomePlayback {
-        val channel = channelDao.getById(channelId) ?: return HomePlayback.UNAVAILABLE
-        if (!isVisibleToActiveProfile(channel)) return HomePlayback.UNAVAILABLE
-        val pid = currentProfileId() ?: return HomePlayback.UNAVAILABLE
-        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return HomePlayback.UNAVAILABLE
-        homeOwnsPreviewAudio = false
-        if (!ensurePlayingByIdAsync(channelId, favorites)) return HomePlayback.UNAVAILABLE
-        // Protected channels stay in-app even with the global external-player preference enabled.
-        return if (externalPlayerOn.value && channel.drmConfig == null) HomePlayback.EXTERNAL else HomePlayback.IN_APP
+    suspend fun playHomeChannel(channelId: Long, favorites: List<ChannelEntity>, expected: ChannelEntity? = null): HomePlayback =
+        requestLivePlayback(channelId, favorites, LiveEntryOrigin.HOME, expected)
+
+    /** Already-resolved logical choices stay exact: do not reapply a default over an explicit picker,
+     * saved source, history item or verified Sport channel. Every path re-reads the actual row. */
+    internal suspend fun requestLivePlayback(channelId: Long, list: List<ChannelEntity> = emptyList(),
+        origin: LiveEntryOrigin = LiveEntryOrigin.CONTINUE, expected: ChannelEntity? = null,
+        arm: Boolean = true, browse: Boolean = false, forceExternal: Boolean = false): HomePlayback {
+        val owner = ctx.value
+        val selected = expected
+        val logical = when (selected?.let { tv.own.owntv.features.live.SwedishChannels.recognize(it.name)?.identity }) {
+            "svt1" -> LiveLogicalChannel.SVT1; "svt2" -> LiveLogicalChannel.SVT2; else -> LiveLogicalChannel.OTHER
+        }
+        val result = entry.enter(origin, logical, prepare = {
+            val channel = homeChannel(channelId, owner.profileId)
+            if (channel == null || forceExternal && channel.drmConfig != null || channel.streamUrl.isBlank() || owner.profileId < 0 || ctx.value != owner ||
+                settings.activeProfileIdNow() != owner.profileId ||
+                selected != null && !sameLiveSelection(selected, channel) ||
+                !isVisibleInContext(channel, owner)) null else {
+                val source = sourceDao.getById(channel.sourceId)
+                if (source == null || ctx.value != owner || settings.activeProfileIdNow() != owner.profileId) null
+                else {
+                    val label = customize.observe(owner.profileId, MediaType.LIVE).first().itemNames[CustomizeKeys.channel(channel)]
+                    (label?.let { channel.copy(name = it) } ?: channel) to source
+                }
+            }
+        }, activate = { (channel, source) ->
+            // Authorization can suspend; recheck the frozen owner immediately before the engine call.
+            if (ctx.value != owner || settings.activeProfileIdNow() != owner.profileId || !sameLiveStream(channel, homeChannel(channel.id, owner.profileId))) LiveEntryOutcome.UNAVAILABLE
+            else {
+                val resolvedLogical = when (tv.own.owntv.features.live.SwedishChannels.recognize(channel.name)?.identity) {
+                    "svt1" -> LiveLogicalChannel.SVT1; "svt2" -> LiveLogicalChannel.SVT2; else -> LiveLogicalChannel.OTHER
+                }
+                LiveEntryDiagnostics.trace.record(entry.requestId, android.os.SystemClock.elapsedRealtime(), origin, resolvedLogical, LiveEntryEvent.SOURCE_VALIDATED)
+                homeOwnsPreviewAudio = false
+                pendingZapTuneJob?.cancel(); pendingZapTuneJob = null
+                if (arm) {
+                    zapList.cancelPendingRebuild()
+                    if (list.none { it.id == channel.id }) zapList.armFor(channel)
+                    else zapList.armFromBrowse(list.map { if (it.id == channel.id) channel else it },
+                        title = if (browse) railItems.value.firstOrNull { it.key == _selected.value }?.title else null,
+                        key = _selected.value.takeIf { browse }, categoryId = (_selected.value as? LiveKey.Folder)?.id.takeIf { browse })
+                }
+                if ((forceExternal || settings.externalPlayerLive.first()) && channel.drmConfig == null) {
+                    val url = if (streamUrlResolver.needsResolve(source)) withContext(Dispatchers.IO) { streamUrlResolver.resolve(source, channel.streamUrl) } else channel.streamUrl
+                    if (url == null || ctx.value != owner || settings.activeProfileIdNow() != owner.profileId || !isVisibleInContext(channel, owner)) LiveEntryOutcome.UNAVAILABLE
+                    else {
+                        live.stop(); _previewChannel.value = null
+                        if (externalPlayerLauncher.launch(url, channel.name, userAgent = source.userAgent,
+                            httpHeaders = SourceOverrides.headersWithReferer(channel.httpHeaders, source))) {
+                            recordLiveHistory(channel, immediate = true)
+                            _liveEntryNotice.value = entry.requestId to HomePlayback.EXTERNAL
+                            LiveEntryOutcome.EXTERNAL
+                        } else LiveEntryOutcome.UNAVAILABLE
+                    }
+                } else {
+                    val before = engineStartRevision
+                    val accepted = kotlinx.coroutines.CompletableDeferred<Boolean>()
+                    val tune = live.launch {
+                        try {
+                            live.expectPromotion(channel)
+                            _previewChannel.value = channel; clearTimeshift(); _catchupActive.value = false
+                            live.start(channel, source)
+                            accepted.complete(engineStartRevision != before)
+                        } catch (cancelled: kotlinx.coroutines.CancellationException) { accepted.cancel(cancelled); throw cancelled }
+                        catch (error: Exception) { accepted.completeExceptionally(error) }
+                    }
+                    try {
+                        if (accepted.await() && ctx.value == owner && settings.activeProfileIdNow() == owner.profileId && sameLiveStream(channel, homeChannel(channel.id, owner.profileId)) && sameLiveSource(source, sourceDao.getById(channel.sourceId))) {
+                            recordLiveHistory(channel, immediate = origin == LiveEntryOrigin.GUIDE)
+                            LiveEntryOutcome.IN_APP // engine request accepted, NOT proof of decoded picture
+                        } else LiveEntryOutcome.UNAVAILABLE
+                    } finally { if (!kotlinx.coroutines.currentCoroutineContext().isActive) tune.cancel() }
+                }
+            }
+        })
+        return when (result) {
+            LiveEntryOutcome.IN_APP -> HomePlayback.IN_APP
+            LiveEntryOutcome.EXTERNAL -> HomePlayback.EXTERNAL
+            LiveEntryOutcome.UNAVAILABLE -> HomePlayback.UNAVAILABLE
+            LiveEntryOutcome.SUPERSEDED -> HomePlayback.SUPERSEDED
+        }
     }
+
+    internal suspend fun watchFullscreenAsync(channel: ChannelEntity, list: List<ChannelEntity>,
+        origin: LiveEntryOrigin = LiveEntryOrigin.TV_GRID): HomePlayback =
+        requestLivePlayback(channel.id, list, origin, channel, browse = true)
+
+    internal suspend fun watchFromGuideAsync(channel: ChannelEntity): HomePlayback =
+        requestLivePlayback(channel.id, origin = LiveEntryOrigin.GUIDE, expected = channel)
 
     // --- Multiview: channels kept from the browse screen ------------------------------------------
     // The plan's second entry point: pick two to four channels from the Live list, then press play and
@@ -1344,7 +1443,16 @@ class LiveViewModel(
     init {
         viewModelScope.launch {
             livePreviewAudio.collect { on ->
-                if (!homeOwnsPreviewAudio && !liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
+                if (!homeOwnsPreviewAudio && !entry.protectsPlayback && !liveOnExo.value && previewEngine.currentUrl != null) previewEngine.setMuted(!on)
+            }
+        }
+        viewModelScope.launch {
+            var previous: Ctx? = null
+            ctx.collect { current ->
+                if (previous != null && previous != current && entry.protectsPlayback) {
+                    stopPreview(); _liveEntryNotice.value = entry.requestId to HomePlayback.UNAVAILABLE
+                }
+                previous = current
             }
         }
         viewModelScope.launch { player.archiveEnded.collect { continueAfterCatchup() } }
@@ -1366,6 +1474,7 @@ class LiveViewModel(
      *  pane may re-take the engine (and re-apply the preview mute) on the next focus. Keeps the stream
      *  playing (no stop) — just clears the flag so [playPreview] works again. */
     fun onFullscreenExited() {
+        entry.release()
         live.detach() // the stream stays; its watchers and the give-up alarm stand down
         // Leaving full-screen ends the rewind: the archive stream is torn down with the player, and the
         // 1 Hz "behind live" ticker would otherwise keep running against nothing for the rest of the session.
@@ -1378,6 +1487,7 @@ class LiveViewModel(
     }
 
     fun clearLiveOnExo() {
+        entry.release()
         // A live tune still in flight would otherwise start over whatever takes mpv now.
         live.cancelTune()
         live.releaseForArchive()
@@ -1412,38 +1522,11 @@ class LiveViewModel(
      *  provider category is metadata (used by [previewCategoryName]); it must not replace Favorites,
      *  History, All, a custom category, or the provider folder the user is actually browsing. */
     fun watchFullscreen(channel: ChannelEntity, list: List<ChannelEntity>) {
-        // Opened with no browse list behind it — the catch-up programme dialog does exactly this. Without
-        // a zap list, CH+/CH− and the channel-list button are dead for the rest of the session, so rebuild
-        // the channel's own category the way the Guide/Search path does.
-        if (list.none { it.id == channel.id }) {
-            zapList.armFor(channel)
-            ensurePlaying(channel)
-            return
-        }
-        val key = _selected.value
-        zapList.armFromBrowse(
-            channels = list,
-            title = railItems.value.firstOrNull { it.key == key }?.title,
-            // Built-in rails (Favorites / History / All) carry no title — their labels are UI strings.
-            // Hand the key out so the overlay can name them properly instead of "All channels".
-            key = key,
-            categoryId = (key as? LiveKey.Folder)?.id,
-        )
-        ensurePlaying(channel)
+        viewModelScope.launch { watchFullscreenAsync(channel, list) }
     }
 
-    /** Tune a channel picked outside the Live TV list — the Guide (F05). Same as
-     *  [ensurePlaying] except history is written straight away: this is a deliberate one-shot pick (you
-     *  chose a channel, or "Watch channel" in a programme dialog), not the zap-through-a-category flow
-     *  the history debounce exists to filter, and such a channel was not reliably landing in History.
-     *
-     *  Every live entry point funnels through here into [playChannel], so Prefer HLS, the
-     *  ExoPlayer→mpv ladder, compatibility-mode pins, learned stream quirks, the per-playlist
-     *  pre-buffer and the external-player toggle apply however the channel was found. */
     fun watchFromGuide(channel: ChannelEntity) {
-        zapList.armFor(channel)
-        ensurePlaying(channel)
-        recordLiveHistory(channel, immediate = true)
+        viewModelScope.launch { watchFromGuideAsync(channel) }
     }
 
     /** Zap to the neighbouring channel ([delta] = +1 down / -1 up) — see [LiveZapList.next] for how
@@ -1495,7 +1578,8 @@ class LiveViewModel(
     suspend fun tuneByNumber(number: Int): tv.own.owntv.player.DirectTuneResult {
         try {
             val currentChannel = _previewChannel.value ?: return tv.own.owntv.player.DirectTuneResult.NotFound(number)
-            val snapshotSourceIds = ctx.value.sourceIds
+            val snapshotContext = ctx.value
+            val snapshotSourceIds = snapshotContext.sourceIds
             // Snapshot the zap list at lookup START so the resolver's zap-context tiebreaker is
             // stable for the duration of the IO query. After the lookup completes and context
             // validity is verified we re-read zapList: a previous background rebuild may have
@@ -1576,7 +1660,7 @@ class LiveViewModel(
             }
 
             // Playback starts IMMEDIATELY — the rebuild that follows it is the zap list's business.
-            zapList.directTune(currentChannel.id, tuned) { live.launch { playChannel(it) }.join() }
+            zapList.directTune(currentChannel.id, tuned) { requestLivePlayback(it.id, origin = LiveEntryOrigin.NUMBER, expected = it, arm = false) }
 
             return tv.own.owntv.player.DirectTuneResult.Found(
                 tv.own.owntv.player.DirectTuneChannelInfo(
@@ -1629,30 +1713,10 @@ class LiveViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Hand [channel] to an external app (VLC, MX Player). Used by the Live TV long-press menu, and by
-     *  [playChannel] when Live TV's external-player default is on. Stalker channels store a portal
+     *  [requestLivePlayback] when Live TV's external-player default is on. Stalker channels store a portal
      *  cmd rather than a URL, so it's resolved first — an external app can't mint one. */
     fun playExternal(channel: ChannelEntity) {
-        viewModelScope.launch {
-            val pid = currentProfileId() ?: return@launch
-            if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return@launch
-            val source = withContext(Dispatchers.IO) { sourceDao.getById(channel.sourceId) }
-            val url = if (streamUrlResolver.needsResolve(source)) {
-                withContext(Dispatchers.IO) {
-                    runCatching { streamUrlResolver.resolve(source!!, channel.streamUrl) }
-                        .onFailure { Log.w(TAG, "stalker resolve failed channelId=${channel.id}", it) }
-                        .getOrNull()
-                } ?: return@launch
-            } else {
-                channel.streamUrl
-            }
-            externalPlayerLauncher.launch(
-                url = url,
-                title = channel.name,
-                userAgent = source?.userAgent,
-                httpHeaders = SourceOverrides.headersWithReferer(channel.httpHeaders, source),
-            )
-            recordLiveHistory(channel, immediate = true)
-        }
+        viewModelScope.launch { requestLivePlayback(channel.id, origin = LiveEntryOrigin.SOURCE_PICKER, expected = channel, forceExternal = true) }
     }
 
     /** Go full-screen on [channel]. Cancels any pending direct-tune zap rebuild first, so normal
@@ -1663,41 +1727,11 @@ class LiveViewModel(
      *  because it's still loading (clicking OK before the preview is ready used to drop to mpv and
      *  stick on a black screen for HLS). */
     fun ensurePlaying(channel: ChannelEntity) {
-        zapList.cancelPendingRebuild()
-        // A deliberate pick supersedes a CH+/- step still waiting out its delay — otherwise the deferred
-        // tune would land half a second later and drag the user off the channel they just chose.
-        pendingZapTuneJob?.cancel()
-        pendingZapTuneJob = null
-        // Before the full-screen player is first drawn: a channel ExoPlayer is already previewing opens on
-        // ExoPlayer's surface straight away, instead of on mpv's until the tune below gets there.
-        live.expectPromotion(channel)
-        // T6 — the controller's one tune job: a quicker second pick cancels the first wherever it has
-        // got to, so two picks can no longer finish in the wrong order.
-        live.launch { playChannel(channel) }
+        viewModelScope.launch { requestLivePlayback(channel.id, origin = LiveEntryOrigin.ZAP, expected = channel, arm = false) }
     }
 
     private suspend fun getSource(sourceId: Long): tv.own.owntv.core.database.entity.SourceEntity? =
         sourceById[sourceId] ?: sourceDao.getById(sourceId)
-
-    /** Internal playback: the canonical ExoPlayer / mpv / Stalker / history side-effects for a
-     *  channel. Direct-tune's background rebuild path calls this without cancelling the rebuild
-     *  so the in-flight rebuild it owns isn't killed by its own play. */
-    private suspend fun playChannel(channel: ChannelEntity) {
-        val pid = currentProfileId() ?: return
-        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) return
-        // Live TV set to play externally: hand the channel over instead of tuning an in-app engine.
-        // History is still recorded, so the channel shows up in History/Recently watched either way.
-        // #115 — a protected channel stays in-app whatever this setting says: no standard intent extra
-        // carries a licence URL, so the external player would open it and fail immediately.
-        if (externalPlayerOn.value && channel.drmConfig == null) { playExternal(channel); return }
-        _previewChannel.value = channel
-        clearTimeshift() // normal live = not timeshifted
-        _catchupActive.value = false // tuning live ends any archive playback the HUD was showing
-        // Core routes it (DRM, the pin, a learned panel refusal, the playlist, the setting), arms the
-        // ladder and starts the engine — the same code the phone runs.
-        live.start(channel, getSource(channel.sourceId))
-        recordLiveHistory(channel)
-    }
 
     /** HUD "compatibility mode" toggle: flip the current channel's engine and pin the choice. */
     fun toggleForceMpv() {
@@ -1713,7 +1747,7 @@ class LiveViewModel(
     /**
      * N2 — tune the channel watched before this one (the remote's "last channel" key). Re-read by id, so
      * a channel removed by a sync is skipped, and only from a playlist this profile has active;
-     * [playChannel] applies the adult filter. It is a deliberate pick, so it opens at once.
+     * [requestLivePlayback] applies the adult filter. It is a deliberate pick, so it opens at once.
      */
     /** [previousChannel]'s target when it belongs to this profile's active playlists — the HUD button
      *  shows only while this is non-null. */
@@ -1723,35 +1757,15 @@ class LiveViewModel(
 
     fun previousChannel() {
         val previous = live.previousChannel.value ?: return
-        viewModelScope.launch {
-            val channel = withContext(Dispatchers.IO) { channelDao.getById(previous.id) } ?: return@launch
-            if (channel.sourceId !in ctx.value.sourceIds) return@launch
-            zapList.armFor(channel)
-            ensurePlaying(custom.value.itemNames[CustomizeKeys.channel(channel)]?.let { channel.copy(name = it) } ?: channel)
-        }
+        viewModelScope.launch { requestLivePlayback(previous.id, origin = LiveEntryOrigin.PREVIOUS, expected = previous) }
     }
 
     fun ensurePlayingById(channelId: Long) {
-        viewModelScope.launch {
-            val channel = channelDao.getById(channelId) ?: return@launch
-            zapList.armFor(channel)
-            ensurePlaying(channel)
-        }
+        viewModelScope.launch { requestLivePlayback(channelId) }
     }
 
-    /** Open a channel from a caller-owned rail (for example Home favorites), preserving that rail as the
-     *  playback browse/zap context instead of replacing it with provider-category metadata. */
-    suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList()): Boolean {
-        val channel = channelDao.getById(channelId) ?: return false
-        if (zapChannels.isEmpty()) {
-            // A single Home "continue watching" tile has no browse rail of its own.
-            zapList.armFor(channel)
-        } else {
-            zapList.armFromBrowse(zapChannels, title = null, key = null, categoryId = null)
-        }
-        ensurePlaying(channel)
-        return true
-    }
+    suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList()): Boolean =
+        requestLivePlayback(channelId, zapChannels) == HomePlayback.IN_APP
 
     private var historyJob: Job? = null
 
@@ -1766,14 +1780,16 @@ class LiveViewModel(
      */
     private fun recordLiveHistory(channel: ChannelEntity, immediate: Boolean = false) {
         historyJob?.cancel()
+        val owner = ctx.value
         historyJob = viewModelScope.launch {
             if (!immediate) delay(HISTORY_DEBOUNCE_MS)
-            val pid = currentProfileId() ?: return@launch
-            Log.d(TAG, "ensurePlaying history profile=$pid channelId=${channel.id}")
+            if (ctx.value != owner || settings.activeProfileIdNow() != owner.profileId || homeChannel(channel.id, owner.profileId) == null) return@launch
+            val pid = owner.profileId
+            // Entry diagnostics deliberately omit profile and provider identifiers.
             runCatching {
                 historyDao.record(WatchHistoryEntity(profileId = pid, mediaType = MediaType.LIVE, itemId = channel.id))
             }.onFailure { t ->
-                Log.w(TAG, "ensurePlaying history record failed channelId=${channel.id} profile=$pid", t)
+                Log.w(TAG, "Live history write failed")
             }
             runCatching { launcherIntegrationRepository.refreshRecentLive(pid) }
         }
@@ -1842,6 +1858,7 @@ class LiveViewModel(
 
     /** Replay a past programme from the channel's archive (seekable, like the Guide's "Watch from start"). */
     fun playCatchupProgramme(ch: ChannelEntity, programme: tv.own.owntv.core.database.entity.EpgProgrammeEntity) {
+        entry.release()
         // The controller's one tune job: a live tune still resolving is cancelled rather than starting
         // over the programme a moment later.
         live.launch {
@@ -2066,9 +2083,13 @@ class LiveViewModel(
     }
 
     fun stopPreview() {
+        entry.release()
         live.stop() // both engines, every watcher and the give-up alarm, and the reconnect link
         _previewChannel.value = null
     }
+
+    /** Browse disposal never owns an accepted/in-flight fullscreen request. */
+    fun stopBrowsePreview() { if (entry.stopPreview()) _previewChannel.value = null }
 
     /**
      * The programme currently airing on each of [channels] (channel id → title), looked up in ONE batch

@@ -34,6 +34,8 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
     var busy by remember(profile, sources) { mutableStateOf(false) }
     // A non-state latch closes the gap before recomposition after two rapid OK events.
     val actionInFlight = remember { booleanArrayOf(false) }
+    fun trace(event: tv.own.owntv.player.LiveEntryEvent) = tv.own.owntv.player.LiveEntryDiagnostics.trace.record(0,
+        android.os.SystemClock.elapsedRealtime(), tv.own.owntv.player.LiveEntryOrigin.SOURCE_PICKER, event = event)
     fun current() = currentProfile == profile && currentSources == sources &&
         vm.homeLibraryContext.value == (profile to sources) && lifecycle == Lifecycle.State.RESUMED
     suspend fun read(identity: String): SourcePickerData? {
@@ -44,10 +46,13 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
         return SourcePickerData(group, choices, library.bounded)
     }
     suspend fun channel(variant: SwedishVariant): ChannelEntity? {
-        val expected = access?.takeIf { it.profileId == profile && it.sourceIds == sources } ?: return null
+        val expected = access?.takeIf { it.profileId == profile && it.sourceIds == sources }
+            ?: return null.also { trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_METADATA_CHANGED) }
         return vm.homeChannel(variant.id, profile)?.takeIf {
             current() && it.streamUrl.isNotBlank() && it.sourceId == variant.sourceId &&
-                CustomizeKeys.channel(it) == variant.stableKey && vm.swedishContextCurrent(expected)
+                CustomizeKeys.channel(it) == variant.stableKey && vm.swedishContextCurrent(expected).also { valid ->
+                    if (!valid) trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_METADATA_CHANGED)
+                }
         }
     }
     fun dismiss() { session = null; data = null; error = null; closed() }
@@ -93,7 +98,9 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
         }, onDismiss = ::dismiss)
     }
     return ChannelSourceActions(play = play@{ identity, exact ->
-        if (actionInFlight[0] || !current()) return@play
+        trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_REQUESTED)
+        if (actionInFlight[0]) { trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_BUSY); return@play }
+        if (!current()) { trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_CONTEXT_CHANGED); return@play }
         actionInFlight[0] = true
         scope.launch {
             try {
@@ -106,9 +113,11 @@ internal fun rememberChannelSourceSelection(store: SwedishChannelStore, db: OwnT
                     vm.homeChannel(original.id, profile)?.takeIf { current() && it.streamUrl.isNotBlank() &&
                         it.sourceId == original.sourceId && CustomizeKeys.channel(it) == CustomizeKeys.channel(original) }
                 }
-                if (actual != null && current()) currentPlay(actual, identity)
+                if (actual != null && current()) {
+                    trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_DISPATCHED); currentPlay(actual, identity)
+                } else trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_MISSING)
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { /* Failed availability read never starts a decoder. */ }
+            catch (_: Exception) { trace(tv.own.owntv.player.LiveEntryEvent.SELECTION_FAILED) }
             finally { actionInFlight[0] = false }
         }
     }, open = open@{ identity, downTime ->

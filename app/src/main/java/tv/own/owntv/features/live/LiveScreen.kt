@@ -564,7 +564,7 @@ fun LiveScreen(
     val categoriesModifier = Modifier
         .onFocusChanged {
             railPaneFocused = it.hasFocus
-            if (it.hasFocus && previewEnabled) vm.stopPreview()
+            if (it.hasFocus && previewEnabled) vm.stopBrowsePreview()
             // The sheet closes when focus leaves it (◀ to the rail) — not while its own menus are open,
             // and not on the "unfocused" report every node gets when it first attaches.
             if (it.hasFocus) sheetHadFocus = true
@@ -764,7 +764,7 @@ fun LiveScreen(
                             .weight(1f, fill = false)
                             .width(if (separate) listWidth * (230f / 620f) else listWidth * (456f / 846f))
                             .focusRequester(listSearchFocus)
-                            .onFocusChanged { if (it.hasFocus && previewEnabled) vm.stopPreview() }
+                            .onFocusChanged { if (it.hasFocus && previewEnabled) vm.stopBrowsePreview() }
                             // ◀ Categories from the search field too, as from the rows (not while typing).
                             .onPreviewKeyEvent { e ->
                                 if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
@@ -874,8 +874,7 @@ fun LiveScreen(
                                         if (rememberLive) perCategoryChannelIds[selectedKey] = channel.id
                                     },
                                     onClick = {
-                                        vm.watchFullscreen(channel, channels.itemSnapshotList.items.filterNotNull())
-                                        if (!externalPlayerOn) onFullscreen()
+                                        scope.launch { if (vm.watchFullscreenAsync(channel, channels.itemSnapshotList.items.filterNotNull()) == LiveViewModel.HomePlayback.IN_APP) onFullscreen() }
                                     },
                                     onLongClick = { contextChannel = channel; contextChannelId = channel.id },
                                 )
@@ -965,7 +964,7 @@ fun LiveScreen(
             ).joinToString(" · "),
             actions = tv.own.owntv.features.epg.guideProgrammeActions(
                 epgVm, ch, p, System.currentTimeMillis(),
-                onWatch = { vm.watchFullscreen(ch, emptyList()); if (!externalPlayerOn) onFullscreen() },
+                onWatch = { scope.launch { if (vm.watchFullscreenAsync(ch, emptyList()) == LiveViewModel.HomePlayback.IN_APP) onFullscreen() } },
                 onPlayFromStart = { vm.playCatchupProgramme(ch, p); if (!externalPlayerOn) onFullscreen() },
                 onPickEpg = { contextChannelId = ch.id; matchingEpg = ch },
                 onEpgOffset = { contextChannelId = ch.id; offsettingEpg = ch },
@@ -1001,7 +1000,7 @@ fun LiveScreen(
             canCatchup = true, // only reachable from the catch-up picker, which already gated on this
             isFavorite = favoriteIds.contains(ch.id),
             onToggleFavorite = { vm.toggleFavorite(ch) },
-            onWatch = { catchupDetail = null; vm.watchFullscreen(ch, emptyList()); if (!externalPlayerOn) onFullscreen() },
+            onWatch = { catchupDetail = null; scope.launch { if (vm.watchFullscreenAsync(ch, emptyList()) == LiveViewModel.HomePlayback.IN_APP) onFullscreen() } },
             onPlayCatchup = { catchupDetail = null; vm.playCatchupProgramme(ch, prog); onFullscreen() },
             // External: the archive went to another app, so don't mount the fullscreen player over it.
             onPlayCatchupExternal = { catchupDetail = null; vm.playCatchupExternal(ch, prog) },

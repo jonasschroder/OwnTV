@@ -32,6 +32,8 @@ class TvSuiteInventoryTest(unittest.TestCase):
                          'Every selected case must have a required executed/no-skip CI result')
         startup = (ROOT / 'tools/run-startup-regressions.sh').read_text()
         upgrades = (ROOT / 'tools/signing/test_upgrade.py').read_text()
+        self.assertIn('run_case liveEntryMatrixKeepsRealDecoderAliveAcrossFullscreenDisposal playback-entry-1080p', startup)
+        self.assertIn('run_case liveEntryMatrixKeepsRealDecoderAliveAcrossFullscreenDisposal playback-entry-720p', startup)
         for name in dedicated:
             self.assertIn(name, startup if name.endswith('ProductionStartupTest') else upgrades)
 

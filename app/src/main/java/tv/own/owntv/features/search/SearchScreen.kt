@@ -188,7 +188,7 @@ fun SearchScreen(
     // A channel shows Live TV's preview: the same guide lookup, and the same 700 ms settle before playing.
     LaunchedEffect(activeChannel?.id, previewOn) {
         val ch = activeChannel
-        if (ch == null) { liveVm.stopPreview(); return@LaunchedEffect }
+        if (ch == null) { liveVm.stopBrowsePreview(); return@LaunchedEffect }
         liveVm.onChannelFocused(ch)
         if (!previewOn) return@LaunchedEffect
         delay(700)

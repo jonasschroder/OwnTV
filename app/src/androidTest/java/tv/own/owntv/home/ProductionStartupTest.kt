@@ -201,6 +201,9 @@ class ProductionStartupTest {
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("swedish-channel-svt1").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
                 compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused()
+                val beforeEntry = vm.swedishRowContext.value
+                instrumentation.sendStatus(2, android.os.Bundle().apply { putString("stream",
+                    "Entry preflight: authorized=${vm.homeChannel(channels[0].id, 7) != null}; metadataCurrent=${beforeEntry != null && vm.swedishContextCurrent(beforeEntry)}; activity=${scenario.state}") })
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
                 try {
                     compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }

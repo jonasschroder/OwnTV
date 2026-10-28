@@ -200,13 +200,18 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
     }
     fun update(value: SwedishChoices) { scope.launch { store.save(profile, value); choices = value } }
     suspend fun tuneChannel(original: ChannelEntity, logicalIdentity: String? = null, origin: tv.own.owntv.player.LiveEntryOrigin = tv.own.owntv.player.LiveEntryOrigin.TV_GRID) {
+        fun trace(event: tv.own.owntv.player.LiveEntryEvent) = tv.own.owntv.player.LiveEntryDiagnostics.trace.record(0,
+            android.os.SystemClock.elapsedRealtime(), origin, event = event)
+        trace(tv.own.owntv.player.LiveEntryEvent.CHANNEL_PREPARING)
         val channel = vm.homeChannel(original.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == tv.own.owntv.core.customize.CustomizeKeys.channel(original) && it.sourceId == original.sourceId && it.streamUrl.isNotBlank() } ?: return
         // Fresh entity retains all provider authorization, DRM, catch-up and EPG context.
         val latestChoices = store.choices(profile)
         val zap = groups.mapNotNull { it.preferred(latestChoices.preferred[it.identity], latestChoices.showUhd) }
             .take(200).mapNotNull { row -> vm.homeChannel(row.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == row.stableKey && it.sourceId == row.sourceId } }
-        val expected = metadata ?: return
-        if (currentMetadata != expected || expected.profileId != profile || !vm.swedishContextCurrent(expected)) return
+        val expected = metadata ?: run { trace(tv.own.owntv.player.LiveEntryEvent.CHANNEL_STALE); return }
+        if (currentMetadata != expected || expected.profileId != profile || !vm.swedishContextCurrent(expected)) {
+            trace(tv.own.owntv.player.LiveEntryEvent.CHANNEL_STALE); return
+        }
         val selectedIdentity = logicalIdentity ?: library.groups.firstOrNull { group -> group.variants.any { it.id == channel.id } }?.identity
         val consistentZap = zap.map { row ->
             val identity = library.groups.firstOrNull { group -> group.variants.any { it.id == row.id } }?.identity

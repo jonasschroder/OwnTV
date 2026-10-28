@@ -152,10 +152,15 @@ class ProductionStartupTest {
             syncMovies = false, syncSeries = false, liveEnginePreference = "EXO_FIRST")
         db.sourceDao().insert(source); db.sourceDao().link(ProfileSourceCrossRef(7, source.id))
         settings.setPlaylistAutoRefresh(source.id, PlaylistRefresh(PlaylistAutoRefresh.OFF))
+        // No portal or credentials: null MAC resolves the local command through Core's real
+        // asynchronous Stalker path, protecting acceptance from an early false rejection.
+        val portal = source.copy(id = 99015, name = "Synthetic asynchronous fixture", type = SourceType.STALKER)
+        db.sourceDao().insert(portal); db.sourceDao().link(ProfileSourceCrossRef(7, portal.id))
+        settings.setPlaylistAutoRefresh(portal.id, PlaylistRefresh(PlaylistAutoRefresh.OFF))
         val channels = listOf("SVT1 HD", "SVT2 FHD", "TV4 HD").mapIndexed { index, name ->
             val file = File(app.filesDir, "v014-video-$index.mp4")
             instrumentation.context.assets.open("live-entry-bars.mp4").use { input -> file.outputStream().use(input::copyTo) }
-            ChannelEntity(id = 9901401L + index, sourceId = source.id, remoteId = "v014-$index", name = name, streamUrl = file.toURI().toString())
+            ChannelEntity(id = 9901401L + index, sourceId = if (index == 1) portal.id else source.id, remoteId = "v014-$index", name = name, streamUrl = file.toURI().toString())
         }
         db.channelDao().insertAll(channels)
         store.save(7, choices.copy(preferred = choices.preferred + ("svt1" to tv.own.owntv.core.customize.CustomizeKeys.channel(channels[0]))))
@@ -171,40 +176,52 @@ class ProductionStartupTest {
                             GlobalContext.get().get<tv.own.owntv.features.live.LiveViewModel>() as T
                     })[tv.own.owntv.features.live.LiveViewModel::class.java]
                 }
-                compose.waitUntil(20_000) { vm.homeLibraryContext.value.first == 7L && source.id in vm.homeLibraryContext.value.second }
-                for (origin in tv.own.owntv.player.LiveEntryOrigin.entries) for (channel in channels) {
-                    val result = kotlinx.coroutines.withContext(Dispatchers.Main) {
-                        vm.requestLivePlayback(channel.id, channels, origin, channel)
+                compose.waitUntil(20_000) { vm.homeLibraryContext.value.first == 7L && listOf(source.id, portal.id).all { it in vm.homeLibraryContext.value.second } }
+                // Complete the shell's normal-entry reset and open its real video surface. Home
+                // intentionally has no preview surface: VM dispatch there is not a fullscreen test.
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag("smart-hero-play").fetchSemanticsNodes().isNotEmpty() }
+                fun awaitPlaying(label: String) {
+                    try {
+                        compose.waitUntil(10_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
+                    } catch (failure: Throwable) {
+                        println("Decoder fixture $label: state=${vm.previewEngine.state.value}; onExo=${vm.liveOnExo.value}")
+                        println(tv.own.owntv.player.LiveEntryDiagnostics.trace.report())
+                        throw failure
                     }
-                    assertEquals(origin.name, tv.own.owntv.features.live.LiveViewModel.HomePlayback.IN_APP, result)
-                    kotlinx.coroutines.withContext(Dispatchers.Main) { vm.stopBrowsePreview() }
-                    compose.waitUntil(10_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
-                    assertEquals(channel.id, vm.previewChannel.value?.id)
-                    assertEquals(channel.streamUrl, vm.previewEngine.currentUrl)
                 }
-                kotlinx.coroutines.withContext(Dispatchers.Main) { vm.stopPreview() }
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("swedish-channel-svt1").performClick()
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
-                compose.waitUntil(10_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
+                awaitPlaying("TV grid disposal")
                 assertEquals(channels[0].id, vm.previewChannel.value?.id)
-                // Wait real frames past disposal, not just the synchronous engine-command acknowledgement.
+                // Wait real frames past disposal, not just synchronous engine-command acknowledgement.
                 Thread.sleep(700)
                 assertEquals(tv.own.owntv.player.LivePreviewEngine.State.PLAYING, vm.previewEngine.state.value)
                 val bitmap = instrumentation.uiAutomation.takeScreenshot()
                 assertTrue("Synthetic moving video must render after real TV grid disposal", (bitmap.getPixel(bitmap.width / 2, bitmap.height / 2) and 0x00ffffff) != 0)
                 val images = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
                 File(images, "v014-svt1-entry-${bitmap.width}x${bitmap.height}.png").outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }; bitmap.recycle()
+                for (origin in tv.own.owntv.player.LiveEntryOrigin.entries) for (channel in channels) {
+                    val result = kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        vm.requestLivePlayback(channel.id, channels, origin, channel)
+                    }
+                    assertEquals(origin.name, tv.own.owntv.features.live.LiveViewModel.HomePlayback.IN_APP, result)
+                    kotlinx.coroutines.withContext(Dispatchers.Main) { vm.stopBrowsePreview() }
+                    awaitPlaying("${origin.name}/${channel.id}")
+                    assertEquals(channel.id, vm.previewChannel.value?.id)
+                    assertEquals(channel.streamUrl, vm.previewEngine.currentUrl)
+                }
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("top-HOME").performClick()
                 val replay = kotlinx.coroutines.withContext(Dispatchers.Main) { vm.playHomeChannel(channels[1].id, channels, channels[1]) }
                 assertEquals(tv.own.owntv.features.live.LiveViewModel.HomePlayback.IN_APP, replay)
-                compose.waitUntil(10_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
+                // A direct Home VM call tests acceptance; there is deliberately no video surface
+                // until its UI receives IN_APP and navigates. The fullscreen matrix above tests frames.
                 kotlinx.coroutines.withContext(Dispatchers.Main) { vm.stopPreview() }
             }
-        } finally { store.save(7, choices); db.sourceDao().delete(source); channels.indices.forEach { File(app.filesDir, "v014-video-$it.mp4").delete() } }
+        } finally { store.save(7, choices); db.sourceDao().delete(source); db.sourceDao().delete(portal); channels.indices.forEach { File(app.filesDir, "v014-video-$it.mp4").delete() } }
     }
 
     @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }

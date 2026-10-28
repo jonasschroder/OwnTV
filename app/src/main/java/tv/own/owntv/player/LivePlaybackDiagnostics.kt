@@ -29,7 +29,14 @@ internal object LivePlaybackDiagnostics {
 }
 
 /** Observe existing Core callbacks; delegate every playback decision and lifecycle call unchanged. */
-internal class DiagnosticLiveHost(private val delegate: LiveTuneController.Host, private val started: () -> Unit = {}, private val exhausted: () -> Unit = {}, private val fallback: () -> Unit = {}) : LiveTuneController.Host by delegate {
+internal class DiagnosticLiveHost(private val delegate: LiveTuneController.Host, private val started: () -> Unit = {}, private val exhausted: () -> Unit = {}, private val fallback: () -> Unit = {},
+    private val resolutionFailure: (tv.own.owntv.core.database.entity.SourceEntity, String) -> (() -> Unit) = { _, _ -> {} }) : LiveTuneController.Host by delegate {
+    override suspend fun resolve(source: tv.own.owntv.core.database.entity.SourceEntity, cmd: String): String? {
+        // Capture the request before suspension; a failed old lookup cannot reject a newer tune.
+        val failed = resolutionFailure(source, cmd)
+        return delegate.resolve(source, cmd).also { if (it == null) failed() }
+    }
+
     override fun recordLadderEvent(onExo: Boolean, reason: PlayerFailureReason, detail: String) {
         if (reason == PlayerFailureReason.LIVE_FALLBACK || reason == PlayerFailureReason.LIVE_NO_FALLBACK) {
             LivePlaybackDiagnostics.trace.record(

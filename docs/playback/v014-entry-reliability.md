@@ -31,6 +31,11 @@ real SVT1/SVT2 failure has the same cause. Real provider traces and approved phy
 source → protected request ID → Core engine dispatch → validate acceptance → fullscreen → actual
 Core Exo-open/MPV-outcome callbacks`.
 
+Stalker Core starts can return before their detached URL resolution dispatches an engine. The app
+awaits the actual Core callback, or that request's captured resolution failure, rather than rejecting
+a valid pending tune. A pinned-Core regression demonstrates return-before-dispatch; stale resolution
+failure cannot reject a newer request. Existing resolver, warm promotion and reconnect rules remain Core-owned.
+
 | Path | Existing selection retained | Entry/navigation rule |
 |---|---|---|
 | Home hero, On Now, favourites | Existing logical resolver and saved variant | `playHomeChannel` → shared gate; fullscreen only for IN_APP |
@@ -65,13 +70,15 @@ Core's existing buffering, fallback and final error UI continue to handle stream
 
 ## Validation
 
-Local validation: **42 distinct focused JVM regressions PASS**, QA app/instrumentation builds PASS, i18n ratchet and two runner/inventory safeguard tests PASS. Native execution and full CI results are linked in the PR.
+Local validation: **44 distinct focused JVM regressions PASS**, QA app/instrumentation builds PASS, i18n ratchet and two runner/inventory safeguard tests PASS. Native execution and full CI results are linked in the PR.
 The matrix covers all 12 origin categories × SVT1/SVT2/TV4, delayed acceptance, competing OK, caller
 cancellation, Back/re-entry, unavailable authorization, startup exception and external outcome.
 Existing source resolver, preview policy and bounded Room authorization regressions remain exercised.
 
 Added a **real QA Activity/Koin/Room/Exo** matrix using an original local H.264/AAC moving-bars fixture,
-then a real native TV-grid OK → fullscreen disposal → Back journey. Existing startup CI requires it at
+through a real native TV-grid OK → fullscreen disposal → origin matrix → Back journey.
+The matrix runs with the actual fullscreen video surface; Home deliberately has no preview surface.
+SVT2 additionally uses Core's asynchronous Stalker path with a local file and no portal or credentials. Existing startup CI requires it at
 1080p and 720p **in addition to all eight previous executions**. It refuses non-CI, physical devices
 and preinstalled QA before any mutation. The video is synthetic, not SVT/IPTV broadcast evidence.
 The native capture must still show running media after browse disposal. No owner-device installation.

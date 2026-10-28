@@ -953,6 +953,9 @@ class LiveViewModel(
      * television's own: which channel is on screen, the zap list, history, catch-up and the HUD state.
      */
     private var engineStartRevision = 0L
+    private data class EngineAcceptance(val request: Long, val source: Long, val command: String,
+        val result: kotlinx.coroutines.CompletableDeferred<Boolean>)
+    private var pendingEngineAcceptance: EngineAcceptance? = null
     private val _liveEntryNotice = MutableStateFlow<Pair<Long, HomePlayback>?>(null)
     val liveEntryNotice: StateFlow<Pair<Long, HomePlayback>?> = _liveEntryNotice
     fun consumeLiveEntryNotice(id: Long) { if (_liveEntryNotice.value?.first == id) _liveEntryNotice.value = null }
@@ -972,7 +975,14 @@ class LiveViewModel(
             sourceLookup = { id -> sourceById[id] },
             // A handover re-opens the channel at its live edge: the rewind is over.
             backToLiveEdge = { clearTimeshift() },
-        ), started = { engineStartRevision++ }, exhausted = {
+        ), started = {
+            engineStartRevision++
+            pendingEngineAcceptance?.takeIf { it.request == entry.requestId }?.result?.complete(true)
+        }, resolutionFailure = { source, command ->
+            val pending = pendingEngineAcceptance?.takeIf { it.source == source.id && it.command == command }
+            val failed: () -> Unit = { pending?.result?.complete(false); Unit }
+            failed
+        }, exhausted = {
             LiveEntryDiagnostics.trace.record(entry.requestId, android.os.SystemClock.elapsedRealtime(), event = LiveEntryEvent.EXHAUSTED)
         }, fallback = { LiveEntryDiagnostics.trace.record(entry.requestId, android.os.SystemClock.elapsedRealtime(), event = LiveEntryEvent.FALLBACK) }),
     )
@@ -1257,12 +1267,16 @@ class LiveViewModel(
                 } else {
                     val before = engineStartRevision
                     val accepted = kotlinx.coroutines.CompletableDeferred<Boolean>()
+                    val acknowledgement = EngineAcceptance(entry.requestId, source.id, channel.streamUrl, accepted)
+                    pendingEngineAcceptance = acknowledgement
                     val tune = live.launch {
                         try {
                             live.expectPromotion(channel)
                             _previewChannel.value = channel; clearTimeshift(); _catchupActive.value = false
                             live.start(channel, source)
-                            accepted.complete(engineStartRevision != before)
+                            // Core may resolve a Stalker command in a detached coroutine. Its actual
+                            // onEngineStarted (or captured resolution failure) acknowledges that path.
+                            if (!streamUrlResolver.needsResolve(source)) accepted.complete(engineStartRevision != before)
                         } catch (cancelled: kotlinx.coroutines.CancellationException) { accepted.cancel(cancelled); throw cancelled }
                         catch (error: Exception) { accepted.completeExceptionally(error) }
                     }
@@ -1271,7 +1285,10 @@ class LiveViewModel(
                             recordLiveHistory(channel, immediate = origin == LiveEntryOrigin.GUIDE)
                             LiveEntryOutcome.IN_APP // engine request accepted, NOT proof of decoded picture
                         } else LiveEntryOutcome.UNAVAILABLE
-                    } finally { if (!kotlinx.coroutines.currentCoroutineContext().isActive) tune.cancel() }
+                    } finally {
+                        if (pendingEngineAcceptance === acknowledgement) pendingEngineAcceptance = null
+                        if (!kotlinx.coroutines.currentCoroutineContext().isActive) tune.cancel()
+                    }
                 }
             }
         })

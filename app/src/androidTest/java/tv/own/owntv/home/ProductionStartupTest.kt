@@ -145,6 +145,15 @@ class ProductionStartupTest {
     }
 
     @Test fun liveEntryMatrixKeepsRealDecoderAliveAcrossFullscreenDisposal(): Unit = runBlocking {
+        fun pressRemote(code: Int) {
+            compose.waitForIdle()
+            // A physical press has one downTime for both events. The logical short/long-OK
+            // controller intentionally rejects an unrelated KeyUp (unlike a generic Button).
+            val down = android.os.SystemClock.uptimeMillis()
+            instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+            instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+            compose.waitForIdle()
+        }
         val store = GlobalContext.get().get<tv.own.owntv.features.live.SwedishChannelStore>()
         val choices = store.choices(7)
         val source = SourceEntity(id = 99014, name = "Synthetic decoder fixture", type = SourceType.M3U,
@@ -171,7 +180,7 @@ class ProductionStartupTest {
         try {
             ActivityScenario.launch<MainActivity>(app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!).use { scenario ->
                 compose.waitUntil(20_000) { compose.onAllNodesWithText(profileName).fetchSemanticsNodes().isNotEmpty() }
-                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                pressRemote(KeyEvent.KEYCODE_DPAD_CENTER)
                 lateinit var vm: tv.own.owntv.features.live.LiveViewModel
                 scenario.onActivity { activity ->
                     vm = androidx.lifecycle.ViewModelProvider(activity, object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -204,7 +213,7 @@ class ProductionStartupTest {
                 val beforeEntry = vm.swedishRowContext.value
                 instrumentation.sendStatus(2, android.os.Bundle().apply { putString("stream",
                     "Entry preflight: authorized=${vm.homeChannel(channels[0].id, 7) != null}; metadataCurrent=${beforeEntry != null && vm.swedishContextCurrent(beforeEntry)}; activity=${scenario.state}") })
-                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                pressRemote(KeyEvent.KEYCODE_DPAD_CENTER)
                 try {
                     compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
                 } catch (failure: Throwable) {
@@ -233,7 +242,7 @@ class ProductionStartupTest {
                     assertEquals(channel.id, vm.previewChannel.value?.id)
                     assertEquals(channel.streamUrl, vm.previewEngine.currentUrl)
                 }
-                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+                pressRemote(KeyEvent.KEYCODE_BACK)
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("top-HOME").performClick()
                 val replay = kotlinx.coroutines.withContext(Dispatchers.Main) { vm.playHomeChannel(channels[1].id, channels, channels[1]) }

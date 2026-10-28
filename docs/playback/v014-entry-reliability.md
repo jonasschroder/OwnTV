@@ -62,6 +62,8 @@ request sequence, monotonic timing and finite origin/logical/event enums only. S
 canonical families; other names are OTHER. No source/profile IDs, provider text, exception messages,
 headers, credentials, tokens or stream URLs are retained. Existing ladder trace is preserved.
 
+Pre-entry SELECTION/CHANNEL events use request=0; a nonzero ID is minted by the shared gate.
+These phases expose a failed source preflight without retaining provider names or lookup errors.
 REQUESTED/SOURCE_VALIDATED/ACCEPTED are distinct from OPENED_EXO/OPENED_MPV. MPV `isPlaying` is not
 used as evidence of a decoded stream. Fallback/exhaustion and cancellation/supersession remain visible.
 The observer delegates all engine decisions and outcomes unchanged. Initialization/unavailability and
@@ -78,6 +80,7 @@ Existing source resolver, preview policy and bounded Room authorization regressi
 Added a **real QA Activity/Koin/Room/Exo** matrix using an original local H.264/AAC moving-bars fixture,
 through a real native TV-grid OK → fullscreen disposal → origin matrix → Back journey.
 The matrix runs with the actual fullscreen video surface; Home deliberately has no preview surface.
+Remote events share a physical press's downTime, as in the existing short/long-OK tests.
 SVT2 additionally uses Core's asynchronous Stalker path with a local file and no portal or credentials. Existing startup CI requires it at
 1080p and 720p **in addition to all eight previous executions**. It refuses non-CI, physical devices
 and preinstalled QA before any mutation. The video is synthetic, not SVT/IPTV broadcast evidence.

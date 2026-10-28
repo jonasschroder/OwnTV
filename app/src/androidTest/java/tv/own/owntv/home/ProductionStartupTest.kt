@@ -228,7 +228,14 @@ class ProductionStartupTest {
                 Thread.sleep(700)
                 assertEquals(tv.own.owntv.player.LivePreviewEngine.State.PLAYING, vm.previewEngine.state.value)
                 val bitmap = instrumentation.uiAutomation.takeScreenshot()
-                assertTrue("Synthetic moving video must render after real TV grid disposal", (bitmap.getPixel(bitmap.width / 2, bitmap.height / 2) and 0x00ffffff) != 0)
+                // Sample the coloured video outside the central pause button and HUD scrims;
+                // a visible control over a black surface is not decoded-picture evidence.
+                assertTrue("Synthetic moving video must render after real TV grid disposal",
+                    listOf(bitmap.width / 4, bitmap.width * 3 / 4).all { x ->
+                        val pixel = bitmap.getPixel(x, bitmap.height / 2)
+                        val rgb = listOf(android.graphics.Color.red(pixel), android.graphics.Color.green(pixel), android.graphics.Color.blue(pixel))
+                        rgb.max() - rgb.min() > 24
+                    })
                 val images = File(app.getExternalFilesDir(null), "startup-screenshots").apply { mkdirs() }
                 File(images, "v014-svt1-entry-${bitmap.width}x${bitmap.height}.png").outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }; bitmap.recycle()
                 for (origin in tv.own.owntv.player.LiveEntryOrigin.entries) for (channel in channels) {
@@ -242,6 +249,17 @@ class ProductionStartupTest {
                     assertEquals(channel.streamUrl, vm.previewEngine.currentUrl)
                 }
                 pressRemote(KeyEvent.KEYCODE_BACK)
+                // Back first dismisses visible HUD controls; only the next Back exits. If the
+                // normal HUD timer already hid them, the first Back correctly exits directly.
+                compose.waitUntil(10_000) {
+                    compose.onAllNodesWithTag("player-hud-controls").fetchSemanticsNodes().isEmpty() ||
+                        compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isNotEmpty()
+                }
+                if (compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty()) {
+                    compose.onNodeWithTag("player-hud-controls").assertDoesNotExist()
+                    assertEquals(tv.own.owntv.player.LivePreviewEngine.State.PLAYING, vm.previewEngine.state.value)
+                    pressRemote(KeyEvent.KEYCODE_BACK)
+                }
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("top-HOME").performClick()
                 val replay = kotlinx.coroutines.withContext(Dispatchers.Main) { vm.playHomeChannel(channels[1].id, channels, channels[1]) }

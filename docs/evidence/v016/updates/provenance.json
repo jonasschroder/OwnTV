@@ -1,0 +1,47 @@
+{
+  "base_sha": "88a51db17493869805db7763a5e69c22a6299dd1",
+  "fixture_version": "0.14.0-dev / code 2; same local test stamp as phase-0, not release identity",
+  "package": "se.jonasschroder.mintv.qa",
+  "android_sdk": 34,
+  "owner_device_changed": false,
+  "app_apk_sha256": "9000a36587e15932734049e257403097c362e218bffab7920ee80a39f0468181",
+  "update_instrumentation_apk_sha256": "b25c5409202be312060549f32e154f7958c6ea97094d0464fb8213b140b8ccd5",
+  "production_shell_capture_harness": "PerformanceJourneyTest from perf/v016-native-focus; only instrumentation APK replaced; production updater fixture unchanged",
+  "screenshots": {
+    "HOME_TV_SPORT_VOD_PROFILE": "actual MainActivity, synthetic library, same profile/data as baseline",
+    "UPDATE": "actual global entry into real UpdateDialog: debug signing guard refuses network/installation",
+    "synthetic": "shared production UpdatePresentation in ComponentActivity with explicit fake release fixture, no network/installer callbacks"
+  },
+  "unit_results": [
+    {
+      "name": "tv.own.owntv.features.update.UpdateTransportTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-29T22:44:53.035Z",
+      "hostname": "MacBook-Pro-som-tillhor-Jonas.local",
+      "time": "0.104"
+    },
+    {
+      "name": "tv.own.owntv.features.update.UpdateExperienceTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-29T22:44:52.882Z",
+      "hostname": "MacBook-Pro-som-tillhor-Jonas.local",
+      "time": "0.076"
+    },
+    {
+      "name": "tv.own.owntv.features.update.UpdatePolicyTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-29T22:44:52.961Z",
+      "hostname": "MacBook-Pro-som-tillhor-Jonas.local",
+      "time": "0.069"
+    }
+  ]
+}

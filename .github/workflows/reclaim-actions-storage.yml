@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: reclaim-actions-storage
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   cleanup:
@@ -62,7 +62,7 @@ jobs:
                   break
               page += 1
 
-          protected = ("signed", "release-candidate", "release_candidate")
+          protected = ("signed", "release-candidate", "release_candidate", "mintv-approved", "mintv-signing-input")
           candidates = []
           kept = 0
           for artifact in artifacts:

@@ -77,7 +77,14 @@ internal class LiveEntryGate(private val scope: CoroutineScope, private val canc
 
 internal enum class LiveEntryOutcome { IN_APP, EXTERNAL, UNAVAILABLE, SUPERSEDED }
 internal enum class LiveEntryOrigin { HOME, TV_GRID, SOURCE_PICKER, GUIDE, SPORT, HISTORY, CONTINUE, ZAP, NUMBER, PREVIOUS, DEEP_LINK, MULTIVIEW }
-internal enum class LiveLogicalChannel { SVT1, SVT2, OTHER }
+internal enum class LiveLogicalChannel { SVT1, SVT2, SVT1_VARMLAND, SVT2_VARMLAND, OTHER }
+internal fun liveLogicalChannel(identity: String?): LiveLogicalChannel = when (identity) {
+    "svt1" -> LiveLogicalChannel.SVT1
+    "svt2" -> LiveLogicalChannel.SVT2
+    "svt1varmland" -> LiveLogicalChannel.SVT1_VARMLAND
+    "svt2varmland" -> LiveLogicalChannel.SVT2_VARMLAND
+    else -> LiveLogicalChannel.OTHER
+}
 internal enum class LiveEntryEvent { SELECTION_REQUESTED, SELECTION_BUSY, SELECTION_CONTEXT_CHANGED, SELECTION_MISSING, SELECTION_METADATA_CHANGED, SELECTION_FAILED, SELECTION_DISPATCHED, CHANNEL_PREPARING, CHANNEL_STALE, REQUESTED, SOURCE_VALIDATED, ACCEPTED, OPENED_EXO, OPENED_MPV, FALLBACK, EXHAUSTED, EXTERNAL, UNAVAILABLE, INITIALIZATION_FAILED, CANCELLED, SUPERSEDED, EXITED }
 
 /** Only finite enums, request sequence and monotonic timing: never provider/profile strings. */

@@ -870,8 +870,6 @@
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	hockey
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	sport
-2	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	svt1
-2	protocol	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	svt2
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	LiveZapList
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	direct tune: zap rebuild failed
@@ -976,9 +974,6 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	ultrahd
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	varmland
 1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	värmland
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishCollectionPolicy.kt	${national}varmland
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishCollectionPolicy.kt	svt1
-1	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishCollectionPolicy.kt	svt2
 2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	categories
 2	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	channels
 1	room-schema	app/src/main/java/tv/own/owntv/features/live/SwedishLiveScreen.kt	epg_channels
@@ -1845,6 +1840,10 @@
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	FrameRate
 1	empty	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	LIVE_ENTRY request=$id elapsedMs=${at.coerceAtLeast(0)} origin=$origin logical=$logical event=$event
+1	protocol	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	svt1
+1	protocol	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	svt1varmland
+1	protocol	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	svt2
+1	protocol	app/src/main/java/tv/own/owntv/player/LiveEntryGate.kt	svt2varmland
 2	empty	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	\0
 1	log	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	LIVE_TRACE elapsedMs=${it.elapsedMs} event=${it.kind} engine=${it.engine} cause=${it.cause}
 1	protocol	app/src/main/java/tv/own/owntv/player/LivePlaybackDiagnostics.kt	— no decodable audio track

@@ -5,6 +5,25 @@ import org.junit.Test
 import tv.own.owntv.features.live.*
 
 class ChannelSourceResolverTest {
+    @Test fun regionalSavedQualityAndMissingVariantCannotCrossIntoNationalService() {
+        val national = row(10, "SVT1 HD")
+        val hd = row(11, "SVT1 Värmland HD")
+        val fhd = row(12, "SVT1 Värmland FHD", 102)
+        val groups = SwedishChannels.group(listOf(national, hd, fhd)).associateBy { it.identity }
+        val choices = SwedishChoices(preferred = mapOf("svt1" to national.stableKey, "svt1varmland" to fhd.stableKey))
+        assertEquals(national, ChannelSourceResolver.resolve(groups.getValue("svt1"), choices).selected)
+        assertEquals(fhd, ChannelSourceResolver.resolve(groups.getValue("svt1varmland"), choices).selected)
+        val missing = groups.getValue("svt1varmland").copy(variants = listOf(hd))
+        assertEquals(hd, ChannelSourceResolver.resolve(missing, choices).selected)
+        assertEquals(ChannelSourceStatus.SAVED_MISSING, ChannelSourceResolver.resolve(missing, choices).status)
+        assertNull(ChannelSourceResolver.resolve(missing.copy(variants = emptyList()), choices).selected)
+        assertEquals(fhd.stableKey, choices.preferred["svt1varmland"])
+        // An explicit programme/provider row remains exact even if a different regional quality is saved.
+        for (intent in listOf(ChannelSourceIntent.GUIDE_PROGRAMME, ChannelSourceIntent.PROVIDER_EXACT)) {
+            assertEquals(hd, ChannelSourceResolver.resolve(groups.getValue("svt1varmland"), choices, intent, hd.stableKey).selected)
+            assertNull(ChannelSourceResolver.resolve(groups.getValue("svt1varmland"), choices, intent, national.stableKey).selected)
+        }
+    }
     private fun row(id: Long, raw: String, source: Long = 101, remote: String = "$id") =
         SwedishVariant(id, source, "$source:$remote", raw, SwedishChannels.recognize(raw)!!, null)
     private val hd = row(1, "SE: TV4 HD")

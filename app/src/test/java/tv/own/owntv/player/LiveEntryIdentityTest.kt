@@ -7,6 +7,14 @@ import tv.own.owntv.core.database.entity.SourceEntity
 import tv.own.owntv.core.model.SourceType
 
 class LiveEntryIdentityTest {
+    @Test fun diagnosticsDistinguishNationalAndRegionalServicesWithoutRetainingProviderLabels() {
+        for ((raw, expected) in listOf("SVT1 HD" to LiveLogicalChannel.SVT1,
+            "SVT2" to LiveLogicalChannel.SVT2, "SE: SVT1 Värmland FHD" to LiveLogicalChannel.SVT1_VARMLAND,
+            "SVT2 Varmland HD" to LiveLogicalChannel.SVT2_VARMLAND)) {
+            assertEquals(expected, liveLogicalChannel(tv.own.owntv.features.live.SwedishChannels.recognize(raw)?.identity))
+        }
+        assertEquals(LiveLogicalChannel.OTHER, liveLogicalChannel("https://private.invalid/user/token"))
+    }
     private val channel = ChannelEntity(id = 1, sourceId = 101, remoteId = "svt1", name = "SVT1 HD", streamUrl = "https://example.invalid/synthetic")
     @Test fun sourceAndDrmChangesAreRejectedButGuideArtworkAndDisplayRenamesDoNotBreakPlayback() {
         assertTrue(sameLiveStream(channel, channel.copy(name = "My channel", logoUrl = "https://example.invalid/logo", epgChannelId = "updated-guide", sortOrder = 99)))

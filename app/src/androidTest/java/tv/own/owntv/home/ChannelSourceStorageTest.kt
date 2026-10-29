@@ -92,6 +92,32 @@ class ChannelSourceStorageTest {
             try { SwedishChannelStore(failing, db, custom).savePreferred(7, 7, "tv4", "101:2") { true }; fail("Commit failure must propagate") }
             catch (_: IllegalStateException) { }
             assertEquals(saved, restarted.choices(7))
+            // Actual bounded Room library: neither a one-source region nor an explicit national
+            // preference may erase the other service. Unreachable nonblank URLs prove no health.
+            val national = channel(20, "HD").copy(name = "SVT1 HD")
+            val regionalHd = channel(21, "HD").copy(name = "SVT1 Värmland HD")
+            val regionalFhd = channel(22, "FHD").copy(name = "SVT1 Värmland FHD")
+            db.channelDao().insertAll(listOf(national, regionalHd, regionalFhd))
+            val regionalChoices = saved.copy(preferred = saved.preferred + mapOf("svt1" to "101:20", "svt1varmland" to "101:22"))
+            restarted.save(7, regionalChoices)
+            suspend fun svt(sources: List<Long> = listOf(101, 102)) = restarted.library(7, sources, restarted.choices(7))
+                .groups.filter { it.identity.startsWith("svt1") }.associateBy { it.identity }
+            assertEquals(setOf("svt1", "svt1varmland"), svt().keys)
+            assertEquals(20L, ChannelSourceResolver.resolve(svt().getValue("svt1"), regionalChoices).selected?.id)
+            assertEquals(22L, ChannelSourceResolver.resolve(svt().getValue("svt1varmland"), regionalChoices).selected?.id)
+            val regionalOtherSource = channel(23, "SD", 102).copy(name = "SVT1 Värmland SD")
+            db.channelDao().insertAll(listOf(regionalOtherSource))
+            assertEquals(3, svt().getValue("svt1varmland").variants.size)
+            assertEquals(2, svt(listOf(101)).getValue("svt1varmland").variants.size)
+            db.channelDao().deleteByRemoteIds(101, listOf("22"))
+            assertEquals(21L, ChannelSourceResolver.resolve(svt().getValue("svt1varmland"), regionalChoices).selected?.id)
+            custom.setItemHidden(7, MediaType.LIVE, "101:21", "Synthetic region", true)
+            assertEquals(23L, ChannelSourceResolver.resolve(svt().getValue("svt1varmland"), regionalChoices).selected?.id)
+            custom.setItemHidden(7, MediaType.LIVE, "102:23", "Synthetic region", true)
+            assertEquals(setOf("svt1"), svt().keys)
+            assertEquals("101:22", restarted.choices(7).preferred["svt1varmland"])
+            assertTrue(restarted.library(8, listOf(101, 102), regionalChoices).groups.isEmpty())
+            restarted.save(7, saved)
             val profile = db.profileDao().getById(7)!!
             db.profileDao().update(profile.copy(createdAt = 999))
             assertTrue(restarted.choices(7).preferred.isEmpty())

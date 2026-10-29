@@ -35,7 +35,7 @@ public final class LoopbackVideoFixture implements AutoCloseable {
     private void serve(Socket socket) throws IOException {
         BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
         String request = input.readLine();
-        if (request == null || !request.matches("(?:GET|HEAD) /[0-2]\\.mp4 HTTP/1\\.[01]")) return;
+        if (request == null || !request.matches("(?:GET|HEAD) /[0-4]\\.mp4 HTTP/1\\.[01]")) return;
         int start = 0, end = bytes.length - 1;
         boolean range = false;
         for (int count = 0; count < 32; count++) {

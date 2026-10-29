@@ -1,0 +1,118 @@
+name: Reclaim Actions storage
+on:
+  push:
+    paths:
+      - .github/workflows/reclaim-actions-storage.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: reclaim-actions-storage
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Delete old replaceable workflow artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import time
+          from datetime import datetime, timedelta, timezone
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          base = f"https://api.github.com/repos/{repo}"
+          now = datetime.now(timezone.utc)
+
+          def call(path, method="GET"):
+              request = Request(
+                  f"{base}{path}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "reclaim-actions-storage-workflow",
+                  },
+                  method=method,
+              )
+              with urlopen(request, timeout=40) as response:
+                  if method == "DELETE":
+                      return response.status
+                  return json.load(response)
+
+          artifacts = []
+          page = 1
+          while True:
+              result = call(f"/actions/artifacts?per_page=100&page={page}")
+              batch = result.get("artifacts", [])
+              artifacts.extend(batch)
+              if len(batch) < 100:
+                  break
+              page += 1
+
+          protected = ("signed", "release-candidate", "release_candidate")
+          candidates = []
+          kept = 0
+          for artifact in artifacts:
+              name = artifact["name"].lower()
+              created = datetime.fromisoformat(artifact["created_at"].replace("Z", "+00:00"))
+              days_to_keep = 7 if ("-win-x64-portable" in name or name.endswith("-installer")) else 3
+              if any(term in name for term in protected) or created >= now - timedelta(days=days_to_keep):
+                  kept += 1
+                  continue
+              candidates.append(artifact)
+
+          # Reclaim the most space first. A bounded run avoids abuse/rate limits.
+          candidates.sort(key=lambda a: a["size_in_bytes"], reverse=True)
+          limit = 1200
+          removed = 0
+          bytes_removed = 0
+          errors = []
+          print(f"Repository: {repo}")
+          print(f"Artifacts found: {len(artifacts)}, protected/recent: {kept}, eligible: {len(candidates)}")
+          print(f"Potential eligible size: {sum(x['size_in_bytes'] for x in candidates) / 1048576:.1f} MiB")
+          for artifact in candidates[:limit]:
+              try:
+                  call(f"/actions/artifacts/{artifact['id']}", method="DELETE")
+                  removed += 1
+                  bytes_removed += artifact["size_in_bytes"]
+              except HTTPError as error:
+                  errors.append(f"{artifact['id']} ({error.code})")
+                  if error.code in (401, 403, 429):
+                      print(f"Stopped on API authorization/rate limit: {error.code}")
+                      break
+              time.sleep(0.18)
+
+          print(f"Deleted artifacts: {removed}; reported compressed size: {bytes_removed / 1048576:.1f} MiB")
+          print(f"Eligible artifacts not yet deleted: {max(0, len(candidates) - removed)}")
+          if errors:
+              print(f"Errors: {', '.join(errors[:10])}")
+              sys.exit(1)
+          PY
+
+      - name: Remove rebuildable Actions caches
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache list --limit 100 --json id,key,sizeInBytes > /tmp/caches-before.json || echo '[]' > /tmp/caches-before.json
+          python3 - <<'PY'
+          import json
+          items = json.load(open("/tmp/caches-before.json"))
+          print(f"Visible cache entries before deletion: {len(items)}")
+          print(f"Visible cache size: {sum(x.get('sizeInBytes', 0) for x in items) / 1048576:.1f} MiB")
+          PY
+          gh cache delete --all --succeed-on-no-caches
+          echo "Removed rebuildable Actions caches. Subsequent builds will recreate them."

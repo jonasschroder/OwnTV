@@ -1,0 +1,131 @@
+{
+  "source_mode": "bounded_live_research",
+  "app_ready": false,
+  "probes": [
+    {
+      "source_url": "https://www.thesportsdb.com/api/v1/json/123/eventstv.php?d=2026-10-29&s=Ice_Hockey&a=Sweden",
+      "http_status": 200,
+      "local_response_saved_at": "2026-10-29T07:15:43.765911+00:00",
+      "body_sha256": "3508033b3a913a75e8bb914ddfab2cc7c4e7d2cce11882272ddd6618539e3527",
+      "records": 1,
+      "observations": [
+        {
+          "idEvent": "2476585",
+          "strEvent": "Brynäs IF vs Färjestad BK",
+          "dateEvent": "2026-10-29",
+          "strTime": "18:00:00",
+          "strCountry": "Sweden",
+          "strChannel": "C More Extreme",
+          "strLeague": null,
+          "strVenue": null
+        }
+      ],
+      "verification_status": "not_accepted_as_current_linear_assignment",
+      "limitation": "Free tier truncates results; legacy station naming and timezone contract unverified. Do not infer absent paid-tier data."
+    },
+    {
+      "source_url": "https://www.thesportsdb.com/api/v1/json/123/eventstv.php?d=2026-10-31&s=Ice_Hockey&a=Sweden",
+      "http_status": 200,
+      "local_response_saved_at": "2026-10-29T07:15:45.980977+00:00",
+      "body_sha256": "68ab491725aab6e05055b708f446cc75b8fe2db5446547370138d330b666c1b4",
+      "records": 1,
+      "observations": [
+        {
+          "idEvent": "2476589",
+          "strEvent": "Djurgårdens IF vs Brynäs IF",
+          "dateEvent": "2026-10-31",
+          "strTime": "17:00:00",
+          "strCountry": "Sweden",
+          "strChannel": "C More Extreme",
+          "strLeague": null,
+          "strVenue": null
+        }
+      ],
+      "verification_status": "not_accepted_as_current_linear_assignment",
+      "limitation": "Free tier truncates results; legacy station naming and timezone contract unverified. Do not infer absent paid-tier data."
+    },
+    {
+      "source_url": "https://www.thesportsdb.com/api/v1/json/123/lookuptv.php?id=2476585",
+      "http_status": 200,
+      "local_response_saved_at": "2026-10-29T07:16:22.209500+00:00",
+      "body_sha256": "50d0bd2e6210facbfa68fb246284f0e1d066be7b0c8b2857c0bdb4b9dbf9ce49",
+      "records": 1,
+      "observations": [
+        {
+          "idEvent": "2476585",
+          "strEvent": "Brynäs IF vs Färjestad BK",
+          "dateEvent": "2026-10-29",
+          "strTime": "18:00:00",
+          "strCountry": "Sweden",
+          "strChannel": "C More Extreme",
+          "strLeague": null,
+          "strVenue": null
+        }
+      ],
+      "verification_status": "not_accepted_as_current_linear_assignment",
+      "limitation": "Free tier truncates results; legacy station naming and timezone contract unverified. Do not infer absent paid-tier data."
+    },
+    {
+      "source_url": "https://www.thesportsdb.com/api/v1/json/123/lookuptv.php?id=2476588",
+      "http_status": 200,
+      "local_response_saved_at": "2026-10-29T08:05:41.892320+00:00",
+      "body_sha256": "643f393e68a7dc2b1d54fe9ad3f1eb39966805963fb8f30be9cef688ab1615da",
+      "records": 1,
+      "observations": [
+        {
+          "idEvent": "2476588",
+          "strEvent": "Växjö Lakers vs Färjestad BK",
+          "dateEvent": "2026-10-31",
+          "strTime": "14:15:00",
+          "strCountry": "Sweden",
+          "strChannel": "C More Extreme",
+          "strLeague": null,
+          "strVenue": null
+        }
+      ],
+      "verification_status": "not_accepted_as_current_linear_assignment",
+      "limitation": "Free tier truncates results; legacy station naming and timezone contract unverified. Do not infer absent paid-tier data."
+    },
+    {
+      "source_url": "https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d=2026-10-31&l=4419",
+      "http_status": 200,
+      "local_response_saved_at": "2026-10-29T07:16:24.428291+00:00",
+      "body_sha256": "ca201160239fe8acdd4bf80ae77dbeaaa97951b23e81427d84d65c993c680bb0",
+      "records": 3,
+      "observations": [
+        {
+          "idEvent": "2476586",
+          "strEvent": "Frölunda HC vs Linköpings HC",
+          "dateEvent": "2026-10-31",
+          "strTime": "14:15:00",
+          "strCountry": "Sweden",
+          "strChannel": null,
+          "strLeague": "Swedish Hockey League",
+          "strVenue": "Scandinavium"
+        },
+        {
+          "idEvent": "2476587",
+          "strEvent": "Skellefteå AIK vs IF Björklöven",
+          "dateEvent": "2026-10-31",
+          "strTime": "14:15:00",
+          "strCountry": "Sweden",
+          "strChannel": null,
+          "strLeague": "Swedish Hockey League",
+          "strVenue": "Skellefteå Kraft Arena"
+        },
+        {
+          "idEvent": "2476588",
+          "strEvent": "Växjö Lakers vs Färjestad BK",
+          "dateEvent": "2026-10-31",
+          "strTime": "14:15:00",
+          "strCountry": "Sweden",
+          "strChannel": null,
+          "strLeague": "Swedish Hockey League",
+          "strVenue": "VIDA Arena"
+        }
+      ],
+      "verification_status": "not_accepted_as_current_linear_assignment",
+      "limitation": "Free tier truncates results; legacy station naming and timezone contract unverified. Do not infer absent paid-tier data."
+    }
+  ]
+}

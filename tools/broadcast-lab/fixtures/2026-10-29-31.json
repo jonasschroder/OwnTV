@@ -1,0 +1,262 @@
+{
+  "purpose": "Manual official fixture reference only; no broadcast assignments. Re-check schedules before use.",
+  "fixtures": [
+    {
+      "id": "shl-2026-10-29-brynas-farjestad",
+      "league": "SHL",
+      "home": "Brynäs IF",
+      "away": "Färjestad BK",
+      "display": "Brynäs IF – Färjestad BK",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "venue": "Monitor ERP Arena",
+      "team_tokens": [
+        [
+          "Brynäs IF",
+          "Brynäs"
+        ],
+        [
+          "Färjestad BK",
+          "Färjestad"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-29-2",
+      "league": "SHL",
+      "home": "Luleå HF",
+      "away": "IF Björklöven",
+      "display": "Luleå HF – IF Björklöven",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "venue": "Coop Norrbotten Arena",
+      "team_tokens": [
+        [
+          "Luleå HF"
+        ],
+        [
+          "IF Björklöven"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-29-3",
+      "league": "SHL",
+      "home": "Rögle BK",
+      "away": "IF Malmö Redhawks",
+      "display": "Rögle BK – IF Malmö Redhawks",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "venue": "Catena Arena",
+      "team_tokens": [
+        [
+          "Rögle BK"
+        ],
+        [
+          "IF Malmö Redhawks"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-29-4",
+      "league": "SHL",
+      "home": "Skellefteå AIK",
+      "away": "Linköping HC",
+      "display": "Skellefteå AIK – Linköping HC",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "venue": "Skellefteå Kraft Arena",
+      "team_tokens": [
+        [
+          "Skellefteå AIK"
+        ],
+        [
+          "Linköping HC"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-29-5",
+      "league": "SHL",
+      "home": "Timrå IK",
+      "away": "Växjö Lakers HC",
+      "display": "Timrå IK – Växjö Lakers HC",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "venue": "SCA Arena",
+      "team_tokens": [
+        [
+          "Timrå IK"
+        ],
+        [
+          "Växjö Lakers HC"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-29-6",
+      "league": "SHL",
+      "home": "Örebro HK",
+      "away": "Frölunda HC",
+      "display": "Örebro HK – Frölunda HC",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "venue": "Behrn Arena",
+      "team_tokens": [
+        [
+          "Örebro HK"
+        ],
+        [
+          "Frölunda HC"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-29-7",
+      "league": "SHL",
+      "home": "Djurgårdens IF",
+      "away": "HV 71",
+      "display": "Djurgårdens IF – HV 71",
+      "kickoff_local": "2026-10-29T19:30:00+01:00",
+      "venue": "Hovet, Johanneshov",
+      "team_tokens": [
+        [
+          "Djurgårdens IF"
+        ],
+        [
+          "HV 71"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-29/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-1",
+      "league": "SHL",
+      "home": "Frölunda HC",
+      "away": "Linköping HC",
+      "display": "Frölunda HC – Linköping HC",
+      "kickoff_local": "2026-10-31T15:15:00+01:00",
+      "venue": "Scandinavium",
+      "team_tokens": [
+        [
+          "Frölunda HC"
+        ],
+        [
+          "Linköping HC"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-2",
+      "league": "SHL",
+      "home": "Skellefteå AIK",
+      "away": "IF Björklöven",
+      "display": "Skellefteå AIK – IF Björklöven",
+      "kickoff_local": "2026-10-31T15:15:00+01:00",
+      "venue": "Skellefteå Kraft Arena",
+      "team_tokens": [
+        [
+          "Skellefteå AIK"
+        ],
+        [
+          "IF Björklöven"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-vaxjo-farjestad",
+      "league": "SHL",
+      "home": "Växjö Lakers HC",
+      "away": "Färjestad BK",
+      "display": "Växjö Lakers HC – Färjestad BK",
+      "kickoff_local": "2026-10-31T15:15:00+01:00",
+      "venue": "Vida Arena",
+      "team_tokens": [
+        [
+          "Växjö Lakers HC",
+          "Växjö Lakers",
+          "Växjö"
+        ],
+        [
+          "Färjestad BK",
+          "Färjestad"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-4",
+      "league": "SHL",
+      "home": "Djurgårdens IF",
+      "away": "Brynäs IF",
+      "display": "Djurgårdens IF – Brynäs IF",
+      "kickoff_local": "2026-10-31T18:00:00+01:00",
+      "venue": "Avicii Arena",
+      "team_tokens": [
+        [
+          "Djurgårdens IF"
+        ],
+        [
+          "Brynäs IF"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-5",
+      "league": "SHL",
+      "home": "IF Malmö Redhawks",
+      "away": "HV 71",
+      "display": "IF Malmö Redhawks – HV 71",
+      "kickoff_local": "2026-10-31T18:00:00+01:00",
+      "venue": "Malmö Arena",
+      "team_tokens": [
+        [
+          "IF Malmö Redhawks"
+        ],
+        [
+          "HV 71"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-6",
+      "league": "SHL",
+      "home": "Timrå IK",
+      "away": "Luleå HF",
+      "display": "Timrå IK – Luleå HF",
+      "kickoff_local": "2026-10-31T18:00:00+01:00",
+      "venue": "SCA Arena",
+      "team_tokens": [
+        [
+          "Timrå IK"
+        ],
+        [
+          "Luleå HF"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    },
+    {
+      "id": "shl-2026-10-31-7",
+      "league": "SHL",
+      "home": "Örebro HK",
+      "away": "Rögle BK",
+      "display": "Örebro HK – Rögle BK",
+      "kickoff_local": "2026-10-31T18:00:00+01:00",
+      "venue": "Behrn Arena",
+      "team_tokens": [
+        [
+          "Örebro HK"
+        ],
+        [
+          "Rögle BK"
+        ]
+      ],
+      "reference_url": "https://stats.swehockey.se/GamesByDate/2026-10-31/ByTime/90"
+    }
+  ]
+}

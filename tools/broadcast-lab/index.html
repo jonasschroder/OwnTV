@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Min TV · Broadcast Lab</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;color:#f2f3f5;background:#0e1116}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 100% 0%,#20352f60,transparent 45%),#0e1116;min-height:100vh}.wrap{max-width:1000px;margin:auto;padding:52px 24px 80px}.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#8ba99e;font-size:11px;font-weight:800}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:28px}h1{font-size:clamp(34px,6vw,60px);letter-spacing:-.055em;line-height:1.04;margin:0 0 14px;font-weight:720}p{color:#9eabb0;line-height:1.55;margin:0}.lead{max-width:640px;font-size:17px;margin-bottom:30px}.pill{font-size:12px;border:1px solid #34423e;background:#18251f;border-radius:24px;color:#bbd5c8;padding:8px 13px}.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 30px}button{font:inherit;color:#102019;background:#d3f1dc;border:0;border-radius:12px;padding:12px 18px;font-weight:650;cursor:pointer}button.secondary{color:#f0f4f3;background:#222b31;border:1px solid #374047}button:hover{filter:brightness(1.1)}button:disabled{cursor:wait;opacity:.65}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{background:#161c22;border:1px solid #2a3239;border-radius:23px;padding:26px;min-height:210px}.muted{color:#92a09e;font-size:13px}.teams{font-size:22px;font-weight:670;letter-spacing:-.025em;margin:12px 0 5px}.channel{margin:20px 0 10px;font-size:20px;font-weight:740}.ok{color:#a1e5b6}.warn{color:#f6c58c}.unknown{color:#91a0ab}.line{border-top:1px solid #2e373a;margin:20px 0}.sourcerow{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:11px;font-size:13px}.note{font-size:12px;color:#93a8a1}.panel{margin-top:24px;padding:24px;background:#171d22;border:1px solid #2a3337;border-radius:22px}h2{font-size:19px;letter-spacing:-.02em;margin:0 0 12px}pre{white-space:pre-wrap;word-break:break-word;font-size:12px;color:#aeb9b3;max-height:340px;overflow:auto;background:#0e1417;padding:16px;border-radius:12px}a{color:#c0eccf}a:hover{color:white}.small{font-size:12px;line-height:1.6}#message{margin:18px 0;color:#b8cbbf;min-height:21px}
+</style>
+</head>
+<body><div class="wrap">
+<div class="top"><span class="eyebrow">MIN TV / BROADCAST LAB · PHASE 2</span><span class="pill">Fristående · Ingen appändring</span></div>
+<h1>Vilken kanal visar<br>Färjestad?</h1>
+<p class="lead">En testmiljö för externa TV-tablåer. Visar kanal, källor och osäkerhet – utan att gissa eller påverka Chromecast.</p>
+<div class="toolbar"><button id="demo">Visa sparad live-observation</button><button class="secondary" id="probe">Så kör du en ny live-probe</button><button class="secondary" id="load">Öppna rapport från fil</button><input id="file" type="file" accept="application/json" hidden></div>
+<div id="message" role="status"></div><div class="grid" id="cards"></div>
+<div class="panel"><h2>Vad behöver vi bevisa?</h2><p class="small">Ett riktigt automatiskt system behöver en extern källa som anger <strong>exakt match + linjär TV-kanal + sändningstid</strong> åtminstone dagen före match. Ett generellt ”TV4 Play” räcker inte. Kanal-API:et innehåller flera dagar. Arena utan båda lagen räknas som obekräftad kandidat. Rapporten är en tidsstämplad observation, inte ett aktuellt produktionsflöde.</p><div class="line"></div><div class="sourcerow"><span>Gratis testkälla</span><a href="https://tvprogramidag.se/utvecklare" target="_blank" rel="noopener">TV-Programidag API</a></div><div class="sourcerow"><span>Licensierad kandidat</span><a href="https://www.roninsport.io/api-feeds/" target="_blank" rel="noopener">Ronin Sport</a></div><div class="sourcerow"><span>Researchunderlag</span><a href="https://www.sportstats.se/games.php?classic=1&amp;d=20261029&amp;g=&amp;l=&amp;league=35238&amp;refresh=1&amp;s=" target="_blank" rel="noopener">Sportstats</a></div></div>
+<div class="panel"><h2>Senaste tekniska resultat</h2><pre id="raw">Ingen analys har körts.</pre><p class="note">Inga IPTV-uppgifter laddas upp. Kör CLI-proben för nya anrop till det dokumenterade API:et. Den här sidan läser endast lokala rapporter. Återpublicera inte tredjepartsdata utan att kontrollera rättigheterna.</p></div>
+</div>
+<script>
+const byId=id=>document.getElementById(id);
+function setReport(report){
+ byId('cards').replaceChildren();
+ for(const row of report.results||[]){
+  if(!row.fixture || typeof row.fixture!=='object')continue;
+  const card=document.createElement('div');card.className='card';
+  const time=document.createElement('div');time.className='muted';
+  time.textContent=new Date(row.fixture.kickoff_local).toLocaleString('sv-SE',{timeZone:'Europe/Stockholm',weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  const teams=document.createElement('div');teams.className='teams';teams.textContent=row.fixture.display;
+  const fresh=Date.parse(row.expires_at)>Date.now();
+  const channel=document.createElement('div');channel.className='channel '+(fresh&&row.status==='confirmed'?'ok':'warn');
+  channel.textContent=fresh&&row.status==='confirmed'?row.linear_channel:'Ingen verifierad aktuell kanal';
+  const status=document.createElement('p');status.className='small';
+  const names=[...new Set((row.unverified_candidates||[]).map(x=>x.channel))];
+  status.textContent=names.length?'Obekräftad arenakandidat: '+names.join(', ')+'. Båda lagen saknas i källan.':'Ingen exakt match–kanal-koppling i observationen.';
+  const origin=document.createElement('div');origin.className='note';
+  origin.textContent=`Kontrollerad: ${row.checked_at} · ${row.source_mode} · ${fresh?'inom TTL':'utgången observation'}`;
+  card.append(time,teams,channel,status,origin);byId('cards').append(card);
+ }
+ byId('raw').textContent=JSON.stringify(report,null,2);
+}
+async function loadSaved(){
+ const response=await fetch('./evidence/2026-10-29-tvprogramidag.json');if(!response.ok)throw Error('Rapport saknas');
+ setReport(await response.json());byId('message').textContent='Sparad live-observation från 29 oktober. Ingen ny extern fråga har gjorts.';
+}
+byId('demo').onclick=()=>loadSaved().catch(e=>byId('message').textContent=e.message);
+byId('probe').onclick=()=>{byId('message').textContent='Kör: python3 broadcast_lab.py probe --output live-report.json. Öppna sedan filen här. Högst 8 anrop, timcache och ingen automatisk bakgrundshämtning.'};
+byId('load').onclick=()=>byId('file').click();
+byId('file').onchange=async event=>{const file=event.target.files?.[0];if(!file)return;try{setReport(JSON.parse(await file.text()));byId('message').textContent='Lokal rapport – se källtidsstämplar och TTL.'}catch(error){byId('message').textContent='Ogiltig rapport: '+error.message}};
+loadSaved().catch(()=>byId('message').textContent='Starta lokal HTTP-server enligt README.');
+</script>
+</body></html>

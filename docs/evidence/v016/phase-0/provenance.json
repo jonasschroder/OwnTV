@@ -11,5 +11,8 @@
   "focus_candidate_apk_sha256": "efbe7846a622daaba3e1a1e0da2595f34c654cd7f05d9fafe88f8d8074943ceb",
   "candidate_production_change": "NativeRowsNavigation.kt visible-target fast path only",
   "timing_harness": "PerformanceJourneyTest: two process runs; two warmup cycles then twenty cycles each; no concurrent builds",
-  "screenshots": "production MainActivity; same synthetic profile; two rendered frames before capture; no owner data"
+  "screenshots": "production MainActivity; same synthetic profile; two rendered frames before capture; no owner data",
+  "candidate_disposition": "Rejected immediate-focus experiment; not the final PR production code",
+  "proposed_production_change": "Advance rapid D-pad repeats from pending logical target while its original deferred movement is active",
+  "logical_fix_apk_sha256": "21a894049380f436c93e3edca061eb1c48017d9a292eaa05c227ccc09087d778"
 }

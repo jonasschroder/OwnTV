@@ -47,15 +47,6 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         val rail = currentRails[targetRow.id]
         val col = targetRow.keys.indexOf(target)
         pending = target; movement?.cancel()
-        val visibleRow = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == row && it.key == targetRow.id }
-        val rowVisible = visibleRow != null && visibleRow.offset >= list.layoutInfo.viewportStartOffset &&
-            visibleRow.offset + visibleRow.size <= list.layoutInfo.viewportEndOffset
-        val visibleColumn = rail?.layoutInfo?.visibleItemsInfo?.firstOrNull { it.index == col }
-        val columnVisible = rail == null || visibleColumn != null && visibleColumn.offset >= rail.layoutInfo.viewportStartOffset &&
-            visibleColumn.offset + visibleColumn.size <= rail.layoutInfo.viewportEndOffset
-        // Attached, fully visible targets can accept this key immediately. Waiting two frames
-        // needlessly delays every remote tap and can coalesce rapid keys against the old item.
-        if (rowVisible && columnVisible && targets[target]?.requestSafely() == true) return true
         movement = scope.launch {
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == row }
             if (item == null || item.offset < list.layoutInfo.viewportStartOffset || item.offset + item.size > list.layoutInfo.viewportEndOffset) list.scrollToItem(row)
@@ -94,12 +85,15 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         val horizontal = when (event.key) { Key.DirectionLeft -> -1; Key.DirectionRight -> 1; else -> 0 }
         if (delta == 0 && horizontal == 0) false else {
             if (event.type == KeyEventType.KeyDown) {
-                val row = currentRows.firstOrNull { selected in it.keys }
+                // Remote repeats can arrive before a lazy target accepts focus. Advance from
+                // the last requested logical card while movement is active, not the old focus.
+                val key = pending?.takeIf { movement?.isActive == true } ?: selected
+                val row = currentRows.firstOrNull { key in it.keys }
                 if (delta != 0) {
-                    val target = nativeRowTarget(currentRows, selected, delta, column)
+                    val target = nativeRowTarget(currentRows, key, delta, column)
                     if (target != null) move(target) else if (delta < 0 && row == currentRows.firstOrNull { it.keys.isNotEmpty() }) { movement?.cancel(); onHeader() }
                 } else if (row != null) {
-                    val col = row.keys.indexOf(selected) + horizontal
+                    val col = row.keys.indexOf(key) + horizontal
                     row.keys.getOrNull(col)?.let { column = col; move(it) }
                 }
             }

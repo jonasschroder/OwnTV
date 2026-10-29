@@ -144,6 +144,32 @@ class PerformanceJourneyTest {
                 }; bitmap.recycle()
     }
 
+    /** Isolates the visible horizontal row; the full journey also includes scrolling and idling. */
+    @Test fun visibleSportRowProbe() {
+        val label = InstrumentationRegistry.getArguments().getString("perfLabel", "unlabelled")!!
+        require(label.matches(Regex("[a-z0-9-]{1,60}")))
+        val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
+        ActivityScenario.launch<MainActivity>(intent).use {
+            chooseSyntheticProfile(); ready("HOME")
+            focus("top-SPORT"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready("SPORT")
+            val firstCard = compose.onNode(hasText("TV4 Hockey HD") and isFocusable())
+            val secondCard = compose.onNode(hasText("TV4 Sport Live 1 HD") and isFocusable())
+            compose.waitUntil(5_000) { runCatching { firstCard.assertExists(); secondCard.assertExists(); true }.getOrDefault(false) }
+            firstCard.performSemanticsAction(SemanticsActions.RequestFocus); compose.waitForIdle()
+            val samples = mutableListOf<Double>()
+            repeat(42) { iteration ->
+                val at = SystemClock.elapsedRealtimeNanos()
+                press(KeyEvent.KEYCODE_DPAD_RIGHT); secondCard.assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_LEFT); firstCard.assertIsFocused()
+                if (iteration >= 2) samples += (SystemClock.elapsedRealtimeNanos() - at) / 1e6
+            }
+            val result = org.json.JSONObject().put("label", label).put("dataset", "synthetic-12000-channel-v1")
+                .put("measurement", "visible_sport_right_left_ms").put("samples_ms", org.json.JSONArray(samples))
+            val dir = File(app.getExternalFilesDir(null), "performance").apply { mkdirs() }
+            File(dir, "$label.json").writeText(result.toString(2))
+        }
+    }
+
     @Test fun repeatedProductionNavigation(): Unit = runBlocking {
         assertNotNull(db.profileDao().getById(profile))
         val label = InstrumentationRegistry.getArguments().getString("perfLabel", "unlabelled")!!

@@ -8,10 +8,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import tv.own.owntv.BuildConfig
 import tv.own.owntv.R
 import tv.own.owntv.features.epg.*
-import tv.own.owntv.features.home.TvText
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.stage.StageSurface
 import tv.own.owntv.ui.theme.*
@@ -36,7 +34,7 @@ internal fun NativeHeaderActions(epg: EpgViewModel, profile: Long?, guide: () ->
     HeaderAction(OwnTVIcon.EPG, stringResource(R.string.common_nav_guide), "header-guide", guide)
     HeaderAction(OwnTVIcon.SEARCH, stringResource(R.string.common_nav_search), "header-search", search)
     if (nowPlaying != null) HeaderAction(OwnTVIcon.PLAY, stringResource(R.string.shell_now_playing), "header-now-playing", nowPlaying)
-    TvText(stringResource(R.string.mintv_v08_version_chip, BuildConfig.VERSION_NAME), size = 16, lines = 1)
+    tv.own.owntv.features.update.GlobalUpdateEntry()
 }
 
 @Composable

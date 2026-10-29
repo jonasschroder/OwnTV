@@ -1,0 +1,56 @@
+{
+  "fixtures": [
+    {
+      "id": "shl-2026-10-29-brynas-farjestad",
+      "display": "Brynäs IF – Färjestad BK",
+      "league": "SHL",
+      "kickoff_local": "2026-10-29T19:00:00+01:00",
+      "team_tokens": [["Brynäs", "Brynas"], ["Färjestad", "Farjestad"]]
+    },
+    {
+      "id": "shl-2026-10-31-vaxjo-farjestad",
+      "display": "Växjö Lakers – Färjestad BK",
+      "league": "SHL",
+      "kickoff_local": "2026-10-31T15:15:00+01:00",
+      "team_tokens": [["Växjö", "Vaxjo"], ["Färjestad", "Farjestad"]]
+    }
+  ],
+  "research_evidence": [
+    {
+      "fixture_id": "shl-2026-10-29-brynas-farjestad",
+      "provider": "Sportstats",
+      "type": "linear",
+      "channel": "TV4 Sport Live 1",
+      "source_url": "https://www.sportstats.se/games.php?classic=1&d=20261029&g=&l=&league=35238&refresh=1&s=",
+      "verified_on": "2026-10-28",
+      "method": "human_research_not_automatic"
+    },
+    {
+      "fixture_id": "shl-2026-10-29-brynas-farjestad",
+      "provider": "bet365 News",
+      "type": "linear",
+      "channel": "TV4 Sport Live 1",
+      "source_url": "https://news.bet365.com/sv-sv/article/sport-tv-idag-torsdag-29-oktober-2026-tv-tabla-streaming/2026102815440827980",
+      "verified_on": "2026-10-28",
+      "method": "human_research_not_automatic"
+    },
+    {
+      "fixture_id": "shl-2026-10-29-brynas-farjestad",
+      "provider": "bet365 News",
+      "type": "streaming",
+      "channel": "TV4 Play Sport Hockey",
+      "source_url": "https://news.bet365.com/sv-sv/article/sport-tv-idag-torsdag-29-oktober-2026-tv-tabla-streaming/2026102815440827980",
+      "verified_on": "2026-10-28",
+      "method": "human_research_not_automatic"
+    },
+    {
+      "fixture_id": "shl-2026-10-31-vaxjo-farjestad",
+      "provider": "TVmatchen",
+      "type": "linear",
+      "channel": "TV4 Sport Live 3",
+      "source_url": "https://www.tvmatchen.nu/match/vaxjo-lakers-farjestad-bk-1893256",
+      "verified_on": "2026-10-27",
+      "method": "human_research_not_automatic"
+    }
+  ]
+}

@@ -19,7 +19,11 @@
 </div>
 <script>
 const byId=id=>document.getElementById(id);
+let expiryTimer;
 function setReport(report){
+ clearTimeout(expiryTimer);
+ const future=(report.results||[]).map(x=>Date.parse(x.expires_at)).filter(x=>x>Date.now());
+ if(future.length)expiryTimer=setTimeout(()=>setReport(report),Math.min(2147483647,Math.max(1,Math.min(...future)-Date.now()+20)));
  byId('cards').replaceChildren();
  for(const row of report.results||[]){
   if(!row.fixture || typeof row.fixture!=='object')continue;

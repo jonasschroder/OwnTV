@@ -230,8 +230,9 @@ class VenuePolicyTests(unittest.TestCase):
         self.assertIn('overlapping_broadcasts_on_channel', self.result([self.venue(), other])['conflicts'])
 
     def test_no_fuzzy_or_unsupported_renamed_arena_matching(self):
-        p = dict(self.venue(), description='Från Renamed Arena.')
-        self.assertEqual(self.result([p])['status'], 'unverified')
+        for name in ['Renamed Arena', 'New Synthetic Arena', 'Synthetic Arena B']:
+            p = dict(self.venue(), description='Från '+name+'.')
+            self.assertEqual(self.result([p])['status'], 'unverified')
 
     def test_expired_venue_evidence_never_recommends(self):
         r = self.result([self.venue()], now=NOW + timedelta(hours=2))

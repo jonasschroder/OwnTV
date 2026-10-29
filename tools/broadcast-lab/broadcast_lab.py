@@ -45,6 +45,16 @@ def contains(text: str, phrase: str) -> bool:
     return bool(phrase) and (' ' + phrase + ' ') in (' ' + folded(text) + ' ')
 
 
+def venue_matches(text: str, venue: str) -> bool:
+    expected = folded(venue)
+    value = folded(text)
+    for prefix in ('fran ', 'from '):
+        if value.startswith(prefix):
+            value = value[len(prefix):]
+            break
+    return bool(expected) and (value == expected or value.startswith(expected + ' i ') or value.startswith(expected + ' in '))
+
+
 def canonical_channel(name: str) -> str | None:
     """Identity normalization only. Legacy/OTT/unknown names never become TV4 linear."""
     s = folded(name).replace(' ', '')
@@ -163,7 +173,7 @@ def observations(snapshot: dict, fixture: dict) -> tuple[list[dict], list[dict]]
         matched, reason = exact_fixture_match(p, fixture)
         # Venue-only observations can recommend a probable channel after global conflict checks.
         text = ' '.join(str(p.get(k) or '') for k in ('title', 'description'))
-        venue_only = (reason == 'missing_exact_teams' and contains(text, fixture.get('venue', '')))
+        venue_only = (reason == 'missing_exact_teams' and (venue_matches(p.get('description') or '', fixture.get('venue', '')) or venue_matches(p.get('title') or '', fixture.get('venue', ''))))
         if not matched and not venue_only:
             continue
         item = {'provider': 'tvprogramidag', 'channel': name, 'raw_channel': raw,

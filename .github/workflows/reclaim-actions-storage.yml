@@ -107,12 +107,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh cache list --limit 100 --json id,key,sizeInBytes > /tmp/caches-before.json || echo '[]' > /tmp/caches-before.json
+          gh cache list --repo "$GITHUB_REPOSITORY" --limit 100 --json id,key,sizeInBytes > /tmp/caches-before.json || echo '[]' > /tmp/caches-before.json
           python3 - <<'PY'
           import json
           items = json.load(open("/tmp/caches-before.json"))
           print(f"Visible cache entries before deletion: {len(items)}")
           print(f"Visible cache size: {sum(x.get('sizeInBytes', 0) for x in items) / 1048576:.1f} MiB")
           PY
-          gh cache delete --all --succeed-on-no-caches
+          gh cache delete --repo "$GITHUB_REPOSITORY" --all --succeed-on-no-caches
           echo "Removed rebuildable Actions caches. Subsequent builds will recreate them."

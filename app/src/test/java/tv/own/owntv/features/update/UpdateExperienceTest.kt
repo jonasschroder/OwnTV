@@ -70,5 +70,24 @@ class UpdateExperienceTest {
         val gate = UpdateTransferActions(this, { state }) { starts++ }
         gate.request(); state = MinTvUpdater.State.Idle; runCurrent(); assertEquals(0, starts)
     }
+    @Test fun externallyInstalledSameOrNewerVersionCannotRestoreAnOldInstallPrompt() {
+        for (installed in listOf(candidate.code, candidate.code + 1)) for (allowed in listOf(false, true)) {
+            val state = restoredUpdateState(candidate, installed, downloaded = true, installAllowed = allowed, interrupted = true)
+            assertEquals(MinTvUpdater.State.UpToDate, state)
+            assertEquals(UpdateAction.CHECK, updateExperience(state, cached = true).action)
+        }
+    }
+    @Test fun cacheWithoutAuthenticatedMetadataNeverRestoresPermissionOrInstallation() {
+        assertEquals(MinTvUpdater.State.Idle, restoredUpdateState(null, candidate.code - 1, true, false, true))
+    }
+    @Test fun newerVerifiedCacheStillUsesExplicitPermissionAndInstallActions() {
+        assertEquals(MinTvUpdater.State.Permission, restoredUpdateState(candidate, candidate.code - 1, true, false, false))
+        assertEquals(MinTvUpdater.State.Available(candidate), restoredUpdateState(candidate, candidate.code - 1, true, true, true))
+    }
+    @Test fun restoredPartialDownloadRequiresAnotherExplicitRestart() {
+        val state = restoredUpdateState(candidate, candidate.code - 1, false, false, true)
+        assertEquals(MinTvUpdater.State.Available(candidate, interrupted = true), state)
+        assertEquals(UpdateAction.DOWNLOAD, updateExperience(state).action)
+    }
 
 }

@@ -25,6 +25,17 @@ internal fun updateRequiredSpace(bytes: Long): Long {
     return bytes * 2 + 32 * 1024 * 1024L
 }
 
+/** Only authenticated, newer metadata may restore a download/permission action after restart.
+ * A compatible update installed outside this process can leave an older verified cache behind.
+ */
+internal fun restoredUpdateState(candidate: UpdatePolicy.Candidate?, installedCode: Long, downloaded: Boolean,
+    installAllowed: Boolean, interrupted: Boolean): MinTvUpdater.State = when {
+    candidate == null -> MinTvUpdater.State.Idle
+    candidate.code <= installedCode -> MinTvUpdater.State.UpToDate
+    downloaded && !installAllowed -> MinTvUpdater.State.Permission
+    else -> MinTvUpdater.State.Available(candidate, interrupted = interrupted && !downloaded)
+}
+
 /** Coalesce repeated remote OK presses even while the manager waits for its resume/check mutex. */
 internal class UpdateTransferActions(private val scope: kotlinx.coroutines.CoroutineScope,
     private val state: () -> MinTvUpdater.State, private val transfer: suspend () -> Unit) {

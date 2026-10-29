@@ -229,9 +229,8 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
             result == PackageInstaller.STATUS_FAILURE_ABORTED -> State.Cancelled
             result != Int.MIN_VALUE && result != PackageInstaller.STATUS_SUCCESS -> State.Failed(installProblem(result))
             prefs.contains("session") && context.packageManager.packageInstaller.getSessionInfo(prefs.getInt("session", -1)) != null -> State.Installing
-            apk.exists() && candidate != null -> if (context.packageManager.canRequestPackageInstalls()) State.Available(candidate!!) else State.Permission
-            candidate != null && candidate!!.code > installedCode -> State.Available(candidate!!, interrupted = prefs.getLong("interrupted_code", 0) == candidate!!.code)
-            else -> State.Idle
+            else -> restoredUpdateState(candidate, installedCode, apk.exists(), context.packageManager.canRequestPackageInstalls(),
+                interrupted = prefs.getLong("interrupted_code", 0) == candidate?.code)
         }
     }
     }

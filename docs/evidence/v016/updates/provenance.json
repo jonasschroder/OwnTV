@@ -4,8 +4,8 @@
   "package": "se.jonasschroder.mintv.qa",
   "android_sdk": 34,
   "owner_device_changed": false,
-  "app_apk_sha256": "2b338e913511c17268252ea6860181402b8a2b83f6c5202f202ddf76141bc25f",
-  "update_instrumentation_apk_sha256": "5109137a98d8f1a91db9f3725203b0c78462a2b6a521811e1fe064460734c2d9",
+  "app_apk_sha256": "9000a36587e15932734049e257403097c362e218bffab7920ee80a39f0468181",
+  "update_instrumentation_apk_sha256": "b25c5409202be312060549f32e154f7958c6ea97094d0464fb8213b140b8ccd5",
   "production_shell_capture_harness": "PerformanceJourneyTest from perf/v016-native-focus; only instrumentation APK replaced; production updater fixture unchanged",
   "screenshots": {
     "HOME_TV_SPORT_VOD_PROFILE": "actual MainActivity, synthetic library, same profile/data as baseline",
@@ -19,19 +19,19 @@
       "skipped": "0",
       "failures": "0",
       "errors": "0",
-      "timestamp": "2026-10-29T22:23:16.140Z",
+      "timestamp": "2026-10-29T22:44:53.035Z",
       "hostname": "MacBook-Pro-som-tillhor-Jonas.local",
-      "time": "0.117"
+      "time": "0.104"
     },
     {
       "name": "tv.own.owntv.features.update.UpdateExperienceTest",
-      "tests": "8",
+      "tests": "12",
       "skipped": "0",
       "failures": "0",
       "errors": "0",
-      "timestamp": "2026-10-29T22:23:15.990Z",
+      "timestamp": "2026-10-29T22:44:52.882Z",
       "hostname": "MacBook-Pro-som-tillhor-Jonas.local",
-      "time": "0.079"
+      "time": "0.076"
     },
     {
       "name": "tv.own.owntv.features.update.UpdatePolicyTest",
@@ -39,9 +39,9 @@
       "skipped": "0",
       "failures": "0",
       "errors": "0",
-      "timestamp": "2026-10-29T22:23:16.073Z",
+      "timestamp": "2026-10-29T22:44:52.961Z",
       "hostname": "MacBook-Pro-som-tillhor-Jonas.local",
-      "time": "0.064"
+      "time": "0.069"
     }
   ]
 }

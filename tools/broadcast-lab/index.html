@@ -12,10 +12,10 @@
 <div class="top"><span class="eyebrow">MIN TV / BROADCAST LAB · PHASE 2</span><span class="pill">Fristående · Ingen appändring</span></div>
 <h1>Vilken kanal visar<br>Färjestad?</h1>
 <p class="lead">En testmiljö för externa TV-tablåer. Visar kanal, källor och osäkerhet – utan att gissa eller påverka Chromecast.</p>
-<div class="toolbar"><button id="demo">Visa sparad live-observation</button><button class="secondary" id="probe">Så kör du en ny live-probe</button><button class="secondary" id="load">Öppna rapport från fil</button><input id="file" type="file" accept="application/json" hidden></div>
+<div class="toolbar"><button id="demo">Visa senaste resultat</button><button class="secondary" id="probe">Hämta gratisdata</button><button class="secondary" id="load">Öppna rapport från fil</button><input id="file" type="file" accept="application/json" hidden></div>
 <div id="message" role="status"></div><div class="grid" id="cards"></div>
-<div class="panel"><h2>Vad behöver vi bevisa?</h2><p class="small">Ett riktigt automatiskt system behöver en extern källa som anger <strong>exakt match + linjär TV-kanal + sändningstid</strong> åtminstone dagen före match. Ett generellt ”TV4 Play” räcker inte. Kanal-API:et innehåller flera dagar. Arena utan båda lagen räknas som obekräftad kandidat. Rapporten är en tidsstämplad observation, inte ett aktuellt produktionsflöde.</p><div class="line"></div><div class="sourcerow"><span>Gratis testkälla</span><a href="https://tvprogramidag.se/utvecklare" target="_blank" rel="noopener">TV-Programidag API</a></div><div class="sourcerow"><span>Licensierad kandidat</span><a href="https://www.roninsport.io/api-feeds/" target="_blank" rel="noopener">Ronin Sport</a></div><div class="sourcerow"><span>Researchunderlag</span><a href="https://www.sportstats.se/games.php?classic=1&amp;d=20261029&amp;g=&amp;l=&amp;league=35238&amp;refresh=1&amp;s=" target="_blank" rel="noopener">Sportstats</a></div></div>
-<div class="panel"><h2>Senaste tekniska resultat</h2><pre id="raw">Ingen analys har körts.</pre><p class="note">Inga IPTV-uppgifter laddas upp. Kör CLI-proben för nya anrop till det dokumenterade API:et. Den här sidan läser endast lokala rapporter. Återpublicera inte tredjepartsdata utan att kontrollera rättigheterna.</p></div>
+<div class="panel"><h2>Vad behöver vi bevisa?</h2><p class="small">Den godkända regeln rekommenderar en kanal när <strong>SHL + officiell arena + sändningstid</strong> ger en unik och färsk träff utan konflikter. Ett generellt ”TV4 Play” räcker inte. Kanal-API:et innehåller flera dagar. En unik och färsk SHL-träff på arena och tid visas som Trolig kanal, aldrig som bekräftad utan laginformation. Rapporten är en tidsstämplad observation, inte ett aktuellt produktionsflöde.</p><div class="line"></div><div class="sourcerow"><span>Gratis testkälla</span><a href="https://tvprogramidag.se/utvecklare" target="_blank" rel="noopener">TV-Programidag API</a></div><div class="sourcerow"><span>Officiella matchtider</span><a href="https://stats.swehockey.se" target="_blank" rel="noopener">Svenska Ishockeyförbundet</a></div><div class="sourcerow"><span>Researchunderlag</span><a href="https://www.sportstats.se/games.php?classic=1&amp;d=20261029&amp;g=&amp;l=&amp;league=35238&amp;refresh=1&amp;s=" target="_blank" rel="noopener">Sportstats</a></div></div>
+<div class="panel"><h2>Senaste tekniska resultat</h2><details><summary>Visa normaliserad JSON</summary><pre id="raw">Ingen analys har körts.</pre></details><p class="note">Inga IPTV-uppgifter laddas upp. Hämtningen sker i den lokala Python-processen. Inga betalningar, hemligheter eller obligatoriska molntjänster behövs. Återpublicera inte tredjepartsdata utan att kontrollera rättigheterna.</p></div>
 </div>
 <script>
 const byId=id=>document.getElementById(id);
@@ -28,23 +28,24 @@ function setReport(report){
   time.textContent=new Date(row.fixture.kickoff_local).toLocaleString('sv-SE',{timeZone:'Europe/Stockholm',weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   const teams=document.createElement('div');teams.className='teams';teams.textContent=row.fixture.display;
   const fresh=Date.parse(row.expires_at)>Date.now();
-  const channel=document.createElement('div');channel.className='channel '+(fresh&&row.status==='confirmed'?'ok':'warn');
-  channel.textContent=fresh&&row.status==='confirmed'?row.linear_channel:'Ingen verifierad aktuell kanal';
+  const channel=document.createElement('div');channel.className='channel '+(fresh&&['confirmed','probable_external_match'].includes(row.status)?'ok':'warn');
+  channel.textContent=fresh&&['confirmed','probable_external_match'].includes(row.status)?row.display_label:'Välj kanal manuellt';
   const status=document.createElement('p');status.className='small';
-  const names=[...new Set((row.unverified_candidates||[]).map(x=>x.channel))];
-  status.textContent=names.length?'Obekräftad arenakandidat: '+names.join(', ')+'. Båda lagen saknas i källan.':'Ingen exakt match–kanal-koppling i observationen.';
+  const names=[...new Set((row.venue_candidates||[]).map(x=>x.channel))];
+  status.textContent=names.length?'SHL · exakt arena · matchande tid. '+(row.conflicts?.length?'Konflikt: '+row.conflicts.join(', '):'Ingen konkurrerande kanal eller match i underlaget.'):'Ingen exakt match–kanal-koppling i observationen.';
   const origin=document.createElement('div');origin.className='note';
-  origin.textContent=`Kontrollerad: ${row.checked_at} · ${row.source_mode} · ${fresh?'inom TTL':'utgången observation'}`;
+  const source=(row.evidence||[])[0]||(row.venue_candidates||[])[0];
+  origin.textContent=`Källan uppdaterad: ${source?.generated_at||'saknas'} · Hämtad: ${source?.fetched_at||row.checked_at} · Utgår: ${row.expires_at} · ${fresh?'inom TTL':'utgången observation'}`;
   card.append(time,teams,channel,status,origin);byId('cards').append(card);
  }
  byId('raw').textContent=JSON.stringify(report,null,2);
 }
 async function loadSaved(){
- const response=await fetch('./evidence/2026-10-29-tvprogramidag.json');if(!response.ok)throw Error('Rapport saknas');
- setReport(await response.json());byId('message').textContent='Sparad live-observation från 29 oktober. Ingen ny extern fråga har gjorts.';
+ const response=await fetch('/api/report');if(!response.ok)throw Error('Rapport saknas');
+ setReport(await response.json());byId('message').textContent='Senaste resultat. Se källans uppdateringstid och utgångstid.';
 }
 byId('demo').onclick=()=>loadSaved().catch(e=>byId('message').textContent=e.message);
-byId('probe').onclick=()=>{byId('message').textContent='Kör: python3 broadcast_lab.py probe --output live-report.json. Öppna sedan filen här. Högst 8 anrop, timcache och ingen automatisk bakgrundshämtning.'};
+byId('probe').onclick=async()=>{byId('probe').disabled=true;byId('message').textContent='Hämtar dokumenterat gratis-API…';try{const r=await fetch('/api/refresh',{method:'POST'});if(!r.ok)throw Error('HTTP '+r.status);setReport(await r.json());byId('message').textContent='Kontroll klar. Timcache används; se ursprunglig hämtningstid i evidensen.'}catch(e){byId('message').textContent='Kunde inte hämta: '+e.message+'. Starta broadcast_lab.py serve enligt README.'}finally{byId('probe').disabled=false}};
 byId('load').onclick=()=>byId('file').click();
 byId('file').onchange=async event=>{const file=event.target.files?.[0];if(!file)return;try{setReport(JSON.parse(await file.text()));byId('message').textContent='Lokal rapport – se källtidsstämplar och TTL.'}catch(error){byId('message').textContent='Ogiltig rapport: '+error.message}};
 loadSaved().catch(()=>byId('message').textContent='Starta lokal HTTP-server enligt README.');

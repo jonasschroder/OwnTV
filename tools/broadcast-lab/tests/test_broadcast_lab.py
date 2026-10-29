@@ -16,7 +16,7 @@ F = {'id': 'synthetic-fixture', 'league': 'SHL', 'home': 'Brynäs IF', 'away': '
      'display': 'Synthetic fixture, not real broadcast evidence', 'kickoff_local': '2026-10-29T19:00:00+01:00',
      'team_tokens': [['Brynäs IF', 'Brynäs'], ['Färjestad BK', 'Färjestad']], 'venue': 'Synthetic Arena'}
 P = {'id': 'synthetic-programme', 'title': 'SHL: Brynäs IF – Färjestad BK', 'description': None,
-     'isLive': True, 'start': '2026-10-29T18:45:00+01:00', 'channel': {'name': 'TV4 Sport Live 1 HD'}}
+     'isLive': True, 'start': '2026-10-29T18:45:00+01:00', 'end': '2026-10-29T21:30:00+01:00', 'channel': {'name': 'TV4 Sport Live 1 HD'}}
 
 
 def snapshot(rows=None, generated=None, fetched=None, channel=None):
@@ -80,16 +80,16 @@ class NormalizationTests(unittest.TestCase):
         self.assertEqual(r['source_mode'], 'file_evaluation')
         self.assertEqual(r['evidence'][0]['source_url'], lab.SPORT)
 
-    def test_venue_candidate_is_never_confirmed(self):
+    def test_unique_venue_is_probable_not_confirmed(self):
         r = self.result([snapshot([dict(P, title='Live: Ishockey: SHL', description='Från Synthetic Arena.')])])
-        self.assertEqual(r['status'], 'unverified')
-        self.assertIsNone(r['linear_channel'])
+        self.assertEqual(r['status'], 'probable_external_match')
+        self.assertEqual(r['linear_channel'], 'TV4 Sport Live 1')
         self.assertIsNone(r['verified_at'])
-        self.assertEqual(r['unverified_candidates'][0]['match_basis'], 'venue_league_time_only')
+        self.assertEqual(r['venue_candidates'][0]['match_basis'], 'venue_league_time_only')
 
     def test_replay_not_a_candidate(self):
         r = self.result([snapshot([dict(P, title='SHL', description='Synthetic Arena', isLive=False)])])
-        self.assertEqual(r['unverified_candidates'], [])
+        self.assertEqual(r['venue_candidates'], [])
 
     def test_ott_only_has_no_linear_confirmation(self):
         r = self.result([snapshot([dict(P, channel={'name': 'TV4 Play Sport Hockey'})])])
@@ -203,3 +203,64 @@ class TransportTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class VenuePolicyTests(unittest.TestCase):
+    def venue(self, **kwargs):
+        return dict(P, title='Live: Ishockey: SHL', description='Från Synthetic Arena.', **kwargs)
+
+    def result(self, programmes, fixtures=None, now=NOW):
+        return lab.report(fixtures or [F], [snapshot(programmes)], now, 'file_evaluation')['results'][0]
+
+    def test_two_distinct_linear_channels_require_manual_selection(self):
+        r = self.result([self.venue(), self.venue(channel={'name': 'TV4 Sport Live 3'})])
+        self.assertEqual(r['status'], 'conflict');self.assertIsNone(r['linear_channel'])
+
+    def test_two_fixtures_in_same_arena_and_broadcast_slot_fail_closed(self):
+        other = dict(F, id='other', home='Luleå HF', team_tokens=[['Luleå'], ['Färjestad']])
+        r = self.result([self.venue()], [F, other])
+        self.assertEqual(r['status'], 'conflict')
+        self.assertIn('conflicting_fixture_at_venue', r['conflicts'])
+
+    def test_duplicate_fixture_identity_with_rescheduled_time_is_conflict(self):
+        other = dict(F, kickoff_local='2026-10-30T19:00:00+01:00')
+        self.assertEqual(self.result([self.venue()], [F, other])['status'], 'conflict')
+
+    def test_overlapping_broadcasts_on_same_linear_channel_conflict(self):
+        other = dict(self.venue(), id='conflicting', description='Från Another Arena.')
+        self.assertIn('overlapping_broadcasts_on_channel', self.result([self.venue(), other])['conflicts'])
+
+    def test_no_fuzzy_or_unsupported_renamed_arena_matching(self):
+        p = dict(self.venue(), description='Från Renamed Arena.')
+        self.assertEqual(self.result([p])['status'], 'unverified')
+
+    def test_expired_venue_evidence_never_recommends(self):
+        r = self.result([self.venue()], now=NOW + timedelta(hours=2))
+        self.assertEqual(r['status'], 'stale');self.assertIsNone(r['linear_channel'])
+
+    def test_invalid_or_missing_end_never_recommends(self):
+        for end in [None, 'bad', '2026-10-29T17:30:00+01:00']:
+            r = self.result([self.venue(end=end)])
+            self.assertIsNone(r['linear_channel'])
+
+    def test_rescheduled_fixture_does_not_reuse_old_broadcast(self):
+        f = dict(F, kickoff_local='2026-10-30T19:00:00+01:00')
+        self.assertEqual(self.result([self.venue()], [f])['status'], 'unverified')
+
+    def test_studio_and_replay_are_not_recommendations_even_if_flagged_live(self):
+        for word in ['studio', 'repris', 'highlights', 'U20']:
+            p = dict(self.venue(), title='SHL ' + word)
+            self.assertIsNone(self.result([p])['linear_channel'])
+
+    def test_same_pair_future_rematch_not_false_conflict(self):
+        other = dict(F, id='rematch', kickoff_local='2026-11-10T19:00:00+01:00')
+        r = self.result([P], [F, other])
+        self.assertEqual(r['status'], 'confirmed')
+
+class CompletenessTests(unittest.TestCase):
+    def test_partial_live_scan_never_promotes_a_unique_candidate(self):
+        s = snapshot([dict(P, title='Live: SHL', description='Från Synthetic Arena.')])
+        s['url'] = lab.BASE + '/channel/tv4-sport-live-1'
+        r = lab.report([F], [s], NOW, 'live_public_api')
+        self.assertFalse(r['complete_channel_scan'])
+        self.assertEqual(r['results'][0]['status'], 'unavailable')
+        self.assertIsNone(r['results'][0]['linear_channel'])

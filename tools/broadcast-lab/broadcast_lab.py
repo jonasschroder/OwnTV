@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import time
 import unicodedata
+from zoneinfo import ZoneInfo
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
@@ -60,6 +61,8 @@ def canonical_channel(name: str) -> str | None:
 
 def exact_fixture_match(program: dict, fixture: dict) -> tuple[bool, str]:
     text = ' '.join(str(program.get(k) or '') for k in ('title', 'description'))
+    if any(contains(text, word) for word in ('studio', 'repris', 'replay', 'highlights', 'SDHL', 'HockeyAllsvenskan', 'U18', 'U20', 'junior')):
+        return False, 'excluded_programme'
     if not contains(text, fixture['league']):
         return False, 'missing_league'
     try:
@@ -68,6 +71,11 @@ def exact_fixture_match(program: dict, fixture: dict) -> tuple[bool, str]:
         return False, 'invalid_start'
     if not -3600 <= delta <= 600:
         return False, 'wrong_time'
+    try:
+        if instant(program['end']) <= instant(fixture['kickoff_local']):
+            return False, 'invalid_end'
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return False, 'invalid_end'
     if program.get('isLive') is not True:
         return False, 'not_explicitly_live'
     if not all(any(contains(text, alias) for alias in aliases) for aliases in fixture['team_tokens']):
@@ -153,13 +161,13 @@ def observations(snapshot: dict, fixture: dict) -> tuple[list[dict], list[dict]]
         if name is None:
             continue
         matched, reason = exact_fixture_match(p, fixture)
-        # Venue-only listings remain diagnostic candidates, NEVER verified assignments.
+        # Venue-only observations can recommend a probable channel after global conflict checks.
         text = ' '.join(str(p.get(k) or '') for k in ('title', 'description'))
         venue_only = (reason == 'missing_exact_teams' and contains(text, fixture.get('venue', '')))
         if not matched and not venue_only:
             continue
         item = {'provider': 'tvprogramidag', 'channel': name, 'raw_channel': raw,
-                'programme_id': p.get('id'), 'programme_start': p['start'],
+                'programme_id': p.get('id'), 'programme_start': p['start'], 'programme_end': p['end'],
                 'programme_title': p.get('title'), 'programme_description': p.get('description'),
                 'source_url': snapshot['url'], 'programme_url': safe_evidence_url(p.get('url')),
                 'fetched_at': snapshot['fetched_at'], 'generated_at': snapshot['payload'].get('generatedAt'),
@@ -185,21 +193,72 @@ def safe_evidence_url(url) -> str | None:
 
 
 def normalize(fixture: dict, evidence: list[dict], candidates: list[dict], now: datetime,
-              expires: datetime, mode: str) -> dict:
-    """Provider-independent contract: only explicit exact-fixture evidence can confirm."""
-    valid = [e for e in evidence if e.get('exact_teams_present') is True and
-             e.get('match_basis') == 'teams_league_time' and canonical_channel(e.get('channel', ''))
+              expires: datetime, mode: str, conflicts: list[str] | None = None) -> dict:
+    """Unique fresh venue/time evidence is probable; explicit teams can confirm."""
+    valid = [e for e in evidence + candidates if canonical_channel(e.get('channel', ''))
              and instant(e['fetched_at']) <= now < instant(e['expires_at'])]
     channels = sorted({canonical_channel(e['channel']) for e in valid})
-    state = 'confirmed' if len(channels) == 1 else 'conflict' if channels else 'stale' if evidence else 'unverified'
-    expiration = min((instant(e['expires_at']) for e in valid), default=expires)
+    conflict = bool(conflicts) or len(channels) > 1
+    exact = any(e.get('exact_teams_present') is True for e in valid)
+    state = ('conflict' if conflict else 'confirmed' if len(channels) == 1 and exact else
+             'probable_external_match' if len(channels) == 1 else
+             'stale' if evidence or candidates else 'unverified')
+    expiration = min([instant(e['expires_at']) for e in valid] or [expires])
+    expiration = min(expiration, instant(fixture['kickoff_local']) + timedelta(hours=4))
+    if now >= expiration and state in ('confirmed', 'probable_external_match'):
+        state = 'stale'
+    selected = channels[0] if state in ('confirmed', 'probable_external_match') else None
     return {'fixture': {k: fixture.get(k) for k in ('id', 'league', 'home', 'away', 'display', 'kickoff_local', 'venue', 'reference_url')},
-            'status': state, 'linear_channel': channels[0] if state == 'confirmed' else None,
-            'checked_at': stamp(now), 'verified_at': stamp(max(instant(e['fetched_at']) for e in valid)) if valid else None,
+            'status': state, 'linear_channel': selected,
+            'display_label': ('Bekräftad kanal: ' if state == 'confirmed' else 'Trolig kanal: ') + selected if selected else 'Välj kanal manuellt',
+            'checked_at': stamp(now), 'verified_at': stamp(max(instant(e['fetched_at']) for e in valid)) if state == 'confirmed' else None,
             'expires_at': stamp(expiration), 'freshness': 'fresh' if now < expiration else 'expired',
             'source_mode': mode, 'app_ready': False,
-            'evidence': evidence, 'unverified_candidates': candidates,
-            'reason': 'Exact teams + league + live broadcast time required; venue alone is insufficient.'}
+            'advance_visibility_days': (instant(fixture['kickoff_local']).astimezone(ZoneInfo('Europe/Stockholm')).date() - min((instant(e['fetched_at']) for e in valid), default=now).astimezone(ZoneInfo('Europe/Stockholm')).date()).days,
+            'evidence': evidence, 'venue_candidates': candidates, 'conflicts': conflicts or [],
+            'reason': 'Unique SHL venue + aligned live broadcast + fresh data; exact teams distinguish confirmation.'}
+
+
+def matching_conflicts(fixture: dict, observations: list[dict], fixtures: list[dict], programmes: list[dict]) -> list[str]:
+    problems = set()
+    for other in fixtures:
+        if other is fixture:
+            continue
+        if other['id'] == fixture['id'] and other != fixture:
+            problems.add('conflicting_fixture_identity')
+    for item in observations:
+        text = str(item.get('programme_title') or '') + ' ' + str(item.get('programme_description') or '')
+        for other in fixtures:
+            if other['league'] == fixture['league']:
+                for team, aliases in zip((other['home'], other['away']), other['team_tokens']):
+                    if folded(team) not in {folded(fixture['home']), folded(fixture['away'])} and any(contains(text, alias) for alias in aliases):
+                        problems.add('contradictory_programme_team')
+        start, end = instant(item['programme_start']), instant(item['programme_end'])
+        for other in fixtures:
+            if other is fixture or other == fixture or other['league'] != fixture['league']:
+                continue
+            if folded(other.get('venue', '')) == folded(fixture.get('venue', '')) and start <= instant(other['kickoff_local']) < end:
+                problems.add('conflicting_fixture_at_venue')
+            text = str(item.get('programme_title') or '') + ' ' + str(item.get('programme_description') or '')
+            if {folded(other['home']), folded(other['away'])} != {folded(fixture['home']), folded(fixture['away'])} and all(any(contains(text, a) for a in names) for names in other['team_tokens']):
+                problems.add('contradictory_programme_teams')
+        for p in programmes:
+            ch = p.get('channel') or {}
+            if canonical_channel(ch.get('name', '')) != item['channel'] or p.get('isLive') is not True:
+                continue
+            text = str(p.get('title') or '') + ' ' + str(p.get('description') or '')
+            if not contains(text, 'SHL') or contains(text, 'studio'):
+                continue
+            try:
+                overlaps = instant(p['start']) < end and instant(p['end']) > start
+            except (KeyError, ValueError, TypeError, AttributeError):
+                problems.add('invalid_competing_broadcast'); continue
+            same = (instant(p['start']) == start and instant(p['end']) == end and
+                    folded(p.get('description') or '') == folded(item.get('programme_description') or '') and
+                    folded(p.get('title') or '') == folded(item.get('programme_title') or ''))
+            if overlaps and not same:
+                problems.add('overlapping_broadcasts_on_channel')
+    return sorted(problems)
 
 
 def endpoint_summary(snapshot: dict, now: datetime) -> dict:
@@ -230,6 +289,9 @@ def report(fixtures: list[dict], snapshots: list[dict], now: datetime, mode: str
             summary = {'url': snapshot['url'], 'status': 'reachable_invalid_shape_or_time',
                        'fetched_at': snapshot.get('fetched_at')}
         summaries.append(summary)
+    complete = (mode != 'live_public_api' or
+                {BASE + '/channel/' + slug for slug in ('tv4-hockey', 'tv4-motor', *(f'tv4-sport-live-{n}' for n in range(1, 5)))}
+                <= {s['url'] for s in usable if fresh_until(s) > now})
     rows = []
     for fixture in fixtures:
         exact, candidates = [], []
@@ -239,9 +301,13 @@ def report(fixtures: list[dict], snapshots: list[dict], now: datetime, mode: str
         def unique(items):
             return list({(e['provider'], e['channel'], e['programme_start'], e['programme_id']): e for e in items}.values())
         expiry = min([fresh_until(s) for s in usable], default=now)
-        row = normalize(fixture, unique(exact), unique(candidates), now, expiry, mode)
-        if not usable:
-            row['status'] = 'unavailable'
+        problems = matching_conflicts(fixture, exact + candidates, fixtures,
+                                      [p for snapshot in usable for p in provider_programs(snapshot)])
+        row = normalize(fixture, unique(exact), unique(candidates), now, expiry, mode, problems)
+        if not usable or not complete:
+            row['status'] = 'unavailable'; row['linear_channel'] = None
+            row['display_label'] = 'Välj kanal manuellt'; row['verified_at'] = None
+            row['reason'] = 'Incomplete or stale six-channel scan; no unique recommendation can be established.'
         rows.append(row)
     dates = sorted({f['kickoff_local'][:10] for f in fixtures})
     coverage = []
@@ -249,12 +315,15 @@ def report(fixtures: list[dict], snapshots: list[dict], now: datetime, mode: str
         group = [r for r in rows if r['fixture']['kickoff_local'].startswith(date)]
         coverage.append({'date': date, 'reference_fixtures': len(group),
                          'exact_confirmed': sum(r['status'] == 'confirmed' for r in group),
-                         'venue_only_candidates': sum(bool(r['unverified_candidates']) for r in group)})
+                         'probable_external_matches': sum(r['status'] == 'probable_external_match' for r in group),
+                         'ambiguous_matches': sum(r['status'] == 'conflict' for r in group),
+                         'venue_candidates': sum(bool(r['venue_candidates']) for r in group),
+                         'incorrect_matches': None, 'accuracy_note': 'No independent full broadcaster ground truth; do not infer zero errors.'})
     return {'schema_version': 1, 'tool': 'MinTV Broadcast Lab 0.2', 'source_mode': mode,
-            'checked_at': stamp(now), 'app_ready': False,
+            'checked_at': stamp(now), 'app_ready': False, 'complete_channel_scan': complete,
             'attribution': {'name': 'TV-Programidag', 'url': 'https://tvprogramidag.se'},
             'policy': {'max_requests_per_probe': 8, 'cache_seconds': 3600,
-                       'venue_join_is_verified': False, 'no_android_integration': True},
+                       'venue_join_status': 'probable_external_match', 'no_android_integration': True},
             'endpoints': summaries, 'coverage': coverage, 'results': rows}
 
 
@@ -300,14 +369,59 @@ def live_probe(cache: Path) -> list[dict]:
     return snapshots
 
 
+def serve(fixtures: list[dict], cache: Path, port: int) -> None:
+    """Optional loopback-only viewer; no hosted backend or browser-held secrets."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Lock
+    lock = Lock()
+    state = {'report': None}
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass  # No request/user content in logs.
+        def send(self, code, body, kind='application/json'):
+            self.send_response(code); self.send_header('Content-Type', kind)
+            self.send_header('Cache-Control', 'no-store'); self.end_headers(); self.wfile.write(body)
+        def do_GET(self):
+            if self.path == '/':
+                return self.send(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
+            if self.path == '/api/report':
+                value = state['report'] or {'results': [], 'note': 'Tryck Hämta gratisdata för en ny kontroll.'}
+                return self.send(200, json.dumps(value, ensure_ascii=False).encode())
+            self.send(404, b'{}')
+        def do_POST(self):
+            expected = f'127.0.0.1:{self.server.server_port}'
+            if (self.path != '/api/refresh' or self.headers.get('Host') != expected or
+                self.headers.get('Origin', f'http://{expected}') != f'http://{expected}' or
+                self.headers.get('Content-Length', '0') != '0'):
+                return self.send(403, b'{}')
+            if not lock.acquire(blocking=False):
+                return self.send(429, b'{}')
+            try:
+                value = report(fixtures, live_probe(cache), datetime.now(UTC), 'live_public_api')
+                state['report'] = value
+                self.send(200, json.dumps(value, ensure_ascii=False).encode())
+            finally:
+                lock.release()
+    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    print(f'Broadcast Lab: http://127.0.0.1:{server.server_port}/', flush=True)
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['probe', 'evaluate', 'demo'])
+    parser.add_argument('command', choices=['probe', 'evaluate', 'demo', 'serve'])
     parser.add_argument('--fixtures', type=Path, default=ROOT / 'fixtures/2026-10-29-31.json')
     parser.add_argument('--input', type=Path, help='Local snapshot bundle, never labelled live')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--cache-dir', type=Path, default=ROOT / '.cache')
+    parser.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
+    if args.command == 'serve':
+        serve(json.loads(args.fixtures.read_text())['fixtures'], args.cache_dir, args.port)
+        return 0
     if args.command == 'demo':
         # Keep supplied research for audit only. It is not freshly verified or a live adapter.
         output = {'schema_version': 1, 'source_mode': 'archived_unverified_research', 'app_ready': False,
@@ -323,7 +437,8 @@ def main() -> int:
     if args.output:
         args.output.write_text(encoded)
         print(f"{args.output}: {len(output.get('results', []))} fixtures; "
-              f"{sum(r['status'] == 'confirmed' for r in output.get('results', []))} exact confirmations")
+              f"{sum(r['status'] == 'confirmed' for r in output.get('results', []))} exact confirmations; "
+              f"{sum(r['status'] == 'probable_external_match' for r in output.get('results', []))} probable matches")
     else:
         print(encoded, end='')
     return 2 if output.get('results') and all(r['status'] == 'unavailable' for r in output['results']) else 0

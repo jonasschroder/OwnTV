@@ -25,3 +25,10 @@ for label in journey-1 journey-2; do
   adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/$label.json" "$out/$label.json" >/dev/null
   echo "PASS $label (synthetic production-shell navigation)"
 done
+# Every instrumentation case is executed by CI's guarded runner, including native evidence
+# and the isolated visible-row probe. Keep these after the matched journey measurements.
+run captureNativeProductionScreens native-production
+adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/native" "$out/native" >/dev/null
+run visibleSportRowProbe visible-sport-row
+adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/visible-sport-row.json" "$out/visible-sport-row.json" >/dev/null
+echo "PASS native screenshots and visible Sport row probe"

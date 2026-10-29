@@ -13,6 +13,8 @@ public final class LoopbackVideoFixtureSmoke {
             URI uri = URI.create(fixture.url(0));
             HttpResponse<byte[]> full = client.send(HttpRequest.newBuilder(uri).build(), HttpResponse.BodyHandlers.ofByteArray());
             if (full.statusCode() != 200 || !Arrays.equals(bytes, full.body())) throw new AssertionError("GET");
+            HttpResponse<byte[]> regional = client.send(HttpRequest.newBuilder(URI.create(fixture.url(4))).build(), HttpResponse.BodyHandlers.ofByteArray());
+            if (regional.statusCode() != 200 || !Arrays.equals(bytes, regional.body())) throw new AssertionError("Regional fixture");
             HttpResponse<byte[]> range = client.send(HttpRequest.newBuilder(uri).header("Range", "bytes=20-39").build(), HttpResponse.BodyHandlers.ofByteArray());
             if (range.statusCode() != 206 || !Arrays.equals(Arrays.copyOfRange(bytes, 20, 40), range.body())) throw new AssertionError("Range");
             HttpResponse<byte[]> head = client.send(HttpRequest.newBuilder(uri).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofByteArray());

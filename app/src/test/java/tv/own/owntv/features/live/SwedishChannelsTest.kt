@@ -4,6 +4,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SwedishChannelsTest {
+    @Test fun varmlandAliasesRemainRegionalAcrossAdvertisedQualitiesAndCountryDecorations() {
+        for (base in listOf("SVT1", "SVT2")) {
+            val national = base.lowercase()
+            for (name in listOf("$base Värmland HD", "SE | $base Varmland FHD", "$base Va\u0308rmland SD", "${base.replace("SVT", "SVT ")} VÄRMLAND 1080p")) {
+                val recognized = SwedishChannels.recognize(name)!!
+                assertEquals(national + "varmland", recognized.identity)
+                assertEquals("$base Värmland", recognized.label)
+                assertNotEquals(SwedishChannels.recognize(base)!!.identity, recognized.identity)
+            }
+            assertNull(SwedishChannels.recognize("$base Värmland Highlights"))
+        }
+    }
     private fun variant(id: Long, name: String, source: Long = 1, remote: String = "$id") =
         SwedishVariant(id, source, "$source:$remote", name, SwedishChannels.recognize(name)!!, id.toInt())
     @Test fun namingDecorationsDoNotChangeIdentity() {

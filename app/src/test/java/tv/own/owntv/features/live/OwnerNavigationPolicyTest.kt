@@ -19,16 +19,18 @@ class OwnerNavigationPolicyTest {
         }
         for (raw in listOf("TV4 Sport Live 0", "TV4 Sport Live 10 Highlights", "TV4 Sport Live 2 Replay", "NO: TV4 Sport Live 2", "TV4 Play Hockey", "TV4 Sport Live 01")) assertNull(hockeyChannelNumber(raw))
     }
-    @Test fun realRegionOnlyAndExplicitOwnerChoiceWins() {
+    @Test fun nationalAndRegionalServicesAreIndependentAndOnlyExplicitHidingRemovesOne() {
         val national = group(1, "SVT1 HD")
         val region = group(2, "SVT1 Värmland HD")
-        assertEquals(listOf(national), preferVarmland(listOf(national), SwedishChoices()))
-        assertEquals(listOf(region), preferVarmland(listOf(national, region), SwedishChoices()))
-        assertEquals(listOf(national), preferVarmland(listOf(national, region), SwedishChoices(preferred = mapOf("svt1" to "1:1"))))
-        assertEquals(listOf(national), preferVarmland(listOf(national, region.copy(variants = region.variants + group(3, "SVT1 Värmland", 2).variants)), SwedishChoices()))
+        val rows = national.variants + region.variants + group(3, "SVT1 Värmland FHD", 2).variants
+        val groups = SwedishChannels.group(rows)
+        assertEquals(listOf("svt1", "svt1varmland"), groups.map { it.identity })
+        assertEquals(2, groups.last().variants.size)
+        assertEquals(listOf("svt1varmland"), SwedishChannels.group(rows, hidden = setOf("svt1")).map { it.identity })
+        assertEquals(listOf("svt1"), SwedishChannels.group(rows, hidden = setOf("svt1varmland")).map { it.identity })
         assertEquals("SVT1", national.label)
         assertNull(SwedishChannels.recognize("SVT1 Värmland Highlights"))
-        assertEquals(listOf(national), preferVarmland(listOf(national), SwedishChoices(preferred = mapOf("svt1varmland" to "9:9"))))
+        assertEquals(listOf(national), SwedishChannels.group(national.variants))
     }
     @Test fun cachedGuideRanksValidNowNextThenStaleButFreezesFocusPositions() {
         val a = group(1, "SE: A"); val b = group(2, "SE: B"); val c = group(3, "SE: C")

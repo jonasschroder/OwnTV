@@ -167,14 +167,18 @@ class ProductionStartupTest {
         val portal = source.copy(id = 99015, name = "Synthetic asynchronous fixture", type = SourceType.STALKER)
         db.sourceDao().insert(portal); db.sourceDao().link(ProfileSourceCrossRef(7, portal.id))
         settings.setPlaylistAutoRefresh(portal.id, PlaylistRefresh(PlaylistAutoRefresh.OFF))
-        val channels = listOf("SVT1 HD", "SVT2 FHD", "TV4 HD").mapIndexed { index, name ->
+        val channels = listOf("SVT1 HD", "SVT2 FHD", "TV4 HD", "SVT1 Värmland HD", "SVT1 Värmland FHD").mapIndexed { index, name ->
             ChannelEntity(id = 9901401L + index, sourceId = if (index == 1) portal.id else source.id, remoteId = "v014-$index", name = name, streamUrl = video.url(index))
         }
         db.channelDao().insertAll(channels)
-        store.save(7, choices.copy(preferred = choices.preferred + ("svt1" to tv.own.owntv.core.customize.CustomizeKeys.channel(channels[0]))))
+        store.save(7, choices.copy(preferred = choices.preferred + mapOf(
+            "svt1" to tv.own.owntv.core.customize.CustomizeKeys.channel(channels[0]),
+            "svt1varmland" to tv.own.owntv.core.customize.CustomizeKeys.channel(channels[4]))))
         val fixtureChoices = store.choices(7)
         assertEquals(channels[0].id, store.library(7, listOf(101, 102, source.id, portal.id), fixtureChoices)
             .groups.single { it.identity == "svt1" }.preferred(fixtureChoices.preferred["svt1"], fixtureChoices.showUhd)?.id)
+        assertEquals(channels[4].id, store.library(7, listOf(101, 102, source.id, portal.id), fixtureChoices)
+            .groups.single { it.identity == "svt1varmland" }.preferred(fixtureChoices.preferred["svt1varmland"], fixtureChoices.showUhd)?.id)
         settings.setActiveProfile(7)
         try {
             ActivityScenario.launch<MainActivity>(app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!).use { scenario ->
@@ -207,6 +211,7 @@ class ProductionStartupTest {
                 }
                 compose.onNodeWithTag("top-TV").performClick()
                 compose.waitUntil(15_000) { compose.onAllNodesWithTag("swedish-channel-svt1").fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("swedish-channel-svt1varmland").assertExists()
                 compose.onNodeWithTag("swedish-channel-svt1").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
                 compose.onNodeWithTag("swedish-channel-svt1").assertIsFocused()
                 val beforeEntry = vm.swedishRowContext.value
@@ -248,6 +253,7 @@ class ProductionStartupTest {
                     assertEquals(channel.id, vm.previewChannel.value?.id)
                     assertEquals(channel.streamUrl, vm.previewEngine.currentUrl)
                 }
+                assertTrue(tv.own.owntv.player.LiveEntryDiagnostics.trace.report().contains("logical=SVT1_VARMLAND"))
                 pressRemote(KeyEvent.KEYCODE_BACK)
                 // Back first dismisses visible HUD controls; only the next Back exits. If the
                 // normal HUD timer already hid them, the first Back correctly exits directly.

@@ -117,6 +117,8 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
             }
             if (count < 400) { ended = true; break }
         }
-        SwedishLibrary(preferVarmland(SwedishChannels.group(candidates, choices.order, choices.hidden), choices), !ended)
+        // National and regional services are independently selectable. A region's presence or
+        // source count is not evidence of stream health and must never hide the national service.
+        SwedishLibrary(SwedishChannels.group(candidates, choices.order, choices.hidden), !ended)
     }
 }

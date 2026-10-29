@@ -89,7 +89,6 @@ import tv.own.owntv.player.LiveEntryGate
 import tv.own.owntv.player.LiveEntryOrigin
 import tv.own.owntv.player.LiveEntryOutcome
 import tv.own.owntv.player.LiveEntryEvent
-import tv.own.owntv.player.LiveLogicalChannel
 import tv.own.owntv.player.LiveEntryDiagnostics
 import tv.own.owntv.player.sameLiveSelection
 import tv.own.owntv.player.sameLiveStream
@@ -1219,9 +1218,7 @@ class LiveViewModel(
         arm: Boolean = true, browse: Boolean = false, forceExternal: Boolean = false): HomePlayback {
         val owner = ctx.value
         val selected = expected
-        val logical = when (selected?.let { tv.own.owntv.features.live.SwedishChannels.recognize(it.name)?.identity }) {
-            "svt1" -> LiveLogicalChannel.SVT1; "svt2" -> LiveLogicalChannel.SVT2; else -> LiveLogicalChannel.OTHER
-        }
+        val logical = tv.own.owntv.player.liveLogicalChannel(selected?.let { SwedishChannels.recognize(it.name)?.identity })
         val result = entry.enter(origin, logical, prepare = {
             val channel = homeChannel(channelId, owner.profileId)
             if (channel == null || forceExternal && channel.drmConfig != null || channel.streamUrl.isBlank() || owner.profileId < 0 || ctx.value != owner ||
@@ -1239,9 +1236,7 @@ class LiveViewModel(
             // Authorization can suspend; recheck the frozen owner immediately before the engine call.
             if (ctx.value != owner || settings.activeProfileIdNow() != owner.profileId || !sameLiveStream(channel, homeChannel(channel.id, owner.profileId))) LiveEntryOutcome.UNAVAILABLE
             else {
-                val resolvedLogical = when (tv.own.owntv.features.live.SwedishChannels.recognize(channel.name)?.identity) {
-                    "svt1" -> LiveLogicalChannel.SVT1; "svt2" -> LiveLogicalChannel.SVT2; else -> LiveLogicalChannel.OTHER
-                }
+                val resolvedLogical = tv.own.owntv.player.liveLogicalChannel(SwedishChannels.recognize(channel.name)?.identity)
                 LiveEntryDiagnostics.trace.record(entry.requestId, android.os.SystemClock.elapsedRealtime(), origin, resolvedLogical, LiveEntryEvent.SOURCE_VALIDATED)
                 homeOwnsPreviewAudio = false
                 pendingZapTuneJob?.cancel(); pendingZapTuneJob = null

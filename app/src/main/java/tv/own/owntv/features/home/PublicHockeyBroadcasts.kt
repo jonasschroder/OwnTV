@@ -9,6 +9,11 @@ import org.json.JSONObject
 internal fun publicWords(value: String): String = Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFKD)
     .replace(Regex("\\p{M}+"), "").split(Regex("[^a-z0-9]+" )).filter(String::isNotEmpty).joinToString(" ")
 private fun publicContains(text: String, word: String) = word.isNotBlank() && " ${publicWords(text)} ".contains(" ${publicWords(word)} ")
+internal fun publicVenueMatches(text: String, venue: String): Boolean {
+    val expected = publicWords(venue)
+    val value = publicWords(text).removePrefix("fran ").removePrefix("from ")
+    return expected.isNotBlank() && (value == expected || value.startsWith("$expected i ") || value.startsWith("$expected in "))
+}
 private fun publicMentions(text: String, team: Team) = SportsCatalog.epgAliases(team).any { words ->
     publicContains(text, words.joinToString(" "))
 }
@@ -51,7 +56,7 @@ internal fun publicHockeyAssignment(fixture: SportFixture, known: List<SportFixt
         known.any { it.id == fixture.id && it != fixture }) return null
     val fresh = programmes.distinct().filter { it.channel in publicTvChannels.values && it.liveShl() && it.fetchedAt <= now && now < it.expiry }
     val matches = fresh.filter { p -> p.start in (fixture.faceoff - 60 * 60_000L)..(fixture.faceoff + 10 * 60_000L) && p.end > fixture.faceoff &&
-        publicContains(p.description + " " + p.title, fixture.venue) }
+        (publicVenueMatches(p.description, fixture.venue) || publicVenueMatches(p.title, fixture.venue)) }
     val channel = matches.map { it.channel }.distinct().singleOrNull() ?: return null
     for (p in matches) {
         if (known.any { other -> other != fixture && other.competition == fixture.competition &&

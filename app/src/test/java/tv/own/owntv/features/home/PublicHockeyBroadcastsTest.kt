@@ -29,12 +29,14 @@ class PublicHockeyBroadcastsTest {
         assertEquals(a, BroadcastResolver.usable(fixture.broadcastFixture(), a, Instant.ofEpochMilli(now)))
     }
     @Test fun explicitTeamsHaveConfirmedStrength() {
-        assertEquals(BroadcastEvidence.CONFIRMED, assignment(listOf(programme.copy(description="SHL Brynäs IF – Färjestad BK, Synthetic Arena")))?.evidence)
+        assertEquals(BroadcastEvidence.CONFIRMED, assignment(listOf(programme.copy(title="SHL Brynäs IF – Färjestad BK")))?.evidence)
     }
     @Test fun wrongRenamedOrMissingArenaNeverGuesses() {
         assertNull(assignment(listOf(programme.copy(description="Från Another Arena."))))
         assertNull(publicHockeyAssignment(fixture.copy(venue=null), listOf(fixture), listOf(programme), now))
         assertNull(assignment(listOf(programme.copy(description="Från Synthetic Arenaberg."))))
+        assertNull(assignment(listOf(programme.copy(description="Från New Synthetic Arena."))))
+        assertNull(assignment(listOf(programme.copy(description="Från Synthetic Arena B."))))
     }
     @Test fun concurrentChannelsOrFixturesRequireManualChoice() {
         assertNull(assignment(listOf(programme, programme.copy(channel="TV4 Sport Live 2"))))

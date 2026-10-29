@@ -348,7 +348,9 @@
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${card.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${it.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-entry
-10	empty	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	\0
+9	empty	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	$expected i
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	$expected in
 1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	${publicWords(text)}
 1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	${publicWords(word)}
 1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	HockeyAllsvenskan
@@ -368,6 +370,8 @@
 1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	channel
 1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	description
 1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	end
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	fran
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	from
 1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	generatedAt
 1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	highlights
 1	url	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	https://tvprogramidag.se/api/public/v1/channel/

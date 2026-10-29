@@ -23,7 +23,7 @@ internal data class NativeSportSnapshot(val profile: Long?, val now: Long, val p
     val hero: SportFixture?, val today: List<SportFixture>, val upcoming: List<SportFixture>,
     val channels: List<ChannelEntity>, val broadcastLabels: Map<String, String> = emptyMap(),
     val heroChannel: ChannelEntity? = null, val loading: Boolean = false, val enabled: Boolean = true, val issue: HockeyIssue? = null,
-    val playableFixtures: Map<String, ChannelEntity> = emptyMap())
+    val playableFixtures: Map<String, ChannelEntity> = emptyMap(), val publicSourceUsed: Boolean = false)
 internal class NativeSportActions(val details: (SportFixture) -> Unit, val channel: (ChannelEntity) -> Unit,
     val browse: () -> Unit, val watch: () -> Unit, val settings: () -> Unit,
     val fixtureWatch: ((SportFixture, ChannelEntity) -> Unit)? = null)
@@ -32,10 +32,12 @@ internal class NativeSportActions(val details: (SportFixture) -> Unit, val chann
 @Composable
 internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSportActions, first: FocusRequester,
     onEntry: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit, modifier: Modifier = Modifier) {
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val rows = buildList {
         add(NativeRow("sport-hero", if (data.hero != null) listOf("sport-hero-action") else emptyList(), horizontalRail = false))
         if (data.today.isNotEmpty()) add(NativeRow("sport-today", data.today.take(16).map { "sport-today-${it.id}" }))
         if (data.upcoming.isNotEmpty()) add(NativeRow("sport-upcoming", data.upcoming.take(12).map { "sport-upcoming-${it.id}" }))
+        if (data.publicSourceUsed) add(NativeRow("sport-attribution", listOf("sport-attribution-link"), horizontalRail = false))
         if (data.channels.isNotEmpty()) add(NativeRow("sport-channels", data.channels.take(48).map { "sport-channel-${it.id}" }))
     }
     val nav = rememberNativeRowsNavigation(rows, data.profile, first, onEntry, onHeader)
@@ -66,6 +68,10 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
             }
             if (data.upcoming.isNotEmpty()) item(key = "sport-upcoming") {
                 SportFixtureRail(stringResource(R.string.mintv_shl_upcoming), data.upcoming.take(12), "sport-upcoming", data, nav, width * 1.3f, actions)
+            }
+            if (data.publicSourceUsed) item(key = "sport-attribution") {
+                HomeButton(stringResource(R.string.mintv_public_hockey_source),
+                    { runCatching { uri.openUri("https://tvprogramidag.se") } }, nav.item("sport-attribution-link"))
             }
             if (data.channels.isNotEmpty()) item(key = "sport-channels") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {

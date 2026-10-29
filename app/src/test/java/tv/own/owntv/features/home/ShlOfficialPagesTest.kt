@@ -18,6 +18,8 @@ class ShlOfficialPagesTest {
     @Test fun frolundaTodayAndNextResolveFromOfficialOctoberSchedule() {
         val games = SwehockeyParser.schedule(page("shl-schedule"))
         assertEquals(364, games.size)
+        assertTrue(games.all { !it.venue.isNullOrBlank() })
+        assertEquals("Scandinavium", games.first { it.home == "Frölunda HC" }.venue)
         val team = SportsCatalog.identity("Frölunda HC", Sport.ICE_HOCKEY)!!
         val mine = personalFixtures(games.map { SportsCatalog.fixture(SportsCatalog.shl, it) }, SportPreferences(listOf(team.id)), now)
         val today = mine.single { it.on(LocalDate.parse("2026-10-10")) }

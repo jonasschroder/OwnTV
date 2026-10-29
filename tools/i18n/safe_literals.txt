@@ -271,6 +271,7 @@
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	sourceAt
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	stage
 2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	team
+2	json	app/src/main/java/tv/own/owntv/features/home/HockeyReader.kt	venue
 1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	FHD
 1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	HD
 1	protocol	app/src/main/java/tv/own/owntv/features/home/HomeChannelDefaults.kt	TV4 AND HOCKEY
@@ -323,6 +324,9 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-public-client-id
 1	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvTwitch.kt	twitch-watch
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	$id-${game.id}
+1	url	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	https://tvprogramidag.se
+2	protocol	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-attribution
+2	protocol	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-attribution-link
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channel-${channel.id}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channel-${it.id}
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channels
@@ -344,6 +348,66 @@
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${card.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-${it.stableKey}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt	vod-series-entry
+9	empty	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	\0
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	$expected i
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	$expected in
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	${publicWords(text)}
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	${publicWords(word)}
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	HockeyAllsvenskan
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	SDHL
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	SHL
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV-Programidag
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV4 Hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV4 Motor
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV4 Sport Live 1
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV4 Sport Live 2
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV4 Sport Live 3
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	TV4 Sport Live 4
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	U18
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	U20
+1	regex	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	[^a-z0-9]+
+1	regex	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	\\p{M}+
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	channel
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	description
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	end
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	fran
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	from
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	generatedAt
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	highlights
+1	url	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	https://tvprogramidag.se/api/public/v1/channel/
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	isLive
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	junior
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	name
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	null
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	programs
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	replay
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	repris
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	slug
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	start
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	studio
+1	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	title
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	tv4-hockey
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	tv4-motor
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	tv4-sport-live-1
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	tv4-sport-live-2
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	tv4-sport-live-3
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeyBroadcasts.kt	tv4-sport-live-4
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	Accept
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	MinTV-Broadcast/0.1
+1	assertion	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	Public schedule unavailable
+1	protocol	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	User-Agent
+1	mime	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	application/json
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	attempt
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	channel
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	description
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	end
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	fetched
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	generated
+1	file-path	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	mintv-public-hockey.json
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	retry
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	rows
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	start
+2	json	app/src/main/java/tv/own/owntv/features/home/PublicHockeySource.kt	title
 4	empty	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	4K
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlBroadcasts.kt	8K
@@ -447,6 +511,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Team
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Time
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	User-agent:
+1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	Venue
 1	protocol	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	W
 1	technical	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	[^a-z0-9]+
 1	regex	app/src/main/java/tv/own/owntv/features/home/ShlData.kt	\\bselected="selected"

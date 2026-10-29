@@ -15,15 +15,16 @@ internal object NoBroadcastMetadata : BroadcastMetadataSource {
 }
 
 internal data class BroadcastFixture(val league: String, val home: String, val away: String,
-    val date: LocalDate, val faceoff: Instant) {
+    val date: LocalDate, val faceoff: Instant, val venue: String? = null) {
     companion object {
         fun from(game: ShlGame) = BroadcastFixture("SHL", game.home, game.away,
-            Instant.ofEpochMilli(game.faceoff).atZone(Stockholm).toLocalDate(), Instant.ofEpochMilli(game.faceoff))
+            Instant.ofEpochMilli(game.faceoff).atZone(Stockholm).toLocalDate(), Instant.ofEpochMilli(game.faceoff), game.venue)
     }
 }
 internal data class BroadcastChannel(val name: String, val linear: Boolean)
+internal enum class BroadcastEvidence { CONFIRMED, PROBABLE_EXTERNAL }
 internal data class BroadcastAssignment(val fixture: BroadcastFixture, val channels: List<BroadcastChannel>,
-    val checkedAt: Instant, val expiresAt: Instant, val source: String)
+    val checkedAt: Instant, val expiresAt: Instant, val source: String, val evidence: BroadcastEvidence = BroadcastEvidence.CONFIRMED)
 
 internal object BroadcastResolver {
     /** Exact identity and instant: reschedules, home/away changes and expired records fail closed. */
@@ -33,6 +34,10 @@ internal object BroadcastResolver {
             teamId(fixture.home) != teamId(fixture.away) &&
             teamId(fixture.home) == teamId(it.fixture.home) && teamId(fixture.away) == teamId(it.fixture.away) &&
             fixture.date == it.fixture.date && fixture.faceoff == it.fixture.faceoff &&
+            (it.evidence != BroadcastEvidence.PROBABLE_EXTERNAL ||
+                !fixture.venue.isNullOrBlank() && publicWords(fixture.venue) == publicWords(it.fixture.venue.orEmpty()) &&
+                it.channels.size == 1 && it.channels.single().linear &&
+                it.expiresAt.toEpochMilli() - it.checkedAt.toEpochMilli() <= 60 * 60_000L) &&
             fixture.date == fixture.faceoff.atZone(Stockholm).toLocalDate() &&
             !it.checkedAt.isAfter(now) && it.expiresAt.isAfter(now) &&
             it.expiresAt.toEpochMilli() - it.checkedAt.toEpochMilli() <= 24 * 60 * 60_000L &&

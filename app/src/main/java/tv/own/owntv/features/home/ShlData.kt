@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 internal val Stockholm: ZoneId = ZoneId.of("Europe/Stockholm")
-internal data class ShlGame(val id: String, val home: String, val away: String, val faceoff: Long, val result: String?) {
+internal data class ShlGame(val id: String, val home: String, val away: String, val faceoff: Long, val result: String?, val venue: String? = null) {
     val fbk get() = teamTokens(home).any { it == "farjestad" || it == "fbk" } || teamTokens(away).any { it == "farjestad" || it == "fbk" }
     fun on(date: LocalDate) = Instant.ofEpochMilli(faceoff).atZone(Stockholm).toLocalDate() == date
 }
@@ -96,6 +96,7 @@ internal object SwehockeyParser {
         var lastDate: String? = null
         val rows = rows(html, "Schedule and Results")
         hockeyFormat(rows.firstOrNull()?.second?.take(4) == listOf("Date", "Time", "Game", "Result"), HockeyFormatReason.HEADERS)
+        val venueColumn = rows.first().second.indexOf("Venue")
         val games = rows.drop(1).map { (raw, cells) ->
             require(cells.size >= 4)
             date.matchEntire(cells[0])?.let { lastDate = it.value }
@@ -106,7 +107,8 @@ internal object SwehockeyParser {
             require(id != null)
             val whenMs = LocalDateTime.parse("$lastDate ${cells[1]}", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
                 .atZone(Stockholm).toInstant().toEpochMilli()
-            ShlGame(id, pair[0], pair[1], whenMs, score.find(cells[3])?.value?.replace(" ", ""))
+            ShlGame(id, pair[0], pair[1], whenMs, score.find(cells[3])?.value?.replace(" ", ""),
+                cells.getOrNull(venueColumn)?.takeIf { it.isNotBlank() })
         }
         require(games.size <= 400 && games.map { it.id }.distinct().size == games.size)
         return games.sortedBy { it.faceoff }

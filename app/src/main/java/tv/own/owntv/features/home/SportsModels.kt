@@ -10,15 +10,15 @@ internal data class Team(val id: String, val sport: Sport, val name: String)
 internal enum class MatchStatus { SCHEDULED, RESULT_SNAPSHOT }
 internal data class Score(val home: Int, val away: Int)
 internal data class SportFixture(val id: String, val competition: Competition, val homeTeam: Team, val awayTeam: Team,
-    val kickoff: Instant, val status: MatchStatus, val score: Score?) {
+    val kickoff: Instant, val status: MatchStatus, val score: Score?, val venue: String? = null) {
     val home get() = homeTeam.name
     val away get() = awayTeam.name
     val faceoff get() = kickoff.toEpochMilli()
     val result get() = score?.let { NumberFormat.getIntegerInstance().format(it.home) + "–" + NumberFormat.getIntegerInstance().format(it.away) }
     fun on(date: LocalDate) = kickoff.atZone(Stockholm).toLocalDate() == date
     fun follows(selection: SportPreferences) = homeTeam.id in selection.teamIds || awayTeam.id in selection.teamIds
-    fun hockeyGame() = ShlGame(id, home, away, faceoff, result)
-    fun broadcastFixture() = BroadcastFixture(competition.name, home, away, kickoff.atZone(Stockholm).toLocalDate(), kickoff)
+    fun hockeyGame() = ShlGame(id, home, away, faceoff, result, venue)
+    fun broadcastFixture() = BroadcastFixture(competition.name, home, away, kickoff.atZone(Stockholm).toLocalDate(), kickoff, venue)
 }
 internal data class SportSnapshot(val competition: Competition, val seasonId: String, val fixtures: List<SportFixture>,
     val fetchedAt: Long, val sourceUpdatedAt: Long?)
@@ -87,7 +87,7 @@ internal object SportsCatalog {
         return SportFixture(competition.id + ":" + game.id, competition,
             identity(game.home, competition.sport) ?: make(game.home, competition.sport),
             identity(game.away, competition.sport) ?: make(game.away, competition.sport), Instant.ofEpochMilli(game.faceoff),
-            if (score != null) MatchStatus.RESULT_SNAPSHOT else MatchStatus.SCHEDULED, score)
+            if (score != null) MatchStatus.RESULT_SNAPSHOT else MatchStatus.SCHEDULED, score, game.venue)
     }
 }
 

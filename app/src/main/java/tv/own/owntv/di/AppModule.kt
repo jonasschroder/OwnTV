@@ -19,6 +19,7 @@ import tv.own.owntv.features.home.HomeViewModel
 import tv.own.owntv.features.live.SwedishChannelStore
 import tv.own.owntv.features.discovery.DiscoveryRepository
 import tv.own.owntv.features.home.HomeSections
+import tv.own.owntv.features.home.PublicHockeySource
 import tv.own.owntv.features.home.ShlRepository
 import tv.own.owntv.features.home.SportsPreferences
 import tv.own.owntv.features.home.SportsRepository
@@ -73,6 +74,7 @@ val appModule = module {
     singleOf(::SportsPreferences)
     singleOf(::SportsRepository)
     singleOf(::TvmatchenBroadcastSource)
+    singleOf(::PublicHockeySource)
     singleOf(::ShlChannelOverrides)
     singleOf(::TwitchStatus)
     viewModelOf(::HomeViewModel)

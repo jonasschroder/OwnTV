@@ -1,5 +1,7 @@
 package tv.own.owntv.home
 
+import tv.own.owntv.R
+
 import android.content.res.Configuration
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -72,6 +74,7 @@ class NativeV011PresentationTest {
     private var played = 0
     private var broadcastReady by mutableStateOf(false)
     private var broadcastLabels by mutableStateOf(false)
+    private var probableBroadcast by mutableStateOf(false)
     private val broadcastChannel = ChannelEntity(id = 401, sourceId = 101, name = "TV4 Sport Live 1 HD", streamUrl = "http://127.0.0.1:9/unavailable")
     private var resumed: String? = null
     private fun shell(command: String): String = android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).bufferedReader().use { it.readText() }
@@ -115,8 +118,8 @@ class NativeV011PresentationTest {
                                     if (populated) listOf(fixture.copy(id = "fixture-next", kickoff = fixture.kickoff.plusSeconds(86_400))) else emptyList(),
                                     if (populated) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
                                     heroChannel = if (broadcastReady) broadcastChannel else null,
-                                    broadcastLabels = if (broadcastLabels) mapOf(fixture.id to broadcastChannel.name) else emptyMap(),
-                                    playableFixtures = if (broadcastReady) mapOf(fixture.id to broadcastChannel) else emptyMap()),
+                                    broadcastLabels = if (broadcastLabels) mapOf(fixture.id to compose.activity.getString(if (probableBroadcast) R.string.mintv_probable_channel else R.string.mintv_confirmed_channel, broadcastChannel.name)) else emptyMap(),
+                                    playableFixtures = if (broadcastReady) mapOf(fixture.id to broadcastChannel) else emptyMap(), publicSourceUsed = probableBroadcast && broadcastLabels),
                                     NativeSportActions({ details++ }, { played++ }, {}, {}, {}, { game, channel ->
                                         assertEquals(fixture, game); assertEquals(broadcastChannel, channel); played++
                                     }), first, { entry = it }, { header.requestFocus() })
@@ -180,9 +183,12 @@ class NativeV011PresentationTest {
     private fun automaticBroadcastCard(size: String) {
         broadcastReady = true; broadcastLabels = true
         mount(); enter(TopDestination.SPORT)
-        compose.onAllNodesWithText(broadcastChannel.name).assertCountEquals(2)
+        compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_confirmed_channel, broadcastChannel.name)).assertCountEquals(2)
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         val card = compose.onNodeWithTag("sport-today-${fixture.id}")
+        card.assertIsFocused()
+        compose.runOnIdle { probableBroadcast = true }
+        compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_probable_channel, broadcastChannel.name)).assertCountEquals(2)
         card.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertEquals(1, played); assertEquals(0, details)
         // A status update preserves the existing focus key; long OK opens details, never playback.
@@ -197,7 +203,7 @@ class NativeV011PresentationTest {
         val bitmap = instrumentation.uiAutomation.takeScreenshot()
         assertEquals(size.substringBefore('x').toInt(), bitmap.width); assertEquals(size.substringAfter('x').toInt(), bitmap.height)
         val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
-        File(dir, "v013-sport-broadcast-$size-synthetic.png").outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
+        File(dir, "free-hockey-probable-$size-synthetic.png").outputStream().use { assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) }
         bitmap.recycle()
         compose.runOnIdle { profile = 8; populated = false; broadcastReady = false; broadcastLabels = false }
         compose.waitForIdle(); compose.onNodeWithTag("sport-today-${fixture.id}").assertDoesNotExist()

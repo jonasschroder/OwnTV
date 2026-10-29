@@ -112,6 +112,64 @@ class PerformanceJourneyTest {
     }
     private fun pss() = Debug.MemoryInfo().also(Debug::getMemoryInfo).totalPss
 
+    @Test fun captureNativeProductionScreens() {
+        val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
+        ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+            chooseSyntheticProfile(); ready("HOME")
+            for (destination in listOf("HOME", "TV", "SPORT", "VOD", "PROFILE")) {
+                focus("top-$destination"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready(destination)
+                capture(scenario, destination)
+            }
+            // Optional global route is present only in the v0.16 update workstream. The same
+            // harness remains usable against the untouched baseline production APK.
+            if (compose.onAllNodesWithTag("header-update").fetchSemanticsNodes().isNotEmpty()) {
+                focus("header-update"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isNotEmpty() }
+                capture(scenario, "UPDATE")
+                press(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("header-update").assertIsFocused()
+            }
+        }
+    }
+
+    private fun capture(scenario: ActivityScenario<MainActivity>, destination: String) {
+                val drawn = java.util.concurrent.CountDownLatch(1)
+                scenario.onActivity { activity -> activity.window.decorView.postOnAnimation {
+                    activity.window.decorView.postOnAnimation { drawn.countDown() }
+                } }
+                assertTrue("Wait for real presentation frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                val bitmap = instrumentation.uiAutomation.takeScreenshot()
+                val dir = File(app.getExternalFilesDir(null), "performance/native").apply { mkdirs() }
+                File(dir, "$destination-${bitmap.width}x${bitmap.height}.png").outputStream().use { output ->
+                    assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output))
+                }; bitmap.recycle()
+    }
+
+    /** Isolates the visible horizontal row; the full journey also includes scrolling and idling. */
+    @Test fun visibleSportRowProbe() {
+        val label = InstrumentationRegistry.getArguments().getString("perfLabel", "unlabelled")!!
+        require(label.matches(Regex("[a-z0-9-]{1,60}")))
+        val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
+        ActivityScenario.launch<MainActivity>(intent).use {
+            chooseSyntheticProfile(); ready("HOME")
+            focus("top-SPORT"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready("SPORT")
+            val firstCard = compose.onNode(hasText("TV4 Hockey HD") and isFocusable())
+            val secondCard = compose.onNode(hasText("TV4 Sport Live 1 HD") and isFocusable())
+            compose.waitUntil(5_000) { runCatching { firstCard.assertExists(); secondCard.assertExists(); true }.getOrDefault(false) }
+            firstCard.performSemanticsAction(SemanticsActions.RequestFocus); compose.waitForIdle()
+            val samples = mutableListOf<Double>()
+            repeat(42) { iteration ->
+                val at = SystemClock.elapsedRealtimeNanos()
+                press(KeyEvent.KEYCODE_DPAD_RIGHT); secondCard.assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_LEFT); firstCard.assertIsFocused()
+                if (iteration >= 2) samples += (SystemClock.elapsedRealtimeNanos() - at) / 1e6
+            }
+            val result = org.json.JSONObject().put("label", label).put("dataset", "synthetic-12000-channel-v1")
+                .put("measurement", "visible_sport_right_left_ms").put("samples_ms", org.json.JSONArray(samples))
+            val dir = File(app.getExternalFilesDir(null), "performance").apply { mkdirs() }
+            File(dir, "$label.json").writeText(result.toString(2))
+        }
+    }
+
     @Test fun repeatedProductionNavigation(): Unit = runBlocking {
         assertNotNull(db.profileDao().getById(profile))
         val label = InstrumentationRegistry.getArguments().getString("perfLabel", "unlabelled")!!
@@ -145,6 +203,14 @@ class PerformanceJourneyTest {
                     focus("top-$destination")
                     val action = { press(KeyEvent.KEYCODE_DPAD_CENTER); ready(destination) }
                     if (iteration < 2) action() else measure("enter_${destination.lowercase()}_ms", action)
+                    if (destination == "VOD") {
+                        focus("vod-movies-entry")
+                        val content: () -> Unit = {
+                            press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused()
+                            press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
+                        }
+                        if (iteration < 2) content() else measure("vod_content_down_up_ms", content)
+                    }
                 }
                 focus("top-HOME")
                 val dpad: () -> Unit = { press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("top-TV").assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_LEFT); compose.onNodeWithTag("top-HOME").assertIsFocused() }

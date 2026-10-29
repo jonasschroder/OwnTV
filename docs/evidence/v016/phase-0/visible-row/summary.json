@@ -1,0 +1,30 @@
+[
+  {
+    "resolution": "1920x1080",
+    "variant": "baseline",
+    "n": 80,
+    "median_ms": 184.2,
+    "p95_ms": 234.0
+  },
+  {
+    "resolution": "1920x1080",
+    "variant": "focus-candidate",
+    "n": 80,
+    "median_ms": 232.3,
+    "p95_ms": 268.6
+  },
+  {
+    "resolution": "1280x720",
+    "variant": "baseline",
+    "n": 80,
+    "median_ms": 183.9,
+    "p95_ms": 233.8
+  },
+  {
+    "resolution": "1280x720",
+    "variant": "focus-candidate",
+    "n": 80,
+    "median_ms": 218.4,
+    "p95_ms": 266.6
+  }
+]

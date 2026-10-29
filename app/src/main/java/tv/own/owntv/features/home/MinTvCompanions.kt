@@ -75,6 +75,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var competitionId by rememberSaveable(profileId) { mutableStateOf(SportsCatalog.shl.id) }
     val selectedCompetition = requiredCompetitions.firstOrNull { it.id == competitionId } ?: requiredCompetitions.firstOrNull() ?: SportsCatalog.shl
     val broadcasts = koinInject<TvmatchenBroadcastSource>()
+    val publicBroadcasts = koinInject<PublicHockeySource>()
     val overrides = koinInject<ShlChannelOverrides>()
     val libraryContext by liveVm.homeLibraryContext.collectAsStateWithLifecycle()
     val libraryCount by liveVm.homeChannelCount.collectAsStateWithLifecycle()
@@ -118,6 +119,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var matching by remember(profileId) { mutableStateOf(false) }
     var matchFailed by remember(profileId) { mutableStateOf(false) }
     var broadcast by remember(profileId) { mutableStateOf<BroadcastAssignment?>(null) }
+    var publicAssignments by remember(profileId) { mutableStateOf<Map<String, BroadcastAssignment>>(emptyMap()) }
     val knownBroadcasts = remember { mutableStateMapOf<String, BroadcastAssignment>() }
     val resolvedCards = remember(profileId) { mutableStateMapOf<String, Pair<Long, List<ChannelEntity>>>() }
     val directCards = remember(profileId) { mutableStateMapOf<String, ChannelEntity>() }
@@ -295,7 +297,21 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }
         }
     }
-    val validBroadcast = if (broadcastEnabled && enabled) gameToMatch?.let { BroadcastResolver.usable(it.broadcastFixture(), broadcast, Instant.ofEpochMilli(now)) } else null
+    LaunchedEffect(available, enabled, externalGames, freshCompetitions, profileId) {
+        publicAssignments = emptyMap()
+        if (!available || !enabled || dashboard == null) return@LaunchedEffect
+        while (true) {
+            val at = System.currentTimeMillis()
+            val known = externalGames.filter { sportsSnapshotFresh(currentData[it.competition.id], loadStates[it.competition.id], at) }
+            publicAssignments = publicBroadcasts.assignments(known, at, true)
+            delay(publicTvTtl)
+        }
+    }
+    fun assignmentFor(game: SportFixture, at: Long): BroadcastAssignment? = if (!enabled) null else
+        mergedHockeyAssignment(game.broadcastFixture(), publicAssignments[fixtureKey(game.broadcastFixture())],
+            knownBroadcasts[fixtureKey(game.broadcastFixture())].takeIf { broadcastEnabled }, Instant.ofEpochMilli(at))
+    val validBroadcast = gameToMatch?.let { assignmentFor(it, now) }
+
     LaunchedEffect(active, profileId, libraryContext, libraryCount) {
         if (active && profileId != null) hasChannels = liveVm.homeHasChannels(profileId)
     }
@@ -399,8 +415,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 try {
                     val at = System.currentTimeMillis()
                     val known = externalGames.filter { sportsSnapshotFresh(currentData[it.competition.id], loadStates[it.competition.id], at) }
-                    val assignment = if (enabled && broadcastEnabled && game in known)
-                        knownBroadcasts[fixtureKey(game.broadcastFixture())] else null
+                    val assignment = if (game in known) assignmentFor(game, at) else null
                     val valid = withContext(Dispatchers.IO) {
                         matchHockeyChannels(listOf(actual), game, selectedTeams, known,
                             assignment.takeIf { localHockeyEvidence(unexpiredMatches, game) == null }, at) {
@@ -521,11 +536,11 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 val cards = freshGames.associate { game ->
                     val key = fixtureKey(game.broadcastFixture())
                     val cached = resolvedCards[key]?.takeIf { it.first > now }
-                    val assignment = if (enabled && broadcastEnabled) knownBroadcasts[key] else null
+                    val assignment = assignmentFor(game, now)
                     game.id to hockeyCardBroadcast(game, localHockeyEvidence(unexpiredMatches, game), localChannels,
                         assignment, cached?.second.orEmpty(), cached != null, guideChoices, now)
                 }
-                val labels = cards.mapNotNull { (id, card) -> card.label?.let { id to it } }.toMap()
+                val labels = cards.mapNotNull { (id, card) -> card.label?.let { id to stringResource(if (card.probable) R.string.mintv_probable_channel else R.string.mintv_confirmed_channel, it) } }.toMap()
                 val playable = cards.mapNotNull { (id, card) -> card.playable?.let { id to it } }.toMap()
                 val onAir = onAirHockeyFixtures(unexpiredMatches, now)
                 val todayRows = freshGames.filter { it.on(today) }.sortedWith(compareBy<SportFixture> { !it.follows(selectedTeams) }.thenBy { it !in onAir }.thenBy { it.faceoff })
@@ -533,7 +548,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 val verified = cards[hero?.id]?.playable
                 dashboard(NativeSportSnapshot(profileId, now, selectedTeams, hero, todayRows,
                     freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
-                    dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable),
+                    dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable,
+                    publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null }),
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
@@ -660,7 +676,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                                 items(games, key = { it.id }) { game ->
                                     val focus = remember(profileId, game.id) { gameFocus.getOrPut(game.id) { FocusRequester() } }
                                     val key = fixtureKey(game.broadcastFixture())
-                                    val assignment = if (enabled && broadcastEnabled) BroadcastResolver.usable(game.broadcastFixture(), knownBroadcasts[key], Instant.ofEpochMilli(now)) else null
+                                    val assignment = assignmentFor(game, now)
                                     val cached = resolvedCards[key]?.takeIf { now < it.first && game.competition.id in freshCompetitions }
                                     val epg = localHockeyEvidence(unexpiredMatches, game)
                                     val epgChannels = epg?.channelIds.orEmpty().filter { (epg?.channelStops?.get(it) ?: 0) > now }.mapNotNull { localChannels[it] }
@@ -717,7 +733,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(22.mpx)) {
                         item { TvText(pairLabel(selected), size = 38, bold = true); TvText(fixtureWhen(selected, now), size = 26, color = MinTvMuted) }
                         selected.result?.takeUnless { selectedTeams.hideScores }?.let { result -> item { TvText(stringResource(R.string.mintv_result_snapshot, result), size = 27, color = MinTvMuted) } }
-                        validBroadcast?.takeIf { localEvidence == null }?.let { assignment -> item { TvText(assignment.channels.filter { it.linear }.joinToString { it.name }, size = 30, color = MinTvTeal, bold = true)
+                        validBroadcast?.takeIf { localEvidence == null }?.let { assignment -> item { TvText(stringResource(if (assignment.evidence == BroadcastEvidence.PROBABLE_EXTERNAL) R.string.mintv_probable_channel else R.string.mintv_confirmed_channel, assignment.channels.filter { it.linear }.joinToString { it.name }), size = 30, color = MinTvTeal, bold = true)
                             TvText(stringResource(R.string.mintv_broadcast_evidence_source, assignment.source), size = 18, color = MinTvMuted)
                             TvText(stringResource(R.string.mintv_updated, updateLabel(assignment.checkedAt.toEpochMilli(), now)), size = 18, color = MinTvMuted) } }
                         if (manualChannel != null) item { TvText(stringResource(R.string.mintv_v0111_manual_channel, manualChannel.name), size = 25) }

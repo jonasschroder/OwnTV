@@ -4,7 +4,7 @@ import java.time.Instant
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.features.live.SwedishChoices
 
-internal data class HockeyCardBroadcast(val label: String?, val playable: ChannelEntity?)
+internal data class HockeyCardBroadcast(val label: String?, val playable: ChannelEntity?, val probable: Boolean = false)
 
 /** A confirmed name is useful even when no unique, authorized source can be played. */
 internal fun hockeyCardBroadcast(fixture: SportFixture, local: EpgHockeyMatch?, localChannels: Map<Long, ChannelEntity>,
@@ -21,7 +21,7 @@ internal fun hockeyCardBroadcast(fixture: SportFixture, local: EpgHockeyMatch?, 
     val label = (if (evidence != null) rows.map { it.name } else names).distinct().joinToString().takeIf { it.isNotBlank() }
     return HockeyCardBroadcast(label, preferredHockeyChannel(rows, choices).takeIf {
         fixture.status == MatchStatus.SCHEDULED && if (evidence != null) !evidence.truncated else complete
-    })
+    }, evidence == null && external?.evidence == BroadcastEvidence.PROBABLE_EXTERNAL)
 }
 
 /** The foreground cache expires independently of the programme stop time, including offline failures. */

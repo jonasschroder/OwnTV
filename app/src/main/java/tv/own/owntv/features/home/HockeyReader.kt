@@ -175,7 +175,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             require(root.optString("competition", c.id) == c.id)
             val rows = root.getJSONArray("games"); require(rows.length() in 0..400)
             ShlSnapshot(root.getString("season"), (0 until rows.length()).map { i -> val g = rows.getJSONObject(i)
-                ShlGame(g.getString("id"), g.getString("home"), g.getString("away"), g.getLong("faceoff"), g.optString("result").takeIf { it.isNotEmpty() })
+                ShlGame(g.getString("id"), g.getString("home"), g.getString("away"), g.getLong("faceoff"), g.optString("result").takeIf { it.isNotEmpty() }, g.optString("venue").takeIf { it.isNotBlank() && it.length <= 160 })
             }, root.getLong("at"), root.optLong("sourceAt").takeIf { it > 0 })
         }.getOrNull() })?.takeIf { it.fetchedAt in 1..now && runCatching { validateGames(c, it.games, now) }.isSuccess }
             ?.also { snapshots[c.id] = it }
@@ -250,7 +250,7 @@ internal class HockeyReader(private val storage: HockeyStorage, private val page
             currentCoroutineContext().ensureActive()
             val root = JSONObject().put("competition", c.id).put("season", season).put("at", now).put("sourceAt", fresh.sourceUpdatedAt ?: 0)
                 .put("games", JSONArray().apply { fresh.games.forEach { g -> put(JSONObject().put("id", g.id).put("home", g.home).put("away", g.away)
-                    .put("faceoff", g.faceoff).put("result", g.result.orEmpty())) } })
+                    .put("faceoff", g.faceoff).put("result", g.result.orEmpty()).put("venue", g.venue.orEmpty())) } })
             storage.cache(cacheKey(c, false), root.toString()); snapshots[c.id] = fresh
             storage.text("hockey-diagnostic:" + key(c, false), "")
             trace(c, HockeyStage.SCHEDULE, if (fresh.games.isEmpty()) HockeyOutcome.EMPTY_SUCCESS else HockeyOutcome.VALID_SUCCESS,

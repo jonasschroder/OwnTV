@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_probable_channel">Trolig kanal: %1$s</string>
+    <string name="mintv_confirmed_channel">Bekräftad kanal: %1$s</string>
+    <string name="mintv_public_hockey_source">Källa: TV-Programidag</string>
+</resources>

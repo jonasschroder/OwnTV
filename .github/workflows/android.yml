@@ -103,6 +103,7 @@ jobs:
             .gradle-cache/OwnTV_Core/player-core/build/reports/tests/**
           include-hidden-files: true
           if-no-files-found: warn
+          retention-days: 3
 
   production-startup-regressions:
     runs-on: ubuntu-latest
@@ -137,6 +138,7 @@ jobs:
           name: mintv-production-startup-evidence
           path: startup-evidence/
           if-no-files-found: error
+          retention-days: 3
       - name: Build source-labelled offline visual comparison
         run: python3 tools/presentation/home_comparison.py --before docs/images/v09/before --after startup-evidence --output home-comparison --baseline-sha d064001009f13cefb5b1da04c51c20f3521d533b --candidate-sha "${{ github.sha }}"
       # The reviewed baseline PNGs are committed, so future startup checks never depend
@@ -146,6 +148,7 @@ jobs:
           name: mintv-v09-home-comparison
           path: home-comparison/
           if-no-files-found: error
+          retention-days: 3
 
   home-device-regressions:
     runs-on: ubuntu-latest
@@ -358,7 +361,7 @@ jobs:
             app/build/reports/androidTests/**
             app/build/outputs/androidTest-results/**
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
       - name: Upload synthetic presentation screenshots
         if: always()
@@ -367,7 +370,7 @@ jobs:
           name: mintv-v06-presentation-test-fixtures
           path: v04-device-screenshots/*.png
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   signing-upgrade-regressions:
     # NO protected environment, production secrets, private artifact or cache upload.

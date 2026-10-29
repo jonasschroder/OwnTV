@@ -1,0 +1,15 @@
+{
+  "base_sha": "88a51db17493869805db7763a5e69c22a6299dd1",
+  "core_sha": "d3a5d8b3bf3248ee941834dbb2e3f3e2618b9659",
+  "fixture_version": "0.14.0-dev (shared local test stamp, not release identity)",
+  "fixture_version_code": 2,
+  "package": "se.jonasschroder.mintv.qa",
+  "sdk": 34,
+  "emulator": "disposable Android TV ARM64; software GPU; 2 GiB RAM; 4 cores",
+  "dataset": "synthetic-12000-channel-v1",
+  "baseline_apk_sha256": "74fbe85f604222783af6983e6f9a04a96d690e850a5e79c9be7bb9a3ad7f4fac",
+  "focus_candidate_apk_sha256": "efbe7846a622daaba3e1a1e0da2595f34c654cd7f05d9fafe88f8d8074943ceb",
+  "candidate_production_change": "NativeRowsNavigation.kt visible-target fast path only",
+  "timing_harness": "PerformanceJourneyTest: two process runs; two warmup cycles then twenty cycles each; no concurrent builds",
+  "screenshots": "production MainActivity; same synthetic profile; two rendered frames before capture; no owner data"
+}

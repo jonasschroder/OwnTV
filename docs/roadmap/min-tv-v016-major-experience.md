@@ -2,7 +2,7 @@
 **Status:** planning specification / Codex execution brief, 29 October 2026. **Source:** `main` at `88a51db17493869805db7763a5e69c22a6299dd1`. **Scope:** one cohesive major QA release after owner review, not a string of micro-releases. **Do not merge, sign, publish, install, or touch Stable as part of preparation.**
 
 ## Product decision
-Make Min TV feel like a complete, fast, calm, coherent Google TV app used every day. The owner wants a **substantial update covering navigation, performance, UI quality, everyday capabilities, and simpler in-app updates**. The owner reports Färjestad TV-channel functionality **still not working on the physical TV** despite v0.15's free venue-based candidate mapping. Do not call that issue resolved based on 12/14 lab candidates or synthetic CI.
+Make Min TV feel like a complete, fast, calm, coherent Google TV app used every day. The owner wants a **substantial update covering navigation, performance, UI quality, everyday capabilities, and simpler in-app updates**. **Updated 30 October after physical Chromecast QA:** published QA v0.15.0-beta.1 (1000021) successfully launched TV4 Sport Live 3 from Sport's **Se matchen** action, with picture and sound confirmed by the owner. Sanitized diagnostics recorded SPORT → SOURCE_VALIDATED (+20 ms) → ACCEPTED (+84 ms) → OPENED_EXO (+1,398 ms), without player fallback. This establishes that *this exact channel route and local IPTV playback worked*, but does not confirm that the 31 October Växjö–Färjestad match will actually be shown on that station: the arena-based broadcaster recommendation remains **probable** until matchday/independent evidence. The confirmed remaining device defect is lost Sport focus after Back; draft PR #35 addresses this but is not installed. Do not describe all Färjestad playback as broken or all broadcast assignments as verified.
 
 Keep the approved fundamental 5-destination navigation (Hem, TV, Sport, Film & serier, Profil/inställningar) and the core Home composition unless visual review proves a specific improvement; do not add tiers of menus or an alternative launcher. Preserve Film & serier's currently accepted core behavior. Swedish default; remote-first, readable at 2–3 metres, 1080p/720p, restrained dark aesthetic, stable focus.
 
@@ -30,7 +30,7 @@ Use `docs/performance/v012/README.md` and `tools/performance/run-journey.sh` as 
 - Confirm no profile/playlist/favourites/history/EPG/subtitle loss after process recreation, navigation or compatible updates. Protect accessibility and focus during asynchronous data refresh.
 
 ## Workstream C — Sport / Färjestad: make recommendations actually useful (P0)
-Observed failure: Färjestad's TV-channel feature still did **not work on physical QA**. Treat as open; don't equate a lab's correct arena mapping with real user success.
+**Physical-device evidence is now mixed, not uniformly failing:** the owner confirmed that *Se matchen* successfully played TV4 Sport Live 3 with audio/video on existing QA 1000021 (30 October). The **broadcast assignment for the actual 31 October SHL fixture is still probable** and must be checked against the actual match. Remaining focus-after-Back defect is implemented but uninstalled in draft #35. Continue investigating other upcoming fixtures or repeatable channel-mapping/stream failures, not a blanket assumption that playback never works.
 
 Instrument a bounded privacy-safe stage ladder, visible via optional diagnostics (without secrets or raw IPTV URLs):
   1. Official SHL fixture exists and has correct team/time/arena.
@@ -40,7 +40,7 @@ Instrument a bounded privacy-safe stage ladder, visible via optional diagnostics
   5. Match card shows **Trolig kanal** or **Bekräftad kanal** plus a truthful action. Distinguish recommended-but-no-playable-source from playable.
   6. **Se matchen** actually dispatches the selected local channel through the existing entry gate, and playback opens with picture and sound.
 
-- Reproduce against the real observed Brynäs–Färjestad (29 Oct) and Växjö–Färjestad (31 Oct) candidate metadata as historical fixtures, but these are *not* current future events or production mappings. Use upcoming real fixtures for QA.
+- Preserve the real observed Brynäs–Färjestad (29 Oct) candidate as a past fixture, and Växjö–Färjestad (31 Oct) as an **upcoming** fixture as of 30 October. Venue-based TV4 Sport Live 3 metadata is a **probable** broadcast assignment, not a hardcoded production mapping; physical picture/sound on the service before kickoff is not proof it carries the match. Use fresh upcoming fixtures for extended QA.
 - Investigate cases where a correct channel name appears but Watch is disabled/missing, the IPTV name uses a distinct numbering/prefix/quality variant, the profile owns a different provider, channel is unavailable, source picker selection is stale, or the actual player fails. Only improve aliases when supported by observed evidence; no fuzzy assignment to an unrelated station.
 - If only the upstream IPTV stream fails, report this plainly; the TV schedule API supplies **metadata, never a playback URL**.
 - Provide useful states: Trolig kanal, Bekräftad kanal, Kanal saknas i din IPTV-lista, Flera möjliga kanaler, Uppgift saknas / behöver uppdateras, plus **Välj kanal** manual fallback. Never claim an accuracy percentage without independent ground truth.
@@ -71,11 +71,11 @@ Provide UI screenshots/tests for checking, available, downloading, interrupted, 
 - Film & serier: maintain currently accepted behaviour; only targeted visual harmony, navigation and performance fixes.
 
 ## Delivery strategy: a *single reviewed major release*, safe implementation slices
-**Phase 0 – Baseline and design decision (first, no release):** capture current native 1080p+720p screenshots, focus map, D-pad recording, performance baseline, and privacy-safe physical failure evidence. Propose one cohesive v0.16 visual system with detailed native screen specifications (Home, TV, Sport, Profile/Settings and Update); owner reviews reference before major UI replacement.
+**Phase 0 – Baseline and design decision (first, no release):** reuse existing draft #33's real native 1080p+720p captures, focus map, navigation measurement (including honestly reported rejected slow-path experiment) and new privacy-safe Chromecast playback evidence in draft #35; avoid duplicating work. Capture any still-missing baseline or physical regression evidence. Propose one cohesive v0.16 visual system with detailed native screen specifications (Home, TV, Sport, Profile/Settings and Update); owner reviews reference before major UI replacement.
 
-**Phase 1 – Architecture/focus + updates:** a focused draft PR for shared navigation contract and app update UX, with tests and before/after captures.
+**Phase 1 – Architecture/focus + updates:** review and integrate existing draft #33 (remote logical focus), #34 (in-app updates), and #35 (Sport Back focus) rather than recreating them. Verify final combined behavior with tests and before/after captures.
 
-**Phase 2 – Playback/Sport resolution + Home/TV cohesion:** independent draft PR(s) fixing the real Färjestad source-mapping/watch problem and improving screens. Distinguish confirmed device findings from inferred hypotheses.
+**Phase 2 – Playback/Sport resolution + Home/TV cohesion:** build on draft #35's actual Sport focus-after-Back fix and confirmed TV4 Sport Live 3 playback. Validate real fixture-to-broadcast accuracy on/near matchday, diagnose remaining failures by stage, and improve screens. Distinguish confirmed device findings from inferred hypotheses.
 
 **Phase 3 – Performance + integration:** performance PR and integration branch / draft PR bringing all accepted pieces together, full CI on integrated candidate, conflict review, 1080p/720p screenshots and regression matrix, release notes. Avoid repeated full CI on throwaway drafts and do not fill GitHub Actions storage with redundant artifacts.
 
@@ -85,7 +85,7 @@ Provide UI screenshots/tests for checking, available, downloading, interrupted, 
 - Real native Compose Android implementation, not a mock-only / HTML-only redesign.
 - Unified remote/focus/Back rules tested on actual destinations, interruptions and two profiles.
 - Significant, reproducible improvement for key slow journeys, with before/after evidence and no player regression.
-- Färjestad channel candidate distinguishes identification, authorized local source resolution and successful playback. Real Chromecast acceptance, not synthetic-only.
+- Färjestad channel candidates distinguish venue-based probability, local source resolution, and actual playback. The 30 Oct Chromecast TV4 Sport Live 3 playback is confirmed; the 31 Oct match-to-channel assignment and draft #35's focus recovery still require validation.
 - Update discovery → review → download → verify → Android confirm → app restore works with QA signing and preserves app state; failures and Later are sensible.
 - Native screenshots 1080p and 720p; long Swedish titles, empty/stale data and 10-foot text readability.
 - Existing full Android/Core/i18n/performance/startup/upgrade/signing/distribution tests preserved. No secrets in logs, screenshots or Git; no new paid dependencies.

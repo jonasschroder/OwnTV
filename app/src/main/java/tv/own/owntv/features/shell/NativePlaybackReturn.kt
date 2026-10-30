@@ -1,5 +1,6 @@
 package tv.own.owntv.features.shell
 
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
 import tv.own.owntv.core.nav.MainSection
@@ -14,4 +15,30 @@ internal fun restoreSportPlaybackFocus(fullscreen: Boolean, origin: NativePlayba
 internal fun Modifier.cancelPlaybackReturnOnInput(pending: Boolean, cancel: () -> Unit): Modifier = onPreviewKeyEvent {
     if (pending && it.type == KeyEventType.KeyDown) cancel()
     false
+}
+
+/** Keep this state machine outside the very large shell composable's generated register frame. */
+internal class NativePlaybackReturnController(owner: NativePlaybackOwner) {
+    private var current = owner
+    private var origin: NativePlaybackOwner? = null
+    var pending by mutableStateOf(false)
+        private set
+    fun update(owner: NativePlaybackOwner) {
+        if (owner != current) { pending = false; origin = null }
+        current = owner
+    }
+    fun opened() { origin = current; pending = false }
+    fun closed(fullscreen: Boolean) {
+        pending = restoreSportPlaybackFocus(fullscreen, origin, current)
+        origin = null
+    }
+    fun cancel() { pending = false }
+}
+
+@Composable
+internal fun rememberSportPlaybackReturn(profile: Long?, section: MainSection, presentation: TopDestination?): NativePlaybackReturnController {
+    val owner = NativePlaybackOwner(profile, section, presentation)
+    val controller = remember { NativePlaybackReturnController(owner) }
+    SideEffect { controller.update(owner) }
+    return controller
 }

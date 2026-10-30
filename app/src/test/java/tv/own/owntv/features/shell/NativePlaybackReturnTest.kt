@@ -19,4 +19,24 @@ class NativePlaybackReturnTest {
         val tv = NativePlaybackOwner(7, MainSection.LIVE_TV, null)
         assertFalse(restoreSportPlaybackFocus(true, tv, tv))
     }
+    @Test fun recompositionDoesNotCancelPendingReturnForTheSameOwner() {
+        val controller = NativePlaybackReturnController(sport)
+        controller.opened(); controller.closed(true); assertTrue(controller.pending)
+        controller.update(sport.copy()); assertTrue(controller.pending)
+    }
+    @Test fun pageOrProfileChangeInvalidatesBothOriginAndPendingRequest() {
+        for (other in listOf(sport.copy(profile = 8), sport.copy(presentation = null), sport.copy(section = MainSection.SETTINGS))) {
+            val controller = NativePlaybackReturnController(sport)
+            controller.opened(); controller.update(other); controller.closed(true); assertFalse(controller.pending)
+            controller.update(sport); controller.opened(); controller.closed(true); assertTrue(controller.pending)
+            controller.update(other); assertFalse(controller.pending)
+        }
+    }
+    @Test fun explicitInputCancelsAndDoesNotRestoreOnLaterPublication() {
+        val controller = NativePlaybackReturnController(sport)
+        controller.opened(); controller.closed(true); controller.cancel(); controller.update(sport)
+        assertFalse(controller.pending)
+        controller.opened(); controller.closed(false); assertFalse(controller.pending)
+    }
+
 }

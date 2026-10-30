@@ -28,8 +28,8 @@ The existing 30-frame entry budget remains finite. If valid content is still una
 
 ## Validation
 
-- 2 focused NativePlaybackReturn JVM tests pass (same owner; changed page/profile; missing owner; no profile; mini/browse exclusion).
-- QA debug and androidTest compilation pass, unchanged Core pin/signing/package settings.
+- 5 focused NativePlaybackReturn JVM tests pass (same owner; changed page/profile; missing owner; no profile; mini/browse exclusion; stable recomposition and explicit cancellation).
+- QA debug and androidTest compilation pass, unchanged Core pin/signing/package settings. CI initially exposed an ART VerifyError in the generated large shell method. Focus ownership now lives in a small separate controller/composable; the actual MainActivity persisted cold-start/activity-recreation test passes locally at both 1080p and 720p after this extraction. Component tests alone did not establish launch compatibility.
 - All **9 NativeNavigationDeviceTest methods pass at 1920×1080 and 1280×720**. The existing mandatory fullscreen method now verifies saved row restoration after asynchronous remount, unavailable-content fallback without later stealing focus, profile isolation, and cancellation by explicit remote navigation. Existing TV timeline behavior remains covered.
 - Literal ratchet, locale-number, overflow and executing-test inventory checks pass. No CI workflow or required-check reduction.
 - Full existing CI runs on the draft PR. The new code is **not installed or verified on Chromecast**; physical evidence above concerns the published QA baseline. Fixtures test production navigation components with synthetic rows, not real provider playback.

@@ -1,7 +1,7 @@
 {
   "base_sha": "88a51db17493869805db7763a5e69c22a6299dd1",
   "fixture_stamp": "0.14.0-dev / 2; local fixture, not shipping identity",
-  "fixture_apk_sha256": "bfe0044cdf22c430896174af8913b98a62e7e3c7efbab81c3988fe173592200a",
+  "fixture_apk_sha256": "212906aff64ee6adcfed7b3c04c89933e23e0f2a73baf5cabe96bdbc7b3468f6",
   "core_changed": false,
   "device_new_code_installed": false,
   "physical_baseline": {
@@ -29,9 +29,21 @@
   "jvm": [
     {
       "name": "tv.own.owntv.features.shell.NativePlaybackReturnTest",
-      "tests": "2",
+      "tests": "5",
       "failures": "0",
       "errors": "0"
+    }
+  ],
+  "production_startup": [
+    {
+      "resolution": "1920x1080",
+      "test": "productionHomeSurvivesPersistedColdStartAndActivityRecreation",
+      "passed": true
+    },
+    {
+      "resolution": "1280x720",
+      "test": "productionHomeSurvivesPersistedColdStartAndActivityRecreation",
+      "passed": true
     }
   ]
 }

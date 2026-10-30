@@ -240,11 +240,7 @@ fun OwnTVShell(
     // Where ▶ out of the Stage rail returns to: the content, exactly as it was left.
     val contentAreaFocus = remember(activeProfileId) { FocusRequester() }
     var sportEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
-    var sportPlaybackOrigin by remember { mutableStateOf<NativePlaybackOwner?>(null) }
-    var sportPlaybackReturn by remember(activeProfileId) { mutableStateOf(false) }
-    LaunchedEffect(selectedSection, presentation, activeProfileId) {
-        if (sportPlaybackOrigin != NativePlaybackOwner(activeProfileId, selectedSection, presentation)) sportPlaybackReturn = false
-    }
+    val sportPlaybackReturn = rememberSportPlaybackReturn(activeProfileId, selectedSection, presentation)
     var homeEntry by remember(activeProfileId) { mutableStateOf<(() -> Boolean)?>(null) }
     var homeSetupOpen by rememberSaveable(activeProfileId) { mutableStateOf(false) }
     // The guide's entry hook: the TV Guide, or Live TV in Guide view (null while Live TV shows its list).
@@ -505,7 +501,7 @@ fun OwnTVShell(
         // `vid=no` and the new item would play with no picture.
         player.exitAudioOnly(); runCatching { liveVm.previewEngine.exitAudioOnly() }
         if (playerMode != PlayerMode.MINI) {
-            sportPlaybackOrigin = NativePlaybackOwner(activeProfileId, selectedSection, presentation)
+            sportPlaybackReturn.opened()
             playerMode = PlayerMode.FULLSCREEN
         }
     }
@@ -518,13 +514,11 @@ fun OwnTVShell(
     // The mini-player's own expand button always maximizes.
     val expandPlayer = {
         resumeVideo(); restoreFocus = false
-        sportPlaybackOrigin = NativePlaybackOwner(activeProfileId, selectedSection, presentation)
+        sportPlaybackReturn.opened()
         playerMode = PlayerMode.FULLSCREEN
     }
     val exitPlayer = {
-        sportPlaybackReturn = restoreSportPlaybackFocus(playerMode == PlayerMode.FULLSCREEN, sportPlaybackOrigin,
-            NativePlaybackOwner(activeProfileId, selectedSection, presentation))
-        sportPlaybackOrigin = null
+        sportPlaybackReturn.closed(playerMode == PlayerMode.FULLSCREEN)
         // Flush the resume position BEFORE the stream is torn down — stop() drops the loaded item's
         // identity, after which neither view model can tell the position was theirs. Both calls are
         // no-ops unless the player is on that section's item.
@@ -959,7 +953,7 @@ fun OwnTVShell(
       if (playerMode != PlayerMode.FULLSCREEN) {
         Column(
             modifier = Modifier.fillMaxSize()
-                .cancelPlaybackReturnOnInput(sportPlaybackReturn) { sportPlaybackReturn = false }
+                .cancelPlaybackReturnOnInput(sportPlaybackReturn.pending, sportPlaybackReturn::cancel)
                 // One group with a restorer: leaving for the mini player and coming back lands on the
                 // exact control that was focused, without every screen having to remember its own.
                 .focusRequester(shellContentFocus)
@@ -1129,7 +1123,7 @@ fun OwnTVShell(
                             { settingsFromHome = false; minTvSettingsStart = it; onSelectSection(MainSection.SETTINGS) },
                             { sportEntry = it }, onChildFocused = { focusedLayer = ShellLayer.CONTENT }, modifier = Modifier.fillMaxSize(),
                             onHeader = { runCatching { sidebarFocus.requestFocus() } },
-                            restoreAfterPlayback = sportPlaybackReturn, onPlaybackReturnFinished = { sportPlaybackReturn = false; restoreFocus = false })
+                            restoreAfterPlayback = sportPlaybackReturn.pending, onPlaybackReturnFinished = { sportPlaybackReturn.cancel(); restoreFocus = false })
                         presentation != null -> Column(Modifier.padding(64.mpx)) {
                             Text(stringResource(R.string.mintv_nav_unavailable), style = tv.own.owntv.ui.theme.stageText(28, 600))
                             tv.own.owntv.ui.stage.StagePill(stringResource(R.string.settings_title), { onSelectSection(MainSection.SETTINGS) })

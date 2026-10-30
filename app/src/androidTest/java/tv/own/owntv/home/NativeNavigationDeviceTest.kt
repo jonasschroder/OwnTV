@@ -58,14 +58,11 @@ class NativeNavigationDeviceTest {
                 val holder = rememberSaveableStateHolder()
                 val manager = LocalFocusManager.current
                 var inHeader by remember { mutableStateOf(true) }
-                var origin by remember { mutableStateOf<NativePlaybackOwner?>(null) }
-                var playbackReturn by remember(profile) { mutableStateOf(false) }
-                val owner = NativePlaybackOwner(profile, nativeEntry(active, MainSection.entries.toSet(), MainSection.MOVIES)!!,
-                    active.takeIf { it == TopDestination.SPORT })
+                val playbackReturn = rememberSportPlaybackReturn(profile,
+                    nativeEntry(active, MainSection.entries.toSet(), MainSection.MOVIES)!!, active.takeIf { it == TopDestination.SPORT })
                 BackHandler {
                     if (fullscreen) {
-                        playbackReturn = restoreSportPlaybackFocus(true, origin, owner)
-                        origin = null; fullscreen = false
+                        playbackReturn.closed(true); fullscreen = false
                     }
                     else when (nativeBack(inHeader, active)) {
                         NativeBack.HEADER -> header.requestFocus()
@@ -73,17 +70,17 @@ class NativeNavigationDeviceTest {
                         NativeBack.EXIT -> Unit
                     }
                 }
-                LaunchedEffect(active, profile, playbackReturn) {
-                    if (loadOnEntry && (active == TopDestination.TV || playbackReturn)) {
+                LaunchedEffect(active, profile, playbackReturn.pending) {
+                    if (loadOnEntry && (active == TopDestination.TV || playbackReturn.pending)) {
                         kotlinx.coroutines.delay(80)
                         available = true
                     }
                 }
-                if (!fullscreen) Column(Modifier.cancelPlaybackReturnOnInput(playbackReturn) { playbackReturn = false }) {
+                if (!fullscreen) Column(Modifier.cancelPlaybackReturnOnInput(playbackReturn.pending, playbackReturn::cancel)) {
                     var entryRequest by remember(profile) { mutableIntStateOf(0) }
                     NativeContentEntry(entryRequest, "$profile:$active", { enter?.invoke() == true }, { header.requestFocus() }, { entryRequest = 0 })
-                    NativeContentEntry(if (playbackReturn) 1 else 0, profile.toString(), { enter?.invoke() == true },
-                        { header.requestFocus() }, { playbackReturn = false })
+                    NativeContentEntry(if (playbackReturn.pending) 1 else 0, profile.toString(), { enter?.invoke() == true },
+                        { header.requestFocus() }, playbackReturn::cancel)
                     NativeTopNavigation(active, header, { entryRequest = 0; active = it; activations++ }, {
                         active = it; activations++; entryRequest++
                     }, { inHeader = true })
@@ -100,7 +97,7 @@ class NativeNavigationDeviceTest {
                         LazyColumn(state = rows, modifier = Modifier.fillMaxSize().nativeContentNavigation(header, manager)
                             .onFocusChanged { if (it.hasFocus) inHeader = false }.focusGroup()) {
                             if (available) items((0..30).toList(), key = { it }) { index ->
-                                HomeButton("Synthetic row $index", { origin = owner; fullscreen = true },
+                                HomeButton("Synthetic row $index", { playbackReturn.opened(); fullscreen = true },
                                     Modifier.fillMaxWidth().height(64.mpx).focusRequester(targets.getValue(index))
                                         .testTag("native-row-$index").onFocusChanged { if (it.isFocused) last = index }
                                         .onKeyEvent { event ->

@@ -114,7 +114,7 @@ class NativeV011PresentationTest {
                                     companion = { TwitchQuickCard(TwitchState.Unavailable, {}, authenticated = false) })
                                 TopDestination.TV -> TvFixture(first)
                                 TopDestination.SPORT -> NativeSportDashboard(NativeSportSnapshot(profile, now, preferences, if (populated) fixture else null,
-                                    if (populated) listOf(fixture, fixture.copy(id = "fixture-2", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!, awayTeam = SportsCatalog.identity("Luleå HF", Sport.ICE_HOCKEY)!!, status = MatchStatus.RESULT_SNAPSHOT, score = Score(3, 1))) else emptyList(),
+                                    if (populated) listOf(fixture, fixture.copy(id = "fixture-2", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!, awayTeam = SportsCatalog.identity("Luleå HF", Sport.ICE_HOCKEY)!!, status = MatchStatus.RESULT_SNAPSHOT, score = Score(3, 1)), fixture.copy(id = "fixture-3", homeTeam = SportsCatalog.identity("Rögle BK", Sport.ICE_HOCKEY)!!)) else emptyList(),
                                     if (populated) listOf(fixture.copy(id = "fixture-next", kickoff = fixture.kickoff.plusSeconds(86_400))) else emptyList(),
                                     if (populated) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
                                     heroChannel = if (broadcastReady) broadcastChannel else null,
@@ -227,6 +227,12 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-hero-action").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-today-${fixture.id}").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
+        // Consecutive remote keys must advance twice, without timing assertions or sleeps.
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.waitForIdle(); compose.onNodeWithTag("sport-today-fixture-3").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-upcoming-fixture-next").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, details); assertEquals(0, played)

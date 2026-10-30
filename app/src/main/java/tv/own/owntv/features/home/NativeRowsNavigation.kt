@@ -85,12 +85,15 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         val horizontal = when (event.key) { Key.DirectionLeft -> -1; Key.DirectionRight -> 1; else -> 0 }
         if (delta == 0 && horizontal == 0) false else {
             if (event.type == KeyEventType.KeyDown) {
-                val row = currentRows.firstOrNull { selected in it.keys }
+                // Remote repeats can arrive before a lazy target accepts focus. Advance from
+                // the last requested logical card while movement is active, not the old focus.
+                val key = pending?.takeIf { movement?.isActive == true } ?: selected
+                val row = currentRows.firstOrNull { key in it.keys }
                 if (delta != 0) {
-                    val target = nativeRowTarget(currentRows, selected, delta, column)
+                    val target = nativeRowTarget(currentRows, key, delta, column)
                     if (target != null) move(target) else if (delta < 0 && row == currentRows.firstOrNull { it.keys.isNotEmpty() }) { movement?.cancel(); onHeader() }
                 } else if (row != null) {
-                    val col = row.keys.indexOf(selected) + horizontal
+                    val col = row.keys.indexOf(key) + horizontal
                     row.keys.getOrNull(col)?.let { column = col; move(it) }
                 }
             }

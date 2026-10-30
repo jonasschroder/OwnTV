@@ -264,9 +264,12 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
                 if (resume == null && live != null) HomeChannelLogo(live.name, info?.logo ?: live.displayLogoUrl, Modifier.size(64.mpx))
                 if (resume != null) SmartResumeIdentity(resume, 64.mpx)
                 Column(Modifier.weight(1f)) {
-                    (resume?.seriesTitle ?: live?.name?.takeIf { info?.now != null })?.let { TvText(it, size = 21, color = MinTvMuted, lines = 1) }
+                    if (resume == null && live != null) Box(Modifier.heightIn(min = 26.mpx * scale)) {
+                        info?.now?.let { TvText(live.name + stringResource(R.string.mintv_v08_separator) +
+                            stringResource(R.string.mintv_v08_time_range, time(it.startMs), time(it.stopMs)), size = 21, color = MinTvMuted, lines = 1) }
+                    } else resume?.seriesTitle?.let { TvText(it, size = 21, color = MinTvMuted, lines = 1) }
                     TvText(resume?.title ?: info?.now?.title ?: live?.name ?: stringResource(if (live != null) R.string.mintv_v08_empty_now
-                        else if (snapshot == null) R.string.mintv_smart_loading else R.string.mintv_smart_start), size = 36, bold = true, lines = 2)
+                        else if (snapshot == null) R.string.mintv_smart_loading else R.string.mintv_smart_start), size = 36, bold = true, lines = if (resume == null && live != null) 1 else 2)
                 }
             }
             if (live == null && resume == null && snapshot != null) {
@@ -276,9 +279,8 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
             if (resume != null) {
                 SmartResumeLine(resume)
                 ProgrammeProgress((resume.position.toDouble() / resume.duration).toFloat(), Modifier.widthIn(max = 640.mpx))
-            } else info?.now?.let {
-                TvText(stringResource(R.string.mintv_v08_time_range, time(it.startMs), time(it.stopMs)), size = 21, color = MinTvMuted, lines = 1)
-                ProgrammeProgress(it.progress(guide.at), Modifier.widthIn(max = 640.mpx))
+            } else if (live != null) Box(Modifier.fillMaxWidth().height(6.mpx)) {
+                info?.now?.let { ProgrammeProgress(it.progress(guide.at), Modifier.widthIn(max = 640.mpx)) }
             }
             if (resume == null && live != null) TvText(
                 info?.next?.let { stringResource(R.string.mintv_live_next, time(it.startMs) + stringResource(R.string.mintv_v08_separator) + it.title) }

@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -317,7 +318,9 @@ fun StageSettingsPage(
                         .width(rowsWidth)
                         .fillMaxHeight()
                         .focusRequester(rowsFocus)
-                        .focusProperties { rowsReturnFocus?.let { left = it } }
+                        .focusProperties { onExit = {
+                            if (requestedFocusDirection == FocusDirection.Left) rowsReturnFocus?.requestFocus()
+                        } }
                         .onFocusChanged { onRowsFocused(it.hasFocus) }
                         .focusGroup()
                         .verticalScroll(scroll)

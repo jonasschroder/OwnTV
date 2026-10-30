@@ -277,7 +277,11 @@ class ProductionStartupTest {
         } finally { video.close(); store.save(7, choices); db.sourceDao().delete(source); db.sourceDao().delete(portal) }
     }
 
-    @Test fun selectSwedishLocale(): Unit = runBlocking { assertTrue(LocaleStore.from(app).set("sv")) }
+    @Test fun selectSwedishLocale(): Unit = runBlocking {
+        assertTrue(LocaleStore.from(app).set("sv"))
+        // Only this guarded disposable fixture: do not publish IP-derived weather locations.
+        settings.setWeatherEnabled(false)
+    }
 
     @Test fun productionHomeSurvivesPersistedColdStartAndActivityRecreation(): Unit = runBlocking {
         assertTrue(app.getSharedPreferences("startup-fixture", Context.MODE_PRIVATE).getBoolean("seeded", false))

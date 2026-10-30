@@ -15,5 +15,23 @@
   },
   "owner_device_installation": false,
   "emulator_installation_explicitly_approved": true,
-  "physical_future_broadcast_confirmed": false
+  "physical_future_broadcast_confirmed": false,
+  "measured_commit": "9fbefd3dc403e4207e8a40a1288c66746171cf63",
+  "measured_apk_sha256": "9eb734722dd64df9d540186e9b6be90734086bfe85d337c5428e994616b2a190",
+  "final_focus_apk_sha256": "6b557259c45fba1f8cd562c4a9d5899f14033c021cdbd48c8a80df8b57963d78",
+  "measurement_limitations": [
+    "instrumentation and Compose idle overhead",
+    "weather cache and UID traffic are not request counts",
+    "n=2 launch samples per resolution",
+    "no decoder/provider/EPG refresh timing",
+    "final focus-exit correction is outside measured top-entry actions"
+  ],
+  "final_apk_sha256": "22d467e6d9a50bbd6558451cac93af103d7083d7ae859651a7a1886960505b87",
+  "final_test_apk_sha256": "7be993e15443b03378465be14be08febb52659b3064cbf00653c27788c1b7f91",
+  "final_native_regression_executions": 18,
+  "final_native_screenshot_dimensions": [
+    "1920x1080",
+    "1280x720"
+  ],
+  "final_measurement_cycles_per_resolution": 20
 }

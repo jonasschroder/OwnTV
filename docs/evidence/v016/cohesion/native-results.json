@@ -1,0 +1,96 @@
+[
+  {
+    "resolution": "1920x1080",
+    "test": "NativeV011PresentationTest#settingsLeftReturnsToActiveCategoryAfterScrollingDetails",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "NativeV011PresentationTest#homeGuideArrivalsAndMissingNextPreserveActionFocus",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "NativeV011PresentationTest#sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "NativeV011PresentationTest#emptyProfileKeepsBothVodEntriesReachableWithoutLeakingTitles",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "NativeNavigationDeviceTest#guideHorizontalInputStaysLocalAndFullscreenHidesHeader",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "NativeV011PresentationTest#capturesFourProductionScreensAt1080WithHonestFallbacks",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "ChannelSourceStorageTest#preferencesSurviveRefreshRestartAndRemainProfileOwnedWithoutRewritingOtherSettings",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#settingsLeftReturnsToActiveCategoryAfterScrollingDetails",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#homeGuideArrivalsAndMissingNextPreserveActionFocus",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#emptyProfileKeepsBothVodEntriesReachableWithoutLeakingTitles",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeNavigationDeviceTest#guideHorizontalInputStaysLocalAndFullscreenHidesHeader",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#capturesFourProductionScreensAt720WithHonestFallbacks",
+    "passed": true
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#fontScalingAt720KeepsBothEntriesAndSportsRowsReachable",
+    "passed": true
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "SmartHomeDeviceTest#programmeRefreshAndMidnightDoNotMoveChannelFocusOrCreateHistory",
+    "passed": true,
+    "stage": "final-stable-guide-correction"
+  },
+  {
+    "resolution": "1920x1080",
+    "test": "NativeV011PresentationTest#homeGuideArrivalsAndMissingNextPreserveActionFocus",
+    "passed": true,
+    "stage": "final-stable-guide-correction"
+  },
+  {
+    "resolution": "1280x720",
+    "test": "SmartHomeDeviceTest#programmeRefreshAndMidnightDoNotMoveChannelFocusOrCreateHistory",
+    "passed": true,
+    "stage": "final-stable-guide-correction"
+  },
+  {
+    "resolution": "1280x720",
+    "test": "NativeV011PresentationTest#homeGuideArrivalsAndMissingNextPreserveActionFocus",
+    "passed": true,
+    "stage": "final-stable-guide-correction"
+  }
+]

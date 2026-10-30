@@ -1,0 +1,96 @@
+{
+  "1920x1080": {
+    "instrumented_launch_to_useful_home_ms": {
+      "n": 1,
+      "median_ms": 5978.28,
+      "p95_ms": 5978.28
+    },
+    "enter_tv_ms": {
+      "n": 20,
+      "median_ms": 709.02,
+      "p95_ms": 999.94
+    },
+    "enter_sport_ms": {
+      "n": 20,
+      "median_ms": 199.59,
+      "p95_ms": 288.09
+    },
+    "enter_vod_ms": {
+      "n": 20,
+      "median_ms": 150.34,
+      "p95_ms": 183.68
+    },
+    "vod_content_down_up_ms": {
+      "n": 20,
+      "median_ms": 149.38,
+      "p95_ms": 182.84
+    },
+    "enter_profile_ms": {
+      "n": 20,
+      "median_ms": 215.84,
+      "p95_ms": 266.19
+    },
+    "enter_home_ms": {
+      "n": 20,
+      "median_ms": 816.38,
+      "p95_ms": 979.7
+    },
+    "dpad_right_left_ms": {
+      "n": 20,
+      "median_ms": 133.38,
+      "p95_ms": 149.44
+    },
+    "background_resume_ms": {
+      "n": 10,
+      "median_ms": 751.56,
+      "p95_ms": 834.43
+    }
+  },
+  "1280x720": {
+    "instrumented_launch_to_useful_home_ms": {
+      "n": 1,
+      "median_ms": 5540.42,
+      "p95_ms": 5540.42
+    },
+    "enter_tv_ms": {
+      "n": 20,
+      "median_ms": 699.38,
+      "p95_ms": 933.73
+    },
+    "enter_sport_ms": {
+      "n": 20,
+      "median_ms": 199.85,
+      "p95_ms": 249.51
+    },
+    "enter_vod_ms": {
+      "n": 20,
+      "median_ms": 150.2,
+      "p95_ms": 167.92
+    },
+    "vod_content_down_up_ms": {
+      "n": 20,
+      "median_ms": 149.81,
+      "p95_ms": 165.46
+    },
+    "enter_profile_ms": {
+      "n": 20,
+      "median_ms": 191.39,
+      "p95_ms": 233.31
+    },
+    "enter_home_ms": {
+      "n": 20,
+      "median_ms": 767.19,
+      "p95_ms": 999.43
+    },
+    "dpad_right_left_ms": {
+      "n": 20,
+      "median_ms": 132.55,
+      "p95_ms": 135.68
+    },
+    "background_resume_ms": {
+      "n": 10,
+      "median_ms": 718.07,
+      "p95_ms": 767.37
+    }
+  }
+}

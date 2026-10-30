@@ -45,7 +45,7 @@ class NativeV011PresentationTest {
         object : Statement() {
             override fun evaluate() {
                 assumeTrue(InstrumentationRegistry.getArguments().getString("disposableEmulator") == "true" && shell("getprop ro.kernel.qemu").trim() == "1")
-                val small = description.methodName.contains("720")
+                val small = description.methodName.contains("720") || InstrumentationRegistry.getArguments().getString("nativeResolution") == "1280x720"
                 density = if (small) 1.2f else 1.8f
                 shell(if (small) "wm size 1280x720" else "wm size 1920x1080")
                 instrumentation.waitForIdleSync()
@@ -72,6 +72,7 @@ class NativeV011PresentationTest {
     private var entry: (() -> Boolean)? = null
     private var details = 0
     private var played = 0
+    private var channelsLoading by mutableStateOf(false)
     private var broadcastReady by mutableStateOf(false)
     private var broadcastLabels by mutableStateOf(false)
     private var probableBroadcast by mutableStateOf(false)
@@ -116,10 +117,10 @@ class NativeV011PresentationTest {
                                 TopDestination.SPORT -> NativeSportDashboard(NativeSportSnapshot(profile, now, preferences, if (populated) fixture else null,
                                     if (populated) listOf(fixture, fixture.copy(id = "fixture-2", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!, awayTeam = SportsCatalog.identity("Luleå HF", Sport.ICE_HOCKEY)!!, status = MatchStatus.RESULT_SNAPSHOT, score = Score(3, 1)), fixture.copy(id = "fixture-3", homeTeam = SportsCatalog.identity("Rögle BK", Sport.ICE_HOCKEY)!!)) else emptyList(),
                                     if (populated) listOf(fixture.copy(id = "fixture-next", kickoff = fixture.kickoff.plusSeconds(86_400))) else emptyList(),
-                                    if (populated) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
+                                    if (populated && !channelsLoading) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
                                     heroChannel = if (broadcastReady) broadcastChannel else null,
                                     broadcastLabels = if (broadcastLabels) mapOf(fixture.id to compose.activity.getString(if (probableBroadcast) R.string.mintv_probable_channel else R.string.mintv_confirmed_channel, broadcastChannel.name)) else emptyMap(),
-                                    playableFixtures = if (broadcastReady) mapOf(fixture.id to broadcastChannel) else emptyMap(), publicSourceUsed = probableBroadcast && broadcastLabels),
+                                    playableFixtures = if (broadcastReady) mapOf(fixture.id to broadcastChannel) else emptyMap(), publicSourceUsed = probableBroadcast && broadcastLabels, channelsLoading = channelsLoading),
                                     NativeSportActions({ details++ }, { played++ }, {}, {}, {}, { game, channel ->
                                         assertEquals(fixture, game); assertEquals(broadcastChannel, channel); played++
                                     }), first, { entry = it }, { header.requestFocus() })
@@ -241,6 +242,54 @@ class NativeV011PresentationTest {
         compose.onNodeWithTag("sport-hero-action").assertDoesNotExist()
         compose.onNodeWithTag("sport-today-${fixture.id}").assertDoesNotExist()
     }
+    @Test fun settingsLeftReturnsToActiveCategoryAfterScrollingDetails() {
+        var selected by mutableIntStateOf(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal)
+        lateinit var category: FocusRequester
+        compose.setContent {
+            MaterialTheme {
+                category = remember { FocusRequester() }
+                val content = remember { FocusRequester() }
+                tv.own.owntv.features.settings.StageSettingsPage(
+                    group = "Synthetic settings", count = "", searchQuery = "", onSearchQuery = {},
+                    scroll = androidx.compose.foundation.rememberScrollState(), showSearch = false,
+                    rowsFocus = content, rowsReturnFocus = category,
+                    categories = { tv.own.owntv.features.shell.components.SettingsCategoryMenu(selected, { selected = it },
+                        { content.requestFocus() }, category) }) {
+                    repeat(20) { index -> HomeButton("Synthetic setting $index", {}, Modifier.testTag("setting-$index")) }
+                }
+            }
+        }
+        compose.runOnIdle { category.requestFocus() }; compose.waitForIdle()
+        compose.onNodeWithTag("settings-group-APP").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("setting-0").assertIsFocused()
+        repeat(6) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+        compose.onNodeWithTag("setting-6").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_LEFT)
+        compose.onNodeWithTag("settings-group-APP").assertIsFocused()
+        assertEquals(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, selected)
+    }
+    @Test fun homeGuideArrivalsAndMissingNextPreserveActionFocus() {
+        var currentGuide by mutableStateOf(HomeGuideState(now, emptyMap()))
+        lateinit var first: FocusRequester
+        compose.setContent {
+            MaterialTheme {
+                first = remember { FocusRequester() }
+                SmartHomeContent(SmartHomeSnapshot(7, true, channels, channels.first().channel, now, null, emptyList()),
+                    currentGuide, 7, {}, {}, {}, {}, {}, {}, first, {}, {}, false, {}, 64.mpx, 24.mpx, onHeader = {})
+            }
+        }
+        compose.runOnIdle { first.requestFocus() }; compose.waitForIdle()
+        compose.onNodeWithTag("smart-hero-play").assertIsFocused()
+        compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_live_no_programme)).onFirst().assertIsDisplayed()
+        compose.runOnIdle { currentGuide = guide.copy(rows = guide.rows.mapValues { it.value.copy(next = null) }) }
+        compose.onNodeWithTag("smart-hero-play").assertIsFocused()
+        compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_next_not_available)).onFirst().assertIsDisplayed()
+        compose.runOnIdle { currentGuide = guide }
+        compose.onNodeWithTag("smart-hero-play").assertIsFocused()
+        compose.onAllNodesWithText("Nästa testprogram", substring = true).onFirst().assertIsDisplayed()
+        compose.runOnIdle { currentGuide = HomeGuideState(now + 86_400_000, emptyMap()) }
+        compose.onNodeWithTag("smart-hero-play").assertIsFocused()
+    }
     @Test fun libraryEntryUsesLatestStateWithoutRegistrationRecompositionLoop() {
         var generation by mutableIntStateOf(0)
         var count = 0
@@ -290,6 +339,9 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
         enter(TopDestination.SPORT)
+        compose.runOnIdle { channelsLoading = true }
+        compose.onNodeWithText("Inga hockeykanaler har identifierats", substring = true).assertDoesNotExist()
+        compose.runOnIdle { channelsLoading = false }
         compose.onNodeWithText("Inga hockeykanaler har identifierats", substring = true).assertIsDisplayed()
         compose.onAllNodes(hasText("Bläddra bland hockeykanaler") and hasClickAction()).assertCountEquals(0)
         compose.onNodeWithTag("sport-settings").assertDoesNotExist()

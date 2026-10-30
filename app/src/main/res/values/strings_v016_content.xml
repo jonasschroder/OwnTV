@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mintv_next_not_available">Next programme unavailable</string>
+    <string name="mintv_channel_keys_hint">OK: play · Hold OK: sources</string>
+</resources>

@@ -23,7 +23,8 @@ internal data class NativeSportSnapshot(val profile: Long?, val now: Long, val p
     val hero: SportFixture?, val today: List<SportFixture>, val upcoming: List<SportFixture>,
     val channels: List<ChannelEntity>, val broadcastLabels: Map<String, String> = emptyMap(),
     val heroChannel: ChannelEntity? = null, val loading: Boolean = false, val enabled: Boolean = true, val issue: HockeyIssue? = null,
-    val playableFixtures: Map<String, ChannelEntity> = emptyMap(), val publicSourceUsed: Boolean = false)
+    val playableFixtures: Map<String, ChannelEntity> = emptyMap(), val publicSourceUsed: Boolean = false,
+    val channelsLoading: Boolean = false)
 internal class NativeSportActions(val details: (SportFixture) -> Unit, val channel: (ChannelEntity) -> Unit,
     val browse: () -> Unit, val watch: () -> Unit, val settings: () -> Unit,
     val fixtureWatch: ((SportFixture, ChannelEntity) -> Unit)? = null)
@@ -48,17 +49,25 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
             item(key = "sport-hero") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                     TvText(stringResource(R.string.mintv_nav_sport), size = 34, bold = true)
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.mpx)).neutralArtwork().padding(26.mpx),
-                        verticalArrangement = Arrangement.spacedBy(12.mpx)) {
-                        TvText(data.hero?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 20, color = MinTvTeal, bold = true)
-                        TvText(data.hero?.let { pairLabel(it) } ?: sportsStatusText(SportsCatalog.shl, data.enabled, SportsLoadState(data.loading, data.issue)), size = if (data.hero == null) 30 else 48, bold = true, lines = 2)
-                        data.hero?.let { TvText(fixtureWhen(it, data.now), size = 23, color = MinTvMuted) }
-                        if (data.hero != null) TvText(data.broadcastLabels[data.hero.id] ?: data.heroChannel?.name ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 21, color = MinTvMuted)
-                        if (data.channels.isEmpty()) TvText(stringResource(R.string.mintv_v011_no_hockey_channels), size = 20, color = MinTvMuted, lines = 2)
-                        data.hero?.let { game ->
-                            SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.mintv_v0111_match_details),
-                                if (data.heroChannel != null) actions.watch else ({ actions.details(game) }),
-                                nav.item("sport-hero-action").testTag("sport-hero-action"), primary = true)
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.mpx)).neutralArtwork().padding(26.mpx),
+                        horizontalArrangement = Arrangement.spacedBy(32.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
+                            TvText(data.hero?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 20, color = MinTvTeal, bold = true)
+                            TvText(data.hero?.let { pairLabel(it) } ?: sportsStatusText(SportsCatalog.shl, data.enabled, SportsLoadState(data.loading, data.issue)),
+                                size = if (data.hero == null) 30 else 42, bold = true, lines = 2)
+                            data.hero?.let { TvText(fixtureWhen(it, data.now), size = 23, color = MinTvMuted) }
+                        }
+                        Column(Modifier.width(420.mpx).background(MinTvPanel.copy(alpha = .72f), RoundedCornerShape(16.mpx)).padding(20.mpx),
+                            verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                            if (data.hero != null) TvText(data.broadcastLabels[data.hero.id] ?: data.heroChannel?.name
+                                ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 22, color = MinTvMuted, lines = 3)
+                            if (data.channels.isEmpty()) TvText(stringResource(if (data.channelsLoading) R.string.mintv_companion_loading
+                                else R.string.mintv_v011_no_hockey_channels), size = 19, color = MinTvMuted, lines = 2)
+                            data.hero?.let { game ->
+                                SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.mintv_v0111_match_details),
+                                    if (data.heroChannel != null) actions.watch else ({ actions.details(game) }),
+                                    nav.item("sport-hero-action").testTag("sport-hero-action"), primary = true)
+                            }
                         }
                     }
                 }

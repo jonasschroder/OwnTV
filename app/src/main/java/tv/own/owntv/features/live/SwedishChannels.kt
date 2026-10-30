@@ -31,6 +31,11 @@ internal object SwedishChannels {
     private val suffix = Regex("\\s+(SE|SWE|SVERIGE|SWEDEN)$", RegexOption.IGNORE_CASE)
     private val general = listOf("SVT1", "SVT2", "TV3", "TV4", "Kanal 5", "TV6", "Sjuan", "TV8", "Kanal 9", "TV10", "Kanal 11", "TV12", "SVT24", "SVT Barn", "Kunskapskanalen")
     private val known = general + listOf("TV4 Hockey", "TV4 Sport Live 1", "TV4 Sport Live 2", "TV4 Sport Live 3", "TV4 Sport Live 4", "TV4 Sportkanalen", "TV4 Fotboll", "V Sport Premium", "V Sport Hockey", "V Sport Motor", "V Sport Vinter", "V Sport Extra", "V Sport 1", "V Sport 2", "V Sport 3", "Eurosport 1", "Eurosport 2", "BBC News", "CNN", "Al Jazeera", "Nickelodeon", "Nick Jr", "Disney Channel", "Cartoon Network")
+    // Immutable recognition tables: the bounded catalog scan visits thousands of rows.
+    private val knownByCompact = known.associateBy { it.lowercase(Locale.ROOT).replace(" ", "") }
+    private val whitespace = Regex("\\s+")
+    private val sportLive = Regex("tv4sportlive[1-9][0-9]{0,2}")
+    private val hockeyLive = Regex("(?:tv4|tv)hockeylive[1-9][0-9]{0,2}")
     fun recognize(raw: String): SwedishName? {
         if (raw.length !in 1..512) return null
         var value = Normalizer.normalize(raw, Normalizer.Form.NFKC).trim()
@@ -47,18 +52,18 @@ internal object SwedishChannels {
             labels.any { it in setOf("sd", "576p", "480p") } -> ChannelQuality.SD
             else -> ChannelQuality.UNKNOWN
         }
-        value = quality.replace(value, " ").replace(Regex("\\s+"), " ").trim().trim('|', ':', '-', ' ')
+        value = quality.replace(value, " ").replace(whitespace, " ").trim().trim('|', ':', '-', ' ')
         // Remove a Swedish suffix that was separated by a quality label (TV4 HD SE).
         value = suffix.replace(value, "").trim()
         val compact = value.lowercase(Locale.ROOT).replace(" ", "")
-        val exact = known.firstOrNull { it.lowercase(Locale.ROOT).replace(" ", "") == compact }
+        val exact = knownByCompact[compact]
             ?: when {
                 compact in listOf("svt1värmland", "svt1varmland", "svt2värmland", "svt2varmland") ->
                     "${if (compact.startsWith("svt1")) "SVT1" else "SVT2"} Värmland"
                 compact == "tv7" -> "Sjuan"
                 compact == "tvhockey" -> "TV4 Hockey"
-                Regex("tv4sportlive[1-9][0-9]{0,2}").matches(compact) -> "TV4 Sport Live ${compact.removePrefix("tv4sportlive").toInt()}"
-                Regex("(?:tv4|tv)hockeylive[1-9][0-9]{0,2}").matches(compact) -> "TV4 Sport Live ${compact.substringAfter("hockeylive").toInt()}"
+                sportLive.matches(compact) -> "TV4 Sport Live ${compact.removePrefix("tv4sportlive").toInt()}"
+                hockeyLive.matches(compact) -> "TV4 Sport Live ${compact.substringAfter("hockeylive").toInt()}"
                 else -> null
             }
         // Unknown suffixes (regions, +1, audio, alternate broadcasts) stay in a distinct identity.

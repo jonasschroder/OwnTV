@@ -44,7 +44,8 @@ internal fun SwedishChannelCard(label: String, quality: ChannelQuality, info: Sw
                     MinTvTeal, Modifier.align(Alignment.TopStart).padding(8.mpx).size(20.mpx).semantics { contentDescription = favoriteLabel }, filled = true)
                 }
                 if (quality != ChannelQuality.UNKNOWN && !compact) TvText(quality.name,
-                    Modifier.align(Alignment.TopEnd).padding(8.mpx), size = 15, color = MinTvMuted, lines = 1)
+                    Modifier.align(Alignment.TopEnd).padding(8.mpx).background(MinTvPanel.copy(alpha = .9f), RoundedCornerShape(6.mpx)).padding(horizontal = 7.mpx, vertical = 3.mpx),
+                    size = 15, color = MinTvMuted, lines = 1)
                 current?.now?.let { programme ->
                     ProgrammeProgress(programme.progress(at), Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(8.mpx))
                 }
@@ -53,9 +54,9 @@ internal fun SwedishChannelCard(label: String, quality: ChannelQuality, info: Sw
             if (!compact && current?.now != null) TvText(
                 label + stringResource(R.string.mintv_v08_separator) + stringResource(R.string.content_live_time_range_plain, time(current.now.startMs), time(current.now.stopMs)),
                 size = 17, color = MinTvMuted, lines = 1)
-            if (current?.next != null) TvText(stringResource(R.string.mintv_live_next, current.next.title),
+            if (current?.next != null) TvText(stringResource(R.string.mintv_live_next, time(current.next.startMs) + stringResource(R.string.mintv_v08_separator) + current.next.title),
                 size = 17, color = MinTvMuted, lines = if (compact) 1 else 2)
-            else TvText(stringResource(R.string.mintv_live_no_programme), size = 17, color = MinTvMuted, lines = 1)
+            else TvText(stringResource(if (current?.now == null) R.string.mintv_live_no_programme else R.string.mintv_next_not_available), size = 17, color = MinTvMuted, lines = 1)
 
         }
     }

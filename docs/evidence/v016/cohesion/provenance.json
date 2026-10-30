@@ -1,0 +1,19 @@
+{
+  "main": "88a51db17493869805db7763a5e69c22a6299dd1",
+  "reused_drafts": {
+    "33": "a7e5bf8769d13975e7a901c384d6788812632960",
+    "34": "f0de00bb118d77da485053162db6a59f58bc1e14",
+    "35": "086110127a46b3c586ed20716309b33f24689be9"
+  },
+  "local_fixture_stamp": "0.14.0-dev / 2 (test-only, not the v0.16 release identity)",
+  "recognition_jvm": {
+    "baseline_class_sha256": "4b0688438c1a068738849b4ffb76c2d0e37bc3c26dcc93a20c27254bdf888438",
+    "candidate_class_sha256": "2418657f320f7609dc9af4582daedfcd9b4aaf45e5a9a99fc7874fe305539cee",
+    "equivalent_inputs": 12007,
+    "alternating_samples_per_variant": 20,
+    "ui_latency_measured": false
+  },
+  "owner_device_installation": false,
+  "emulator_installation_explicitly_approved": true,
+  "physical_future_broadcast_confirmed": false
+}

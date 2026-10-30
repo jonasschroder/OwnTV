@@ -1266,6 +1266,7 @@ fun SettingsScreen(
             crumb = !searching,
             searchFocus = searchFieldFocus,
             rowsFocus = rowsFocus,
+            rowsReturnFocus = if (searching) null else categoryTarget,
             modifier = modifier.onFocusChanged { rootHasFocus = it.hasFocus },
             categories = if (searching) null else ({
                 Box(Modifier.testTag("navigation-context")) {

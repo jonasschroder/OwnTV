@@ -138,6 +138,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var dashboardEntry by remember(profileId) { mutableStateOf<(() -> Boolean)?>(null) }
     val currentDashboardEntry by rememberUpdatedState(dashboardEntry)
     var dashboardChannels by remember(profileId, libraryContext) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    var dashboardChannelsLoaded by remember(profileId, libraryContext) { mutableStateOf(false) }
     LaunchedEffect(dashboard != null, active, profileId, libraryContext, libraryCount, guideChoices) {
         if (dashboard == null || !active || profileId == null || libraryContext.first != profileId) return@LaunchedEffect
         try {
@@ -146,6 +147,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             if (liveVm.homeLibraryContext.value == libraryContext) dashboardChannels = logicalHockeyChannels(rows, choices).take(48)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { dashboardChannels = emptyList() }
+        finally { dashboardChannelsLoaded = true }
     }
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
@@ -557,7 +559,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 dashboard(NativeSportSnapshot(profileId, now, selectedTeams, hero, todayRows,
                     freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
                     dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable,
-                    publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null }),
+                    publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null },
+                    channelsLoading = !dashboardChannelsLoaded),
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,

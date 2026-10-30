@@ -248,6 +248,7 @@ fun StageSettingsPage(
     /** Off where there is no Settings to search (the setup wizard reuses the Add a source pages). */
     showSearch: Boolean = true,
     categories: (@Composable () -> Unit)? = null,
+    rowsReturnFocus: FocusRequester? = null,
     onRowsFocused: (Boolean) -> Unit = {},
     rows: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -272,7 +273,7 @@ fun StageSettingsPage(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (crumb) {
+                    if (crumb && categories == null) {
                         // Two steps only (owner): the page it came from, then this one.
                         ((if (settingsRoot) listOf(stringResource(R.string.common_nav_settings)) else emptyList()) + parents).takeLast(1).forEach { p ->
                             Text(p, style = stageText(42, 800, (-1f / 46f).em), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -280,7 +281,7 @@ fun StageSettingsPage(
                         }
                     }
                     // The path before the title shortens first (it is measured last); the tools and the search never move.
-                    Text(group, style = stageText(42, 800, (-1f / 46f).em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(group, style = stageText(if (categories == null) 42 else 34, 800, (-1f / 46f).em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(count, style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.mpx))
                 }
                 if (tools != null) Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically, content = tools)
@@ -316,6 +317,7 @@ fun StageSettingsPage(
                         .width(rowsWidth)
                         .fillMaxHeight()
                         .focusRequester(rowsFocus)
+                        .focusProperties { rowsReturnFocus?.let { left = it } }
                         .onFocusChanged { onRowsFocused(it.hasFocus) }
                         .focusGroup()
                         .verticalScroll(scroll)

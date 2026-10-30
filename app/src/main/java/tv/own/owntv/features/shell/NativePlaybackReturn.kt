@@ -42,3 +42,13 @@ internal fun rememberSportPlaybackReturn(profile: Long?, section: MainSection, p
     SideEffect { controller.update(owner) }
     return controller
 }
+
+/** Start bounded focus attachment only after the content owners have finished hydration.
+ * A genuine empty result still supplies an entry and falls back normally; user input cancels pending.
+ */
+@Composable
+internal fun NativePlaybackContentEntry(pending: Boolean, ownerKey: String, enter: (() -> Boolean)?,
+    unavailable: () -> Unit, finished: () -> Unit) {
+    NativeContentEntry(if (pending && enter != null) 1 else 0, ownerKey,
+        { enter?.invoke() == true }, unavailable, finished)
+}

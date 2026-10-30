@@ -70,7 +70,11 @@ class SwedishRowStorageTest {
             val channels = (0L until 500).map { channel(it + 1, "guide$it") }
             val context = SwedishRowContext(1, listOf(101), SectionCustomizations(), 0)
             val readStart = android.os.SystemClock.elapsedRealtime()
+            val queriesBefore = tv.own.owntv.features.catalog.NativeReadWork.snapshot()
             val rows = storedSwedishRows(db, channels, context, now) { true }
+            val queriesAfter = tv.own.owntv.features.catalog.NativeReadWork.snapshot()
+            assertEquals(1L, queriesAfter[tv.own.owntv.features.catalog.NativeReadKind.GUIDE_SUMMARIES.ordinal] -
+                queriesBefore[tv.own.owntv.features.catalog.NativeReadKind.GUIDE_SUMMARIES.ordinal])
             val elapsed = android.os.SystemClock.elapsedRealtime() - readStart
             assertEquals(16, rows.size)
             channels.take(16).forEachIndexed { index, ch ->

@@ -85,33 +85,35 @@ internal fun ProfileSettingsRows() {
     )
     val sep = stringResource(R.string.content_epg_bits_separator)
     profiles.forEach { p ->
-        val inUse = p.id == activeProfileId
-        val line = listOfNotNull(
-            if (inUse) stringResource(R.string.settings_profile_in_use) else null,
-            if (p.isKids) stringResource(R.string.settings_profile_kids) else null,
-            stringResource(if (p.pinHash != null) R.string.settings_profile_pin_lock else R.string.settings_profile_no_lock),
-        ).joinToString(sep)
-        val inUseTag = stringResource(R.string.settings_profile_in_use).uppercase()
-        val kidsTag = stringResource(R.string.profiles_kids_tag).uppercase()
-        val pinTag = stringResource(R.string.profiles_pin).uppercase()
-        val accent = stageAccent.accent
-        StageSettingRow(
-            icon = OwnTVIcon.PERSON,
-            title = p.name,
-            desc = line,
-            value = SettingValue.Custom {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
-                    if (inUse) StageTag(inUseTag, tint = accent)
-                    if (p.isKids) StageTag(kidsTag)
-                    if (p.pinHash != null) StageTag(pinTag)
-                    if (!inUse) OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx))
-                }
-            },
-            onClick = { returnTo = p.id; editing = p },
-            onLongClick = if (profiles.size > 1) ({ returnTo = p.id; confirmDelete = p }) else null,
-            help = help,
-            modifier = Modifier.focusRequester(remember(p.id) { rowFocus.getOrPut(p.id) { FocusRequester() } }),
-        )
+        androidx.compose.runtime.key(p.id) {
+            val inUse = p.id == activeProfileId
+            val line = listOfNotNull(
+                if (inUse) stringResource(R.string.settings_profile_in_use) else null,
+                if (p.isKids) stringResource(R.string.settings_profile_kids) else null,
+                stringResource(if (p.pinHash != null) R.string.settings_profile_pin_lock else R.string.settings_profile_no_lock),
+            ).joinToString(sep)
+            val inUseTag = stringResource(R.string.settings_profile_in_use).uppercase()
+            val kidsTag = stringResource(R.string.profiles_kids_tag).uppercase()
+            val pinTag = stringResource(R.string.profiles_pin).uppercase()
+            val accent = stageAccent.accent
+            StageSettingRow(
+                icon = OwnTVIcon.PERSON,
+                title = p.name,
+                desc = line,
+                value = SettingValue.Custom {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
+                        if (inUse) StageTag(inUseTag, tint = accent)
+                        if (p.isKids) StageTag(kidsTag)
+                        if (p.pinHash != null) StageTag(pinTag)
+                        if (!inUse) OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx))
+                    }
+                },
+                onClick = { returnTo = p.id; editing = p },
+                onLongClick = if (profiles.size > 1) ({ returnTo = p.id; confirmDelete = p }) else null,
+                help = help,
+                modifier = Modifier.focusRequester(remember(p.id) { rowFocus.getOrPut(p.id) { FocusRequester() } }),
+            )
+        }
     }
     StageSettingRow(
         icon = OwnTVIcon.SPARKLE,

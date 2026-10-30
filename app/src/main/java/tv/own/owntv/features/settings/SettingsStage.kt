@@ -41,6 +41,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.key
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -311,23 +312,21 @@ fun StageSettingsPage(
                 )
             }
             if (list != null) list(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight())
-            else CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                Column(
-                    Modifier
-                        .padding(start = rowsLeft, top = rowsTop)
-                        .width(rowsWidth)
-                        .fillMaxHeight()
-                        .focusRequester(rowsFocus)
-                        .focusProperties { onExit = {
-                            if (requestedFocusDirection == FocusDirection.Left) rowsReturnFocus?.requestFocus()
-                        } }
-                        .onFocusChanged { onRowsFocused(it.hasFocus) }
-                        .focusGroup()
-                        .verticalScroll(scroll)
-                        .padding(bottom = 40.mpx),
-                    verticalArrangement = Arrangement.spacedBy(6.mpx),
-                    content = rows,
-                )
+            else key(group) {
+                CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+                    // Attach to the row group inside the scroll container's own focus target.
+                    // Save the actual row before Left redirects to the selected category.
+                    Column(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight()
+                        .verticalScroll(scroll).focusRequester(rowsFocus)
+                        .focusProperties {
+                            onExit = {
+                                rowsFocus.saveFocusedChild()
+                                if (requestedFocusDirection == FocusDirection.Left) rowsReturnFocus?.requestFocus()
+                            }
+                        }
+                        .onFocusChanged { onRowsFocused(it.hasFocus) }.focusGroup().padding(bottom = 40.mpx),
+                        verticalArrangement = Arrangement.spacedBy(6.mpx), content = rows)
+                }
             }
             val help = panel.help
             val editor = panel.editor

@@ -231,7 +231,7 @@ internal fun SmartAction(label: String, onClick: () -> Unit, modifier: Modifier 
         colors = ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else Color.Transparent,
             contentColor = if (primary) MinTvNavy else MinTvTeal, focusedContainerColor = if (primary) Color(0xFFE4FFFF) else Color(0xFF29454D),
             focusedContentColor = if (primary) MinTvNavy else Color.White),
-        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
+        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.mpx, MinTvTeal))),
         scale = ButtonDefaults.scale(focusedScale = 1f)) { TvText(label, size = if (compact) 18 else 22, bold = true, lines = 1, color = LocalContentColor.current) }
 }
 
@@ -340,7 +340,7 @@ private fun SmartCard(play: () -> Unit, modifier: Modifier, content: @Composable
     Button(play, modifier, contentPadding = PaddingValues(16.mpx),
         shape = ButtonDefaults.shape(RoundedCornerShape(16.mpx)),
         colors = ButtonDefaults.colors(containerColor = Color(0xFF14242E), focusedContainerColor = Color(0xFF29454D)),
-        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
+        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.mpx, MinTvTeal))),
         scale = ButtonDefaults.scale(focusedScale = 1f)) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.mpx), content = content)
     }

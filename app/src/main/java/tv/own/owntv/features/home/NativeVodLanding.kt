@@ -42,6 +42,9 @@ internal fun NativeVodLanding(data: NativeVodSnapshot, first: FocusRequester, on
                 Column(verticalArrangement = Arrangement.spacedBy(22.mpx)) {
                     TvText(stringResource(R.string.mintv_nav_vod), size = 34, bold = true)
                     TvText(stringResource(R.string.mintv_v011_vod_hint), size = 20, color = MinTvMuted, lines = 2)
+                    if (data.loading || data.movies.isEmpty() && data.series.isEmpty()) TvText(
+                        stringResource(if (data.loading) R.string.mintv_companion_loading else R.string.mintv_discovery_empty),
+                        size = 20, color = MinTvMuted, lines = 2)
                     VodLandingRail(MetadataType.MOVIE, data.movies, nav, entryWidth, cardWidth, onLibrary, onTitle)
                 }
             }
@@ -67,12 +70,11 @@ private fun VodLandingRail(type: MetadataType, cards: List<DiscoveryCard>, nav: 
     val row = if (movie) "vod-movies" else "vod-series"
     LazyRow(state = nav.rails.getValue(row), horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(5.mpx)) {
         item {
-            HomeSurface({ onLibrary(type) }, nav.item("$row-entry").testTag("$row-entry").width(if (cards.isEmpty()) entryWidth + cardWidth * 3 + 54.mpx else entryWidth).heightIn(min = 205.mpx), focusedScale = if (cards.isEmpty()) 1f else 1.025f) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 177.mpx).neutralArtwork().padding(16.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            HomeSurface({ onLibrary(type) }, nav.item("$row-entry").testTag("$row-entry").width(if (cards.isEmpty()) entryWidth + cardWidth * 3 + 54.mpx else entryWidth).heightIn(min = (if (cards.isEmpty()) 150 else 205).mpx), focusedScale = 1f) {
+                Row(Modifier.fillMaxWidth().heightIn(min = (if (cards.isEmpty()) 122 else 177).mpx).neutralArtwork().padding(16.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                     TvText(stringResource(if (movie) R.string.common_nav_movies else R.string.common_nav_series), size = 37, bold = true)
                     TvText(stringResource(if (movie) R.string.mintv_all_movies else R.string.mintv_all_series), size = 21, color = MinTvTeal, lines = 2)
-                    if (cards.isEmpty()) TvText(stringResource(R.string.mintv_discovery_empty), size = 21, color = MinTvMuted, lines = 3)
                 }
                 if (cards.isEmpty()) OwnTVIcon(if (movie) OwnTVIcon.MOVIES else OwnTVIcon.SERIES, MinTvTeal.copy(alpha = .45f), Modifier.padding(24.mpx).size(64.mpx))
                 }

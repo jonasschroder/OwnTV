@@ -6,7 +6,8 @@ import tv.own.owntv.core.database.OwnTVDatabase
 
 /** Uses the SAME bundled Room driver as Core. No legacy openHelper and no secondary database. */
 internal suspend fun <T> OwnTVDatabase.readCatalog(sql: String, arguments: Array<out Any?>,
-    block: (CatalogCursor) -> T): T = useReaderConnection { connection ->
+    kind: NativeReadKind = NativeReadKind.CATALOG, block: (CatalogCursor) -> T): T = useReaderConnection { connection ->
+    NativeReadWork.record(kind)
     connection.usePrepared(sql) { statement ->
         arguments.forEachIndexed { index, value -> when (value) {
             null -> statement.bindNull(index + 1)

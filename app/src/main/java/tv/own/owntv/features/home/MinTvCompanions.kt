@@ -21,6 +21,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import java.text.NumberFormat
 import java.time.Instant
@@ -161,16 +162,21 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var initialScheduleRead by remember(profileId) { mutableStateOf(false) }
     var restoreTarget by remember(profileId) { mutableStateOf<FocusRequester?>(null) }
     val currentPicker by rememberUpdatedState(picker)
+    val enterMatchcenter: () -> Boolean = remember(tabFocus, profileId) { {
+        if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
+        else if (currentEntryScreen) currentEntryFocus.requestSafely() || backFocus.requestSafely()
+        else currentDashboardEntry?.invoke() ?: false
+    } }
     DisposableEffect(tabFocus, profileId) {
-        val enter: () -> Boolean = {
-            if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
-            else if (currentEntryScreen) currentEntryFocus.requestSafely() || backFocus.requestSafely()
-            else currentDashboardEntry?.invoke() ?: false
-        }
-        onMatchcenterEntry(enter)
-        // Restoring a saved hero/card must not mistake transient empty cache hydration for removal.
-        onPlaybackReturnEntry?.invoke { initialScheduleRead && enter() }
-        onDispose { onMatchcenterEntry(null); onPlaybackReturnEntry?.invoke(null) }
+        onMatchcenterEntry(enterMatchcenter)
+        onDispose { onMatchcenterEntry(null) }
+    }
+    // A pending player return must wait for both owners. A fixed frame retry can expire
+    // while Room/catalogue hydration is still running on a populated profile.
+    val returnReady = initialScheduleRead && (dashboard == null || dashboardChannelsLoaded)
+    DisposableEffect(tabFocus, profileId, returnReady) {
+        onPlaybackReturnEntry?.invoke(enterMatchcenter.takeIf { returnReady })
+        onDispose { onPlaybackReturnEntry?.invoke(null) }
     }
 
     val gameFocus = remember(profileId) { mutableMapOf<String, FocusRequester>() }
@@ -560,11 +566,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
                     dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable,
                     publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null },
-                    channelsLoading = !dashboardChannelsLoaded),
+                    channelsLoading = !dashboardChannelsLoaded, broadcastAvailability = cards.mapValues { it.value.availability }),
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
-                        fixtureWatch = { game, channel -> play(channel, listOf(channel), game) }), entryFocus, { dashboardEntry = it })
+                        fixtureWatch = { game, channel -> play(channel, listOf(channel), game) },
+                        chooseChannel = { game -> screen = true; choose(game); picker = true; pickerSelectedId = null; restoreTarget = pickerFocus }), entryFocus, { dashboardEntry = it })
             } else {
             val shown = manualChannel ?: reliableChannels.firstOrNull()
             val verifiedDirect = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)
@@ -607,7 +614,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
             BackHandler(onBack = ::back)
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF14202C), MinTvNavy)))
+            Column(Modifier.fillMaxSize().then(if (picker) Modifier.testTag("sport-manual-picker") else Modifier)
+                .background(Brush.verticalGradient(listOf(Color(0xFF14202C), MinTvNavy)))
                 .padding(start = contentStart, end = 48.mpx, top = reservedTop, bottom = 32.mpx)
                 .focusGroup(), verticalArrangement = Arrangement.spacedBy(18.mpx)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {

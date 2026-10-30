@@ -309,6 +309,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/MatchcenterTabs.kt	sports-tab-${tab.name}
 10	empty	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	\0
 1	protocol	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	TV12
+1	technical	app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt	sport-manual-picker
 2	empty	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	\0
 1	locale	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	EEE d MMM
 1	locale	app/src/main/java/tv/own/owntv/features/home/MinTvPresentation.kt	HH:mm
@@ -330,8 +331,10 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channel-${channel.id}
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channel-${it.id}
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-channels
+3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-empty-action
 2	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-hero
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-hero-action
+3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-hero-details
 3	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-today
 1	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-today-${it.id}
 7	technical	app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt	sport-upcoming
@@ -941,6 +944,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/ProviderTags.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/features/live/ProviderTags.kt	\\s+
 1	regex	app/src/main/java/tv/own/owntv/features/live/ProviderTags.kt	^([A-Z]{2,3})\\s*\\|\\s*
+1	empty	app/src/main/java/tv/own/owntv/features/live/SwedishChannelCard.kt	\0
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	${cursor.getLong(1)}:${if (cursor.isNull(2)) raw else cursor.getString(2)}
 1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	(?:stockholm|skane|skåne|goteborg|göteborg|\\+1|english|norsk|dansk)
 1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	,

@@ -30,8 +30,8 @@ internal fun NativeSportScreen(liveVm: LiveViewModel, homeVm: HomeViewModel, pro
     val favorites = home.channels.takeIf { home.profileId == profileId && library.profileId == profileId }.orEmpty()
         .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false }
     var returnEntry by remember(profileId) { mutableStateOf<(() -> Boolean)?>(null) }
-    tv.own.owntv.features.shell.NativeContentEntry(if (restoreAfterPlayback) 1 else 0, profileId.toString(),
-        { returnEntry?.invoke() == true }, onHeader, onPlaybackReturnFinished)
+    tv.own.owntv.features.shell.NativePlaybackContentEntry(restoreAfterPlayback, profileId.toString(),
+        returnEntry, onHeader, onPlaybackReturnFinished)
     Box(modifier.fillMaxSize().onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup()) {
         MinSportCompanion(true, usable, liveVm, profileId, favorites, onPlay, 64.mpx, onSources,
             reservedTop = 32.mpx, compact = false, onSettings = { onSettings(MinTvSettingsDestination.SPORT) },

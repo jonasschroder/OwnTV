@@ -37,6 +37,7 @@ class NativeNavigationDeviceTest {
     private var profile by mutableLongStateOf(7)
     private var available by mutableStateOf(true)
     private var loadOnEntry by mutableStateOf(false)
+    private var loadDelayMs = 80L
     private var fullscreen by mutableStateOf(false)
     private var active by mutableStateOf(TopDestination.HOME)
     private val enteredPages = mutableListOf<TopDestination>()
@@ -72,14 +73,15 @@ class NativeNavigationDeviceTest {
                 }
                 LaunchedEffect(active, profile, playbackReturn.pending) {
                     if (loadOnEntry && (active == TopDestination.TV || playbackReturn.pending)) {
-                        kotlinx.coroutines.delay(80)
+                        kotlinx.coroutines.delay(loadDelayMs)
                         available = true
                     }
                 }
                 if (!fullscreen) Column(Modifier.cancelPlaybackReturnOnInput(playbackReturn.pending, playbackReturn::cancel)) {
                     var entryRequest by remember(profile) { mutableIntStateOf(0) }
                     NativeContentEntry(entryRequest, "$profile:$active", { enter?.invoke() == true }, { header.requestFocus() }, { entryRequest = 0 })
-                    NativeContentEntry(if (playbackReturn.pending) 1 else 0, profile.toString(), { enter?.invoke() == true },
+                    NativePlaybackContentEntry(playbackReturn.pending, profile.toString(),
+                        if (available || !loadOnEntry) ({ enter?.invoke() == true }) else null,
                         { header.requestFocus() }, playbackReturn::cancel)
                     NativeTopNavigation(active, header, { entryRequest = 0; active = it; activations++ }, {
                         active = it; activations++; entryRequest++
@@ -213,9 +215,10 @@ class NativeNavigationDeviceTest {
         repeat(3) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
         compose.onNodeWithTag("native-row-3").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.runOnIdle { available = false; loadOnEntry = true }
+        compose.runOnIdle { available = false; loadOnEntry = true; loadDelayMs = 1_300 }
         press(KeyEvent.KEYCODE_BACK)
-        compose.onNodeWithTag("native-row-3").assertIsFocused().assertIsDisplayed()
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("native-row-3").assertIsFocused(); true }.getOrDefault(false) }
+        compose.onNodeWithTag("native-row-3").assertIsDisplayed()
         // A genuine empty return falls back to the active Sport header and never jumps later.
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.runOnIdle { available = false; loadOnEntry = false }

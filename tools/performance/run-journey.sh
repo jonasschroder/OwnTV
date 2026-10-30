@@ -32,3 +32,8 @@ adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/native" "$out/
 run visibleSportRowProbe visible-sport-row
 adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/visible-sport-row.json" "$out/visible-sport-row.json" >/dev/null
 echo "PASS native screenshots and visible Sport row probe"
+
+# Populated visual/remote scenarios are deliberately AFTER all identical-data timings.
+run capturePopulatedNativeShell populated-native
+adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/native" "$out/populated-native" >/dev/null
+echo "PASS populated actual MainActivity and remote return journeys"

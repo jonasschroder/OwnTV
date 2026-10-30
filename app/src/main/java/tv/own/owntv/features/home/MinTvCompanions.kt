@@ -57,6 +57,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     onSettings: () -> Unit = {},
     dashboard: (@Composable (NativeSportSnapshot, NativeSportActions, FocusRequester, ((() -> Boolean)?) -> Unit) -> Unit)? = null,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
+    onPlaybackReturnEntry: (((() -> Boolean)?) -> Unit)? = null,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
     val sports = koinInject<SportsRepository>()
@@ -155,15 +156,19 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val currentActive by rememberUpdatedState(active)
     val currentProfile by rememberUpdatedState(profileId)
     val currentEntryFocus by rememberUpdatedState(if (picker) { if (searchOpen && pickerSelectedId == null) searchFocus else pickerFocus } else if (selectedId != null) detailFocus else tabFocus)
+    var initialScheduleRead by remember(profileId) { mutableStateOf(false) }
     var restoreTarget by remember(profileId) { mutableStateOf<FocusRequester?>(null) }
     val currentPicker by rememberUpdatedState(picker)
     DisposableEffect(tabFocus, profileId) {
-        onMatchcenterEntry {
+        val enter: () -> Boolean = {
             if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
             else if (currentEntryScreen) currentEntryFocus.requestSafely() || backFocus.requestSafely()
             else currentDashboardEntry?.invoke() ?: false
         }
-        onDispose { onMatchcenterEntry(null) }
+        onMatchcenterEntry(enter)
+        // Restoring a saved hero/card must not mistake transient empty cache hydration for removal.
+        onPlaybackReturnEntry?.invoke { initialScheduleRead && enter() }
+        onDispose { onMatchcenterEntry(null); onPlaybackReturnEntry?.invoke(null) }
     }
 
     val gameFocus = remember(profileId) { mutableMapOf<String, FocusRequester>() }
@@ -250,15 +255,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     LaunchedEffect(profileId, available, requiredCompetitions, requestedCompetitions, retryRevision) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
-        if (!available) return@LaunchedEffect
+        initialScheduleRead = false
+        if (!available) { initialScheduleRead = selection != null; return@LaunchedEffect }
         // Hydrate every relevant league before any network wait. A slow first league must not
         // conceal another league's verified cache for up to the request deadline.
-        for (competition in requiredCompetitions.filter { it.scheduleAvailable }) {
-            sports.cached(competition)?.let { cached ->
-                data = data + (competition.id to cached)
-                loadStates[competition.id] = SportsLoadState(cached = true)
+        try {
+            for (competition in requiredCompetitions.filter { it.scheduleAvailable }) {
+                sports.cached(competition)?.let { cached ->
+                    data = data + (competition.id to cached)
+                    loadStates[competition.id] = SportsLoadState(cached = true)
+                }
             }
-        }
+        } finally { initialScheduleRead = true }
         if (!enabled) requiredCompetitions.filter { it.scheduleAvailable }.forEach {
             repository.notScheduled(it, false, System.currentTimeMillis())
         }

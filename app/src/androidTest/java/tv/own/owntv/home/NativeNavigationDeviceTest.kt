@@ -58,23 +58,32 @@ class NativeNavigationDeviceTest {
                 val holder = rememberSaveableStateHolder()
                 val manager = LocalFocusManager.current
                 var inHeader by remember { mutableStateOf(true) }
+                var origin by remember { mutableStateOf<NativePlaybackOwner?>(null) }
+                var playbackReturn by remember(profile) { mutableStateOf(false) }
+                val owner = NativePlaybackOwner(profile, nativeEntry(active, MainSection.entries.toSet(), MainSection.MOVIES)!!,
+                    active.takeIf { it == TopDestination.SPORT })
                 BackHandler {
-                    if (fullscreen) fullscreen = false
+                    if (fullscreen) {
+                        playbackReturn = restoreSportPlaybackFocus(true, origin, owner)
+                        origin = null; fullscreen = false
+                    }
                     else when (nativeBack(inHeader, active)) {
                         NativeBack.HEADER -> header.requestFocus()
                         NativeBack.HOME -> { active = TopDestination.HOME; header.requestFocus() }
                         NativeBack.EXIT -> Unit
                     }
                 }
-                LaunchedEffect(active, profile) {
-                    if (loadOnEntry && active == TopDestination.TV) {
+                LaunchedEffect(active, profile, playbackReturn) {
+                    if (loadOnEntry && (active == TopDestination.TV || playbackReturn)) {
                         kotlinx.coroutines.delay(80)
                         available = true
                     }
                 }
-                if (!fullscreen) Column {
+                if (!fullscreen) Column(Modifier.cancelPlaybackReturnOnInput(playbackReturn) { playbackReturn = false }) {
                     var entryRequest by remember(profile) { mutableIntStateOf(0) }
                     NativeContentEntry(entryRequest, "$profile:$active", { enter?.invoke() == true }, { header.requestFocus() }, { entryRequest = 0 })
+                    NativeContentEntry(if (playbackReturn) 1 else 0, profile.toString(), { enter?.invoke() == true },
+                        { header.requestFocus() }, { playbackReturn = false })
                     NativeTopNavigation(active, header, { entryRequest = 0; active = it; activations++ }, {
                         active = it; activations++; entryRequest++
                     }, { inHeader = true })
@@ -91,7 +100,7 @@ class NativeNavigationDeviceTest {
                         LazyColumn(state = rows, modifier = Modifier.fillMaxSize().nativeContentNavigation(header, manager)
                             .onFocusChanged { if (it.hasFocus) inHeader = false }.focusGroup()) {
                             if (available) items((0..30).toList(), key = { it }) { index ->
-                                HomeButton("Synthetic row $index", { fullscreen = true },
+                                HomeButton("Synthetic row $index", { origin = owner; fullscreen = true },
                                     Modifier.fillMaxWidth().height(64.mpx).focusRequester(targets.getValue(index))
                                         .testTag("native-row-$index").onFocusChanged { if (it.isFocused) last = index }
                                         .onKeyEvent { event ->
@@ -202,6 +211,44 @@ class NativeNavigationDeviceTest {
         compose.onNodeWithTag("top-TV").assertExists()
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("native-row-0").assertIsFocused()
+        // Real-device baseline: Sport loses focus because its header is absent during exitPlayer.
+        press(KeyEvent.KEYCODE_DPAD_UP); press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_DOWN)
+        repeat(3) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+        compose.onNodeWithTag("native-row-3").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.runOnIdle { available = false; loadOnEntry = true }
+        press(KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithTag("native-row-3").assertIsFocused().assertIsDisplayed()
+        // A genuine empty return falls back to the active Sport header and never jumps later.
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.runOnIdle { available = false; loadOnEntry = false }
+        press(KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        compose.runOnIdle { available = true }
+        compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("native-row-3").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.runOnIdle { profile = 9 }
+        press(KeyEvent.KEYCODE_BACK)
+        compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("native-row-0").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.runOnIdle { available = false }
+        compose.mainClock.autoAdvance = false
+        try {
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            repeat(3) { compose.mainClock.advanceTimeByFrame() }
+            compose.waitForIdle()
+            compose.onNodeWithTag("top-SPORT").assertIsFocused()
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+            compose.mainClock.advanceTimeByFrame(); compose.waitForIdle()
+            compose.onNodeWithTag("top-VOD").assertIsFocused()
+            compose.runOnIdle { available = true }
+            compose.mainClock.advanceTimeBy(1_000); compose.waitForIdle()
+            compose.onNodeWithTag("top-VOD").assertIsFocused()
+        } finally { compose.mainClock.autoAdvance = true }
     }
     @Test fun profileSwitchInvalidatesBookmarkAndEmptyDataKeepsHeaderReachable() {
         mount(); press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)

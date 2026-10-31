@@ -1,0 +1,347 @@
+{
+  "conditions": {
+    "processes_per_variant_resolution": 2,
+    "measured_cycles_per_process": 20,
+    "orders": [
+      "before,after",
+      "after,before"
+    ],
+    "baseline": "7698b1a production-equivalent phase2 APK",
+    "same_final_test_harness": true,
+    "note": "Single bounded replication due first-pass p95/PSS differences. Both runs retained; no dropped samples. Instruments/software GPU, not physical performance."
+  },
+  "resolutions": {
+    "1920x1080": {
+      "before": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 2,
+            "median_ms": 6260.27,
+            "p95_ms": 6794.56
+          },
+          "enter_tv_ms": {
+            "n": 40,
+            "median_ms": 766.45,
+            "p95_ms": 999.87
+          },
+          "enter_sport_ms": {
+            "n": 40,
+            "median_ms": 217.42,
+            "p95_ms": 299.9
+          },
+          "enter_vod_ms": {
+            "n": 40,
+            "median_ms": 150.2,
+            "p95_ms": 183.55
+          },
+          "vod_content_down_up_ms": {
+            "n": 40,
+            "median_ms": 150.07,
+            "p95_ms": 200.68
+          },
+          "enter_profile_ms": {
+            "n": 40,
+            "median_ms": 215.96,
+            "p95_ms": 265.53
+          },
+          "enter_home_ms": {
+            "n": 40,
+            "median_ms": 839.24,
+            "p95_ms": 1000.65
+          },
+          "dpad_right_left_ms": {
+            "n": 40,
+            "median_ms": 133.31,
+            "p95_ms": 150.05
+          },
+          "background_resume_ms": {
+            "n": 20,
+            "median_ms": 757.93,
+            "p95_ms": 975.07
+          }
+        },
+        "cpu_process_ms": [
+          79711,
+          81909
+        ],
+        "sampled_max_pss_kib": [
+          302626,
+          310160
+        ],
+        "sampled_median_pss_kib": [
+          292787,
+          294500
+        ],
+        "mean_pss_kib": [
+          291849,
+          290568
+        ],
+        "frame_duration": {
+          "n": 1072,
+          "median_ms": 30.89,
+          "p95_ms": 120.21
+        },
+        "reader_counts": [
+          {
+            "CATALOG": 1396,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          },
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          }
+        ]
+      },
+      "after": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 2,
+            "median_ms": 5807.2,
+            "p95_ms": 5903.38
+          },
+          "enter_tv_ms": {
+            "n": 40,
+            "median_ms": 774.65,
+            "p95_ms": 1049.84
+          },
+          "enter_sport_ms": {
+            "n": 40,
+            "median_ms": 232.62,
+            "p95_ms": 285.71
+          },
+          "enter_vod_ms": {
+            "n": 40,
+            "median_ms": 149.6,
+            "p95_ms": 183.1
+          },
+          "vod_content_down_up_ms": {
+            "n": 40,
+            "median_ms": 149.77,
+            "p95_ms": 183.36
+          },
+          "enter_profile_ms": {
+            "n": 40,
+            "median_ms": 200.31,
+            "p95_ms": 265.96
+          },
+          "enter_home_ms": {
+            "n": 40,
+            "median_ms": 848.64,
+            "p95_ms": 1049.53
+          },
+          "dpad_right_left_ms": {
+            "n": 40,
+            "median_ms": 133.36,
+            "p95_ms": 150.08
+          },
+          "background_resume_ms": {
+            "n": 20,
+            "median_ms": 736.44,
+            "p95_ms": 900.3
+          }
+        },
+        "cpu_process_ms": [
+          84270,
+          81675
+        ],
+        "sampled_max_pss_kib": [
+          306326,
+          305669
+        ],
+        "sampled_median_pss_kib": [
+          286687,
+          290989
+        ],
+        "mean_pss_kib": [
+          285057,
+          286797
+        ],
+        "frame_duration": {
+          "n": 1070,
+          "median_ms": 29.55,
+          "p95_ms": 114.21
+        },
+        "reader_counts": [
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          },
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          }
+        ]
+      }
+    },
+    "1280x720": {
+      "before": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 2,
+            "median_ms": 5904.61,
+            "p95_ms": 5923.82
+          },
+          "enter_tv_ms": {
+            "n": 40,
+            "median_ms": 782.91,
+            "p95_ms": 1022.51
+          },
+          "enter_sport_ms": {
+            "n": 40,
+            "median_ms": 216.13,
+            "p95_ms": 283.01
+          },
+          "enter_vod_ms": {
+            "n": 40,
+            "median_ms": 150.69,
+            "p95_ms": 182.56
+          },
+          "vod_content_down_up_ms": {
+            "n": 40,
+            "median_ms": 151.07,
+            "p95_ms": 183.26
+          },
+          "enter_profile_ms": {
+            "n": 40,
+            "median_ms": 199.6,
+            "p95_ms": 249.56
+          },
+          "enter_home_ms": {
+            "n": 40,
+            "median_ms": 834.69,
+            "p95_ms": 1081.22
+          },
+          "dpad_right_left_ms": {
+            "n": 40,
+            "median_ms": 132.81,
+            "p95_ms": 149.4
+          },
+          "background_resume_ms": {
+            "n": 20,
+            "median_ms": 737.27,
+            "p95_ms": 915.31
+          }
+        },
+        "cpu_process_ms": [
+          83294,
+          78115
+        ],
+        "sampled_max_pss_kib": [
+          307774,
+          308820
+        ],
+        "sampled_median_pss_kib": [
+          295226,
+          293525
+        ],
+        "mean_pss_kib": [
+          288984,
+          289086
+        ],
+        "frame_duration": {
+          "n": 1067,
+          "median_ms": 22.99,
+          "p95_ms": 106.27
+        },
+        "reader_counts": [
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          },
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          }
+        ]
+      },
+      "after": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 2,
+            "median_ms": 5869.13,
+            "p95_ms": 5951.23
+          },
+          "enter_tv_ms": {
+            "n": 40,
+            "median_ms": 791.4,
+            "p95_ms": 1033.84
+          },
+          "enter_sport_ms": {
+            "n": 40,
+            "median_ms": 232.73,
+            "p95_ms": 271.39
+          },
+          "enter_vod_ms": {
+            "n": 40,
+            "median_ms": 150.28,
+            "p95_ms": 182.8
+          },
+          "vod_content_down_up_ms": {
+            "n": 40,
+            "median_ms": 165.11,
+            "p95_ms": 183.85
+          },
+          "enter_profile_ms": {
+            "n": 40,
+            "median_ms": 199.0,
+            "p95_ms": 232.2
+          },
+          "enter_home_ms": {
+            "n": 40,
+            "median_ms": 866.45,
+            "p95_ms": 1015.23
+          },
+          "dpad_right_left_ms": {
+            "n": 40,
+            "median_ms": 132.99,
+            "p95_ms": 137.63
+          },
+          "background_resume_ms": {
+            "n": 20,
+            "median_ms": 758.0,
+            "p95_ms": 867.19
+          }
+        },
+        "cpu_process_ms": [
+          83097,
+          80057
+        ],
+        "sampled_max_pss_kib": [
+          305585,
+          304787
+        ],
+        "sampled_median_pss_kib": [
+          289238,
+          296216
+        ],
+        "mean_pss_kib": [
+          288813,
+          288994
+        ],
+        "frame_duration": {
+          "n": 1059,
+          "median_ms": 23.37,
+          "p95_ms": 106.31
+        },
+        "reader_counts": [
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          },
+          {
+            "CATALOG": 1395,
+            "GUIDE_SUMMARIES": 45,
+            "PUBLIC_HTTP": 0
+          }
+        ]
+      }
+    }
+  }
+}

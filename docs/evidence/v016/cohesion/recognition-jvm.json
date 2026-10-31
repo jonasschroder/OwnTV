@@ -1,0 +1,1 @@
+{"environment":"host JVM; recognition only, no UI or hardware latency claim","equivalentInputs":12007,"baseline":{"medianMs":54.870667,"p95Ms":61.230958,"n":20},"candidate":{"medianMs":25.736792,"p95Ms":27.249583,"n":20}}

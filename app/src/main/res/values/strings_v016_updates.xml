@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v016_update_title">Update Min TV</string>
+    <string name="v016_update_entry_available">Update available</string>
+    <string name="v016_update_entry_progress">Downloading %1$d%%</string>
+    <string name="v016_update_entry_working">Preparing update</string>
+    <string name="v016_update_entry_installed">Updated</string>
+    <string name="v016_update_entry_description">%1$s · %2$s · Open updates</string>
+    <string name="v016_update_now">Update now</string>
+    <string name="v016_update_install_cached">Install downloaded update</string>
+    <string name="v016_update_continue_browsing">Continue browsing</string>
+    <string name="v016_update_step_check">Check for updates</string>
+    <string name="v016_update_step_review">1 of 3 · Review the update</string>
+    <string name="v016_update_step_download">2 of 3 · Download and verify</string>
+    <string name="v016_update_step_install">3 of 3 · Confirm in Android</string>
+    <string name="v016_update_step_done">Update installed</string>
+    <string name="v016_update_step_issue">Update needs your attention</string>
+    <string name="v016_update_cached_verified">%1$s is downloaded and verified</string>
+    <string name="v016_update_download_size">Download: %1$s</string>
+    <string name="v016_update_free_space">Available storage: %1$s</string>
+    <string name="v016_update_byte_progress">%1$s of %2$s</string>
+    <string name="v016_update_interrupted">The download was interrupted. Update now starts it again from the beginning.</string>
+    <string name="v016_update_install_explanation">After verification, Android asks you to confirm installation. Your profiles and settings are kept.</string>
+</resources>

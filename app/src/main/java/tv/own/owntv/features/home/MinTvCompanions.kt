@@ -21,6 +21,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import java.text.NumberFormat
 import java.time.Instant
@@ -57,6 +58,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     onSettings: () -> Unit = {},
     dashboard: (@Composable (NativeSportSnapshot, NativeSportActions, FocusRequester, ((() -> Boolean)?) -> Unit) -> Unit)? = null,
     onMatchcenterEntry: ((() -> Boolean)?) -> Unit,
+    onPlaybackReturnEntry: (((() -> Boolean)?) -> Unit)? = null,
     homeContent: @Composable (card: @Composable () -> Unit, matchcenterOpen: Boolean) -> Unit) {
     val repository = koinInject<ShlRepository>()
     val sports = koinInject<SportsRepository>()
@@ -83,6 +85,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val scope = rememberCoroutineScope()
     val (enabled, broadcastEnabled) = rememberCompanionFlags(repository.preferences)
     var screen by rememberSaveable(profileId) { mutableStateOf(false) }
+    var homeShortcut by rememberSaveable(profileId) { mutableStateOf(false) }
     var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.FARJESTAD) }
     // Keep the old enum value readable for saved-state compatibility, never render/fetch its table.
     LaunchedEffect(section) { if (section == MatchcenterSection.TABLE) section = MatchcenterSection.FARJESTAD }
@@ -137,6 +140,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     var dashboardEntry by remember(profileId) { mutableStateOf<(() -> Boolean)?>(null) }
     val currentDashboardEntry by rememberUpdatedState(dashboardEntry)
     var dashboardChannels by remember(profileId, libraryContext) { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    var dashboardChannelsLoaded by remember(profileId, libraryContext) { mutableStateOf(false) }
     LaunchedEffect(dashboard != null, active, profileId, libraryContext, libraryCount, guideChoices) {
         if (dashboard == null || !active || profileId == null || libraryContext.first != profileId) return@LaunchedEffect
         try {
@@ -145,6 +149,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             if (liveVm.homeLibraryContext.value == libraryContext) dashboardChannels = logicalHockeyChannels(rows, choices).take(48)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { dashboardChannels = emptyList() }
+        finally { dashboardChannelsLoaded = true }
     }
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
@@ -155,15 +160,24 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val currentActive by rememberUpdatedState(active)
     val currentProfile by rememberUpdatedState(profileId)
     val currentEntryFocus by rememberUpdatedState(if (picker) { if (searchOpen && pickerSelectedId == null) searchFocus else pickerFocus } else if (selectedId != null) detailFocus else tabFocus)
+    var initialScheduleRead by remember(profileId) { mutableStateOf(false) }
     var restoreTarget by remember(profileId) { mutableStateOf<FocusRequester?>(null) }
     val currentPicker by rememberUpdatedState(picker)
+    val enterMatchcenter: () -> Boolean = remember(tabFocus, profileId) { {
+        if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
+        else if (currentEntryScreen) currentEntryFocus.requestSafely() || backFocus.requestSafely()
+        else currentDashboardEntry?.invoke() ?: false
+    } }
     DisposableEffect(tabFocus, profileId) {
-        onMatchcenterEntry {
-            if (currentEntryScreen && currentPicker) { restoreTarget = currentEntryFocus; true }
-            else if (currentEntryScreen) currentEntryFocus.requestSafely() || backFocus.requestSafely()
-            else currentDashboardEntry?.invoke() ?: false
-        }
+        onMatchcenterEntry(enterMatchcenter)
         onDispose { onMatchcenterEntry(null) }
+    }
+    // A pending player return must wait for both owners. A fixed frame retry can expire
+    // while Room/catalogue hydration is still running on a populated profile.
+    val returnReady = initialScheduleRead && (dashboard == null || dashboardChannelsLoaded)
+    DisposableEffect(tabFocus, profileId, returnReady) {
+        onPlaybackReturnEntry?.invoke(enterMatchcenter.takeIf { returnReady })
+        onDispose { onPlaybackReturnEntry?.invoke(null) }
     }
 
     val gameFocus = remember(profileId) { mutableMapOf<String, FocusRequester>() }
@@ -250,15 +264,18 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     LaunchedEffect(profileId, available, requiredCompetitions, requestedCompetitions, retryRevision) {
         data = data.filterKeys { id -> requiredCompetitions.any { it.id == id } }
         val competitions = requestedCompetitions
-        if (!available) return@LaunchedEffect
+        initialScheduleRead = false
+        if (!available) { initialScheduleRead = selection != null; return@LaunchedEffect }
         // Hydrate every relevant league before any network wait. A slow first league must not
         // conceal another league's verified cache for up to the request deadline.
-        for (competition in requiredCompetitions.filter { it.scheduleAvailable }) {
-            sports.cached(competition)?.let { cached ->
-                data = data + (competition.id to cached)
-                loadStates[competition.id] = SportsLoadState(cached = true)
+        try {
+            for (competition in requiredCompetitions.filter { it.scheduleAvailable }) {
+                sports.cached(competition)?.let { cached ->
+                    data = data + (competition.id to cached)
+                    loadStates[competition.id] = SportsLoadState(cached = true)
+                }
             }
-        }
+        } finally { initialScheduleRead = true }
         if (!enabled) requiredCompetitions.filter { it.scheduleAvailable }.forEach {
             repository.notScheduled(it, false, System.currentTimeMillis())
         }
@@ -374,7 +391,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         }
     }
     fun close() {
-        screen = false; selectedId = null; picker = false; searchOpen = false; query = ""
+        screen = false; homeShortcut = false; selectedId = null; picker = false; searchOpen = false; query = ""
         if (dashboard == null) restoreTarget = entryFocus else {
             restoreTarget = null
             scope.launch { repeat(2) { withFrameNanos { } }; currentDashboardEntry?.invoke() }
@@ -388,6 +405,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             restoreTarget = pickerFocus
             return
         }
+        if (homeShortcut && !picker && !searchOpen) { close(); return }
         val previous = MatchcenterNavigation(section, selectedId, picker, searchOpen).back()
         if (previous == null) close() else {
             val old = selectedId
@@ -395,8 +413,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             restoreTarget = if (previous.channelPicker) pickerFocus else if (previous.gameId != null) detailFocus else gameFocus[old] ?: tabFocus
         }
     }
-    fun choose(game: SportFixture) { selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
-    fun open() { screen = true; restoreTarget = tabFocus }
+    fun choose(game: SportFixture) { homeShortcut = false; selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
+    fun open() { homeShortcut = false; screen = true; restoreTarget = tabFocus }
     var playbackValidationJob by remember(profileId) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun play(channel: ChannelEntity, list: List<ChannelEntity>, expected: SportFixture? = gameToMatch) {
         // Shell saves this destination during fullscreen; Back returns to the match/picker.
@@ -549,11 +567,13 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 dashboard(NativeSportSnapshot(profileId, now, selectedTeams, hero, todayRows,
                     freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
                     dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable,
-                    publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null }),
+                    publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null },
+                    channelsLoading = !dashboardChannelsLoaded, broadcastAvailability = cards.mapValues { it.value.availability }),
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
-                        fixtureWatch = { game, channel -> play(channel, listOf(channel), game) }), entryFocus, { dashboardEntry = it })
+                        fixtureWatch = { game, channel -> play(channel, listOf(channel), game) },
+                        chooseChannel = { game -> screen = true; choose(game); picker = true; pickerSelectedId = null; restoreTarget = pickerFocus }), entryFocus, { dashboardEntry = it })
             } else {
             val shown = manualChannel ?: reliableChannels.firstOrNull()
             val verifiedDirect = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)
@@ -568,7 +588,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 openCard, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt },
                 manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true,
-                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() }, hero = homeHero)
+                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else {
+                    screen = true
+                    gameToMatch?.let { choose(it); homeShortcut = true } ?: open()
+                } }, hero = homeHero,
+                onChooseChannel = gameToMatch?.let { game -> { screen = true; choose(game); homeShortcut = true; picker = true; pickerSelectedId = null; restoreTarget = pickerFocus } },
+                probable = manualChannel == null && localEvidence == null && validBroadcast?.evidence == BroadcastEvidence.PROBABLE_EXTERNAL)
             else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {
@@ -596,7 +621,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
             BackHandler(onBack = ::back)
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF14202C), MinTvNavy)))
+            Column(Modifier.fillMaxSize().then(if (picker) Modifier.testTag("sport-manual-picker") else if (selectedId != null) Modifier.testTag("sport-match-details") else Modifier)
+                .background(Brush.verticalGradient(listOf(Color(0xFF14202C), MinTvNavy)))
                 .padding(start = contentStart, end = 48.mpx, top = reservedTop, bottom = 32.mpx)
                 .focusGroup(), verticalArrangement = Arrangement.spacedBy(18.mpx)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {

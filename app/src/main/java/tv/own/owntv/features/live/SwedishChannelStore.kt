@@ -86,8 +86,12 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         if (scopedSources.isEmpty()) return@withContext SwedishLibrary(emptyList())
         val cust = customize.observe(profile, MediaType.LIVE).first()
         val categories = db.categoryDao().observe(scopedSources, MediaType.LIVE).first()
-        val forbidden = categories.filter { CustomizeKeys.category(it) in cust.hiddenCategories ||
-            !tv.own.owntv.core.content.AdultCategoryClassifier.allows(profile, it.id, db.profileDao(), db.categoryDao()) }.map { it.id }.toSet()
+        val owner = db.profileDao().getById(profile)?.takeIf { profile >= 0 }
+            ?: return@withContext SwedishLibrary(emptyList())
+        // The category snapshot already contains the names. Reuse Core's exact policy rather
+        // than re-reading the same profile/category for every category (including adult users).
+        val forbidden = tv.own.owntv.core.content.AdultCategoryClassifier.hiddenCategoryIds(
+            categories, cust.hiddenCategories, owner.isKids)
         val candidates = ArrayList<SwedishVariant>()
         var last = 0L; var scanned = 0; var ended = false
         val marks = scopedSources.joinToString(",") { "?" }

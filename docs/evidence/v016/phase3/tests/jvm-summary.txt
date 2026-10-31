@@ -1,0 +1,1 @@
+47 targeted JVM tests; 0 failures; 0 errors. QA/debug and AndroidTest builds successful. Suites: features.update.*, NativeRowsNavigationTest, HockeyBroadcastCardsTest, NativePlaybackReturnTest.

@@ -231,7 +231,7 @@ internal fun SmartAction(label: String, onClick: () -> Unit, modifier: Modifier 
         colors = ButtonDefaults.colors(containerColor = if (primary) MinTvTeal else Color.Transparent,
             contentColor = if (primary) MinTvNavy else MinTvTeal, focusedContainerColor = if (primary) Color(0xFFE4FFFF) else Color(0xFF29454D),
             focusedContentColor = if (primary) MinTvNavy else Color.White),
-        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
+        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.mpx, MinTvTeal))),
         scale = ButtonDefaults.scale(focusedScale = 1f)) { TvText(label, size = if (compact) 18 else 22, bold = true, lines = 1, color = LocalContentColor.current) }
 }
 
@@ -246,14 +246,14 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
     val info = live?.let { guide.rows[it.homeEpgKey()]?.at(guide.at) }
     val time = rememberSystemTimeFormatter()
     val scale = maxOf(1f, LocalDensity.current.fontScale)
-    Row(Modifier.fillMaxWidth().heightIn(min = 326.mpx * scale).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 274.mpx * scale).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
         if (matchday != null) Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             matchday(first)
             if (live != null) SmartAction(stringResource(R.string.mintv_smart_last_tv), { onLive(live) },
                 Modifier.testTag("smart-last-live").focusRequester(companionFocus)
                     .then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(live) }, { onSource(live, it, true) }, pendingSourcePress) else Modifier), compact = true)
         }
-        else Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f).heightIn(min = 326.mpx * scale).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).clip(RoundedCornerShape(24.mpx)).neutralArtwork().padding(26.mpx), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+        else Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f).heightIn(min = 274.mpx * scale).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).clip(RoundedCornerShape(24.mpx)).neutralArtwork().padding(26.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
             TvText(stringResource(when {
                 resume?.kind == SmartResumeKind.EPISODE -> R.string.mintv_smart_continue_series
                 resume != null -> R.string.search_continue
@@ -264,9 +264,12 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
                 if (resume == null && live != null) HomeChannelLogo(live.name, info?.logo ?: live.displayLogoUrl, Modifier.size(64.mpx))
                 if (resume != null) SmartResumeIdentity(resume, 64.mpx)
                 Column(Modifier.weight(1f)) {
-                    (resume?.seriesTitle ?: live?.name)?.let { TvText(it, size = 21, color = MinTvMuted, lines = 1) }
-                    TvText(resume?.title ?: info?.now?.title ?: stringResource(if (live != null) R.string.mintv_v08_empty_now
-                        else if (snapshot == null) R.string.mintv_smart_loading else R.string.mintv_smart_start), size = 36, bold = true, lines = 2)
+                    if (resume == null && live != null) Box(Modifier.heightIn(min = 26.mpx * scale)) {
+                        info?.now?.let { TvText(live.name + stringResource(R.string.mintv_v08_separator) +
+                            stringResource(R.string.mintv_v08_time_range, time(it.startMs), time(it.stopMs)), size = 21, color = MinTvMuted, lines = 1) }
+                    } else resume?.seriesTitle?.let { TvText(it, size = 21, color = MinTvMuted, lines = 1) }
+                    TvText(resume?.title ?: info?.now?.title ?: live?.name ?: stringResource(if (live != null) R.string.mintv_v08_empty_now
+                        else if (snapshot == null) R.string.mintv_smart_loading else R.string.mintv_smart_start), size = 36, bold = true, lines = if (resume == null && live != null) 1 else 2)
                 }
             }
             if (live == null && resume == null && snapshot != null) {
@@ -276,10 +279,13 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
             if (resume != null) {
                 SmartResumeLine(resume)
                 ProgrammeProgress((resume.position.toDouble() / resume.duration).toFloat(), Modifier.widthIn(max = 640.mpx))
-            } else info?.now?.let {
-                TvText(stringResource(R.string.mintv_v08_time_range, time(it.startMs), time(it.stopMs)), size = 21, color = MinTvMuted, lines = 1)
-                ProgrammeProgress(it.progress(guide.at), Modifier.widthIn(max = 640.mpx))
+            } else if (live != null) Box(Modifier.fillMaxWidth().height(6.mpx)) {
+                info?.now?.let { ProgrammeProgress(it.progress(guide.at), Modifier.widthIn(max = 640.mpx)) }
             }
+            if (resume == null && live != null) TvText(
+                info?.next?.let { stringResource(R.string.mintv_live_next, time(it.startMs) + stringResource(R.string.mintv_v08_separator) + it.title) }
+                    ?: stringResource(if (info?.now == null) R.string.mintv_live_no_programme else R.string.mintv_next_not_available),
+                size = 19, color = MinTvMuted, lines = 1)
             Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                 SmartAction(stringResource(when { resume != null -> R.string.content_action_resume; live != null -> R.string.mintv_watch_channel
                     snapshot?.hasSources == false -> R.string.mintv_smart_add_source; else -> R.string.mintv_home_live }),
@@ -334,7 +340,7 @@ private fun SmartCard(play: () -> Unit, modifier: Modifier, content: @Composable
     Button(play, modifier, contentPadding = PaddingValues(16.mpx),
         shape = ButtonDefaults.shape(RoundedCornerShape(16.mpx)),
         colors = ButtonDefaults.colors(containerColor = Color(0xFF14242E), focusedContainerColor = Color(0xFF29454D)),
-        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.mpx, MinTvTeal))),
+        border = ButtonDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.mpx, MinTvTeal))),
         scale = ButtonDefaults.scale(focusedScale = 1f)) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.mpx), content = content)
     }

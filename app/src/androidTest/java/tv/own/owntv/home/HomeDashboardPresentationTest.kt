@@ -157,7 +157,7 @@ class HomeDashboardPresentationTest {
     }
     private fun candidate() = UpdatePolicy.Candidate("stable", BuildConfig.APPLICATION_ID, 1234567, "synthetic-next",
         "synthetic.apk", "0".repeat(64), 1, 26, setOf("arm64-v8a"),
-        "### Syntetiska testnyheter\n- Ny startsida\n- Tydligare uppdateringar\n" + "- Syntetisk rad för fjärrkontrollens skrolltest\n".repeat(16), "synthetic")
+        "### Syntetiska testnyheter\n- Ny startsida\n- Tydligare uppdateringar\n" + "- Syntetisk rad för fjärrkontrollens skrolltest\n".repeat(48), "synthetic")
     private fun mount() {
         compose.setContent {
             val native = LocalConfiguration.current
@@ -376,10 +376,12 @@ class HomeDashboardPresentationTest {
         val releaseNotes = compose.onNodeWithText("Syntetiska testnyheter", substring = true)
         releaseNotes.assertExists()
         key(KeyEvent.KEYCODE_DPAD_UP)
-        releaseNotes.assertIsFocused()
-        val beforeScroll = releaseNotes.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
+        val reader = compose.onNodeWithTag("update-body")
+        reader.assertIsFocused()
+        val beforeScroll = reader.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
         key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN)
-        val afterScroll = releaseNotes.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
+        compose.waitUntil(5000) { reader.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value() > beforeScroll }
+        val afterScroll = reader.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
         assertTrue("Remote must scroll authenticated notes", afterScroll > beforeScroll)
         val variants = listOf(
             MinTvUpdater.State.Downloading(42) to "downloading",

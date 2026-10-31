@@ -22,6 +22,7 @@ internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int)
 internal suspend fun OkHttpClient.companionResponse(request: Request, limit: Int): CompanionResponse =
     suspendCancellableCoroutine { continuation ->
         require(limit in 1..600_000)
+        tv.own.owntv.features.catalog.NativeReadWork.record(tv.own.owntv.features.catalog.NativeReadKind.PUBLIC_HTTP)
         val call = newCall(request)
         call.timeout().timeout(8, TimeUnit.SECONDS)
         continuation.invokeOnCancellation { call.cancel() }

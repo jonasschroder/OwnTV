@@ -37,9 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.key
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -248,6 +250,8 @@ fun StageSettingsPage(
     /** Off where there is no Settings to search (the setup wizard reuses the Add a source pages). */
     showSearch: Boolean = true,
     categories: (@Composable () -> Unit)? = null,
+    compactHeader: Boolean = categories != null,
+    rowsReturnFocus: FocusRequester? = null,
     onRowsFocused: (Boolean) -> Unit = {},
     rows: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -262,7 +266,7 @@ fun StageSettingsPage(
             // The mockup's 1920 px frame as fractions of the real width, so other zooms reflow.
             val w = maxWidth / 1920f
             Row(
-                Modifier.fillMaxWidth().padding(start = w * 64, end = w * 64, top = 128.mpx).height(60.mpx),
+                Modifier.fillMaxWidth().padding(start = w * 64, end = w * 64, top = if (compactHeader) 48.mpx else 128.mpx).height(60.mpx),
                 horizontalArrangement = Arrangement.spacedBy(16.mpx),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -272,7 +276,7 @@ fun StageSettingsPage(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (crumb) {
+                    if (crumb && categories == null) {
                         // Two steps only (owner): the page it came from, then this one.
                         ((if (settingsRoot) listOf(stringResource(R.string.common_nav_settings)) else emptyList()) + parents).takeLast(1).forEach { p ->
                             Text(p, style = stageText(42, 800, (-1f / 46f).em), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -280,7 +284,7 @@ fun StageSettingsPage(
                         }
                     }
                     // The path before the title shortens first (it is measured last); the tools and the search never move.
-                    Text(group, style = stageText(42, 800, (-1f / 46f).em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(group, style = stageText(if (categories == null) 42 else 40, 800, (-1f / 46f).em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(count, style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.mpx))
                 }
                 if (tools != null) Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically, content = tools)
@@ -296,10 +300,11 @@ fun StageSettingsPage(
                     onActivate = onSearchActivate,
                 )
             }
-            if (categories != null) Box(Modifier.padding(start = w * 50, top = 210.mpx).width(w * 370).fillMaxHeight()) { categories() }
+            val contentTop = if (compactHeader) 128.mpx else 210.mpx
+            if (categories != null) Box(Modifier.padding(start = w * 50, top = contentTop).width(w * 370).fillMaxHeight()) { categories() }
             val rowsLeft = if (categories == null) w * 50 else w * 450
             val rowsWidth = if (categories == null) w * 1060 else w * 1000
-            val rowsTop = if (toolbar != null) 300.mpx else 210.mpx
+            val rowsTop = if (toolbar != null) 300.mpx else contentTop
             if (toolbar != null) {
                 Row(
                     Modifier.padding(start = w * 50, top = 210.mpx).width(w * 1060).height(84.mpx).padding(horizontal = 6.mpx),
@@ -309,27 +314,28 @@ fun StageSettingsPage(
                 )
             }
             if (list != null) list(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight())
-            else CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                Column(
-                    Modifier
-                        .padding(start = rowsLeft, top = rowsTop)
-                        .width(rowsWidth)
-                        .fillMaxHeight()
-                        .focusRequester(rowsFocus)
-                        .onFocusChanged { onRowsFocused(it.hasFocus) }
-                        .focusGroup()
-                        .verticalScroll(scroll)
-                        .padding(bottom = 40.mpx),
-                    verticalArrangement = Arrangement.spacedBy(6.mpx),
-                    content = rows,
-                )
+            else key(group) {
+                CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+                    // Attach to the row group inside the scroll container's own focus target.
+                    // Save the actual row before Left redirects to the selected category.
+                    Column(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight()
+                        .verticalScroll(scroll).focusRequester(rowsFocus)
+                        .focusProperties {
+                            onExit = {
+                                rowsFocus.saveFocusedChild()
+                                if (requestedFocusDirection == FocusDirection.Left) rowsReturnFocus?.requestFocus()
+                            }
+                        }
+                        .onFocusChanged { onRowsFocused(it.hasFocus) }.focusGroup().padding(bottom = 40.mpx),
+                        verticalArrangement = Arrangement.spacedBy(6.mpx), content = rows)
+                }
             }
             val help = panel.help
             val editor = panel.editor
             if (help != null || panelTop != null || editor != null) {
                 Column(
                     Modifier
-                        .padding(start = if (categories == null) w * 1160 else w * 1480, top = 240.mpx)
+                        .padding(start = if (categories == null) w * 1160 else w * 1480, top = if (compactHeader) 144.mpx else 240.mpx)
                         .width(if (categories == null) w * 696 else w * 376)
                         .heightIn(max = maxHeight - 280.mpx)
                         .stageGlass(30.mpx)

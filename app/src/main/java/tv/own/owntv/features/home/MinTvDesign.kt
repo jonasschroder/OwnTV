@@ -26,9 +26,9 @@ internal val MinTvPanel = tv.own.owntv.ui.theme.StageSurfaces.Panel
 
 @Composable
 internal fun TvText(value: String, modifier: Modifier = Modifier, size: Int = 22, color: Color = Color.White,
-    lines: Int = 2, bold: Boolean = false) {
+    lines: Int = 2, bold: Boolean = false, minLines: Int = 1) {
     Text(value, modifier = modifier, style = stageText(size, if (bold) 700 else 500), color = color,
-        maxLines = lines, overflow = TextOverflow.Ellipsis)
+        minLines = minLines, maxLines = lines, overflow = TextOverflow.Ellipsis)
 }
 
 /** Dark, inexpensive TV cards: focus changes outline/colour without relayout or new surfaces. */

@@ -1,0 +1,19 @@
+[
+  {
+    "path": "tests/ci-followup-backReturnsFromAbout.txt",
+    "sha256": "c920ee39b5d96d3f35e9c33709af24273f66238587e6f7abb11c5eb7e613977d"
+  },
+  {
+    "path": "tests/ci-followup-updateDialogShowsRealInstalledVersionAndDistinctProgressFailureAndConfirmationStates.txt",
+    "sha256": "7ed40348b51d3f5d0a2f8b47bdc88f93972fa1fd10c57ec788ecf1a6e83881fd"
+  },
+  {
+    "path": "tests/ci-followup-capturePopulatedNativeShell.txt",
+    "sha256": "687e4be9fa62c65c98ce20a819758fe9727901d52281eef8f28967c78d2222f0"
+  },
+  {
+    "followup_instrumentation_apk_sha256": "2563478cc17b57504ae327f579c39c6579f9e38f4966bca62f891d9d8e13f5c4",
+    "production_unchanged_from": "f0abde065d1faafd570e9648b4c99899a6b51216",
+    "note": "Test-only reader/locale selector follow-up. Original picture/performance instrumentation hash in provenance.json remains intact; production APK hash verified unchanged."
+  }
+]

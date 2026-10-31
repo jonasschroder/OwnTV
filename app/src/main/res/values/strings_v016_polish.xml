@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v016_choose_channel">Choose channel</string>
+    <string name="v016_sport_channel_missing">This recommended channel is missing from your IPTV library. Choose another channel manually.</string>
+    <string name="v016_sport_choose_source">Several local sources are possible. Choose the one you want to use.</string>
+    <string name="v016_sport_manual_available">No broadcaster has been verified. You can choose a channel manually.</string>
+    <string name="v016_sport_hold_channel">Hold OK to choose a channel.</string>
+    <string name="v016_hockey_settings">Hockey settings</string>
+    <string name="v016_guide_missing_short">Guide unavailable</string>
+    <string name="v016_match_info_short">Info</string>
+    <string name="v016_category_content">Content</string>
+    <string name="v016_category_sound">Sound &amp; subtitles</string>
+    <string name="v016_category_watching">Playback</string>
+    <string name="v016_category_active">Active</string>
+    <string name="v016_channel_play_hint">OK plays this channel</string>
+</resources>

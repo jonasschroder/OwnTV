@@ -87,18 +87,23 @@ class PerformanceJourneyTest {
             throw error
         }
     }
-    private fun chooseSyntheticProfile() {
-        compose.waitUntil(20_000) { compose.onAllNodesWithTag("top-HOME").fetchSemanticsNodes().isNotEmpty() || compose.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty() }
+    private fun chooseSyntheticProfile(profileName: String = name) {
+        compose.waitUntil(20_000) { compose.onAllNodesWithTag("top-HOME").fetchSemanticsNodes().isNotEmpty() || compose.onAllNodesWithText(profileName).fetchSemanticsNodes().isNotEmpty() }
         if (compose.onAllNodesWithTag("top-HOME").fetchSemanticsNodes().isNotEmpty()) return
         // The label intentionally sits outside the clickable avatar. Use its aligned remote target.
-        val label = compose.onNodeWithText(name).fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithText(profileName).fetchSemanticsNode().boundsInRoot
         val tile = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
             .filter { it.boundsInRoot.bottom <= label.top && it.boundsInRoot.center.x in label.left..label.right }
             .minByOrNull { kotlin.math.abs(it.boundsInRoot.center.x - label.center.x) } ?: error("Synthetic profile avatar unavailable")
         compose.onNode(SemanticsMatcher("synthetic profile avatar") { it.id == tile.id }).performSemanticsAction(SemanticsActions.RequestFocus)
         press(KeyEvent.KEYCODE_DPAD_CENTER)
     }
-    private fun press(code: Int) { instrumentation.sendKeyDownUpSync(code); compose.waitForIdle() }
+    private fun press(code: Int) {
+        val down = SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, code, 0))
+        instrumentation.sendKeySync(KeyEvent(down, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+        compose.waitForIdle()
+    }
     private fun focus(tag: String) { compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus); compose.waitForIdle() }
     private fun ready(destination: String) {
         waitTag("top-$destination")
@@ -110,7 +115,225 @@ class PerformanceJourneyTest {
             "PROFILE" -> waitTag("settings-categories")
         }
     }
-    private fun pss() = Debug.MemoryInfo().also(Debug::getMemoryInfo).totalPss
+    private val workKinds = listOf("CATALOG", "GUIDE_SUMMARIES", "PUBLIC_HTTP")
+    private fun readerWork(): List<Long>? = runCatching {
+        val type = Class.forName("tv.own.owntv.features.catalog.NativeReadWork")
+        @Suppress("UNCHECKED_CAST")
+        (type.getMethod("snapshot").invoke(type.getField("INSTANCE").get(null)) as List<Long>)
+    }.getOrNull()
+    private val memorySummaries = mutableListOf<Map<String, String>>()
+    private fun pss(): Int {
+        val info = Debug.MemoryInfo().also(Debug::getMemoryInfo)
+        memorySummaries += info.memoryStats
+        return info.totalPss
+    }
+
+    @Test fun captureNativeProductionScreens() {
+        val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
+        ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+            chooseSyntheticProfile(); ready("HOME")
+            for (destination in listOf("HOME", "TV", "SPORT", "VOD", "PROFILE")) {
+                focus("top-$destination"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready(destination)
+                capture(scenario, destination)
+            }
+            // Optional global route is present only in the v0.16 update workstream. The same
+            // harness remains usable against the untouched baseline production APK.
+            if (compose.onAllNodesWithTag("header-update").fetchSemanticsNodes().isNotEmpty()) {
+                focus("header-update"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isNotEmpty() }
+                capture(scenario, "UPDATE")
+                press(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("header-update").assertIsFocused()
+            }
+        }
+    }
+
+    private fun capture(scenario: ActivityScenario<MainActivity>, destination: String) {
+                val drawn = java.util.concurrent.CountDownLatch(1)
+                scenario.onActivity { activity -> activity.window.decorView.postOnAnimation {
+                    activity.window.decorView.postOnAnimation { drawn.countDown() }
+                } }
+                assertTrue("Wait for real presentation frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                // Dialog window entry animation is outside Compose's idle clock.
+                if (destination.endsWith("UPDATE")) Thread.sleep(300)
+                val bitmap = instrumentation.uiAutomation.takeScreenshot()
+                val dir = File(app.getExternalFilesDir(null), "performance/native").apply { mkdirs() }
+                File(dir, "$destination-${bitmap.width}x${bitmap.height}.png").outputStream().use { output ->
+                    assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output))
+                }; bitmap.recycle()
+    }
+
+    /** Isolates the visible horizontal row; the full journey also includes scrolling and idling. */
+    @Test fun capturePopulatedNativeShell(): Unit = runBlocking {
+        seedDesignReview(app, db, settings)
+        val baseline = InstrumentationRegistry.getArguments().getString("reviewBaseline") == "true"
+        val video = tv.own.owntv.home.LoopbackVideoFixture(instrumentation.context.assets.open("live-entry-bars.mp4").use { it.readBytes() })
+        val hockeyId = 9900013L
+        val original = db.channelDao().getById(hockeyId)!!
+        db.channelDao().updateAll(listOf(original.copy(streamUrl = video.url(3))))
+        try {
+            for (size in listOf("1920x1080", "1280x720")) {
+                shell("wm size $size")
+                shell("wm density ${if (size == "1280x720") 213 else 320}")
+                settings.setActiveProfile(profile)
+                val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
+                ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+                    chooseSyntheticProfile(); waitTag("smart-channel-svt1")
+                    for (destination in listOf("HOME", "TV", "SPORT", "VOD", "PROFILE")) {
+                        focus("top-$destination"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                        if (destination == "HOME") {
+                            waitTag("smart-channel-svt1")
+                            compose.waitUntil(15_000) { compose.onAllNodes(hasText("Färjestad", substring = true)).fetchSemanticsNodes().isNotEmpty() }
+                        } else ready(destination)
+                        press(KeyEvent.KEYCODE_DPAD_DOWN)
+                        if (destination == "TV") press(KeyEvent.KEYCODE_DPAD_DOWN)
+                        capture(scenario, "POPULATED_$destination")
+                        if (destination == "HOME" && !baseline) {
+                            // Compose's locale can differ from Activity.getString after a locale
+                            // change in this process. Identify the focused hero action structurally;
+                            // opening the exact match below still verifies the action's meaning.
+                            val hero = hasAnyAncestor(hasTestTag("smart-hero"))
+                            val text = compose.onNode(isFocused() and hero).fetchSemanticsNode()
+                                .config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString("") { it.text }
+                            val action = compose.onNode(hasText(text) and isFocusable() and hero)
+                            action.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                            waitTag("sport-match-details"); capture(scenario, "HOME_MATCH_DETAILS")
+                            press(KeyEvent.KEYCODE_BACK)
+                            compose.waitUntil(5_000) { runCatching { action.assertIsFocused(); true }.getOrDefault(false) }
+                            val held = SystemClock.uptimeMillis()
+                            instrumentation.sendKeySync(KeyEvent(held, held, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                            Thread.sleep(650)
+                            instrumentation.sendKeySync(KeyEvent(held, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                            waitTag("sport-manual-picker"); press(KeyEvent.KEYCODE_BACK)
+                            waitTag("sport-match-details"); press(KeyEvent.KEYCODE_BACK)
+                            compose.waitUntil(5_000) { runCatching { action.assertIsFocused(); true }.getOrDefault(false) }
+                        }
+                    }
+                    focus("header-update"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isNotEmpty() }
+                    capture(scenario, "POPULATED_UPDATE")
+                    press(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("header-update").assertIsFocused()
+
+                    focus("top-TV"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready("TV")
+                    focus("tv-category-GENERAL"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    val lateChannelTag = if (size == "1920x1080") "swedish-channel-tv6" else "swedish-channel-svt1varmland"
+                    val lateGuideKey = if (size == "1920x1080") "perf-5" else "perf-60"
+                    waitTag(lateChannelTag); focus(lateChannelTag)
+                    val guideBounds = compose.onNodeWithTag(lateChannelTag).getUnclippedBoundsInRoot()
+                    val lateTitle = "Syntetiskt sent program med en lång svensk titel som fyller två rader"
+                    db.epgDao().upsertProgrammes(listOf(EpgProgrammeEntity(sourceId = profile, epgChannelId = lateGuideKey,
+                        startMs = System.currentTimeMillis() - 60_000, stopMs = System.currentTimeMillis() + 3_600_000, title = lateTitle)))
+                    compose.waitUntil(10_000) { compose.onAllNodesWithText(lateTitle).fetchSemanticsNodes().isNotEmpty() }
+                    compose.onNodeWithTag(lateChannelTag).assertIsFocused()
+                    if (!baseline) assertEquals(guideBounds, compose.onNodeWithTag(lateChannelTag).getUnclippedBoundsInRoot())
+                    capture(scenario, "TV_LATE_GUIDE")
+                    focus("tv-category-OTHER"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    press(KeyEvent.KEYCODE_DPAD_DOWN)
+                    repeat(6) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+                    val channelMatcher = SemanticsMatcher("logical TV channel") {
+                        it.config.contains(androidx.compose.ui.semantics.SemanticsProperties.TestTag) &&
+                            it.config[androidx.compose.ui.semantics.SemanticsProperties.TestTag].startsWith("swedish-channel-")
+                    }
+                    val focused = compose.onNode(isFocused() and channelMatcher)
+                    focused.assertIsDisplayed()
+                    val tag = focused.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.TestTag]
+                    capture(scenario, "TV_32_CHANNELS")
+                    val down = SystemClock.uptimeMillis()
+                    instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                    Thread.sleep(650)
+                    instrumentation.sendKeySync(KeyEvent(down, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                    waitTag("source-picker"); capture(scenario, "SOURCE_PICKER")
+                    press(KeyEvent.KEYCODE_BACK)
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag(tag).assertIsFocused(); true }.getOrDefault(false) }
+
+                    focus("header-epg-refresh"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.onNodeWithTag("header-epg-refresh").assertIsFocused()
+                    focus("top-SPORT"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready("SPORT")
+                    press(KeyEvent.KEYCODE_DPAD_DOWN)
+                    val hockeyLabels = listOf("TV4 Hockey HD", "TV4 Sport Live 1 HD", "TV4 Sport Live 2 HD", "TV4 Sport Live 3 HD")
+                    fun hockeyCard(label: String) = compose.onNode(hasText(label) and isFocusable())
+                    fun focusedSportChannel(): Int = hockeyLabels.indexOfFirst {
+                        runCatching { hockeyCard(it).assertIsFocused(); true }.getOrDefault(false)
+                    }
+                    repeat(5) { if (focusedSportChannel() < 0) press(KeyEvent.KEYCODE_DPAD_DOWN) }
+                    val channelEntry = focusedSportChannel()
+                    check(channelEntry == 0 || channelEntry == 3) { "Unexpected synthetic Sport entry: $channelEntry" }
+                    if (channelEntry != 3) repeat(3) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+                    hockeyCard(hockeyLabels[3]).assertIsFocused()
+                    lateinit var vm: tv.own.owntv.features.live.LiveViewModel
+                    scenario.onActivity { activity ->
+                        vm = androidx.lifecycle.ViewModelProvider(activity, object : androidx.lifecycle.ViewModelProvider.Factory {
+                            @Suppress("UNCHECKED_CAST") override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
+                                GlobalContext.get().get<tv.own.owntv.features.live.LiveViewModel>() as T
+                        })[tv.own.owntv.features.live.LiveViewModel::class.java]
+                    }
+                    press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
+                    compose.waitUntil(15_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
+                    capture(scenario, "SPORT_LOOPBACK_PLAYBACK")
+                    press(KeyEvent.KEYCODE_BACK) // The existing visible HUD is the first finite Back level.
+                    if (compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty()) press(KeyEvent.KEYCODE_BACK)
+                    waitTag("top-SPORT")
+                    try {
+                        compose.waitUntil(5_000) { runCatching { hockeyCard(hockeyLabels[3]).assertIsFocused(); true }.getOrDefault(false) }
+                    } catch (error: Throwable) {
+                        val dir = File(app.getExternalFilesDir(null), "performance/native").apply { mkdirs() }
+                        File(dir, "SPORT_RETURN-${size}-focus.txt").writeText(compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 12))
+                        capture(scenario, "SPORT_RETURN_FAILURE")
+                        if (!baseline) throw error // Baseline collection records the defect; candidate/CI must pass.
+                    }
+                    if (!baseline) {
+                        focus("sport-hero-action"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                        // The explicit fallback must open the existing fixture-scoped manual picker.
+                        waitTag("sport-manual-picker")
+                        capture(scenario, "SPORT_MANUAL_PICKER")
+                        press(KeyEvent.KEYCODE_BACK)
+                    }
+                    settings.setActiveProfile(99001)
+                    compose.waitUntil(15_000) { vm.homeLibraryContext.value.first == 99001L }
+                    assertTrue(vm.homeLibraryContext.value.second.isEmpty())
+                    compose.waitUntil(5_000) { compose.onAllNodesWithText("Synthetic empty profile").fetchSemanticsNodes().isNotEmpty() }
+                    chooseSyntheticProfile("Synthetic empty profile")
+                    waitTag("top-HOME")
+                    focus("top-HOME"); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.onNodeWithTag("smart-channel-svt1").assertDoesNotExist()
+                    compose.onNodeWithTag("sport-channel-$hockeyId").assertDoesNotExist()
+                    settings.setActiveProfile(profile)
+                    compose.waitUntil(5_000) { compose.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty() }
+                    chooseSyntheticProfile(); waitTag("top-HOME")
+                }
+            }
+        } finally {
+            video.close()
+            db.channelDao().updateAll(listOf(original))
+            shell("wm size reset")
+            shell("wm density reset")
+        }
+    }
+
+    @Test fun visibleSportRowProbe() {
+        val label = InstrumentationRegistry.getArguments().getString("perfLabel", "unlabelled")!!
+        require(label.matches(Regex("[a-z0-9-]{1,60}")))
+        val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
+        ActivityScenario.launch<MainActivity>(intent).use {
+            chooseSyntheticProfile(); ready("HOME")
+            focus("top-SPORT"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready("SPORT")
+            val firstCard = compose.onNode(hasText("TV4 Hockey HD") and isFocusable())
+            val secondCard = compose.onNode(hasText("TV4 Sport Live 1 HD") and isFocusable())
+            compose.waitUntil(5_000) { runCatching { firstCard.assertExists(); secondCard.assertExists(); true }.getOrDefault(false) }
+            firstCard.performSemanticsAction(SemanticsActions.RequestFocus); compose.waitForIdle()
+            val samples = mutableListOf<Double>()
+            repeat(42) { iteration ->
+                val at = SystemClock.elapsedRealtimeNanos()
+                press(KeyEvent.KEYCODE_DPAD_RIGHT); secondCard.assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_LEFT); firstCard.assertIsFocused()
+                if (iteration >= 2) samples += (SystemClock.elapsedRealtimeNanos() - at) / 1e6
+            }
+            val result = org.json.JSONObject().put("label", label).put("dataset", "synthetic-12000-channel-v1")
+                .put("measurement", "visible_sport_right_left_ms").put("samples_ms", org.json.JSONArray(samples))
+            val dir = File(app.getExternalFilesDir(null), "performance").apply { mkdirs() }
+            File(dir, "$label.json").writeText(result.toString(2))
+        }
+    }
 
     @Test fun repeatedProductionNavigation(): Unit = runBlocking {
         assertNotNull(db.profileDao().getById(profile))
@@ -124,6 +347,8 @@ class PerformanceJourneyTest {
         val listener = Window.OnFrameMetricsAvailableListener { _, metric, lost ->
             frames.add(metric.getMetric(FrameMetrics.TOTAL_DURATION)); lostCallbacks += lost
         }
+        val workBefore = readerWork()
+        val runtimeBefore = Debug.getRuntimeStats()
         val cpuBefore = Process.getElapsedCpuTime()
         val rxBefore = TrafficStats.getUidRxBytes(Process.myUid())
         val txBefore = TrafficStats.getUidTxBytes(Process.myUid())
@@ -145,6 +370,14 @@ class PerformanceJourneyTest {
                     focus("top-$destination")
                     val action = { press(KeyEvent.KEYCODE_DPAD_CENTER); ready(destination) }
                     if (iteration < 2) action() else measure("enter_${destination.lowercase()}_ms", action)
+                    if (destination == "VOD") {
+                        focus("vod-movies-entry")
+                        val content: () -> Unit = {
+                            press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused()
+                            press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused()
+                        }
+                        if (iteration < 2) content() else measure("vod_content_down_up_ms", content)
+                    }
                 }
                 focus("top-HOME")
                 val dpad: () -> Unit = { press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("top-TV").assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_LEFT); compose.onNodeWithTag("top-HOME").assertIsFocused() }
@@ -168,6 +401,13 @@ class PerformanceJourneyTest {
             .put("package", app.packageName).put("sdk", android.os.Build.VERSION.SDK_INT)
             .put("measurements_ms", JSONObject().apply { samples.forEach { (k,v) -> put(k, JSONArray(v)) } })
             .put("pss_kib_samples", JSONArray(memory)).put("cpu_process_ms", Process.getElapsedCpuTime() - cpuBefore)
+            .put("memory_summary_samples", JSONArray(memorySummaries.map { JSONObject(it) }))
+            .put("art_runtime_before", JSONObject(runtimeBefore)).put("art_runtime_after", JSONObject(Debug.getRuntimeStats()))
+            .put("app_reader_work_delta", JSONObject().apply {
+                val after = readerWork()
+                if (workBefore != null && after != null) after.forEachIndexed { i, count -> put(workKinds[i], count - workBefore[i]) }
+                else put("instrumented", false)
+            })
             .put("network_rx_bytes", if (rxBefore >= 0 && rxAfter >= rxBefore) rxAfter - rxBefore else JSONObject.NULL)
             .put("network_tx_bytes", if (txBefore >= 0 && txAfter >= txBefore) txAfter - txBefore else JSONObject.NULL)
             .put("frame_duration_ns", JSONArray(frames.toList())).put("frame_callback_drops", lostCallbacks)

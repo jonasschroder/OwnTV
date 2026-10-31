@@ -243,6 +243,7 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
         false
     }.onFocusChanged { if (it.hasFocus) onChildFocused() }, header = {
             TvText(stringResource(R.string.mintv_swedish_channels), Modifier.weight(1f), size = 34, bold = true)
+            TvText(stringResource(R.string.mintv_channel_keys_hint), size = 18, color = MinTvMuted, lines = 1)
 
         }, categories = {
         LazyRow(Modifier.testTag("navigation-context").onFocusChanged { categoryHasFocus = it.hasFocus }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v016_choose_channel">Välj kanal</string>
+    <string name="v016_sport_channel_missing">Den rekommenderade kanalen saknas i din IPTV-lista. Välj en annan kanal manuellt.</string>
+    <string name="v016_sport_choose_source">Flera lokala källor är möjliga. Välj den du vill använda.</string>
+    <string name="v016_sport_manual_available">Ingen sändande kanal är verifierad. Du kan välja kanal manuellt.</string>
+    <string name="v016_sport_hold_channel">Håll OK för att välja kanal.</string>
+    <string name="v016_hockey_settings">Hockeyinställningar</string>
+    <string name="v016_guide_missing_short">Guide saknas</string>
+    <string name="v016_match_info_short">Info</string>
+    <string name="v016_category_content">Innehåll</string>
+    <string name="v016_category_sound">Ljud &amp; text</string>
+    <string name="v016_category_watching">Uppspelning</string>
+    <string name="v016_category_active">Aktiv</string>
+    <string name="v016_channel_play_hint">OK spelar kanalen</string>
+</resources>

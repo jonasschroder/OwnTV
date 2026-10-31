@@ -21,11 +21,15 @@ class HockeyBroadcastCardsTest {
         hockeyCardBroadcast(game, proof, rows, external, resolved, complete, SwedishChoices(), now)
     @Test fun exactLocalProofWinsConflictingExternalAndMakesUniqueSourcePlayable() {
         assertEquals(channel.name, card().label); assertEquals(channel, card().playable)
+        assertEquals(HockeyChannelAvailability.PLAYABLE, card().availability)
+        assertEquals(HockeyChannelAvailability.CHECKING, card(local.copy(truncated = true)).availability)
         assertNull(card(local.copy(truncated = true)).playable)
         assertEquals(channel.name, card(local.copy(truncated = true)).label)
     }
     @Test fun verifiedNameRemainsVisibleWithoutLibraryOrCompleteSearchAndPlayIsNeverLinear() {
         assertEquals("TV4 Sport Live 3", card(null).label); assertNull(card(null).playable)
+        assertEquals(HockeyChannelAvailability.CHECKING, card(null).availability)
+        assertEquals(HockeyChannelAvailability.MISSING, card(null, complete = true).availability)
         val row = channel.copy(name = "TV4 Sport Live 3")
         assertNull(card(null, resolved = listOf(row)).playable)
         assertEquals(row, card(null, resolved = listOf(row), complete = true).playable)
@@ -39,6 +43,7 @@ class HockeyBroadcastCardsTest {
         val second = channel.copy(id = 2, sourceId = 102)
         val multiple = local.copy(channelIds = listOf(1, 2), channelStops = local.channelStops + (2L to game.faceoff + 3_600_000), channelStarts = local.channelStarts + (2L to game.faceoff))
         assertNull(card(multiple, mapOf(1L to channel, 2L to second)).playable)
+        assertEquals(HockeyChannelAvailability.CHOICE_REQUIRED, card(multiple, mapOf(1L to channel, 2L to second)).availability)
         assertNull(card(rows = emptyMap()).playable)
         assertNull(card(local.copy(channelStops = mapOf(1L to now))).playable)
         assertNull(card(local.copy(fixture = game.copy(kickoff = game.kickoff.plusSeconds(3600))), external = null).playable)

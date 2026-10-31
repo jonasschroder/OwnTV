@@ -223,7 +223,7 @@
       ]
     },
     "before/POPULATED_UPDATE-1280x720.png": {
-      "sha256": "ca2f7bcaaa9c2f31d38de35cedec57a403e8d649cb48db4d97897128185f9253",
+      "sha256": "6393acae296095671f623c44b19ea29082126f7460d6aaf2fb5e20e36d8285a4",
       "pixels": [
         1280,
         720
@@ -493,6 +493,19 @@
     "Before populated images: immutable 016e956 production APK; relative synthetic times differ from final capture. Earlier before harness binary was not separately retained; final harness source and APK digest are provided.",
     "All timing APKs use identical observation counters; no other baseline behavior patch.",
     "Full-shell Update is the real debug guard; update journey states are separate synthetic ComponentActivity presentation.",
-    "All images synthetic; no owner IPTV URLs, tokens, credentials or original installed data."
-  ]
+    "All images synthetic; no owner IPTV URLs, tokens, credentials or original installed data.",
+    "Before Update 720p was recaptured with the immutable 016e956 APK and the follow-up harness: the earlier saved modal frame was incomplete. Same synthetic performance profile/library; later wall-clock time, no rich EPG needed behind Settings."
+  ],
+  "measured_production_commit": "2e13080bc068604238892c5352874cfd5ad28202",
+  "startup_followup": {
+    "scope": "Test expectation only; production source and measured APK unchanged",
+    "test_file_sha256": "2667e0e666090f5b297c9ec7cf9ca758a004a4f40862ecd93c1ade84bd9ec621",
+    "harness_sha256": "cf9f7bfb93e1266006e8a1016f20e659567d9f47d66c2cc13a0a1bb8b15ae31a",
+    "local_premium_startup_resolutions": [
+      "1920x1080",
+      "1280x720"
+    ],
+    "initial_ci_startup_job": 124372889800,
+    "initial_ci_failure": "Expected header after Down; new loaded-empty recovery action correctly receives focus"
+  }
 }

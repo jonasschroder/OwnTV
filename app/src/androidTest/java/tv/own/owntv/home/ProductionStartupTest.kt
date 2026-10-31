@@ -514,10 +514,12 @@ class ProductionStartupTest {
                 compose.onNodeWithTag("top-SPORT").assertIsFocused()
                 compose.onNodeWithTag("top-TV").assertIsSelected()
                 press(KeyEvent.KEYCODE_DPAD_DOWN)
-                compose.waitForIdle()
-                compose.onNodeWithTag("top-SPORT").assertIsFocused()
+                // Disabled hockey now has an explicit recovery action, so Down enters content.
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sport-empty-action").assertIsFocused(); true }.getOrDefault(false) }
                 compose.onNodeWithTag("top-SPORT").assertIsSelected()
                 assertNavigationLevels(contextual = false)
+                press(KeyEvent.KEYCODE_DPAD_UP)
+                compose.onNodeWithTag("top-SPORT").assertIsFocused()
                 nativeCapture("sport")
                 compose.onNodeWithTag("top-VOD").performClick()
                 compose.onNodeWithTag("sub-MOVIES").assertExists()

@@ -127,7 +127,8 @@ class UpdateDialogNavigationTest {
             if (name == "available") {
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithText("Uppdatera nu").assertIsFocused(); true }.getOrDefault(false) }
                 key(KeyEvent.KEYCODE_DPAD_UP)
-                val notesNode = compose.onNode(hasText("Syntetiskt testunderlag", substring = true) and isFocusable())
+                compose.onNodeWithText("Syntetiskt testunderlag", substring = true).assertExists()
+                val notesNode = compose.onNodeWithTag("update-body")
                 notesNode.assertIsFocused()
                 val before = notesNode.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
                 key(KeyEvent.KEYCODE_DPAD_DOWN)

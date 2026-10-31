@@ -188,9 +188,13 @@ class PerformanceJourneyTest {
                         if (destination == "TV") press(KeyEvent.KEYCODE_DPAD_DOWN)
                         capture(scenario, "POPULATED_$destination")
                         if (destination == "HOME" && !baseline) {
-                            var matchInfo = ""
-                            scenario.onActivity { matchInfo = it.getString(tv.own.owntv.R.string.mintv_v0111_match_details) }
-                            val action = compose.onNode(hasText(matchInfo) and isFocusable())
+                            // Compose's locale can differ from Activity.getString after a locale
+                            // change in this process. Identify the focused hero action structurally;
+                            // opening the exact match below still verifies the action's meaning.
+                            val hero = hasAnyAncestor(hasTestTag("smart-hero"))
+                            val text = compose.onNode(isFocused() and hero).fetchSemanticsNode()
+                                .config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString("") { it.text }
+                            val action = compose.onNode(hasText(text) and isFocusable() and hero)
                             action.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
                             waitTag("sport-match-details"); capture(scenario, "HOME_MATCH_DETAILS")
                             press(KeyEvent.KEYCODE_BACK)

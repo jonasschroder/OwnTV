@@ -249,9 +249,14 @@ private fun SmartHomeHero(snapshot: SmartHomeSnapshot?, guide: HomeGuideState,
     Row(Modifier.fillMaxWidth().heightIn(min = 274.mpx * scale).testTag("smart-hero"), horizontalArrangement = Arrangement.spacedBy(24.mpx)) {
         if (matchday != null) Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
             matchday(first)
-            if (live != null) SmartAction(stringResource(R.string.mintv_smart_last_tv), { onLive(live) },
+            if (live != null) SmartAction(stringResource(R.string.mintv_smart_last_tv) + stringResource(R.string.mintv_v08_separator) + live.name, { onLive(live) },
                 Modifier.testTag("smart-last-live").focusRequester(companionFocus)
                     .then(if (onSource != null) Modifier.logicalChannelKeys({ onLive(live) }, { onSource(live, it, true) }, pendingSourcePress) else Modifier), compact = true)
+            if (live != null) {
+                TvText(info?.now?.title ?: stringResource(R.string.mintv_live_no_programme), size = 19, color = MinTvMuted, lines = 1)
+                info?.next?.let { TvText(stringResource(R.string.mintv_live_next,
+                    time(it.startMs) + stringResource(R.string.mintv_v08_separator) + it.title), size = 17, color = MinTvMuted, lines = 1) }
+            }
         }
         else Column(Modifier.onFocusChanged { if (it.hasFocus) onUtilityFocus(0) }.weight(3.8f).heightIn(min = 274.mpx * scale).background(Color(0xFF162E27), RoundedCornerShape(24.mpx)).clip(RoundedCornerShape(24.mpx)).neutralArtwork().padding(26.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
             TvText(stringResource(when {

@@ -46,6 +46,9 @@ internal fun rememberHomeDashboardGuide(vm: LiveViewModel, profile: Long?, enabl
     val cache = remember(context, revision) { SwedishRowCache() }
     var rows by remember(context, revision, keys) { mutableStateOf<Map<SwedishRowKey, SwedishRowInfo>>(emptyMap()) }
     var at by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(active) {
+        if (active) foregroundHomeClock(System::currentTimeMillis) { at = it }
+    }
     LaunchedEffect(active, context) {
         if (active) db.invalidationTracker.createFlow("epg_programmes", "channels", "categories", "profiles", "sources")
             .debounce(350).collect { revision++ }
@@ -59,7 +62,6 @@ internal fun rememberHomeDashboardGuide(vm: LiveViewModel, profile: Long?, enabl
                 catch (timeout: TimeoutCancellationException) { currentCoroutineContext().ensureActive(); emptyMap() }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { emptyMap() }
-            at = time
             val boundary = rows.values.minOfOrNull { it.expires(time) } ?: (time + 30_000)
             delay(minOf(5_000L, boundary - System.currentTimeMillis()).coerceAtLeast(100))
         }
@@ -79,4 +81,9 @@ internal fun rememberHomeDashboardGuide(vm: LiveViewModel, profile: Long?, enabl
         catch (_: Exception) { null }
     }
     return HomeGuideState(at, if (active) rows else emptyMap(), synopsis.takeIf { active && programme != null })
+}
+
+/** Foreground display time must not wait for SQLite, or retain yesterday's EPG after resume. */
+internal suspend fun foregroundHomeClock(now: () -> Long, publish: (Long) -> Unit) {
+    while (true) { publish(now()); delay(5_000) }
 }

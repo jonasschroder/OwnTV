@@ -188,6 +188,9 @@ class PerformanceJourneyTest {
                         if (destination == "TV") press(KeyEvent.KEYCODE_DPAD_DOWN)
                         capture(scenario, "POPULATED_$destination")
                         if (destination == "HOME" && !baseline) {
+                            compose.onNodeWithTag("smart-last-live").assertTextContains("SVT1", substring = true)
+                            compose.waitUntil(5_000) { compose.onAllNodes(hasText("Syntetiskt program 0", substring = true) and
+                                hasAnyAncestor(hasTestTag("smart-hero"))).fetchSemanticsNodes().isNotEmpty() }
                             // Compose's locale can differ from Activity.getString after a locale
                             // change in this process. Identify the focused hero action structurally;
                             // opening the exact match below still verifies the action's meaning.

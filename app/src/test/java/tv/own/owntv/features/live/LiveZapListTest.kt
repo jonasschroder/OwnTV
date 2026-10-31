@@ -264,4 +264,19 @@ class LiveZapListTest {
         h.releaseWindow = false
         h.stop()
     }
+    @Test fun repeatedStepsWithSingleEligibleChannelNeverRequestRetune() {
+        val h = Harness()
+        try {
+            h.playing = 1
+            h.zap.armFromBrowse(listOf(channel(1)), title = "Single", key = LiveKey.Favorites, categoryId = null)
+            repeat(100) { assertNull(h.zap.next(1)); assertNull(h.zap.next(-1)) }
+            assertEquals(0, h.windowBuilds)
+            val national = channel(1).copy(name = "SVT1")
+            val regional = channel(2).copy(name = "SVT1 Värmland")
+            h.zap.armFromBrowse(listOf(national, regional), title = "Regional", key = LiveKey.Favorites, categoryId = null)
+            assertEquals(regional, h.zap.next(1))
+            h.playing = 2
+            assertEquals(national, h.zap.next(1))
+        } finally { h.stop() }
+    }
 }

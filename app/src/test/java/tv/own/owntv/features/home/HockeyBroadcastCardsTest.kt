@@ -105,4 +105,13 @@ class HockeyBroadcastCardsTest {
         assertEquals(initial, capped.rows)
         hockeyEpgWithLookahead(initial.take(127), windows) { _, _ -> error("Complete guide needs no duplicate reads") }
     }
+    @Test fun expiredLocalEvidenceDoesNotBlockFreshExactExternalAssignment() {
+        val row = channel.copy(id = 3, name = "TV4 Sport Live 3")
+        val expired = local.copy(channelStops = mapOf(1L to now))
+        val result = card(expired, resolved = listOf(row), complete = true)
+        assertEquals(row, result.playable)
+        assertEquals("TV4 Sport Live 3", result.label)
+        assertNull(card(expired, external = assignment.copy(expiresAt = Instant.ofEpochMilli(now)),
+            resolved = listOf(row), complete = true).playable)
+    }
 }

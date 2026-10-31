@@ -17,3 +17,10 @@ Nästa sammanhängande granskningsfas:
 - OK och Höger går in i vald inställningskategori. Vänster och återgång bevarar giltigt detaljfokus.
 - Film & serier har kompaktare tomma ingångar med en gemensam förklaring. Befintlig fortsättning och uppspelning bevaras.
 - Den guidade uppdateringsdialogens steg och felreturer har fjärrkontrolltester i båda TV-upplösningarna. Verklig signerad uppdatering på Chromecast återstår efter godkännande.
+
+Slutlig UI-förfining:
+
+- Uppdateringsdialogen har en helt täckande yta och tydligare text. Version och knappar ligger kvar när nyheter rullas med fjärrkontrollen, även i 720p och med större text.
+- Home öppnar rätt matchinformation direkt när sändande kanal saknas. Håll OK för att välja kanal; Back återställer samma fokus.
+- Inställningar har kompaktare rubrik och kortare kategorinamn. Aktiv kategori markeras uttryckligen och skiljs från den ruta som har fokus.
+- Sport har tydligare matchkort och större spelbara hockeykanaler. Bekräftad, trolig och okänd sändning hålls fortfarande isär.

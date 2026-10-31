@@ -215,6 +215,8 @@ jobs:
               ('tv.own.owntv.home.NativeV011PresentationTest', 'homeGuideArrivalsAndMissingNextPreserveActionFocus'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'updateRemotePresentationJourneyAt1080'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'updateRemotePresentationJourneyAt720'),
+              ('tv.own.owntv.home.NativeV011PresentationTest', 'homeMatchFirstActionsAt1080'),
+              ('tv.own.owntv.home.NativeV011PresentationTest', 'homeMatchFirstActionsAt720'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'fontScalingAt720KeepsBothEntriesAndSportsRowsReachable'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'signedOutTwitchShowsStatusAndPreservesIndependentAppEntry'),
               ('tv.own.owntv.home.ChannelGridDeviceTest', 'verticalMovesKeepColumnAcrossPartialRowAndHorizontalNeverWraps'),

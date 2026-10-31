@@ -226,6 +226,7 @@ fun SettingsScreen(
     onLibrary: (() -> Unit)? = null,
     onDownloads: (() -> Unit)? = null,
     onSwitchProfile: (() -> Unit)? = null,
+    reserveStatusHeader: Boolean = false,
 ) {
     // A cross-script language change recreates the Activity so Android can apply the new script's
     // shaping and font fallback. Keep the open settings sub-screen across that configuration change
@@ -1268,6 +1269,7 @@ fun SettingsScreen(
             rowsFocus = rowsFocus,
             rowsReturnFocus = if (searching) null else categoryTarget,
             modifier = modifier.onFocusChanged { rootHasFocus = it.hasFocus },
+            compactHeader = !reserveStatusHeader && !searching,
             categories = if (searching) null else ({
                 Box(Modifier.testTag("navigation-context")) {
                     SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, {

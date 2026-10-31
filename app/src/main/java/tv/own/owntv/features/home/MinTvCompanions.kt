@@ -85,6 +85,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val scope = rememberCoroutineScope()
     val (enabled, broadcastEnabled) = rememberCompanionFlags(repository.preferences)
     var screen by rememberSaveable(profileId) { mutableStateOf(false) }
+    var homeShortcut by rememberSaveable(profileId) { mutableStateOf(false) }
     var section by rememberSaveable(profileId) { mutableStateOf(MatchcenterSection.FARJESTAD) }
     // Keep the old enum value readable for saved-state compatibility, never render/fetch its table.
     LaunchedEffect(section) { if (section == MatchcenterSection.TABLE) section = MatchcenterSection.FARJESTAD }
@@ -390,7 +391,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         }
     }
     fun close() {
-        screen = false; selectedId = null; picker = false; searchOpen = false; query = ""
+        screen = false; homeShortcut = false; selectedId = null; picker = false; searchOpen = false; query = ""
         if (dashboard == null) restoreTarget = entryFocus else {
             restoreTarget = null
             scope.launch { repeat(2) { withFrameNanos { } }; currentDashboardEntry?.invoke() }
@@ -404,6 +405,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             restoreTarget = pickerFocus
             return
         }
+        if (homeShortcut && !picker && !searchOpen) { close(); return }
         val previous = MatchcenterNavigation(section, selectedId, picker, searchOpen).back()
         if (previous == null) close() else {
             val old = selectedId
@@ -411,8 +413,8 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             restoreTarget = if (previous.channelPicker) pickerFocus else if (previous.gameId != null) detailFocus else gameFocus[old] ?: tabFocus
         }
     }
-    fun choose(game: SportFixture) { selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
-    fun open() { screen = true; restoreTarget = tabFocus }
+    fun choose(game: SportFixture) { homeShortcut = false; selectedId = game.id; picker = false; searchOpen = false; browsing = false; query = ""; restoreTarget = detailFocus }
+    fun open() { homeShortcut = false; screen = true; restoreTarget = tabFocus }
     var playbackValidationJob by remember(profileId) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun play(channel: ChannelEntity, list: List<ChannelEntity>, expected: SportFixture? = gameToMatch) {
         // Shell saves this destination during fullscreen; Back returns to the match/picker.
@@ -586,7 +588,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                 openCard, homeCardModifier.focusRequester(entryFocus),
                 currentData.values.minOfOrNull { it.fetchedAt },
                 manual = manualChannel != null, epgTime = localEvidence?.timeFromEpg == true,
-                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else open() }, hero = homeHero)
+                onDetails = { if (selectedTeams.teamIds.isEmpty()) onSettings() else {
+                    screen = true
+                    gameToMatch?.let { choose(it); homeShortcut = true } ?: open()
+                } }, hero = homeHero,
+                onChooseChannel = gameToMatch?.let { game -> { screen = true; choose(game); homeShortcut = true; picker = true; pickerSelectedId = null; restoreTarget = pickerFocus } },
+                probable = manualChannel == null && localEvidence == null && validBroadcast?.evidence == BroadcastEvidence.PROBABLE_EXTERNAL)
             else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
             HomeSportsCard(selectedTeams.teamIds.isNotEmpty(), {
@@ -614,7 +621,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
         if (screen) {
             BackHandler(onBack = ::back)
-            Column(Modifier.fillMaxSize().then(if (picker) Modifier.testTag("sport-manual-picker") else Modifier)
+            Column(Modifier.fillMaxSize().then(if (picker) Modifier.testTag("sport-manual-picker") else if (selectedId != null) Modifier.testTag("sport-match-details") else Modifier)
                 .background(Brush.verticalGradient(listOf(Color(0xFF14202C), MinTvNavy)))
                 .padding(start = contentStart, end = 48.mpx, top = reservedTop, bottom = 32.mpx)
                 .focusGroup(), verticalArrangement = Arrangement.spacedBy(18.mpx)) {

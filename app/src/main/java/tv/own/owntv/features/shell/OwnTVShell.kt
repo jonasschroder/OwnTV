@@ -1170,6 +1170,7 @@ fun OwnTVShell(
                             onLibrary = { selectFromNav(MainSection.MORE) },
                             onDownloads = { selectFromNav(MainSection.DOWNLOADS) },
                             onSwitchProfile = onSwitchProfile,
+                            reserveStatusHeader = playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO,
                             // Settings is reached through More now, so Back out of its root goes
                             // back there rather than to the rail — one level out, not two.
                             onBack = { restoreFocus = false; runCatching { sidebarFocus.requestFocus() } },
@@ -1400,7 +1401,7 @@ fun OwnTVShell(
                 }
             }
           }
-            if (primary == TopDestination.PROFILE || playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
+            if ((primary == TopDestination.PROFILE && selectedSection != MainSection.SETTINGS) || playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO)
             tv.own.owntv.features.shell.components.StageStatusCluster(
                 continuePill = continueTarget?.let { target ->
                     val live = target.kind == tv.own.owntv.features.home.ContinueKind.LIVE

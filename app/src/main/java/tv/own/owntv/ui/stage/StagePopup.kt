@@ -22,6 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.focusRequester
@@ -68,6 +70,8 @@ fun StagePopup(
     width: Dp = 880.mpx,
     scroll: Boolean = true,
     dismissOnBackPress: Boolean = true,
+    /** Explicit readable surface for critical flows; other Stage popups retain glass. */
+    panelColor: Color? = null,
     buttons: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -86,7 +90,8 @@ fun StagePopup(
                     .padding(top = if (ime.visible) edge else 0.mpx)
                     .width(width.coerceAtMost(maxWidth - edge * 2))
                     .heightIn(max = room.coerceAtLeast(120.mpx))
-                    .stageGlass(30.mpx, overContent = true)
+                    .then(if (panelColor == null) Modifier.stageGlass(30.mpx, overContent = true)
+                        else Modifier.clip(RoundedCornerShape(30.mpx)).background(panelColor.copy(alpha = 1f)))
                     .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                     .padding(30.mpx),
             ) {

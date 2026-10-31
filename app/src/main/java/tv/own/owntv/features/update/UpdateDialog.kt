@@ -3,6 +3,7 @@ package tv.own.owntv.features.update
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.border
@@ -85,6 +86,9 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val notesFocus = remember { FocusRequester() }
+    val bodyScroll = rememberScrollState()
+    var bodyFocused by remember { mutableStateOf(false) }
+    val scrollStep = with(LocalDensity.current) { 80.mpx.toPx() }
     val automaticFocus = remember { FocusRequester() }
     val first = remember { FocusRequester() }
     val actionFocus = remember { FocusRequester() }
@@ -107,22 +111,37 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
         UpdateAction.CONFIRM -> R.string.mintv_update_confirm
         else -> R.string.settings_check_updates
     }
-    StagePopup(onDismiss = onDismiss, title = stringResource(if (state == MinTvUpdater.State.Idle || state == MinTvUpdater.State.UpToDate) R.string.mintv_update_about else R.string.v016_update_title), width = 1080.mpx,
-        modifier = Modifier.focusProperties { onEnter = { if (initialAction && !experience.busy) actionFocus.requestFocus() else first.requestFocus() } }.focusGroup(),
+    StagePopup(onDismiss = onDismiss, title = stringResource(if (state == MinTvUpdater.State.Idle || state == MinTvUpdater.State.UpToDate) R.string.mintv_update_about else R.string.v016_update_title), width = 1080.mpx, scroll = false, panelColor = StageSurfaces.Panel,
+        modifier = Modifier.testTag("update-surface").focusProperties { onEnter = { if (initialAction && !experience.busy) actionFocus.requestFocus() else first.requestFocus() } }.focusGroup(),
         buttons = { CompositionLocalProvider(LocalResources provides resources) {
             StageButton(stringResource(if (later) R.string.update_later else if (experience.busy) R.string.v016_update_continue_browsing else R.string.settings_close), onClick = onDismiss,
-                modifier = Modifier.focusRequester(first).focusProperties { if (notes != null) up = notesFocus }, height = 56.mpx, textSize = 18)
+                modifier = Modifier.focusRequester(first).focusProperties { up = notesFocus }, height = 56.mpx, textSize = 20)
             if (!experience.busy) StageButton(stringResource(action), onClick = onAction,
-                modifier = Modifier.focusRequester(actionFocus).focusProperties { up = if (notes != null) notesFocus else automaticFocus; left = first }, height = 56.mpx, textSize = 18, tinted = true)
+                modifier = Modifier.focusRequester(actionFocus).focusProperties { up = notesFocus; left = first }, height = 56.mpx, textSize = 20, tinted = true)
         } }) { CompositionLocalProvider(LocalResources provides resources) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.app_name), style = stageText(23, 700), color = StageColors.Text)
-                Text(stringResource(R.string.mintv_v08_version_current, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString()), style = stageText(17, 500), color = StageColors.Muted)
+                Text(stringResource(R.string.mintv_v08_version_current, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString()), style = stageText(18, 500), color = StageColors.Muted, modifier = Modifier.testTag("update-current-version"))
             }
             Text(channel, style = stageText(18, 600), color = StageSurfaces.Cyan)
         }
         Spacer(Modifier.height(16.mpx))
+        Column(Modifier.weight(1f, fill = false).fillMaxWidth().testTag("update-body")
+            .focusRequester(notesFocus).focusProperties { up = first; down = automaticFocus }
+            .onPreviewKeyEvent { event ->
+                val delta = when (event.key) {
+                    Key.DirectionDown -> scrollStep.takeIf { bodyScroll.canScrollForward }
+                    Key.DirectionUp -> (-scrollStep).takeIf { bodyScroll.canScrollBackward }
+                    else -> null
+                }
+                if (delta == null) false else {
+                    if (event.type == KeyEventType.KeyDown) scope.launch { bodyScroll.scrollBy(delta) }
+                    true
+                }
+            }.onFocusChanged { bodyFocused = it.isFocused }
+            .border(2.mpx, if (bodyFocused) StageSurfaces.Cyan else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(8.mpx))
+            .focusable().verticalScroll(bodyScroll).padding(4.mpx)) {
         Text(stringResource(when (experience.step) {
             UpdateStep.DISCOVER -> R.string.v016_update_step_check
             UpdateStep.REVIEW -> R.string.v016_update_step_review
@@ -153,7 +172,8 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
                 MinTvUpdater.Problem.INVALID -> R.string.mintv_update_invalid
             })
         }
-        Text(text, style = stageText(25, 700), color = StageColors.Text)
+        Text(text, style = stageText(if (experience.step == UpdateStep.ISSUE) 21 else 25,
+            if (experience.step == UpdateStep.ISSUE) 500 else 700), color = StageColors.Text, modifier = Modifier.testTag("update-status"))
         candidate?.let {
             Text(stringResource(R.string.mintv_v08_version_target, it.version, it.code.toString()), style = stageText(19, 600), color = StageColors.Text)
             val size = android.text.format.Formatter.formatShortFileSize(context, it.bytes)
@@ -178,32 +198,16 @@ internal fun UpdatePresentation(state: MinTvUpdater.State, channel: String, auto
         notes?.let {
             Spacer(Modifier.height(14.mpx))
             Text(stringResource(R.string.mintv_v08_notes), style = stageText(21, 700), color = StageColors.Text)
-            var focused by remember { mutableStateOf(false) }
-            val notesScroll = rememberScrollState()
-            val scrollStep = with(LocalDensity.current) { 80.mpx.toPx() }
             Text(renderReleaseNotes(it, StageColors.Text), style = stageText(18, 400), color = StageColors.Muted,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 180.mpx).focusRequester(notesFocus)
-                    .focusProperties { up = first; down = automaticFocus }
-                    .onPreviewKeyEvent { event ->
-                        val delta = when (event.key) {
-                            Key.DirectionDown -> scrollStep.takeIf { notesScroll.canScrollForward }
-                            Key.DirectionUp -> (-scrollStep).takeIf { notesScroll.canScrollBackward }
-                            else -> null
-                        }
-                        if (delta == null) false else {
-                            if (event.type == KeyEventType.KeyDown) scope.launch { notesScroll.scrollBy(delta) }
-                            true
-                        }
-                    }.onFocusChanged { focused = it.hasFocus }
-                    .border(2.mpx, if (focused) StageSurfaces.Cyan else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(8.mpx))
-                    .focusable().verticalScroll(notesScroll).padding(8.mpx))
+                modifier = Modifier.fillMaxWidth().padding(8.mpx))
+        }
         }
         Spacer(Modifier.height(12.mpx))
         val date = checked?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
             ?: stringResource(R.string.mintv_update_never)
         Text(stringResource(R.string.mintv_update_last_check, date), style = stageText(16, 400), color = StageColors.Muted)
         StageButton(stringResource(R.string.mintv_update_automatic, stringResource(if (automatic) R.string.common_on else R.string.common_off)),
-            onClick = onAutomatic, modifier = Modifier.focusRequester(automaticFocus).focusProperties { up = if (notes != null) notesFocus else first; down = first }, height = 48.mpx, textSize = 16)
+            onClick = onAutomatic, modifier = Modifier.focusRequester(automaticFocus).focusProperties { up = notesFocus; down = first }, height = 48.mpx, textSize = 18)
     } }
 }
 

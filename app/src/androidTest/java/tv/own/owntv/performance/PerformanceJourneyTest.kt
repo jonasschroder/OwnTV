@@ -153,6 +153,8 @@ class PerformanceJourneyTest {
                     activity.window.decorView.postOnAnimation { drawn.countDown() }
                 } }
                 assertTrue("Wait for real presentation frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
+                // Dialog window entry animation is outside Compose's idle clock.
+                if (destination.endsWith("UPDATE")) Thread.sleep(300)
                 val bitmap = instrumentation.uiAutomation.takeScreenshot()
                 val dir = File(app.getExternalFilesDir(null), "performance/native").apply { mkdirs() }
                 File(dir, "$destination-${bitmap.width}x${bitmap.height}.png").outputStream().use { output ->
@@ -171,6 +173,7 @@ class PerformanceJourneyTest {
         try {
             for (size in listOf("1920x1080", "1280x720")) {
                 shell("wm size $size")
+                shell("wm density ${if (size == "1280x720") 213 else 320}")
                 settings.setActiveProfile(profile)
                 val intent = app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!
                 ActivityScenario.launch<MainActivity>(intent).use { scenario ->
@@ -184,6 +187,22 @@ class PerformanceJourneyTest {
                         press(KeyEvent.KEYCODE_DPAD_DOWN)
                         if (destination == "TV") press(KeyEvent.KEYCODE_DPAD_DOWN)
                         capture(scenario, "POPULATED_$destination")
+                        if (destination == "HOME" && !baseline) {
+                            var matchInfo = ""
+                            scenario.onActivity { matchInfo = it.getString(tv.own.owntv.R.string.mintv_v0111_match_details) }
+                            val action = compose.onNode(hasText(matchInfo) and isFocusable())
+                            action.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
+                            waitTag("sport-match-details"); capture(scenario, "HOME_MATCH_DETAILS")
+                            press(KeyEvent.KEYCODE_BACK)
+                            compose.waitUntil(5_000) { runCatching { action.assertIsFocused(); true }.getOrDefault(false) }
+                            val held = SystemClock.uptimeMillis()
+                            instrumentation.sendKeySync(KeyEvent(held, held, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                            Thread.sleep(650)
+                            instrumentation.sendKeySync(KeyEvent(held, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+                            waitTag("sport-manual-picker"); press(KeyEvent.KEYCODE_BACK)
+                            waitTag("sport-match-details"); press(KeyEvent.KEYCODE_BACK)
+                            compose.waitUntil(5_000) { runCatching { action.assertIsFocused(); true }.getOrDefault(false) }
+                        }
                     }
                     focus("header-update"); press(KeyEvent.KEYCODE_DPAD_CENTER)
                     compose.waitUntil(5_000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isNotEmpty() }
@@ -283,6 +302,7 @@ class PerformanceJourneyTest {
             video.close()
             db.channelDao().updateAll(listOf(original))
             shell("wm size reset")
+            shell("wm density reset")
         }
     }
 

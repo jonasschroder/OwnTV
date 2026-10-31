@@ -52,11 +52,11 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
     BoxWithConstraints(modifier.fillMaxSize().background(DesignLabBackground)) {
         val width = (maxWidth - 128.mpx - 54.mpx) / 4
         LazyColumn(state = nav.list, contentPadding = PaddingValues(horizontal = 64.mpx, vertical = 28.mpx),
-            verticalArrangement = Arrangement.spacedBy(18.mpx), modifier = Modifier.fillMaxSize().then(nav.modifier).focusGroup()) {
+            verticalArrangement = Arrangement.spacedBy(24.mpx), modifier = Modifier.fillMaxSize().then(nav.modifier).focusGroup()) {
             item(key = "sport-hero") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.mpx)) {
                     TvText(stringResource(R.string.mintv_nav_sport), size = 34, bold = true)
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.mpx)).neutralArtwork().padding(26.mpx),
+                    Row(Modifier.fillMaxWidth().heightIn(min = if (data.hero != null) 268.mpx else 120.mpx).clip(RoundedCornerShape(20.mpx)).neutralArtwork().padding(26.mpx),
                         horizontalArrangement = Arrangement.spacedBy(32.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                             TvText(data.hero?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 20, color = MinTvTeal, bold = true)
@@ -113,7 +113,16 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                     TvText(stringResource(R.string.mintv_v011_hockey_channels), size = 27, bold = true)
                     LazyRow(state = nav.rails.getValue("sport-channels"), horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(5.mpx)) {
                         items(data.channels.take(48), key = { it.id }) { channel ->
-                            HomeButton(channel.name, { actions.channel(channel) }, nav.item("sport-channel-${channel.id}").width(width), logo = channel.displayLogoUrl)
+                            HomeSurface({ actions.channel(channel) }, nav.item("sport-channel-${channel.id}").width(width)
+                                .testTag("sport-channel-${channel.id}")) {
+                                Column(Modifier.fillMaxWidth().heightIn(min = 120.mpx).padding(8.mpx),
+                                    verticalArrangement = Arrangement.spacedBy(14.mpx, androidx.compose.ui.Alignment.CenterVertically)) {
+                                    channel.displayLogoUrl?.let { logo -> tv.own.owntv.ui.components.ChannelLogoTile(logo,
+                                        Modifier.height(42.mpx).fillMaxWidth(.5f), fill = Color.Transparent) { } }
+                                    TvText(channel.name, size = 24, bold = true, lines = 2)
+                                    TvText(stringResource(R.string.v016_channel_play_hint), size = 18, color = MinTvTeal, lines = 1)
+                                }
+                            }
                         }
                     }
                 }
@@ -131,8 +140,8 @@ private fun SportFixtureRail(label: String, fixtures: List<SportFixture>, id: St
                 val playable = data.playableFixtures[game.id]?.takeIf { game.status == MatchStatus.SCHEDULED }
                 val activate = { if (playable != null && actions.fixtureWatch != null) actions.fixtureWatch.invoke(game, playable) else actions.details(game) }
                 HomeSurface(activate, nav.item("$id-${game.id}")
-                    .then(if (playable != null) Modifier.logicalChannelKeys(activate, { actions.details(game) }) else Modifier).width(width).heightIn(min = (if (id == "sport-upcoming") 108 else 178).mpx).testTag("$id-${game.id}")) {
-                    Column(Modifier.fillMaxWidth().heightIn(min = (if (id == "sport-upcoming") 80 else 150).mpx).neutralArtwork().padding(8.mpx), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
+                    .then(if (playable != null) Modifier.logicalChannelKeys(activate, { actions.details(game) }) else Modifier).width(width).heightIn(min = (if (id == "sport-upcoming") 164 else 178).mpx).testTag("$id-${game.id}")) {
+                    Column(Modifier.fillMaxWidth().heightIn(min = (if (id == "sport-upcoming") 136 else 150).mpx).neutralArtwork().padding(8.mpx), verticalArrangement = Arrangement.spacedBy(12.mpx)) {
                         TvText(fixtureWhen(game, data.now), size = 18, color = MinTvMuted, lines = 1)
                         TvText(pairLabel(game), size = if (id == "sport-upcoming") 23 else 28, bold = true, lines = if (id == "sport-upcoming") 1 else 2)
                         TvText(game.result?.takeUnless { data.preferences.hideScores } ?: data.broadcastLabels[game.id]

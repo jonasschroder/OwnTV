@@ -1,0 +1,251 @@
+[
+  {
+    "path": "before/POPULATED_HOME-1920x1080.png",
+    "sha256": "71a930ac7decb1f20fed2a3ce75b06d5a0f77bbfdd4d33a6b23d0815057f9268"
+  },
+  {
+    "path": "before/POPULATED_TV-1920x1080.png",
+    "sha256": "8ec27c2595c69da12f8d03c8619b2d9351eaa40afb0208be8fbdb2614106c6d8"
+  },
+  {
+    "path": "before/POPULATED_SPORT-1920x1080.png",
+    "sha256": "2358539a4b2ef15b514be6622013022fb376a8d661a571c06a245372cb309ed8"
+  },
+  {
+    "path": "before/POPULATED_VOD-1920x1080.png",
+    "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4"
+  },
+  {
+    "path": "before/POPULATED_PROFILE-1920x1080.png",
+    "sha256": "0370a620e037b6f836543cab81803a570a5f7606e1920d2062165b9045809808"
+  },
+  {
+    "path": "before/POPULATED_UPDATE-1920x1080.png",
+    "sha256": "fbb37a90a88ca90010300ff0b1c23cc93dfe7bbe0a2de23ebec6571ee03679e8"
+  },
+  {
+    "path": "after/POPULATED_HOME-1920x1080.png",
+    "sha256": "3c676883235b968a210b84ee9e6806c34e2dbd33cff19216bcce154e969c3d03"
+  },
+  {
+    "path": "after/POPULATED_TV-1920x1080.png",
+    "sha256": "a32cfbdf308bff6cc6fa9ab8ebdde871d891991bff09020c2000e857867bf027"
+  },
+  {
+    "path": "after/POPULATED_SPORT-1920x1080.png",
+    "sha256": "c9f0586b5ad8b13f942c9c94c96b77412dee66a4495ad7bbb30df98383db1479"
+  },
+  {
+    "path": "after/POPULATED_VOD-1920x1080.png",
+    "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4"
+  },
+  {
+    "path": "after/POPULATED_PROFILE-1920x1080.png",
+    "sha256": "34b4805a2cd86511fd30350de0f87f553608b0639e2f7f8af3b8faca6e31d43b"
+  },
+  {
+    "path": "after/POPULATED_UPDATE-1920x1080.png",
+    "sha256": "de10705a3a882e2e2de09835f6e32f7c8d72ea215cd6bbb76dff2941362b5fbc"
+  },
+  {
+    "path": "journeys/v016-update-flow-review-1920x1080-synthetic.png",
+    "sha256": "b34f97d90c7d9aa798e6914eb31fa2c98924056484a0af4bdfa5e021add49023"
+  },
+  {
+    "path": "journeys/v016-update-flow-progress-1920x1080-synthetic.png",
+    "sha256": "2c94e0dd68c71d2d26cefc1ce67de34734e2be9049bf296cf31e6266c0a22544"
+  },
+  {
+    "path": "journeys/v016-update-flow-permission-1920x1080-synthetic.png",
+    "sha256": "e8796c287f48c793ba3ae6ac9a30ca4894d71f882ec9f6bb0f90e1b7322e994b"
+  },
+  {
+    "path": "journeys/v016-update-flow-confirmation-1920x1080-synthetic.png",
+    "sha256": "05a01e68bc73d4728bad75e1e2481112ba75df1088e3279de10246f4ff2a691f"
+  },
+  {
+    "path": "after/HOME_MATCH_DETAILS-1920x1080.png",
+    "sha256": "d01b1e82ad1bd2359de02c7c9a8c2eeffddff671bf409c2e813e00c243a94683"
+  },
+  {
+    "path": "after/TV_LATE_GUIDE-1920x1080.png",
+    "sha256": "7de0d4e447eb99ace1051ace3938e425d1df761452195e9a8e63676c8c584609"
+  },
+  {
+    "path": "after/SPORT_MANUAL_PICKER-1920x1080.png",
+    "sha256": "ec36692fb0335733af1bfe254fcf7c6052554aed63643f13ce8439206eb9c05e"
+  },
+  {
+    "path": "after/SOURCE_PICKER-1920x1080.png",
+    "sha256": "485f871106256fac9787a15efcd0ef045b0c658b03ded344c31dc0cf18546039"
+  },
+  {
+    "path": "before/POPULATED_HOME-1280x720.png",
+    "sha256": "2d1703e46c0e790ddfc3b957b0b33b54f6c71fe56d2e31a9287d1b0874469c9f"
+  },
+  {
+    "path": "before/POPULATED_TV-1280x720.png",
+    "sha256": "631399a46e6d26495c065385fb01e57964b90d974103ab7b3dc7107fa8dd0604"
+  },
+  {
+    "path": "before/POPULATED_SPORT-1280x720.png",
+    "sha256": "72817192bb19c0b8abb853c601752e7ddca80144d1b7eeaa5eb7a9a22b3378c1"
+  },
+  {
+    "path": "before/POPULATED_VOD-1280x720.png",
+    "sha256": "21d171110546766ca596f6dbad41640c12d37e638dbb01422f8b35c94f2325d9"
+  },
+  {
+    "path": "before/POPULATED_PROFILE-1280x720.png",
+    "sha256": "b3f0a94732889eec3e28445a331f880a6bcafc2e1db3b93af42effbbad9fb63a"
+  },
+  {
+    "path": "before/POPULATED_UPDATE-1280x720.png",
+    "sha256": "d2f2ab55207a73d07cc34b8d012a8bd62228966367643237cfbf5d9fcbb51b3a"
+  },
+  {
+    "path": "after/POPULATED_HOME-1280x720.png",
+    "sha256": "2eb64435a88ea62b65dfba18c3306a33f0002e37ac5311fa0402ed54bb075ae3"
+  },
+  {
+    "path": "after/POPULATED_TV-1280x720.png",
+    "sha256": "249cde31fac5e995d142d593a608591978a5f2ca0453fa72a6fc6be2ae9c0d32"
+  },
+  {
+    "path": "after/POPULATED_SPORT-1280x720.png",
+    "sha256": "dbe8281f89ccfee382fc4311cc600dfe5e6089bf58885670d35c2dc4b56b1907"
+  },
+  {
+    "path": "after/POPULATED_VOD-1280x720.png",
+    "sha256": "21d171110546766ca596f6dbad41640c12d37e638dbb01422f8b35c94f2325d9"
+  },
+  {
+    "path": "after/POPULATED_PROFILE-1280x720.png",
+    "sha256": "20077f6c5076f52bc7b13cf2a71211dc07786347a2a047730359c79068c29116"
+  },
+  {
+    "path": "after/POPULATED_UPDATE-1280x720.png",
+    "sha256": "145733dc4c07faa5948e6e69e5534181ab1544701cff66806337fd55c1cd6725"
+  },
+  {
+    "path": "journeys/v016-update-flow-review-1280x720-synthetic.png",
+    "sha256": "9c7f552ad79d6fd4cc0e4e07ae43ce67433776e1de35f4fbdb31ed64f3edfe57"
+  },
+  {
+    "path": "journeys/v016-update-flow-progress-1280x720-synthetic.png",
+    "sha256": "ad3bd663ebf48f50165b1dd986be102f44a011784c031b45ad6feb90cf2bfa70"
+  },
+  {
+    "path": "journeys/v016-update-flow-permission-1280x720-synthetic.png",
+    "sha256": "e460ba5dfe2ec215ddbadd472fdbad51babdde3f25926077db75d36282ad9118"
+  },
+  {
+    "path": "journeys/v016-update-flow-confirmation-1280x720-synthetic.png",
+    "sha256": "8d5e90f93ce5ccb4574ca950e6c812eba2edaf504f6e676b7fa5785fbe8874d3"
+  },
+  {
+    "path": "after/HOME_MATCH_DETAILS-1280x720.png",
+    "sha256": "0748ce6965284d983439dd7e8f745fbd2554af2c241e055626b11b096f504b1d"
+  },
+  {
+    "path": "after/TV_LATE_GUIDE-1280x720.png",
+    "sha256": "98baf75447029d5e3d2193d0cecc5257ac1da5918d4c66860fc0b96b17dea7b6"
+  },
+  {
+    "path": "after/SPORT_MANUAL_PICKER-1280x720.png",
+    "sha256": "f53801869e5f3519090aa740b4c42c73b8264fa7a3d4e87226b52c954e51aaa2"
+  },
+  {
+    "path": "after/SOURCE_PICKER-1280x720.png",
+    "sha256": "f6e4bc22d3c912c722d8a9b2d0942067fd692756881fd8bb1261d6a8bdf1f303"
+  },
+  {
+    "path": "tests/updateRemotePresentationJourneyAt1080.txt",
+    "sha256": "d1573fcfd6a8795778902d8cf3e073011a1b4578f4391ed2602a6156a6357dd7"
+  },
+  {
+    "path": "tests/updateRemotePresentationJourneyAt720.txt",
+    "sha256": "b0a86426c62a112ebb53e1a118bc6d6fba9253be31dd7dd87867d4291aa5e12a"
+  },
+  {
+    "path": "tests/homeMatchFirstActionsAt1080.txt",
+    "sha256": "6ea088f1dfe843af4f6e6d8ac0dd4344ce75b5e6f7bc5759ada0671a26d108c6"
+  },
+  {
+    "path": "tests/homeMatchFirstActionsAt720.txt",
+    "sha256": "71d60daae6acb94961031ac788911e7bac69a026dac9865e0a44f5fad2e668ce"
+  },
+  {
+    "path": "tests/settingsLeftReturnsToActiveCategoryAfterScrollingDetails.txt",
+    "sha256": "9f69116dbcac574e9af3289486f08b5e387052fced5492ad245625abfca2877a"
+  },
+  {
+    "path": "tests/sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus.txt",
+    "sha256": "5dca00cd0278f97f82f5d9f67a685d65e665f2341504bf499f7267389ce64177"
+  },
+  {
+    "path": "tests/fontScalingAt720KeepsBothEntriesAndSportsRowsReachable.txt",
+    "sha256": "e333f2657f56734cec06623caf474d8e0d001070fab631a09b53eb4bdc4d6467"
+  },
+  {
+    "path": "tests/automaticBroadcastCardPlaysOnlyUniqueSourceAt1080.txt",
+    "sha256": "1cbea8b71177b31ca1942549f76738ee76f8efc84b68bdda6f2661d38fdc871a"
+  },
+  {
+    "path": "tests/automaticBroadcastCardPlaysOnlyUniqueSourceAt720.txt",
+    "sha256": "940598335c000ebe22a7188badb79a2e99d3203c8447666acdd0bb648189a786"
+  },
+  {
+    "path": "tests/before-populated.txt",
+    "sha256": "13082deba8e07dc9380089d10d30f074c86c6315effb60bc3bf9430ab328d286"
+  },
+  {
+    "path": "tests/after-populated.txt",
+    "sha256": "2142db1a540c0d0795994a8b598c385ba6586b2933af49beb61945a1b5273d87"
+  },
+  {
+    "path": "performance/perf-before-1920x1080.json",
+    "sha256": "c6f637bbf331705eaed65f880e1b8edcd4f9872d4c583dbc7d97cb78f4b5f35d"
+  },
+  {
+    "path": "performance/perf-repeat-after-1280x720.json",
+    "sha256": "7e849046d6d7f92b9f4d8ee8d8cf8b31a3ebda388d42b55b521069574865f95b"
+  },
+  {
+    "path": "performance/perf-after-1280x720.json",
+    "sha256": "3b5799c455ed1c04d1a93bb8401119150dcb33a43a257cc8ea9f45d8cfb7b33e"
+  },
+  {
+    "path": "performance/perf-repeat-before-1280x720.json",
+    "sha256": "e1d758286d407873313fd060f6826487d7e5cf4ddc928f5721533a664c7869c9"
+  },
+  {
+    "path": "performance/perf-repeat-after-1920x1080.json",
+    "sha256": "a413b6d4c505f777ffe3d0ab7c27c2c3479f96e6bf92e38fb394a17da6f0a74e"
+  },
+  {
+    "path": "performance/perf-before-1280x720.json",
+    "sha256": "5e55ab65bd6edfe47255a0b707ab825f05811e54990fd14672467ed6ed17be2f"
+  },
+  {
+    "path": "performance/perf-repeat-before-1920x1080.json",
+    "sha256": "8fb192157283249941f7da5874ad6fe3e9501885abb9351c323eb1945946cff4"
+  },
+  {
+    "path": "performance/perf-after-1920x1080.json",
+    "sha256": "47a273d9d922b98813f294f43b2d9df6fb51dcb9ad4b3d4bd390a51ab3895ed5"
+  },
+  {
+    "local_artifact": "app-qa-debug.apk",
+    "sha256": "faa2df45a48da2ec021a30e29b7c761fc140c484865c2d816ce8ee0f65d71961"
+  },
+  {
+    "local_artifact": "app-qa-debug-androidTest.apk",
+    "sha256": "47b30b5d286a668049547bea8990f8c72c82d5624cf77d519d0b90b2b5c1f1e8"
+  },
+  {
+    "baseline_commit": "7698b1a7d73fe2ec6582988e1a2f2db0f5da3019",
+    "baseline_apk_sha256": "f1aaffcda73ce709d40cc929788e0939f061fce92bf2728abd4b33041cdb49c2",
+    "note": "Phase2 feature APK production tree equals review head; test-only follow-up did not change production APK. Synthetic debug stamp 0.14.0-dev/2; no release APK."
+  }
+]

@@ -8,4 +8,9 @@
     <string name="v016_hockey_settings">Hockeyinställningar</string>
     <string name="v016_guide_missing_short">Guide saknas</string>
     <string name="v016_match_info_short">Info</string>
+    <string name="v016_category_content">Innehåll</string>
+    <string name="v016_category_sound">Ljud &amp; text</string>
+    <string name="v016_category_watching">Uppspelning</string>
+    <string name="v016_category_active">Aktiv</string>
+    <string name="v016_channel_play_hint">OK spelar kanalen</string>
 </resources>

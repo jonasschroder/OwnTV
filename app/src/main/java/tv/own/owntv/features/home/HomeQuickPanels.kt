@@ -1,5 +1,6 @@
 package tv.own.owntv.features.home
 
+import tv.own.owntv.features.live.source.logicalChannelKeys
 import androidx.compose.ui.platform.testTag
 
 import androidx.compose.foundation.background
@@ -19,18 +20,26 @@ import androidx.compose.ui.platform.LocalConfiguration
 /** Supporting strips, not independent dashboard panels. Evidence/actions keep their existing owners. */
 @Composable
 internal fun HockeyQuickCard(game: SportFixture?, now: Long, channel: String?, watch: Boolean,
-    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false, onDetails: () -> Unit = onOpen, hero: Boolean = false) {
+    teams: String, onOpen: () -> Unit, modifier: Modifier = Modifier, cachedAt: Long? = null, manual: Boolean = false, epgTime: Boolean = false, onDetails: () -> Unit = onOpen, hero: Boolean = false,
+    onChooseChannel: (() -> Unit)? = null, probable: Boolean = false) {
     if (hero) {
         Column(Modifier.fillMaxWidth().heightIn(min = 252.mpx)
             .background(Brush.horizontalGradient(listOf(Color(0xFF17352E), Color(0xFF15282C))), RoundedCornerShape(20.mpx)).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(6.mpx)) {
-            TvText(game?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 18, color = MinTvTeal, bold = true)
-            TvText(game?.let { pairLabel(it) } ?: teams.ifBlank { stringResource(R.string.mintv_choose_teams) }, size = 52, bold = true, lines = 2)
-            game?.let { TvText(fixtureWhen(it, now), size = 21, color = MinTvMuted, lines = 1) }
-            TvText(channel ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 20, color = MinTvMuted, lines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TvText(game?.competition?.name ?: stringResource(R.string.mintv_my_hockey), size = 18, color = MinTvTeal, bold = true)
+                game?.let { TvText(fixtureWhen(it, now), size = 21, color = MinTvMuted, lines = 1) }
+            }
+            TvText(game?.let { pairLabel(it) } ?: teams.ifBlank { stringResource(R.string.mintv_choose_teams) }, size = 48, bold = true, lines = 2)
+            TvText(channel?.let { if (probable) stringResource(R.string.mintv_probable_channel, it) else it } ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 20, color = MinTvMuted, lines = 1)
             if (manual && channel != null) TvText(stringResource(R.string.mintv_hockey_manual_evidence), size = 16, color = MinTvMuted, lines = 1)
             if (epgTime) TvText(stringResource(R.string.mintv_hockey_epg_time), size = 16, color = MinTvMuted, lines = 1)
-            SmartAction(stringResource(if (watch) R.string.mintv_watch_match else R.string.mintv_v011_browse_hockey), onOpen, modifier, primary = true)
+            val primary = if (watch) onOpen else onDetails
+            Row(horizontalArrangement = Arrangement.spacedBy(18.mpx), verticalAlignment = Alignment.CenterVertically) {
+                SmartAction(stringResource(if (watch) R.string.mintv_watch_match else if (game != null) R.string.mintv_v0111_match_details else R.string.mintv_v011_browse_hockey), primary,
+                    modifier.then(if (game != null && onChooseChannel != null) Modifier.logicalChannelKeys(primary, { onChooseChannel() }) else Modifier), primary = true)
+                if (game != null && onChooseChannel != null) TvText(stringResource(R.string.v016_sport_hold_channel), size = 17, color = MinTvMuted, lines = 2)
+            }
         }
         return
     }

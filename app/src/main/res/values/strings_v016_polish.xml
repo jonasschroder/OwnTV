@@ -8,4 +8,9 @@
     <string name="v016_hockey_settings">Hockey settings</string>
     <string name="v016_guide_missing_short">Guide unavailable</string>
     <string name="v016_match_info_short">Info</string>
+    <string name="v016_category_content">Content</string>
+    <string name="v016_category_sound">Sound &amp; subtitles</string>
+    <string name="v016_category_watching">Playback</string>
+    <string name="v016_category_active">Active</string>
+    <string name="v016_channel_play_hint">OK plays this channel</string>
 </resources>

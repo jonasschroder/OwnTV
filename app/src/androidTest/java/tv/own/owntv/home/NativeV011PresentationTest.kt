@@ -48,7 +48,18 @@ class NativeV011PresentationTest {
                 val small = description.methodName.contains("720") || InstrumentationRegistry.getArguments().getString("nativeResolution") == "1280x720"
                 density = if (small) 1.2f else 1.8f
                 shell(if (small) "wm size 1280x720" else "wm size 1920x1080")
-                instrumentation.waitForIdleSync()
+                // The TV launcher's onboarding animation may never become globally idle.
+                // Wait for the actual display size before launching our own test Activity.
+                val expected = if (small) 1280 to 720 else 1920 to 1080
+                val deadline = android.os.SystemClock.uptimeMillis() + 5_000
+                var ready: Boolean
+                do {
+                    val shot = instrumentation.uiAutomation.takeScreenshot()
+                    ready = shot.width == expected.first && shot.height == expected.second
+                    shot.recycle()
+                    if (!ready) Thread.sleep(50)
+                } while (!ready && android.os.SystemClock.uptimeMillis() < deadline)
+                check(ready) { "Native test display did not reach $expected" }
                 try { base.evaluate() } finally { shell("wm size reset") }
             }
         }
@@ -253,12 +264,15 @@ class NativeV011PresentationTest {
         var state by mutableStateOf<tv.own.owntv.features.update.MinTvUpdater.State>(tv.own.owntv.features.update.MinTvUpdater.State.Available(candidate))
         var open by mutableStateOf(false)
         var downloads = 0; var permissionRequests = 0; var confirmations = 0
+        var backdrop by mutableStateOf(MinTvNavy)
         lateinit var entryFocus: FocusRequester
         compose.setContent {
             val config = Configuration(compose.activity.resources.configuration).apply { setLocale(Locale.forLanguageTag("sv")) }
             val swedish = compose.activity.createConfigurationContext(config)
-            CompositionLocalProvider(LocalContext provides swedish, LocalConfiguration provides config) {
+            CompositionLocalProvider(LocalContext provides swedish, LocalConfiguration provides config,
+                LocalDensity provides Density(density, fontScale)) {
             MaterialTheme {
+                Box(Modifier.fillMaxSize().background(backdrop)) { }
                 val scope = rememberCoroutineScope()
                 entryFocus = remember { FocusRequester() }
                 tv.own.owntv.features.update.UpdateEntryPresentation(state, "Test", { open = true }, Modifier.focusRequester(entryFocus))
@@ -275,11 +289,12 @@ class NativeV011PresentationTest {
                             }
                             else -> Unit
                         }
-                    }, availableBytes = 1_000_000_000)
+                    }, availableBytes = if ((state as? tv.own.owntv.features.update.MinTvUpdater.State.Available)?.interrupted == true) 0 else 1_000_000_000)
             }
             }
         }
         fun captureStep(step: String) {
+            Thread.sleep(300) // Capture the actual steady dialog after the platform window fade.
             val bitmap = instrumentation.uiAutomation.takeScreenshot()
             val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }
             File(dir, "v016-update-flow-$step-${bitmap.width}x${bitmap.height}-synthetic.png").outputStream().use {
@@ -289,6 +304,18 @@ class NativeV011PresentationTest {
         }
         compose.runOnIdle { entryFocus.requestFocus() }; press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithText("Uppdatera nu").assertIsFocused(); captureStep("review")
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithTag("update-body").assertIsFocused()
+        val range = compose.onNodeWithTag("update-body").fetchSemanticsNode()
+            .config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange]
+        if (range.maxValue() > 0f) {
+            press(KeyEvent.KEYCODE_DPAD_DOWN)
+            compose.waitUntil(5_000) { range.value() > 0f }
+            compose.onNodeWithTag("update-body").assertIsFocused()
+        }
+        compose.onNodeWithTag("update-current-version").assertIsDisplayed()
+        press(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("header-update").assertIsFocused()
+        assertEquals(0, downloads); press(KeyEvent.KEYCODE_DPAD_CENTER)
         // Later keeps the authenticated candidate and returns to its exact global entry.
         press(KeyEvent.KEYCODE_DPAD_LEFT); press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithTag("header-update").assertIsFocused(); assertEquals(0, downloads)
@@ -318,10 +345,95 @@ class NativeV011PresentationTest {
             press(KeyEvent.KEYCODE_DPAD_CENTER); press(KeyEvent.KEYCODE_BACK)
             compose.onNodeWithTag("header-update").assertIsFocused()
         }
+        // Render the actual shared native popup against two different underlying screens.
+        // Alpha on the captured window is always 255; pixel invariance proves the body masks content.
+        val cases = listOf<tv.own.owntv.features.update.MinTvUpdater.State>(
+            tv.own.owntv.features.update.MinTvUpdater.State.Idle,
+            tv.own.owntv.features.update.MinTvUpdater.State.Checking,
+            tv.own.owntv.features.update.MinTvUpdater.State.UpToDate,
+            tv.own.owntv.features.update.MinTvUpdater.State.Failed(tv.own.owntv.features.update.MinTvUpdater.Problem.SETUP),
+            tv.own.owntv.features.update.MinTvUpdater.State.Available(candidate),
+            tv.own.owntv.features.update.MinTvUpdater.State.Downloading(42, 12_600_000, candidate.bytes),
+            tv.own.owntv.features.update.MinTvUpdater.State.Verifying,
+            tv.own.owntv.features.update.MinTvUpdater.State.Failed(tv.own.owntv.features.update.MinTvUpdater.Problem.STORAGE),
+            tv.own.owntv.features.update.MinTvUpdater.State.Permission,
+            tv.own.owntv.features.update.MinTvUpdater.State.Confirmation,
+            tv.own.owntv.features.update.MinTvUpdater.State.Installing,
+            tv.own.owntv.features.update.MinTvUpdater.State.Cancelled,
+            tv.own.owntv.features.update.MinTvUpdater.State.Installed,
+            tv.own.owntv.features.update.MinTvUpdater.State.Available(candidate, interrupted = true))
+        for (scale in listOf(1f, 1.4f)) for (next in cases) {
+            compose.runOnIdle { fontScale = scale; state = next; backdrop = androidx.compose.ui.graphics.Color.Red; open = true }
+            compose.waitForIdle()
+            compose.onNodeWithTag("update-current-version").assertIsDisplayed()
+            compose.onNodeWithTag("update-status").assertIsDisplayed()
+            val bounds = compose.onNodeWithTag("update-surface").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            fun pixels(): List<Int> {
+                instrumentation.waitForIdleSync()
+                val shot = instrumentation.uiAutomation.takeScreenshot()
+                return try { listOf(.2f, .4f, .6f, .8f).map { t ->
+                    shot.getPixel((bounds.left + 12 * density).toInt(), (bounds.top + bounds.height * t).toInt())
+                } + shot.getPixel(2, shot.height / 2) } finally { shot.recycle() }
+            }
+            fun distance(a: Int, b: Int) = listOf(0, 8, 16).maxOf { shift ->
+                kotlin.math.abs((a ushr shift and 255) - (b ushr shift and 255))
+            }
+            fun settled(redBackground: Boolean): List<Int> {
+                var sample = emptyList<Int>()
+                // Platform Dialog entry fades are outside Compose's idle clock. Wait for the
+                // real opaque paint at the clean heading margin. Other samples may include
+                // internal button shadows; all four must still be background-invariant (2/255 rounding).
+                try { compose.waitUntil(3_000) {
+                    sample = pixels()
+                    distance(sample.first(), 0xFF142237.toInt()) <= 2 &&
+                        if (redBackground) (sample.last() ushr 16 and 255) > (sample.last() ushr 8 and 255)
+                        else (sample.last() ushr 8 and 255) > (sample.last() ushr 16 and 255)
+                }
+                } catch (error: Throwable) {
+                    val shot = instrumentation.uiAutomation.takeScreenshot()
+                    val file = File(compose.activity.getExternalFilesDir(null), "v04-screenshots/pixel-failure.png")
+                    file.parentFile!!.mkdirs(); file.outputStream().use { shot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }; shot.recycle()
+                    throw AssertionError("$next / $scale / red=$redBackground / $bounds / ${sample.map { Integer.toHexString(it) }}", error)
+                }
+                return sample
+            }
+            val red = settled(true)
+            compose.runOnIdle { backdrop = androidx.compose.ui.graphics.Color.Green }; compose.waitForIdle()
+            val green = settled(false)
+            assertTrue("Opaque modal must mask underlying content: $next / $scale",
+                red.take(4).zip(green.take(4)).all { (a, b) -> distance(a, b) <= 2 })
+            assertNotEquals("The underlying screen must actually change", red.last(), green.last())
+            val identity = compose.onNodeWithTag("update-current-version").fetchSemanticsNode().boundsInRoot
+            assertTrue("Version must stay inside the visible panel", bounds.contains(identity.topLeft) && bounds.contains(identity.bottomRight))
+            press(KeyEvent.KEYCODE_BACK); compose.onNodeWithTag("header-update").assertIsFocused()
+        }
         assertEquals(1, downloads); assertEquals(1, permissionRequests); assertEquals(1, confirmations)
     }
     @Test fun updateRemotePresentationJourneyAt1080() { updateRemoteJourney() }
     @Test fun updateRemotePresentationJourneyAt720() { updateRemoteJourney() }
+
+    private fun matchFirstHome() {
+        var played = 0; var details = 0; var choices = 0
+        var playable by mutableStateOf(false)
+        val first = FocusRequester()
+        compose.setContent { MaterialTheme {
+            HockeyQuickCard(fixture, now, "TV4 Sport Live 1", playable, "Färjestad", { played++ },
+                Modifier.focusRequester(first), onDetails = { details++ }, hero = true,
+                onChooseChannel = { choices++ }, probable = !playable)
+        } }
+        compose.runOnIdle { first.requestFocus() }
+        compose.onNodeWithText(compose.activity.getString(R.string.mintv_v0111_match_details)).assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, details); assertEquals(0, played)
+        val down = android.os.SystemClock.uptimeMillis()
+        instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        Thread.sleep(650)
+        instrumentation.sendKeySync(KeyEvent(down, android.os.SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        compose.waitForIdle(); assertEquals(1, choices); assertEquals(1, details); assertEquals(0, played)
+        compose.runOnIdle { playable = true }
+        press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, played); assertEquals(1, details)
+    }
+    @Test fun homeMatchFirstActionsAt1080() { matchFirstHome() }
+    @Test fun homeMatchFirstActionsAt720() { matchFirstHome() }
 
     @Test fun settingsLeftReturnsToActiveCategoryAfterScrollingDetails() {
         var selected by mutableIntStateOf(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal)
@@ -341,7 +453,7 @@ class NativeV011PresentationTest {
             }
         }
         compose.runOnIdle { category.requestFocus() }; compose.waitForIdle()
-        compose.onNodeWithTag("settings-group-APP").assertIsFocused()
+        compose.onNodeWithTag("settings-group-APP").assertIsFocused().assertIsSelected()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("setting-0").assertIsFocused()
         repeat(6) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
         compose.onNodeWithTag("setting-6").assertIsFocused()
@@ -353,6 +465,8 @@ class NativeV011PresentationTest {
             compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("setting-6").assertIsFocused(); true }.getOrDefault(false) }
         } catch (error: Throwable) { throw AssertionError(compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 10), error) }
         press(KeyEvent.KEYCODE_DPAD_LEFT); press(KeyEvent.KEYCODE_DPAD_UP)
+        compose.onNodeWithTag("settings-group-APP").assertIsSelected()
+        compose.onNodeWithTag("settings-group-WATCHING").assertIsFocused().assertIsNotSelected()
         assertEquals(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, selected)
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("setting-0").assertIsFocused(); true }.getOrDefault(false) }

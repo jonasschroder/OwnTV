@@ -24,15 +24,19 @@ internal fun SettingsCategoryMenu(selected: Int, choose: (Int) -> Unit, enter: (
     val list = rememberLazyListState()
     var focused by remember { mutableIntStateOf(selected) }
     val scope = rememberCoroutineScope()
+    fun activate(index: Int) {
+        choose(index)
+        scope.launch { repeat(2) { withFrameNanos { } }; enter() }
+    }
     LaunchedEffect(selected) { list.scrollToItem(selected.coerceIn(SettingsGroup.entries.indices)) }
     LazyColumn(Modifier.fillMaxSize().testTag("settings-categories").focusGroup().onPreviewKeyEvent {
         if (it.key == Key.DirectionRight) {
-            if (it.type == KeyEventType.KeyDown) { choose(focused); scope.launch { withFrameNanos { }; withFrameNanos { }; enter() } }
+            if (it.type == KeyEventType.KeyDown) { activate(focused) }
             true
         } else false
     }, state = list, verticalArrangement = Arrangement.spacedBy(10.mpx)) {
         itemsIndexed(SettingsGroup.entries) { index, group ->
-            StagePill(stringResource(group.titleRes), { choose(index) },
+            StagePill(stringResource(group.titleRes), { activate(index) },
                 Modifier.fillMaxWidth().then(if (index == selected) Modifier.focusRequester(target) else Modifier).onFocusChanged { if (it.isFocused) focused = index }.testTag("settings-group-${group.name}"), dimmed = index != selected)
         }
     }

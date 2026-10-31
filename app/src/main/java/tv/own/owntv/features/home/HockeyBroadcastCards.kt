@@ -4,7 +4,9 @@ import java.time.Instant
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.features.live.SwedishChoices
 
-internal data class HockeyCardBroadcast(val label: String?, val playable: ChannelEntity?, val probable: Boolean = false)
+internal enum class HockeyChannelAvailability { PLAYABLE, CHECKING, MISSING, CHOICE_REQUIRED, UNKNOWN }
+internal data class HockeyCardBroadcast(val label: String?, val playable: ChannelEntity?, val probable: Boolean = false,
+    val availability: HockeyChannelAvailability = HockeyChannelAvailability.UNKNOWN)
 
 /** A confirmed name is useful even when no unique, authorized source can be played. */
 internal fun hockeyCardBroadcast(fixture: SportFixture, local: EpgHockeyMatch?, localChannels: Map<Long, ChannelEntity>,
@@ -19,9 +21,17 @@ internal fun hockeyCardBroadcast(fixture: SportFixture, local: EpgHockeyMatch?, 
     } else resolved.filter { channel -> external?.channels?.any { BroadcastResolver.matches(it, channel.name) } == true }, choices)
         .filterNot { BroadcastResolver.streamingBrand(it.name) }
     val label = (if (evidence != null) rows.map { it.name } else names).distinct().joinToString().takeIf { it.isNotBlank() }
-    return HockeyCardBroadcast(label, preferredHockeyChannel(rows, choices).takeIf {
+    val playable = preferredHockeyChannel(rows, choices).takeIf {
         fixture.status == MatchStatus.SCHEDULED && if (evidence != null) !evidence.truncated else complete
-    }, evidence == null && external?.evidence == BroadcastEvidence.PROBABLE_EXTERNAL)
+    }
+    val availability = when {
+        playable != null -> HockeyChannelAvailability.PLAYABLE
+        evidence?.truncated == true || external != null && evidence == null && !complete -> HockeyChannelAvailability.CHECKING
+        label != null && rows.isEmpty() -> HockeyChannelAvailability.MISSING
+        rows.isNotEmpty() -> HockeyChannelAvailability.CHOICE_REQUIRED
+        else -> HockeyChannelAvailability.UNKNOWN
+    }
+    return HockeyCardBroadcast(label, playable, evidence == null && external?.evidence == BroadcastEvidence.PROBABLE_EXTERNAL, availability)
 }
 
 /** The foreground cache expires independently of the programme stop time, including offline failures. */

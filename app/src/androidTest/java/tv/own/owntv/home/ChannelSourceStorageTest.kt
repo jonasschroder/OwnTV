@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.*
 import org.junit.Assert.*
 import org.junit.Test
 import tv.own.owntv.core.customize.CustomizationStore
+import tv.own.owntv.core.customize.CustomizeKeys
 import tv.own.owntv.core.database.OwnTVDatabase
 import tv.own.owntv.core.database.entity.*
 import tv.own.owntv.core.model.MediaType
@@ -74,6 +75,23 @@ class ChannelSourceStorageTest {
             try { restarted.savePreferred(7, 7, "tv4", "deleted") { false }; fail("Unavailable source must not save") }
             catch (_: IllegalStateException) { }
             assertEquals(saved, restarted.choices(7))
+            // Reused Core policy must still enforce kids/customized categories and source ownership.
+            val adult = CategoryEntity(id = 501, sourceId = 101, mediaType = MediaType.LIVE, name = "Adult XXX")
+            val normal = adult.copy(id = 502, name = "Swedish TV")
+            db.categoryDao().insertAll(listOf(adult, normal))
+            db.channelDao().insertAll(listOf(channel(501, "HD").copy(name = "SVT2 HD", categoryId = adult.id),
+                channel(502, "HD").copy(name = "TV6 HD", categoryId = normal.id)))
+            assertTrue(restarted.library(7, listOf(101), SwedishChoices()).groups.any { it.identity == "svt2" })
+            val owner = db.profileDao().getById(7)!!
+            db.profileDao().update(owner.copy(isKids = true))
+            assertFalse(restarted.library(7, listOf(101), SwedishChoices()).groups.any { it.identity == "svt2" })
+            assertTrue(restarted.library(7, listOf(101), saved).groups.any { it.identity == "tv6" })
+            custom.setCategoryHidden(7, MediaType.LIVE, CustomizeKeys.category(normal), true)
+            assertFalse(restarted.library(7, listOf(101), saved).groups.any { it.identity == "tv6" })
+            assertTrue(restarted.library(999, listOf(101), saved).groups.isEmpty())
+            db.profileDao().update(owner)
+            custom.setCategoryHidden(7, MediaType.LIVE, CustomizeKeys.category(normal), false)
+            db.channelDao().deleteByRemoteIds(101, listOf("501", "502"))
             // Failed durable commit cannot report success or change the real store.
             val failing = object : ContextWrapper(isolated) {
                 override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {

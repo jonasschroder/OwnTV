@@ -37,9 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.key
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -248,6 +250,7 @@ fun StageSettingsPage(
     /** Off where there is no Settings to search (the setup wizard reuses the Add a source pages). */
     showSearch: Boolean = true,
     categories: (@Composable () -> Unit)? = null,
+    rowsReturnFocus: FocusRequester? = null,
     onRowsFocused: (Boolean) -> Unit = {},
     rows: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -272,7 +275,7 @@ fun StageSettingsPage(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (crumb) {
+                    if (crumb && categories == null) {
                         // Two steps only (owner): the page it came from, then this one.
                         ((if (settingsRoot) listOf(stringResource(R.string.common_nav_settings)) else emptyList()) + parents).takeLast(1).forEach { p ->
                             Text(p, style = stageText(42, 800, (-1f / 46f).em), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -280,7 +283,7 @@ fun StageSettingsPage(
                         }
                     }
                     // The path before the title shortens first (it is measured last); the tools and the search never move.
-                    Text(group, style = stageText(42, 800, (-1f / 46f).em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(group, style = stageText(if (categories == null) 42 else 34, 800, (-1f / 46f).em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(count, style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.mpx))
                 }
                 if (tools != null) Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically, content = tools)
@@ -309,20 +312,21 @@ fun StageSettingsPage(
                 )
             }
             if (list != null) list(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight())
-            else CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                Column(
-                    Modifier
-                        .padding(start = rowsLeft, top = rowsTop)
-                        .width(rowsWidth)
-                        .fillMaxHeight()
-                        .focusRequester(rowsFocus)
-                        .onFocusChanged { onRowsFocused(it.hasFocus) }
-                        .focusGroup()
-                        .verticalScroll(scroll)
-                        .padding(bottom = 40.mpx),
-                    verticalArrangement = Arrangement.spacedBy(6.mpx),
-                    content = rows,
-                )
+            else key(group) {
+                CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+                    // Attach to the row group inside the scroll container's own focus target.
+                    // Save the actual row before Left redirects to the selected category.
+                    Column(Modifier.padding(start = rowsLeft, top = rowsTop).width(rowsWidth).fillMaxHeight()
+                        .verticalScroll(scroll).focusRequester(rowsFocus)
+                        .focusProperties {
+                            onExit = {
+                                rowsFocus.saveFocusedChild()
+                                if (requestedFocusDirection == FocusDirection.Left) rowsReturnFocus?.requestFocus()
+                            }
+                        }
+                        .onFocusChanged { onRowsFocused(it.hasFocus) }.focusGroup().padding(bottom = 40.mpx),
+                        verticalArrangement = Arrangement.spacedBy(6.mpx), content = rows)
+                }
             }
             val help = panel.help
             val editor = panel.editor

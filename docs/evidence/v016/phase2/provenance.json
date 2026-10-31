@@ -1,0 +1,511 @@
+{
+  "parent_commit": "016e956271547f1cd1324122d5a2c2972f223464",
+  "main_baseline": "88a51db17493869805db7763a5e69c22a6299dd1",
+  "core_repository": "https://github.com/jonasschroder/OwnTV_Core.git",
+  "core_commit": "d3a5d8b3bf3248ee941834dbb2e3f3e2618b9659",
+  "fixture_version": "0.14.0-dev / 2 (not a production release)",
+  "package": "se.jonasschroder.mintv.qa",
+  "device": "mintv-v016 / emulator-5588; Android TV 14, ARM64, read-only AVD, SwiftShader, 2GiB/4 cores",
+  "physical_install": false,
+  "baseline_patch_sha256": "2779e4e795034ec064631680b6cada2f70d2b6953cae27b466e4a1b3479e25c0",
+  "apk_sha256": {
+    "before_016": "22d467e6d9a50bbd6558451cac93af103d7083d7ae859651a7a1886960505b87",
+    "baseline_counted": "ac71ecefc46be918ec6ea3008581a99bbdb5f73f60f5c5689ddac276854de9dc",
+    "candidate": "f1aaffcda73ce709d40cc929788e0939f061fce92bf2728abd4b33041cdb49c2",
+    "test_harness": "682e21e8897503e8c3cb956e66a42ffd3a4e8d61693f0f782adb6f74a5bdaaff"
+  },
+  "native_libraries_identical": true,
+  "native_library_sha256": {
+    "lib/arm64-v8a/libandroidx.graphics.path.so": "41e9a793c43a0f4fddb19e33f346bace464f30f888ba7b9eaf96294ea115bfb6",
+    "lib/arm64-v8a/libavcodec.so": "6135eea5fff28274ce93b93413b7b25fa903b8f83e47dfb3eeef601616b4b842",
+    "lib/arm64-v8a/libavdevice.so": "f0d61a45375576fa4e539d3b73d97b3b9acbf196a68cb068065a5f45413bae98",
+    "lib/arm64-v8a/libavfilter.so": "96f50a06dacd7a8ca4e536a4491aad933cebd1c8da93ad74e477feb5c1a87413",
+    "lib/arm64-v8a/libavformat.so": "2c2685ee02914fc4f65299eda5db2680fcc8305dfb4d8eec7bb53cceba254d63",
+    "lib/arm64-v8a/libavutil.so": "d7e758462b55a39783958f4e3f523070384c9a6e4408772f891702be093acd13",
+    "lib/arm64-v8a/libc++_shared.so": "b5d97c38a728afe28d341cda3369f512d35eaf9c680c1b0563cd6a63e395230f",
+    "lib/arm64-v8a/libdatastore_shared_counter.so": "deed4546c8dafad0e68ea2c25e4c0a62ca97343614ae386b7ed2af6abb7fa999",
+    "lib/arm64-v8a/libmpv.so": "3edc5720029c4577c2ae89238226ac5bf8cdbe87e158d3684abc9250a1551694",
+    "lib/arm64-v8a/libplayer.so": "72389830ac3db3b14dbd28463eaed0e017309833dd63b08c9eda4abaeee449bf",
+    "lib/arm64-v8a/libsqliteJni.so": "d99e44569c5417c191c3eb7927cde1cd1309713113e049dfb343db89f107a16e",
+    "lib/arm64-v8a/libswresample.so": "92e9c3317a305d80a7646bb2936e4cec3b4e20d20c22782fd884e75dd6b86b70",
+    "lib/arm64-v8a/libswscale.so": "89f75eab984b352fadf2fb168a4c8ba8174b9bd4bc3c7947d453ca9c1c8da60f",
+    "lib/armeabi-v7a/libandroidx.graphics.path.so": "41399eba6fc2a60f6f14642375c1824f3cf25eb8fec7397d753730a3ceda3e2b",
+    "lib/armeabi-v7a/libavcodec.so": "46e7d877f3f7d2f58818748458449d1db0fcacc7eed2650b512e2d8c19d558c6",
+    "lib/armeabi-v7a/libavdevice.so": "c5d3d094a35003894644ca566730db984079fb287103210574b769b097e50c6f",
+    "lib/armeabi-v7a/libavfilter.so": "0637087f44a40071064b738df4f8c090869bc30d0a89795ce781bfbb8175c940",
+    "lib/armeabi-v7a/libavformat.so": "2088f4b764fd510523a859b60e73f02bdbfeecc3048cc50b748a4901a3480b1c",
+    "lib/armeabi-v7a/libavutil.so": "99ffe0c47654773724409c3d7328448692f5b082e4860a65fab5045d5f0e089b",
+    "lib/armeabi-v7a/libc++_shared.so": "38331a1efcb446eb1a0db440a8db8f41fa4fb698d15c061ab8c491426531c2c0",
+    "lib/armeabi-v7a/libdatastore_shared_counter.so": "f51d0b6801896a20be66bd389a024f30be3284b757ac02377833d20e70b9c628",
+    "lib/armeabi-v7a/libmpv.so": "7d253ce014476b7b6a2ba41d9937f844839a31c2350f43a200c3c9b499b688a7",
+    "lib/armeabi-v7a/libplayer.so": "c0715c35e727eb61bf21a7b31c7dc4f9ef9ad5d52d6778114d84e9091657855b",
+    "lib/armeabi-v7a/libsqliteJni.so": "b305f063c74569ab6cfb6061c9e29b60a0265fcdda0fdcd2bd6ca82fc2157c58",
+    "lib/armeabi-v7a/libswresample.so": "febc978dc3cc622e7d1b93c067a92a6f02ce7f2f3310c36f335f8472810c5f64",
+    "lib/armeabi-v7a/libswscale.so": "37e458e50e206316791ba39d28653a4e305d9d1a4c0e418d9926c4f798e8e93c"
+  },
+  "candidate_changed_production_sources_sha256": {
+    "app/src/main/java/tv/own/owntv/features/catalog/CatalogRead.kt": "b0a1791b3aa82b81c7dc09acf302b89e563296b4e11840fbc8d5f39527d07cc1",
+    "app/src/main/java/tv/own/owntv/features/catalog/NativeReadWork.kt": "6cf8d1bb3809fb2ce27b6b7fe3bc26964667d6c3c3848fe4dfd06f0b7c6bb319",
+    "app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt": "aa51ab8464073e1edf2f30cf642a50aef243f604c1a05fcb70d6b6fa35c82c07",
+    "app/src/main/java/tv/own/owntv/features/home/HockeyBroadcastCards.kt": "bf1fff1e511bcbffae68f313dfef15c3cb0d30d4f4d8a85b93df8776dd219c2d",
+    "app/src/main/java/tv/own/owntv/features/home/HomeSurface.kt": "54d01a8f8df1f5243a21eaf8f2d0f7da0ac782087db0acd8ce205aafd178b5ba",
+    "app/src/main/java/tv/own/owntv/features/home/MinTvCompanions.kt": "d81bc45f8bde1f5fe01486e8fd0271d3066a4e065fcc86cdd823f6a78694c43d",
+    "app/src/main/java/tv/own/owntv/features/home/MinTvDesign.kt": "2cdb351bb59963bc82e5a88dc6135d99ce268c104a422315ff96f9e0b3047d2b",
+    "app/src/main/java/tv/own/owntv/features/home/NativeSportDashboard.kt": "38b11f813fd24a0a4c7486707643d6042cd82a82aa59fca6d936a062064def17",
+    "app/src/main/java/tv/own/owntv/features/home/NativeSportScreen.kt": "63b1c8c83f6559b5647d83502c9c47d26a3b17bf02352b9c7c13555d3af7c315",
+    "app/src/main/java/tv/own/owntv/features/home/NativeVodLanding.kt": "d198e29f5d1f9c1a4d5e43730e9e6c21b8d6c30a4edbf8e3f4fc1ef054d5abfd",
+    "app/src/main/java/tv/own/owntv/features/home/SmartHomeContent.kt": "5b5c0ac40026abf7b7bbde1e07d887f01fd3177abf9a13176dcd8636f54ae6e8",
+    "app/src/main/java/tv/own/owntv/features/live/SwedishChannelCard.kt": "890443a83719c7b6457b24c9095bcb24134c32ca8ef32038f4afb9d2c3ff9235",
+    "app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt": "0a72988a7315801004df6afbf46909a7ea8d3fac77019d3592b3b99871c28ca6",
+    "app/src/main/java/tv/own/owntv/features/settings/ProfileSettingsRows.kt": "062193d62e4e91e18289f6b97a56606c68fffff71c8017e0cc24e2e1f1ae9cc8",
+    "app/src/main/java/tv/own/owntv/features/settings/SettingsStage.kt": "807112a91473bb61f80c00cbe26b06206397a90d3cec0c2ad390eb78769e646a",
+    "app/src/main/java/tv/own/owntv/features/shell/NativePlaybackReturn.kt": "45c8f7ccb8c852986014e4ce690337ac6c7b566a3d9d6aeeb2059e4c2487de29",
+    "app/src/main/java/tv/own/owntv/features/shell/components/SettingsCategoryMenu.kt": "dd89f532f9c461b7d6045d8fab6a379e64b9b2a92b3ad9956fb38acb9f555fd7",
+    "app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt": "4f1760e11cbfc1aa093929d87a68d43740a9df82ff0b705bb5bad09087070703",
+    "app/src/main/res/values-sv/strings_v016_polish.xml": "c857a87b9c65934538f825fab99c347c1b99959bbfbc0561ec5f6792c69b0481",
+    "app/src/main/res/values/strings_v016_polish.xml": "acac2a623f56c76f085d5c48cbd63d84d617b89406ac0456c262b033552d11d1"
+  },
+  "jvm_tests": [
+    {
+      "name": "tv.own.owntv.features.home.HockeyBroadcastCardsTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "tv.own.owntv.features.shell.NativePlaybackReturnTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "tv.own.owntv.features.home.NativeRowsNavigationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "tv.own.owntv.features.update.UpdateTransportTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "tv.own.owntv.features.update.UpdateExperienceTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "tv.own.owntv.features.update.UpdatePolicyTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "images": {
+    "empty/PROFILE-1280x720.png": {
+      "sha256": "daba6294d07c2497a39a0810eb754193fd017b3d15279ce6eadfaac54a4703bf",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "empty/SPORT-1920x1080.png": {
+      "sha256": "75919890ae52eea32bcf24db4175d2aed2221caff38ea6937158bd9920291292",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "empty/PROFILE-1920x1080.png": {
+      "sha256": "dceaafe3131b9251674c460edc8b702bee04082b8a2d636f6d3d0a8877b67f94",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "empty/TV-1920x1080.png": {
+      "sha256": "756272a31149e0038d41c1bf1a88e814c20383ead42cd41abbde4ddd2cbe2756",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "empty/HOME-1920x1080.png": {
+      "sha256": "5e62a5fe04825b4d4ec34febd1c4a97b74654d0e69ae73bdfe33b6b3f6643b1d",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "empty/HOME-1280x720.png": {
+      "sha256": "061c81d43e3406909f0ccc460bad6772d89b09209932679d611e08b832e5f6d5",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "empty/VOD-1920x1080.png": {
+      "sha256": "afd4d5c446a49e62197bdc2a832d75e0bdc1cfe645abdf9e5ed2200455c83fe5",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "empty/SPORT-1280x720.png": {
+      "sha256": "81b1e54d989011307faad9d5206d71a65b5cb4fbd0cc15c1799de7b337c32449",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "empty/VOD-1280x720.png": {
+      "sha256": "6b80c54dd3488d19e5beb27e28bd6b7b6e85eb8a486cffd8ab3f043f13b4d5a9",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "empty/UPDATE-1920x1080.png": {
+      "sha256": "19c51910066cd226524bb23fe089aa8ae6296faf1e94f6464cb107ce5ef017fb",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "empty/TV-1280x720.png": {
+      "sha256": "6ebf8d9be9105304ac8ac8e3af70c57cb6ba56e73643fdc2d27644ef1340364b",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "empty/UPDATE-1280x720.png": {
+      "sha256": "b377421f6834c7ba2373996f3c6d3900be91460c62994673fe97d2e2c03d44e7",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_UPDATE-1920x1080.png": {
+      "sha256": "f6c89baf8d70daef3f4403a92461ff0d1144d933aec73ff1403df00543273c41",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "before/POPULATED_PROFILE-1920x1080.png": {
+      "sha256": "14a90d1cbfd0fb7dda8ff015028a460307e287b387a2cb9fa10fa80521b2083b",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "before/POPULATED_TV-1920x1080.png": {
+      "sha256": "da4191a0c2b172d5258e219b566070ada52b05d1caf9610d420d82c762da1969",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "before/POPULATED_PROFILE-1280x720.png": {
+      "sha256": "cad35a79c7435a85f2f06682dae150a2e2aabbffa215a1e35dcf068bd224091d",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_UPDATE-1280x720.png": {
+      "sha256": "6393acae296095671f623c44b19ea29082126f7460d6aaf2fb5e20e36d8285a4",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_VOD-1280x720.png": {
+      "sha256": "232991182667452e0e70ddc3623b5b03bfe825befac17641505bc02884125414",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_HOME-1280x720.png": {
+      "sha256": "d91669d5064e247322c6e20be64b619ad644bc87c5667c2514c7008c5eda411a",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_VOD-1920x1080.png": {
+      "sha256": "416f2136dfc2c4d449f6a4d3926f17f5d038b9a00bf902a910e58c582e57f2a8",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "before/POPULATED_SPORT-1920x1080.png": {
+      "sha256": "f52f7bdd4f4b7c6218aedc0ca937cb5098ccd2a7c15910ac6e3f3ad65bf6696c",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "before/POPULATED_TV-1280x720.png": {
+      "sha256": "00c8b3d8f2df010016cc99e67194f9528cf5e7aa4809b7c6dd112b8c62b39f3a",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_SPORT-1280x720.png": {
+      "sha256": "21b72f062d85b199482469666e5d70b6b0b14c2e78991d90a01f131f4a8b11eb",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "before/POPULATED_HOME-1920x1080.png": {
+      "sha256": "c800c545bcb9f545c8bab18da3940fe0142bb4f1f870406aab595fe254ec5df7",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "after/POPULATED_UPDATE-1920x1080.png": {
+      "sha256": "9376f65b85828d5c7fefd9970e367ffb84e657793b0b9eef3b9c55a56762f604",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "after/POPULATED_PROFILE-1920x1080.png": {
+      "sha256": "773af4613fa7bcffd6ea96ca26ebdd6ec9f5609e783a2b5bb9a0d38b7fa6ee53",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "after/POPULATED_TV-1920x1080.png": {
+      "sha256": "bc1eae139da0ae2c9f695184ef6bf4ec12998c5d3bc9933901dea5564b5c77db",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "after/POPULATED_PROFILE-1280x720.png": {
+      "sha256": "498ea3a9b307679b6fc66fd100f40dfa623643a88b85e47c0cdc181d35206ac4",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "after/POPULATED_UPDATE-1280x720.png": {
+      "sha256": "0d14ee4a66b55ce658656fd8d77b96fe1814f8e332f8f9f518c6df4d87d77088",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "after/POPULATED_VOD-1280x720.png": {
+      "sha256": "39af8ab2890124e56a6b466bcd49fbb58f4d10caf24ae77fce7c491c8d11e156",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "after/POPULATED_HOME-1280x720.png": {
+      "sha256": "60b43a7015576f243d4f8ba3bf23fe5399e24d0a563af883acf1194c4b8b6316",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "after/POPULATED_VOD-1920x1080.png": {
+      "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "after/POPULATED_SPORT-1920x1080.png": {
+      "sha256": "d7e5fa848cc6c45af8f4b396a67311a14f675c57d5ad91f5cf12baa2322cc509",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "after/POPULATED_TV-1280x720.png": {
+      "sha256": "d00daec08e74967f0d9b3bd9631c313291bd93ff961607f169685cfd5770ed06",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "after/POPULATED_SPORT-1280x720.png": {
+      "sha256": "2d10691f63c991019c651ed9a88605b6360a5dc9a09539ee3e1b663c1ed4269e",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "after/POPULATED_HOME-1920x1080.png": {
+      "sha256": "f0310ae3a6073f478d8334c65f6ef4dd2dea8e96d4cbac67aa884250b7e4f5ba",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/v016-update-flow-progress-1920x1080-synthetic.png": {
+      "sha256": "1e08bf1cf20cfd05102a7cf9f0c93ec2b3d35cec2fd690a5b3a609c9d735f75a",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/TV_LATE_GUIDE-1280x720.png": {
+      "sha256": "5833d8b44cce35d174ac52097488b894805b286dc9e3a1373947ac6ab06cf8f1",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/SPORT_LOOPBACK_PLAYBACK-1920x1080.png": {
+      "sha256": "3fbafd2f570da52d447f244e5987fe0171da88d1e61672126cf64e31e72d1145",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/v016-update-flow-permission-1280x720-synthetic.png": {
+      "sha256": "786f1a1fb0d50c0351da69a0fc98110ecd6b6ee92259588c83b92e34f1e96846",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/v016-update-flow-progress-1280x720-synthetic.png": {
+      "sha256": "8321585c1181266d2e709dd9036b5515ac73626ccfd5934867cafd8ad2623199",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/SPORT_MANUAL_PICKER-1920x1080.png": {
+      "sha256": "7773e32c3cdecd90360df3c2bee6a77adfce4b3b385b352ad928409ebae84820",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/TV_32_CHANNELS-1280x720.png": {
+      "sha256": "506aa4f87a1ea6dd7f3ee3604c8d432fc575e937c33a72989465c4b54f9342cd",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/v016-update-flow-confirmation-1280x720-synthetic.png": {
+      "sha256": "951a73cbe96c4ae4d18080cd429a1b4289deb491d34425fd7d5b66afa1a0a46a",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/TV_LATE_GUIDE-1920x1080.png": {
+      "sha256": "6c3845e1e4b934daf888de2badd3f0f47745a49b1414c03f909a10fb8a9cfd39",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/SOURCE_PICKER-1920x1080.png": {
+      "sha256": "05b8bfb6ba33cb70490d5516b74760cb086331feeeb50291ee4fb4e9fd2e02cf",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/v016-update-flow-review-1280x720-synthetic.png": {
+      "sha256": "307e2d74440d57c6928404bc33ec51aa6df6aca96ed97e36249f7e8bdd48e5fb",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/SOURCE_PICKER-1280x720.png": {
+      "sha256": "52885e5aada2ae6a49a0ced2a33592094208405bef92ad6723fb59ea48653936",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/TV_32_CHANNELS-1920x1080.png": {
+      "sha256": "38b23ccf2ee4d05ded0ce343335233581f3c4aa8485b08c20baf4b39cdf5d06f",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/v016-update-flow-permission-1920x1080-synthetic.png": {
+      "sha256": "ba73eea453f54d486289e9363bfc3a1d3f6866fbcd9711226adb2c486b317a76",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/v016-update-flow-review-1920x1080-synthetic.png": {
+      "sha256": "fafc9d2c114f6b6fa35a5b903c19b0dbd593cb508efd1423d7e6f8c7d11f2332",
+      "pixels": [
+        1920,
+        1080
+      ]
+    },
+    "journeys/SPORT_MANUAL_PICKER-1280x720.png": {
+      "sha256": "82e00ee5c3dee7505062f56b55df05bc7a551f4317fa92bbcb559efff62682a0",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/SPORT_LOOPBACK_PLAYBACK-1280x720.png": {
+      "sha256": "84dc580a73b9ec925176ed2bbb9d9a1e764e87caf1659207decb04720b16705a",
+      "pixels": [
+        1280,
+        720
+      ]
+    },
+    "journeys/v016-update-flow-confirmation-1920x1080-synthetic.png": {
+      "sha256": "a968aacaaa2e86c6843cbfd9d263a7a0c019c2b2c1c70e4c308ded832757343b",
+      "pixels": [
+        1920,
+        1080
+      ]
+    }
+  },
+  "notes": [
+    "Before populated images: immutable 016e956 production APK; relative synthetic times differ from final capture. Earlier before harness binary was not separately retained; final harness source and APK digest are provided.",
+    "All timing APKs use identical observation counters; no other baseline behavior patch.",
+    "Full-shell Update is the real debug guard; update journey states are separate synthetic ComponentActivity presentation.",
+    "All images synthetic; no owner IPTV URLs, tokens, credentials or original installed data.",
+    "Before Update 720p was recaptured with the immutable 016e956 APK and the follow-up harness: the earlier saved modal frame was incomplete. Same synthetic performance profile/library; later wall-clock time, no rich EPG needed behind Settings."
+  ],
+  "measured_production_commit": "2e13080bc068604238892c5352874cfd5ad28202",
+  "startup_followup": {
+    "scope": "Test expectation only; production source and measured APK unchanged",
+    "test_file_sha256": "2667e0e666090f5b297c9ec7cf9ca758a004a4f40862ecd93c1ade84bd9ec621",
+    "harness_sha256": "cf9f7bfb93e1266006e8a1016f20e659567d9f47d66c2cc13a0a1bb8b15ae31a",
+    "local_premium_startup_resolutions": [
+      "1920x1080",
+      "1280x720"
+    ],
+    "initial_ci_startup_job": 124372889800,
+    "initial_ci_failure": "Expected header after Down; new loaded-empty recovery action correctly receives focus"
+  }
+}

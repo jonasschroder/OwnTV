@@ -1266,10 +1266,13 @@ fun SettingsScreen(
             crumb = !searching,
             searchFocus = searchFieldFocus,
             rowsFocus = rowsFocus,
+            rowsReturnFocus = if (searching) null else categoryTarget,
             modifier = modifier.onFocusChanged { rootHasFocus = it.hasFocus },
             categories = if (searching) null else ({
                 Box(Modifier.testTag("navigation-context")) {
-                    SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, { runCatching { rowsFocus.requestFocus() } }, categoryTarget)
+                    SettingsCategoryMenu(selectedGroup, { selectedGroup = it }, {
+                        if (!rowsFocus.restoreFocusedChild()) runCatching { rowsFocus.requestFocus() }
+                    }, categoryTarget)
                 }
             }),
             onRowsFocused = { categoryRowsFocused = it },
@@ -1299,19 +1302,21 @@ fun SettingsScreen(
                 selectedRows.isEmpty() -> StageSettingsNote(stringResource(R.string.settings_quick_empty_title), stringResource(R.string.settings_quick_empty_hint))
                 else -> {
                     selectedRows.forEachIndexed { i, row ->
-                        row.heading?.let { heading ->
-                            val under = selectedRows.drop(i).let { rest -> 1 + rest.drop(1).takeWhile { it.heading == null }.size }
-                            StageSettingsHeading(heading, under, first = i == 0)
+                        androidx.compose.runtime.key(row.key) {
+                            row.heading?.let { heading ->
+                                val under = selectedRows.drop(i).let { rest -> 1 + rest.drop(1).takeWhile { it.heading == null }.size }
+                                StageSettingsHeading(heading, under, first = i == 0)
+                            }
+                            RootRowStage(
+                                row,
+                                // Inside Quick every row is pinned by definition — the dot would say nothing.
+                                pinned = !inQuick && row.key in quickPinned,
+                                inQuick = inQuick,
+                                extra = extras[row.key],
+                                onLongClick = { menuRow = row },
+                                focus = if (row.key == menuReturnKey) menuReturnFocus else null,
+                            )
                         }
-                        RootRowStage(
-                            row,
-                            // Inside Quick every row is pinned by definition — the dot would say nothing.
-                            pinned = !inQuick && row.key in quickPinned,
-                            inQuick = inQuick,
-                            extra = extras[row.key],
-                            onLongClick = { menuRow = row },
-                            focus = if (row.key == menuReturnKey) menuReturnFocus else null,
-                        )
                     }
                     if (group == SettingsGroup.APP) VideoPlayerGroupRows(VideoGroup.DIAGNOSTICS, pageScroll, firstHeading = false)
                 }

@@ -50,7 +50,7 @@ internal suspend fun storedSwedishRows(db: OwnTVDatabase, channels: List<Channel
                 SELECT id FROM epg_programmes WHERE epgChannelId=r.epgKey
                 AND startMs>r.at AND startMs>=coalesce(n.stopMs,r.at) AND startMs<=r.at+86400000
                 AND stopMs>startMs AND trim(title)!='' ORDER BY startMs ASC,id ASC LIMIT 1)
-        """.trimIndent(), arguments) { cursor ->
+        """.trimIndent(), arguments, tv.own.owntv.features.catalog.NativeReadKind.GUIDE_SUMMARIES) { cursor ->
             while (cursor.moveToNext()) {
                 coroutine.ensureActive()
                 val key = keys[cursor.getInt(0)]; val delta = key.shift * 60_000L

@@ -21,18 +21,22 @@ import tv.own.owntv.ui.theme.mpx
 internal fun NativeSportScreen(liveVm: LiveViewModel, homeVm: HomeViewModel, profileId: Long?, active: Boolean,
     onPlay: (ChannelEntity, List<ChannelEntity>) -> Unit,
     onSources: () -> Unit, onSettings: (MinTvSettingsDestination) -> Unit,
-    onEntryHook: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit = {}, onChildFocused: () -> Unit, modifier: Modifier = Modifier) {
+    onEntryHook: ((() -> Boolean)?) -> Unit, onHeader: () -> Unit = {}, onChildFocused: () -> Unit, modifier: Modifier = Modifier,
+    restoreAfterPlayback: Boolean = false, onPlaybackReturnFinished: () -> Unit = {}) {
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val usable = active && lifecycle == Lifecycle.State.RESUMED
     val home by liveVm.nativeHomeFavorites.collectAsStateWithLifecycle()
     val library by liveVm.homeLibraryState.collectAsStateWithLifecycle()
     val favorites = home.channels.takeIf { home.profileId == profileId && library.profileId == profileId }.orEmpty()
         .filter { it.sourceId in library.sourceIds && library.visibleFavoriteIds?.contains(it.id) != false }
+    var returnEntry by remember(profileId) { mutableStateOf<(() -> Boolean)?>(null) }
+    tv.own.owntv.features.shell.NativePlaybackContentEntry(restoreAfterPlayback, profileId.toString(),
+        returnEntry, onHeader, onPlaybackReturnFinished)
     Box(modifier.fillMaxSize().onFocusChanged { if (it.hasFocus) onChildFocused() }.focusGroup()) {
         MinSportCompanion(true, usable, liveVm, profileId, favorites, onPlay, 64.mpx, onSources,
             reservedTop = 32.mpx, compact = false, onSettings = { onSettings(MinTvSettingsDestination.SPORT) },
             dashboard = { data, actions, first, entry -> NativeSportDashboard(data, actions, first, entry, onHeader) },
-            onMatchcenterEntry = onEntryHook) { hockey, _ -> hockey() }
+            onMatchcenterEntry = onEntryHook, onPlaybackReturnEntry = { returnEntry = it }) { hockey, _ -> hockey() }
 
     }
 }

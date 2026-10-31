@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v016_update_title">Uppdatera Min TV</string>
+    <string name="v016_update_entry_available">Uppdatering finns</string>
+    <string name="v016_update_entry_progress">Hämtar %1$d%%</string>
+    <string name="v016_update_entry_working">Förbereder uppdatering</string>
+    <string name="v016_update_entry_installed">Uppdaterad</string>
+    <string name="v016_update_entry_description">%1$s · %2$s · Öppna uppdateringar</string>
+    <string name="v016_update_now">Uppdatera nu</string>
+    <string name="v016_update_install_cached">Installera hämtad uppdatering</string>
+    <string name="v016_update_continue_browsing">Fortsätt använda appen</string>
+    <string name="v016_update_step_check">Sök efter uppdatering</string>
+    <string name="v016_update_step_review">1 av 3 · Läs om uppdateringen</string>
+    <string name="v016_update_step_download">2 av 3 · Hämta och kontrollera</string>
+    <string name="v016_update_step_install">3 av 3 · Bekräfta i Android</string>
+    <string name="v016_update_step_done">Uppdateringen är installerad</string>
+    <string name="v016_update_step_issue">Uppdateringen behöver din uppmärksamhet</string>
+    <string name="v016_update_cached_verified">%1$s är hämtad och kontrollerad</string>
+    <string name="v016_update_download_size">Hämtning: %1$s</string>
+    <string name="v016_update_free_space">Ledigt utrymme: %1$s</string>
+    <string name="v016_update_byte_progress">%1$s av %2$s</string>
+    <string name="v016_update_interrupted">Hämtningen avbröts. Uppdatera nu startar om hämtningen från början.</string>
+    <string name="v016_update_install_explanation">Efter kontrollen ber Android dig bekräfta installationen. Dina profiler och inställningar behålls.</string>
+</resources>

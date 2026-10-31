@@ -32,8 +32,8 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         data object Idle : State
         data object Checking : State
         data object UpToDate : State
-        data class Available(val candidate: UpdatePolicy.Candidate) : State
-        data class Downloading(val percent: Int) : State
+        data class Available(val candidate: UpdatePolicy.Candidate, val interrupted: Boolean = false) : State
+        data class Downloading(val percent: Int, val receivedBytes: Long = 0, val totalBytes: Long = 0) : State
         data object Verifying : State
         data object Installed : State
         data object Permission : State
@@ -50,7 +50,8 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
     // Presentation may close while a foreground download continues. The transport cancels on pause.
     private val actions = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate)
     internal fun requestCheck() { actions.launch { check(force = true) } }
-    internal fun requestDownloadOrInstall() { actions.launch { if (hasDownload()) continueInstall() else download() } }
+    private val transfers = UpdateTransferActions(actions, { mutableState.value }) { if (hasDownload()) continueInstall() else download() }
+    internal fun requestDownloadOrInstall() { transfers.request() }
     private val prefs = context.getSharedPreferences(STORE, Context.MODE_PRIVATE)
     private val receiverChanges = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "confirmation" && prefs.contains("confirmation")) mutableState.value = State.Confirmation
@@ -139,12 +140,13 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
     internal suspend fun download() = lock.withLock {
         val info = candidate ?: return@withLock
         if (!ready() || !foreground) return@withLock
-        mutableState.value = State.Downloading(0)
+        mutableState.value = State.Downloading(0, 0, info.bytes)
+        prefs.edit().putLong("interrupted_code", info.code).apply()
         val partial = File(directory, "candidate.part")
         try {
             withContext(Dispatchers.IO) {
                 directory.mkdirs()
-                if (StatFs(directory.path).availableBytes < info.bytes * 2 + 32 * 1024 * 1024) throw UpdateError(Problem.STORAGE)
+                if (StatFs(directory.path).availableBytes < updateRequiredSpace(info.bytes)) throw UpdateError(Problem.STORAGE)
                 response(info.url).use { response ->
                     val length = response.body.contentLength(); require(length == -1L || length == info.bytes)
                     val digest = MessageDigest.getInstance("SHA-256"); var received = 0L
@@ -155,7 +157,9 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
                             val size = input.read(buffer); if (size < 0) break
                             received += size; require(received <= info.bytes)
                             digest.update(buffer, 0, size); output.write(buffer, 0, size)
-                            mutableState.value = State.Downloading((received * 100 / info.bytes).toInt())
+                            val percent = (received * 100 / info.bytes).toInt()
+                            if ((mutableState.value as? State.Downloading)?.percent != percent)
+                                mutableState.value = State.Downloading(percent, received, info.bytes)
                         }
                     } }
                     require(received == info.bytes && UpdatePolicy.hex(digest.digest()) == info.hash)
@@ -163,11 +167,11 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
                 mutableState.value = State.Verifying
                 verifyApk(partial, info)
                 apk.delete(); require(partial.renameTo(apk))
-                prefs.edit().putLong("download_code", info.code).apply()
+                prefs.edit().putLong("download_code", info.code).remove("interrupted_code").apply()
                 if (context.packageManager.canRequestPackageInstalls()) install(info) else mutableState.value = State.Permission
             }
-        } catch (cancel: CancellationException) { mutableState.value = State.Available(info); throw cancel }
-        catch (error: Exception) { mutableState.value = if (!foreground) State.Available(info) else State.Failed(problem(error)) }
+        } catch (cancel: CancellationException) { mutableState.value = State.Available(info, interrupted = true); throw cancel }
+        catch (error: Exception) { mutableState.value = if (!foreground) State.Available(info, interrupted = true) else State.Failed(problem(error)) }
         finally { partial.delete() }
     }
     private fun verifyApk(file: File, info: UpdatePolicy.Candidate) {
@@ -225,9 +229,8 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
             result == PackageInstaller.STATUS_FAILURE_ABORTED -> State.Cancelled
             result != Int.MIN_VALUE && result != PackageInstaller.STATUS_SUCCESS -> State.Failed(installProblem(result))
             prefs.contains("session") && context.packageManager.packageInstaller.getSessionInfo(prefs.getInt("session", -1)) != null -> State.Installing
-            apk.exists() && candidate != null -> if (context.packageManager.canRequestPackageInstalls()) State.Available(candidate!!) else State.Permission
-            candidate != null && candidate!!.code > installedCode -> State.Available(candidate!!)
-            else -> State.Idle
+            else -> restoredUpdateState(candidate, installedCode, apk.exists(), context.packageManager.canRequestPackageInstalls(),
+                interrupted = prefs.getLong("interrupted_code", 0) == candidate?.code)
         }
     }
     }
@@ -243,6 +246,7 @@ class MinTvUpdater(private val context: Context, private val settings: SettingsR
         catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) { mutableState.value = State.Failed(Problem.INSTALL) }
     }
+    internal fun availableStorage(): Long? = runCatching { android.os.StatFs(context.cacheDir.path).availableBytes }.getOrNull()
     internal fun hasDownload() = apk.exists() && prefs.getLong("download_code", 0) == candidate?.code
     internal fun dismiss() { transport.cancel(); mutableState.value = State.Idle; prefs.edit().remove("result").apply() }
     companion object { internal const val STORE = "mintv-verified-updates" }

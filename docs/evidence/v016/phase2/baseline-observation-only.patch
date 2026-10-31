@@ -1,0 +1,56 @@
+diff --git a/app/src/main/java/tv/own/owntv/features/catalog/CatalogRead.kt b/app/src/main/java/tv/own/owntv/features/catalog/CatalogRead.kt
+index b581d6d..d42866c 100644
+--- a/app/src/main/java/tv/own/owntv/features/catalog/CatalogRead.kt
++++ b/app/src/main/java/tv/own/owntv/features/catalog/CatalogRead.kt
+@@ -6,7 +6,8 @@ import tv.own.owntv.core.database.OwnTVDatabase
+ 
+ /** Uses the SAME bundled Room driver as Core. No legacy openHelper and no secondary database. */
+ internal suspend fun <T> OwnTVDatabase.readCatalog(sql: String, arguments: Array<out Any?>,
+-    block: (CatalogCursor) -> T): T = useReaderConnection { connection ->
++    kind: NativeReadKind = NativeReadKind.CATALOG, block: (CatalogCursor) -> T): T = useReaderConnection { connection ->
++    NativeReadWork.record(kind)
+     connection.usePrepared(sql) { statement ->
+         arguments.forEachIndexed { index, value -> when (value) {
+             null -> statement.bindNull(index + 1)
+diff --git a/app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt b/app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt
+index a407139..4d7bb3c 100644
+--- a/app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt
++++ b/app/src/main/java/tv/own/owntv/features/home/CompanionHttp.kt
+@@ -22,6 +22,7 @@ internal suspend fun OkHttpClient.companionRequest(request: Request, limit: Int)
+ internal suspend fun OkHttpClient.companionResponse(request: Request, limit: Int): CompanionResponse =
+     suspendCancellableCoroutine { continuation ->
+         require(limit in 1..600_000)
++        tv.own.owntv.features.catalog.NativeReadWork.record(tv.own.owntv.features.catalog.NativeReadKind.PUBLIC_HTTP)
+         val call = newCall(request)
+         call.timeout().timeout(8, TimeUnit.SECONDS)
+         continuation.invokeOnCancellation { call.cancel() }
+diff --git a/app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt b/app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt
+index 8bc339e..cfe60f1 100644
+--- a/app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt
++++ b/app/src/main/java/tv/own/owntv/features/live/SwedishRowEpgStore.kt
+@@ -50,7 +50,7 @@ internal suspend fun storedSwedishRows(db: OwnTVDatabase, channels: List<Channel
+                 SELECT id FROM epg_programmes WHERE epgChannelId=r.epgKey
+                 AND startMs>r.at AND startMs>=coalesce(n.stopMs,r.at) AND startMs<=r.at+86400000
+                 AND stopMs>startMs AND trim(title)!='' ORDER BY startMs ASC,id ASC LIMIT 1)
+-        """.trimIndent(), arguments) { cursor ->
++        """.trimIndent(), arguments, tv.own.owntv.features.catalog.NativeReadKind.GUIDE_SUMMARIES) { cursor ->
+             while (cursor.moveToNext()) {
+                 coroutine.ensureActive()
+                 val key = keys[cursor.getInt(0)]; val delta = key.shift * 60_000L
+diff --git a/app/src/main/java/tv/own/owntv/features/catalog/NativeReadWork.kt b/app/src/main/java/tv/own/owntv/features/catalog/NativeReadWork.kt
+new file mode 100644
+index 0000000..8f9b56e
+--- /dev/null
++++ b/app/src/main/java/tv/own/owntv/features/catalog/NativeReadWork.kt
+@@ -0,0 +1,11 @@
++package tv.own.owntv.features.catalog
++
++import java.util.concurrent.atomic.AtomicLongArray
++
++/** Fixed aggregate counts only: no SQL, URLs, parameters, content IDs or retained owners. */
++internal enum class NativeReadKind { CATALOG, GUIDE_SUMMARIES, PUBLIC_HTTP }
++internal object NativeReadWork {
++    private val totals = AtomicLongArray(NativeReadKind.entries.size)
++    fun record(kind: NativeReadKind) { totals.incrementAndGet(kind.ordinal) }
++    fun snapshot(): List<Long> = NativeReadKind.entries.map { totals.get(it.ordinal) }
++}

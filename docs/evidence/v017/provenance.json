@@ -1,0 +1,229 @@
+[
+  {
+    "path": "before/POPULATED_UPDATE-1920x1080.png",
+    "sha256": "de10705a3a882e2e2de09835f6e32f7c8d72ea215cd6bbb76dff2941362b5fbc"
+  },
+  {
+    "path": "before/TV_LATE_GUIDE-1280x720.png",
+    "sha256": "a280b46878006eb4357a6b264f6f347ee76017a0cb607a4de7c31116c3070878"
+  },
+  {
+    "path": "before/POPULATED_PROFILE-1920x1080.png",
+    "sha256": "34b4805a2cd86511fd30350de0f87f553608b0639e2f7f8af3b8faca6e31d43b"
+  },
+  {
+    "path": "before/SPORT_LOOPBACK_PLAYBACK-1920x1080.png",
+    "sha256": "cb729a2346595cab8e232a2e78b5d3df683344accac305df518364eb4fb8cc91"
+  },
+  {
+    "path": "before/POPULATED_TV-1920x1080.png",
+    "sha256": "0592643297462e9395f20d693491fd9620ae710fee673828063c52a21a77ff79"
+  },
+  {
+    "path": "before/POPULATED_PROFILE-1280x720.png",
+    "sha256": "20077f6c5076f52bc7b13cf2a71211dc07786347a2a047730359c79068c29116"
+  },
+  {
+    "path": "before/POPULATED_UPDATE-1280x720.png",
+    "sha256": "145733dc4c07faa5948e6e69e5534181ab1544701cff66806337fd55c1cd6725"
+  },
+  {
+    "path": "before/POPULATED_VOD-1280x720.png",
+    "sha256": "21d171110546766ca596f6dbad41640c12d37e638dbb01422f8b35c94f2325d9"
+  },
+  {
+    "path": "before/TV_32_CHANNELS-1280x720.png",
+    "sha256": "6eda1ec1f7350ae249fb1498247bbd13b2b14b339c8bc8a2672d55e7ed0da195"
+  },
+  {
+    "path": "before/TV_LATE_GUIDE-1920x1080.png",
+    "sha256": "c8f15147bf44bb5fe3e457e4e46cbcb1d3cc1fab17e961eaf1ff024f616053bc"
+  },
+  {
+    "path": "before/POPULATED_HOME-1280x720.png",
+    "sha256": "59637c56f29f1e00c22343e849a90da9b0248583e9861d245e1645d6721f0eb7"
+  },
+  {
+    "path": "before/POPULATED_VOD-1920x1080.png",
+    "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4"
+  },
+  {
+    "path": "before/SOURCE_PICKER-1920x1080.png",
+    "sha256": "c6977115a6f67376eb17bf24b2d20dcbfaf02ef3f1a120b2779fe399d7c62692"
+  },
+  {
+    "path": "before/SOURCE_PICKER-1280x720.png",
+    "sha256": "c5f28c9688fcc0441db98591d84040ae9c08681bb4a7f3cd33f17eaeb25ecf61"
+  },
+  {
+    "path": "before/TV_32_CHANNELS-1920x1080.png",
+    "sha256": "149718036fe82e33214c569b8150dfdf229579bf9ceea01af003346e5222d7cf"
+  },
+  {
+    "path": "before/POPULATED_SPORT-1920x1080.png",
+    "sha256": "b2689a3673fdde44d83b955c38357280b4ab7f2085760e14b6dd79e2b402b3ba"
+  },
+  {
+    "path": "before/POPULATED_TV-1280x720.png",
+    "sha256": "1b03eb2b018c4dd8c406d9c04df6276670f302b753fe2a5713d59f6294e8fc3b"
+  },
+  {
+    "path": "before/POPULATED_SPORT-1280x720.png",
+    "sha256": "49e50d9de6921913bfa88ba1fa78d0e47dafd9bed519dfc2bddfbb888c32a788"
+  },
+  {
+    "path": "before/POPULATED_HOME-1920x1080.png",
+    "sha256": "bb309ba90cb8f594a5eaa8328d1f1128fa0ff10bfadebbbf723eb30cf7dd540d"
+  },
+  {
+    "path": "before/SPORT_LOOPBACK_PLAYBACK-1280x720.png",
+    "sha256": "8d1fad7b8f60af98a44c1915651f9e93b3dbcd0cfa4d05e438240479ba3dc696"
+  },
+  {
+    "path": "performance/before-1920x1080.json",
+    "sha256": "112c6face60be647a4a2cf425d0189733709a23795b8b513564947fa9f0eb02d"
+  },
+  {
+    "path": "performance/before-1280x720.json",
+    "sha256": "f6ee9bad8c10816489c730c39a0f3c0441e357841a63a8426711d7949744e2a4"
+  },
+  {
+    "path": "tests/before-native.txt",
+    "sha256": "b20a26910060db612a3d97c29bb2d93125f8566d8a48e04150600d4c2e73118d"
+  },
+  {
+    "path": "tests/before-seed.txt",
+    "sha256": "54652d9aa47a6e548604a5202261e26d03454e05fd833137523142c806709008"
+  },
+  {
+    "path": "tests/before-locale.txt",
+    "sha256": "72341e0e18661238b691856271726741407017a2ff56f87abcaec9a6e15b6fd6"
+  },
+  {
+    "path": "after/POPULATED_UPDATE-1920x1080.png",
+    "sha256": "de10705a3a882e2e2de09835f6e32f7c8d72ea215cd6bbb76dff2941362b5fbc"
+  },
+  {
+    "path": "after/TV_LATE_GUIDE-1280x720.png",
+    "sha256": "9ad02854d653e0f1d62b3969d2b161ed1f9128f4bc392a33f1623289a22f090b"
+  },
+  {
+    "path": "after/POPULATED_PROFILE-1920x1080.png",
+    "sha256": "34b4805a2cd86511fd30350de0f87f553608b0639e2f7f8af3b8faca6e31d43b"
+  },
+  {
+    "path": "after/SPORT_LOOPBACK_PLAYBACK-1920x1080.png",
+    "sha256": "5e53ade33ddffab07084d2bbb037e906628226dc567e9c09aebf2640ee94cd00"
+  },
+  {
+    "path": "after/POPULATED_TV-1920x1080.png",
+    "sha256": "89dd3f9c915e5fa0b6263d5ca9957d6549057edf484deff084597cfdf95cc52b"
+  },
+  {
+    "path": "after/POPULATED_PROFILE-1280x720.png",
+    "sha256": "20077f6c5076f52bc7b13cf2a71211dc07786347a2a047730359c79068c29116"
+  },
+  {
+    "path": "after/POPULATED_UPDATE-1280x720.png",
+    "sha256": "145733dc4c07faa5948e6e69e5534181ab1544701cff66806337fd55c1cd6725"
+  },
+  {
+    "path": "after/POPULATED_VOD-1280x720.png",
+    "sha256": "21d171110546766ca596f6dbad41640c12d37e638dbb01422f8b35c94f2325d9"
+  },
+  {
+    "path": "after/SPORT_MANUAL_PICKER-1920x1080.png",
+    "sha256": "e18050eb3179211905f1a0739711804654a27c13c5a360f3b961299b15d8a770"
+  },
+  {
+    "path": "after/TV_32_CHANNELS-1280x720.png",
+    "sha256": "a9247262c52d3720c03156aabdf8b7079d448e4567b5368b3559d934157f2b3e"
+  },
+  {
+    "path": "after/TV_LATE_GUIDE-1920x1080.png",
+    "sha256": "ffdb847e8d1fe191ce2ca0639fc4388210073f7050c8751ea8fa3e7366807f06"
+  },
+  {
+    "path": "after/POPULATED_HOME-1280x720.png",
+    "sha256": "e67af27f5d8999dc4990ddb77742955c9c48b975a4f1914f90421ee306330e20"
+  },
+  {
+    "path": "after/POPULATED_VOD-1920x1080.png",
+    "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4"
+  },
+  {
+    "path": "after/SOURCE_PICKER-1920x1080.png",
+    "sha256": "64bb1056ae8c16b76012145ea00c961618f8699b939454851831731534078939"
+  },
+  {
+    "path": "after/SOURCE_PICKER-1280x720.png",
+    "sha256": "52dc4d81cc51a74738e94e4f167533b2732b7e7bdfb8847b5a5a40a97135dbfa"
+  },
+  {
+    "path": "after/TV_32_CHANNELS-1920x1080.png",
+    "sha256": "cd95720d44fbcfa0f939aec97834177c9c2837715cc9a0c1d9fee1e2444a851b"
+  },
+  {
+    "path": "after/POPULATED_SPORT-1920x1080.png",
+    "sha256": "0bfd717c9b6685a862742e3a020e8fd67fe932f0bab6b8f1b946331830ee21b3"
+  },
+  {
+    "path": "after/POPULATED_TV-1280x720.png",
+    "sha256": "f5c07741a0cf734f0697de619145b62173681d0907a1b80f128347dc9765e4d6"
+  },
+  {
+    "path": "after/HOME_MATCH_DETAILS-1280x720.png",
+    "sha256": "5414809587ab5cf97fb886a9d6eb703989e3459752fb5b47362286727294d079"
+  },
+  {
+    "path": "after/POPULATED_SPORT-1280x720.png",
+    "sha256": "d49cc7944f2f301dc4235f701b9d90ea064857fdd2cf4413c77729c4614485d0"
+  },
+  {
+    "path": "after/POPULATED_HOME-1920x1080.png",
+    "sha256": "24861b3dbe5b52135aaa9e126e3f0aafbd04366c7e2df6e410acfe8276103696"
+  },
+  {
+    "path": "after/SPORT_MANUAL_PICKER-1280x720.png",
+    "sha256": "1dd463e19e2875cae188567286b6866bfaebf7003fb7d258c0f630d4f09e8b42"
+  },
+  {
+    "path": "after/HOME_MATCH_DETAILS-1920x1080.png",
+    "sha256": "99eb4e1c4be0d3a1cef97ae017493f48f6d22aad7dc2a8ff2c3e487683721865"
+  },
+  {
+    "path": "after/SPORT_LOOPBACK_PLAYBACK-1280x720.png",
+    "sha256": "b7f66261ce2b09dcb42fbe9d2fb5479f578129467e0bf30d0a151f2698b07eaf"
+  },
+  {
+    "path": "performance/after-1920x1080.json",
+    "sha256": "29c302567f172f1968ef9d40dcbe708c5df1e19fcd3ffb53c59d4ba16307254e"
+  },
+  {
+    "path": "performance/after-1280x720.json",
+    "sha256": "3c091690d1389d7cf26629248ba33f95783aed8bc5865b99fc7448a6a89077de"
+  },
+  {
+    "path": "tests/after-native.txt",
+    "sha256": "7e5e636ea4ab8490645423f71aaa68e3f1f96677fc12a62cd46f7aeaaf80bf0e"
+  },
+  {
+    "path": "tests/after-seed.txt",
+    "sha256": "54652d9aa47a6e548604a5202261e26d03454e05fd833137523142c806709008"
+  },
+  {
+    "path": "tests/after-locale.txt",
+    "sha256": "2763f83da3ced6246e7b0ede95f2b65e6372f0e7438491daae5097e4b3aadbcd"
+  },
+  {
+    "apk": "before",
+    "sha256": "faa2df45a48da2ec021a30e29b7c761fc140c484865c2d816ce8ee0f65d71961"
+  },
+  {
+    "apk": "after",
+    "sha256": "ebf87e4714c41ec1e0388fc148ee782a2c90ffb82b4b74d4697f03685c4a6a02"
+  },
+  {
+    "instrumentation_sha256": "088ea0b57a27f89afdea71b309522d34257a881d4f40f27ca2dacc8e50b81410"
+  }
+]

@@ -179,7 +179,7 @@ class LiveZapList(
         val i = if (currentId != null) list.indexOfFirst { it.id == currentId } else -1
         if (i >= 0) {
             val nextIdx = wrappedZapIndex(i, delta, list.size) ?: return null
-            return list[nextIdx]
+            return list[nextIdx].takeUnless { nextIdx == i }
         }
         // The anchor names the channel it was created for. If that is no longer what is playing (a newer
         // numeric tune, or CH± already moved on), it is stale — drop it rather than jump somewhere else.
@@ -193,6 +193,7 @@ class LiveZapList(
             pending = null
             return null
         }
+        if (nextIdx == anchor.previousIndex) return null
         pending = anchor.copy(targetChannelId = prev[nextIdx].id, previousIndex = nextIdx)
         return prev[nextIdx]
     }

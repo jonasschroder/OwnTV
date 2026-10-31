@@ -1,0 +1,366 @@
+{
+  "conditions": {
+    "baseline": "frozen v0.16 b94e98c production-equivalent APK; same final harness",
+    "locale": "sv",
+    "weather": false,
+    "dataset": "synthetic-12000-channel-v1",
+    "warmup_cycles": 2,
+    "measured_cycles_per_process": 20,
+    "processes_per_variant_resolution": 1,
+    "device": "disposable Android TV ARM64 emulator, SwiftShader software GPU",
+    "limitations": [
+      "Instrumentation/idling included; not remote-to-photon or physical Chromecast",
+      "One instrumented useful-Home launch per process is not cold-start TTID",
+      "PSS is sampled, not peak or retained-object/leak evidence",
+      "Counts cover app-owned readCatalog/guide summary and CompanionHttp only, not all Core/provider/updater I/O",
+      "Frame metrics are software-GPU rendering samples, not measured TV FPS",
+      "Earlier main/phase2 comparisons remain preserved in ../phase2"
+    ]
+  },
+  "resolutions": {
+    "1920x1080": {
+      "before": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 1,
+            "median_ms": 7432.22,
+            "p95_ms": 7432.22
+          },
+          "enter_tv_ms": {
+            "n": 20,
+            "median_ms": 806.69,
+            "p95_ms": 986.55
+          },
+          "enter_sport_ms": {
+            "n": 20,
+            "median_ms": 221.75,
+            "p95_ms": 282.84
+          },
+          "enter_vod_ms": {
+            "n": 20,
+            "median_ms": 149.92,
+            "p95_ms": 167.04
+          },
+          "vod_content_down_up_ms": {
+            "n": 20,
+            "median_ms": 149.88,
+            "p95_ms": 182.01
+          },
+          "enter_profile_ms": {
+            "n": 20,
+            "median_ms": 215.88,
+            "p95_ms": 262.69
+          },
+          "enter_home_ms": {
+            "n": 20,
+            "median_ms": 890.25,
+            "p95_ms": 1032.61
+          },
+          "dpad_right_left_ms": {
+            "n": 20,
+            "median_ms": 133.43,
+            "p95_ms": 150.23
+          },
+          "background_resume_ms": {
+            "n": 10,
+            "median_ms": 745.97,
+            "p95_ms": 917.81
+          }
+        },
+        "cpu_process_ms": 84616,
+        "sampled_max_pss_kib": 306260,
+        "sampled_median_pss_kib": 295592,
+        "mean_memory_summary_kib": {
+          "summary.code": 4000.6,
+          "summary.stack": 3821.7,
+          "summary.graphics": 0,
+          "summary.java-heap": 30712,
+          "summary.native-heap": 70205.7,
+          "summary.system": 14556.1,
+          "summary.total-pss": 290707,
+          "summary.private-other": 167410.9,
+          "summary.total-swap": 14523.4
+        },
+        "art_runtime_delta": {
+          "art.gc.blocking-gc-count": 0,
+          "art.gc.gc-time": 3665,
+          "art.gc.bytes-allocated": 2397217296,
+          "art.gc.bytes-freed": 2378096144,
+          "art.gc.gc-count": 172,
+          "art.gc.blocking-gc-time": 0
+        },
+        "app_reader_work_delta": {
+          "CATALOG": 1395,
+          "GUIDE_SUMMARIES": 45,
+          "PUBLIC_HTTP": 0
+        },
+        "uid_network_rx_bytes": 0,
+        "uid_network_tx_bytes": 0,
+        "frame_duration": {
+          "n": 536,
+          "median_ms": 31.37,
+          "p95_ms": 118.85
+        },
+        "frame_over_16_67_ms_fraction": 1.0,
+        "frame_callback_drops": 0
+      },
+      "after": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 1,
+            "median_ms": 5965.6,
+            "p95_ms": 5965.6
+          },
+          "enter_tv_ms": {
+            "n": 20,
+            "median_ms": 783.96,
+            "p95_ms": 1015.69
+          },
+          "enter_sport_ms": {
+            "n": 20,
+            "median_ms": 232.77,
+            "p95_ms": 265.95
+          },
+          "enter_vod_ms": {
+            "n": 20,
+            "median_ms": 149.99,
+            "p95_ms": 183.44
+          },
+          "vod_content_down_up_ms": {
+            "n": 20,
+            "median_ms": 149.91,
+            "p95_ms": 195.83
+          },
+          "enter_profile_ms": {
+            "n": 20,
+            "median_ms": 214.24,
+            "p95_ms": 249.26
+          },
+          "enter_home_ms": {
+            "n": 20,
+            "median_ms": 870.69,
+            "p95_ms": 1077.95
+          },
+          "dpad_right_left_ms": {
+            "n": 20,
+            "median_ms": 133.33,
+            "p95_ms": 149.76
+          },
+          "background_resume_ms": {
+            "n": 10,
+            "median_ms": 783.13,
+            "p95_ms": 967.27
+          }
+        },
+        "cpu_process_ms": 82680,
+        "sampled_max_pss_kib": 303312,
+        "sampled_median_pss_kib": 297458,
+        "mean_memory_summary_kib": {
+          "summary.code": 3974.3,
+          "summary.stack": 3564.6,
+          "summary.graphics": 0,
+          "summary.java-heap": 28050.9,
+          "summary.native-heap": 69269.7,
+          "summary.system": 14614,
+          "summary.total-pss": 286940.9,
+          "summary.private-other": 167467.4,
+          "summary.total-swap": 14520
+        },
+        "art_runtime_delta": {
+          "art.gc.blocking-gc-count": 0,
+          "art.gc.gc-time": 3618,
+          "art.gc.bytes-allocated": 2398362080,
+          "art.gc.bytes-freed": 2386117792,
+          "art.gc.gc-count": 170,
+          "art.gc.blocking-gc-time": 0
+        },
+        "app_reader_work_delta": {
+          "CATALOG": 1395,
+          "GUIDE_SUMMARIES": 45,
+          "PUBLIC_HTTP": 0
+        },
+        "uid_network_rx_bytes": 0,
+        "uid_network_tx_bytes": 0,
+        "frame_duration": {
+          "n": 535,
+          "median_ms": 29.66,
+          "p95_ms": 117.82
+        },
+        "frame_over_16_67_ms_fraction": 1.0,
+        "frame_callback_drops": 0
+      }
+    },
+    "1280x720": {
+      "before": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 1,
+            "median_ms": 6094.56,
+            "p95_ms": 6094.56
+          },
+          "enter_tv_ms": {
+            "n": 20,
+            "median_ms": 788.49,
+            "p95_ms": 1051.42
+          },
+          "enter_sport_ms": {
+            "n": 20,
+            "median_ms": 233.29,
+            "p95_ms": 266.23
+          },
+          "enter_vod_ms": {
+            "n": 20,
+            "median_ms": 150.39,
+            "p95_ms": 166.46
+          },
+          "vod_content_down_up_ms": {
+            "n": 20,
+            "median_ms": 166.06,
+            "p95_ms": 183.46
+          },
+          "enter_profile_ms": {
+            "n": 20,
+            "median_ms": 200.19,
+            "p95_ms": 231.96
+          },
+          "enter_home_ms": {
+            "n": 20,
+            "median_ms": 850.13,
+            "p95_ms": 1012.83
+          },
+          "dpad_right_left_ms": {
+            "n": 20,
+            "median_ms": 133.25,
+            "p95_ms": 149.81
+          },
+          "background_resume_ms": {
+            "n": 10,
+            "median_ms": 742.07,
+            "p95_ms": 933.83
+          }
+        },
+        "cpu_process_ms": 81420,
+        "sampled_max_pss_kib": 302673,
+        "sampled_median_pss_kib": 292489,
+        "mean_memory_summary_kib": {
+          "summary.code": 3915.4,
+          "summary.stack": 3730.9,
+          "summary.graphics": 0,
+          "summary.java-heap": 27219.4,
+          "summary.native-heap": 68271.4,
+          "summary.system": 14386.1,
+          "summary.total-pss": 285071.9,
+          "summary.private-other": 167548.6,
+          "summary.total-swap": 14516.6
+        },
+        "art_runtime_delta": {
+          "art.gc.blocking-gc-count": 0,
+          "art.gc.gc-time": 3528,
+          "art.gc.bytes-allocated": 2392037264,
+          "art.gc.bytes-freed": 2378373104,
+          "art.gc.gc-count": 171,
+          "art.gc.blocking-gc-time": 0
+        },
+        "app_reader_work_delta": {
+          "CATALOG": 1395,
+          "GUIDE_SUMMARIES": 45,
+          "PUBLIC_HTTP": 0
+        },
+        "uid_network_rx_bytes": 0,
+        "uid_network_tx_bytes": 0,
+        "frame_duration": {
+          "n": 531,
+          "median_ms": 23.68,
+          "p95_ms": 103.84
+        },
+        "frame_over_16_67_ms_fraction": 1.0,
+        "frame_callback_drops": 0
+      },
+      "after": {
+        "latency": {
+          "instrumented_launch_to_useful_home_ms": {
+            "n": 1,
+            "median_ms": 5908.19,
+            "p95_ms": 5908.19
+          },
+          "enter_tv_ms": {
+            "n": 20,
+            "median_ms": 780.62,
+            "p95_ms": 966.93
+          },
+          "enter_sport_ms": {
+            "n": 20,
+            "median_ms": 233.03,
+            "p95_ms": 283.15
+          },
+          "enter_vod_ms": {
+            "n": 20,
+            "median_ms": 158.64,
+            "p95_ms": 183.24
+          },
+          "vod_content_down_up_ms": {
+            "n": 20,
+            "median_ms": 166.28,
+            "p95_ms": 183.29
+          },
+          "enter_profile_ms": {
+            "n": 20,
+            "median_ms": 199.1,
+            "p95_ms": 234.61
+          },
+          "enter_home_ms": {
+            "n": 20,
+            "median_ms": 849.16,
+            "p95_ms": 983.38
+          },
+          "dpad_right_left_ms": {
+            "n": 20,
+            "median_ms": 132.94,
+            "p95_ms": 149.53
+          },
+          "background_resume_ms": {
+            "n": 10,
+            "median_ms": 735.44,
+            "p95_ms": 900.26
+          }
+        },
+        "cpu_process_ms": 81060,
+        "sampled_max_pss_kib": 307426,
+        "sampled_median_pss_kib": 290410,
+        "mean_memory_summary_kib": {
+          "summary.code": 4018.9,
+          "summary.stack": 3551.4,
+          "summary.graphics": 0,
+          "summary.java-heap": 26162.3,
+          "summary.native-heap": 68695.4,
+          "summary.system": 14405.9,
+          "summary.total-pss": 284319,
+          "summary.private-other": 167485.1,
+          "summary.total-swap": 14510.9
+        },
+        "art_runtime_delta": {
+          "art.gc.blocking-gc-count": 0,
+          "art.gc.gc-time": 3577,
+          "art.gc.bytes-allocated": 2392073984,
+          "art.gc.bytes-freed": 2383420944,
+          "art.gc.gc-count": 170,
+          "art.gc.blocking-gc-time": 0
+        },
+        "app_reader_work_delta": {
+          "CATALOG": 1395,
+          "GUIDE_SUMMARIES": 45,
+          "PUBLIC_HTTP": 0
+        },
+        "uid_network_rx_bytes": 0,
+        "uid_network_tx_bytes": 0,
+        "frame_duration": {
+          "n": 534,
+          "median_ms": 23.22,
+          "p95_ms": 103.87
+        },
+        "frame_over_16_67_ms_fraction": 1.0,
+        "frame_callback_drops": 0
+      }
+    }
+  }
+}

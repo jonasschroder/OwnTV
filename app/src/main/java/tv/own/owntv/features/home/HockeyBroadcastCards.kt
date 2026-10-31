@@ -12,7 +12,10 @@ internal data class HockeyCardBroadcast(val label: String?, val playable: Channe
 internal fun hockeyCardBroadcast(fixture: SportFixture, local: EpgHockeyMatch?, localChannels: Map<Long, ChannelEntity>,
     assignment: BroadcastAssignment?, resolved: List<ChannelEntity>, complete: Boolean,
     choices: SwedishChoices, now: Long): HockeyCardBroadcast {
-    val evidence = local?.takeIf { it.fixture == fixture }
+    val evidence = local?.takeIf { proof -> proof.fixture == fixture && proof.channelIds.any { id ->
+        localChannels[id] != null && (proof.channelStops[id] ?: 0L) > now &&
+            (proof.channelStarts[id] ?: Long.MAX_VALUE) < (proof.channelStops[id] ?: 0L)
+    } }
     val external = BroadcastResolver.usable(fixture.broadcastFixture(), assignment, Instant.ofEpochMilli(now))
     val names = external?.channels?.filter { it.linear }?.map { it.name }.orEmpty()
     val rows = hockeyGuideChannels(if (evidence != null) evidence.channelIds.mapNotNull { id ->

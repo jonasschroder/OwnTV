@@ -1257,9 +1257,6 @@ fun OwnTVShell(
                             },
                             onGoToChannel = { ch ->
                                 restoreFocus = false
-                                if (liveView == tv.own.owntv.core.settings.SettingsRepository.LiveView.GUIDE) {
-                                    liveVm.setLiveView(tv.own.owntv.core.settings.SettingsRepository.LiveView.LIST)
-                                }
                                 liveVm.revealChannel(ch)
                                 searchReturn = MainSection.LIVE_TV
                                 onSelectSection(MainSection.LIVE_TV)

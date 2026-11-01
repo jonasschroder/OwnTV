@@ -1030,7 +1030,7 @@ fun OwnTVShell(
           }
           NativeContentEntry(nativeEntryRequest, nativePageKey(activeProfileId, selectedSection, presentation), {
               when (selectedSection) {
-                  MainSection.LIVE_TV -> tvCategoryEntry?.invoke() == true
+                  MainSection.LIVE_TV -> tvCategoryEntry?.invoke() == true || tryEnterNativeContent()
                   MainSection.SETTINGS -> settingsCategoryEntry?.invoke() ?: tryEnterNativeContent()
                   MainSection.MOVIES, MainSection.SERIES -> runCatching { nativeSubFocus.requestFocus() }.getOrDefault(false)
                   else -> tryEnterNativeContent()
@@ -1078,7 +1078,6 @@ fun OwnTVShell(
             ) {
                 // Live TV's view (List / Guide, G14), and how a guide — the TV Guide or Live TV's Guide view —
                 // starts a channel or an archive programme: through LiveViewModel, the one live path.
-                val liveView by liveVm.liveView.collectAsStateWithLifecycle()
                 val guidePlayChannel: (ChannelEntity, List<ChannelEntity>) -> Unit = { ch, _ ->
                     restoreFocus = false
                     scope.launch { if (liveVm.watchFromGuideAsync(ch) == LiveViewModel.HomePlayback.IN_APP) openFullscreen(MainSection.LIVE_TV) }
@@ -1282,24 +1281,10 @@ fun OwnTVShell(
                             modifier = Modifier.fillMaxSize(),
                         )
 
-                        selectedSection == MainSection.LIVE_TV && liveView == tv.own.owntv.core.settings.SettingsRepository.LiveView.GUIDE -> EpgScreen(
-                            onPlayChannel = guidePlayChannel,
-                            onPlayCatchup = guidePlayCatchup,
-                            onAddEpg = { openEpgAdd = true; onSelectSection(MainSection.SETTINGS) },
-                            previewEnabled = playerMode == PlayerMode.NONE,
-                            liveMode = true,
-                            onEntryHook = { guideEntry = it },
-                            onListView = { liveVm.setLiveView(tv.own.owntv.core.settings.SettingsRepository.LiveView.LIST) },
-                            restoreFocus = restoreFocus,
-                            onRestored = { restoreFocus = false },
-                            onContentScrolled = { contentScrolled = it },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .onFocusChanged { if (it.hasFocus) focusedLayer = ShellLayer.CONTENT }
-                                .focusGroup(),
-                        )
-
-                        selectedSection == MainSection.LIVE_TV -> LiveScreen(
+                        // Native TV always shows the Swedish channel grid. An older Stable install
+                        // may still store LiveView.GUIDE; that preference must not replace the
+                        // focusable native TV screen. The separate EPG section remains available.
+                        nativeTvSurface(selectedSection) == NativeTvSurface.CHANNEL_GRID -> LiveScreen(
                             onHeader = { runCatching { sidebarFocus.requestFocus() } },
                             onEntryHook = { guideEntry = it },
                             onCategoryEntryHook = { tvCategoryEntry = it },
@@ -1349,7 +1334,7 @@ fun OwnTVShell(
                             modifier = Modifier.fillMaxSize(),
                         )
 
-                        selectedSection == MainSection.EPG -> EpgScreen(
+                        nativeTvSurface(selectedSection) == NativeTvSurface.PROGRAMME_GUIDE -> EpgScreen(
                             onFullscreen = { openFullscreen() },
                             onPlayChannel = guidePlayChannel,
                             onPlayCatchup = guidePlayCatchup,

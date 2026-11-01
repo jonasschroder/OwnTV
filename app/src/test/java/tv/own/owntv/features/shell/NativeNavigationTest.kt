@@ -35,10 +35,18 @@ class NativeNavigationTest {
         assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all, MainSection.MOVIES, MainSection.EPG))
         assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all - MainSection.EPG, MainSection.MOVIES, MainSection.EPG))
     }
-    @Test fun guideOnlyAndEmptyTvDoNotUnhideLive() {
-        assertEquals(MainSection.EPG, nativeEntry(TopDestination.TV, setOf(MainSection.EPG), MainSection.MOVIES))
+    @Test fun tvAlwaysShowsChannelsWhenLegacyStableSettingsHideLiveButKeepGuide() {
+        // The TV tab is always visible. Old navigation preferences must not
+        // trap an upgraded user on the legacy EPG screen with no D-pad entry.
+        assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, setOf(MainSection.EPG), MainSection.MOVIES))
+        assertEquals(MainSection.LIVE_TV, nativeEntry(TopDestination.TV, all, MainSection.MOVIES, MainSection.EPG))
         assertNull(nativeEntry(TopDestination.TV, emptySet(), MainSection.MOVIES))
         assertNull(nativeEntry(TopDestination.VOD, emptySet(), MainSection.MOVIES))
+    }
+    @Test fun nativeTvScreensIgnorePersistedLegacyGuideModeAndRetainSeparateEpg() {
+        assertEquals(NativeTvSurface.CHANNEL_GRID, nativeTvSurface(MainSection.LIVE_TV))
+        assertEquals(NativeTvSurface.PROGRAMME_GUIDE, nativeTvSurface(MainSection.EPG))
+        assertNull(nativeTvSurface(MainSection.HOME))
     }
     @Test fun profileAndSettingsRemainReachableWithNoContentOrNetwork() {
         assertEquals(listOf(MainSection.SETTINGS, MainSection.MORE, MainSection.DOWNLOADS),

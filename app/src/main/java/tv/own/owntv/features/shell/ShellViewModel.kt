@@ -358,6 +358,7 @@ class ShellViewModel(
                 // browse section, so it is never in `visible` and would otherwise be redirected away
                 // from the moment the user changed anything in Nav menu customization.
                 if (current in visible ||
+                    nativeTvSelectable(current, visible) ||
                     current == MainSection.SETTINGS ||
                     current == MainSection.SEARCH ||
                     current == MainSection.MORE

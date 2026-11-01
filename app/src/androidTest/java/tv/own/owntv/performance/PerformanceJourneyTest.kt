@@ -165,6 +165,11 @@ class PerformanceJourneyTest {
     /** Isolates the visible horizontal row; the full journey also includes scrolling and idling. */
     @Test fun capturePopulatedNativeShell(): Unit = runBlocking {
         seedDesignReview(app, db, settings)
+        // Reproduce the actual upgraded-Stable regression with old persisted settings.
+        // This is an emulator-only synthetic profile, never the owner's device data.
+        settings.setNavMenuMode(SettingsRepository.NavMenuMode.STATIC)
+        settings.setNavMenuHidden(setOf("LIVE_TV"))
+        settings.setLiveView(SettingsRepository.LiveView.GUIDE)
         val baseline = InstrumentationRegistry.getArguments().getString("reviewBaseline") == "true"
         val video = tv.own.owntv.home.LoopbackVideoFixture(instrumentation.context.assets.open("live-entry-bars.mp4").use { it.readBytes() })
         val hockeyId = 9900013L
@@ -172,6 +177,12 @@ class PerformanceJourneyTest {
         db.channelDao().updateAll(listOf(original.copy(streamUrl = video.url(3))))
         try {
             for (size in listOf("1920x1080", "1280x720")) {
+                // This journey also plays a synthetic Sport stream, which records TV4 as
+                // the last Live channel. Reset only the disposable synthetic profile's
+                // Live history before each screen-size pass, so the SVT1 Home assertion
+                // tests the intended initial state rather than the previous pass's playback.
+                db.historyDao().clearType(profile, MediaType.LIVE)
+                db.historyDao().record(WatchHistoryEntity(profileId = profile, mediaType = MediaType.LIVE, itemId = 9900000))
                 shell("wm size $size")
                 shell("wm density ${if (size == "1280x720") 213 else 320}")
                 settings.setActiveProfile(profile)
@@ -306,6 +317,8 @@ class PerformanceJourneyTest {
                 }
             }
         } finally {
+            settings.setLiveView(SettingsRepository.LiveView.LIST)
+            settings.setNavMenuHidden(emptySet())
             video.close()
             db.channelDao().updateAll(listOf(original))
             shell("wm size reset")

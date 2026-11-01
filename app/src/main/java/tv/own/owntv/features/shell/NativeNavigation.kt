@@ -24,6 +24,13 @@ internal fun topDestination(section: MainSection, sport: Boolean = false): TopDe
     MainSection.SEARCH -> TopDestination.TV // caller keeps its contextual parent while search is open
 }
 
+/** New TV header is present even when pre-native navigation hid LIVE_TV but
+ * left the guide exposed. Keep the selected native grid from being immediately
+ * discarded by legacy section-visibility reactivity.
+ */
+internal fun nativeTvSelectable(section: MainSection, visible: Set<MainSection>): Boolean =
+    section == MainSection.LIVE_TV && (MainSection.LIVE_TV in visible || MainSection.EPG in visible)
+
 /** Empty capability is deliberately different from an explicit hidden navigation preference. */
 internal fun nativeRoutes(destination: TopDestination, visible: Set<MainSection>): List<MainSection> = when (destination) {
     TopDestination.HOME -> listOf(MainSection.HOME).filter { it in visible }
@@ -38,7 +45,7 @@ internal fun nativeEntry(destination: TopDestination, visible: Set<MainSection>,
         TopDestination.SPORT -> MainSection.HOME
         // A native TV tab must not strand an upgraded user in the old guide just
         // because LIVE_TV was hidden in legacy navigation preferences.
-        TopDestination.TV -> if (MainSection.LIVE_TV in visible || MainSection.EPG in visible) MainSection.LIVE_TV else null
+        TopDestination.TV -> MainSection.LIVE_TV.takeIf { nativeTvSelectable(it, visible) }
         TopDestination.VOD -> nativeRoutes(destination, visible).let { lastVod.takeIf(it::contains) ?: it.firstOrNull() }
         else -> nativeRoutes(destination, visible).firstOrNull()
     }

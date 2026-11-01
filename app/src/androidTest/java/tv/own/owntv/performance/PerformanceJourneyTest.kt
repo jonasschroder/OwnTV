@@ -165,6 +165,11 @@ class PerformanceJourneyTest {
     /** Isolates the visible horizontal row; the full journey also includes scrolling and idling. */
     @Test fun capturePopulatedNativeShell(): Unit = runBlocking {
         seedDesignReview(app, db, settings)
+        // Reproduce the actual upgraded-Stable regression with old persisted settings.
+        // This is an emulator-only synthetic profile, never the owner's device data.
+        settings.setNavMenuMode(SettingsRepository.NavMenuMode.STATIC)
+        settings.setNavMenuHidden(setOf("LIVE_TV"))
+        settings.setLiveView(SettingsRepository.LiveView.GUIDE)
         val baseline = InstrumentationRegistry.getArguments().getString("reviewBaseline") == "true"
         val video = tv.own.owntv.home.LoopbackVideoFixture(instrumentation.context.assets.open("live-entry-bars.mp4").use { it.readBytes() })
         val hockeyId = 9900013L
@@ -312,6 +317,8 @@ class PerformanceJourneyTest {
                 }
             }
         } finally {
+            settings.setLiveView(SettingsRepository.LiveView.LIST)
+            settings.setNavMenuHidden(emptySet())
             video.close()
             db.channelDao().updateAll(listOf(original))
             shell("wm size reset")

@@ -176,7 +176,10 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # The old swiftshader_indirect backend was deprecated in emulator 36.4.9; on
+          # long Android-TV D-pad runs it repeatedly loses ColorBuffers and dies before
+          # screenshot collection. Select the supported software backend for this job.
+          emulator-options: -no-window -gpu software -noaudio -no-boot-anim -camera-back none
           # AGP normally uninstalls the disposable test app and removes its scoped files after
           # instrumentation. Keep it only until this runner shuts down, so screenshots survive.
           script: bash tools/run-tv-regressions.sh

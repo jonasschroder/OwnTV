@@ -1,4 +1,5 @@
 name: Reclaim Actions storage
+# Rerun authorized on 2026-11-05. Only disposable artifacts and caches are removed.
 on:
   push:
     paths:

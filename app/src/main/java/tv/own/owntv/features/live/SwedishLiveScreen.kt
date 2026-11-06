@@ -113,10 +113,18 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
             verticalTarget = target
             if (focusId != target) preferredColumn = index % CHANNEL_GRID_COLUMNS
             val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == target }
-            if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
-                visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(index + editItems)
-            repeat(2) { withFrameNanos { } }
+            val scrolled = visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
+                visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset
+            if (scrolled) {
+                list.scrollToItem(index + editItems)
+                repeat(2) { withFrameNanos { } }
+            }
+            // Entry into an already visible grid must not wait two more display frames.
             if (targets[target]?.requestSafely() == true) return true
+            repeat(2) {
+                withFrameNanos { }
+                if (targets[target]?.requestSafely() == true) return true
+            }
         }
         categoryFocus.requestSafely()
         return false
@@ -296,9 +304,19 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
                                 movement?.cancel()
                                 movement = scope.launch {
                                     val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == targetIdentity }
-                                    if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset || visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(next + editItems)
-                                    repeat(2) { withFrameNanos { } }
-                                    targets[targetIdentity]?.requestSafely()
+                                    val scrolled = visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
+                                        visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset
+                                    if (scrolled) {
+                                        list.scrollToItem(next + editItems)
+                                        repeat(2) { withFrameNanos { } }
+                                    }
+                                    // Most left/right/up/down presses target an already laid-out
+                                    // channel; transfer focus in this frame. Retry only if a lazy
+                                    // target is not attached yet (e.g. after an offscreen scroll).
+                                    if (targets[targetIdentity]?.requestSafely() != true) repeat(3) {
+                                        withFrameNanos { }
+                                        if (targets[targetIdentity]?.requestSafely() == true) return@launch
+                                    }
                                 }
                             }, onFirstRowUp = {
                                 movement?.cancel()

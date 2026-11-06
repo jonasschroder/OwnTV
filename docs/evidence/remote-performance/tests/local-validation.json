@@ -1,0 +1,20 @@
+{
+  "qa_jvm": {
+    "tests": 589,
+    "failures": 0
+  },
+  "targeted_native": {
+    "tests": 44,
+    "failures": 0
+  },
+  "python_initial": {
+    "tests": 106,
+    "failures": 1,
+    "failure": "new real-clock class missing from explicit CI inventory"
+  },
+  "corrected_inventory_retest": {
+    "tests": 1,
+    "failures": 0
+  },
+  "runtime_sources_changed_by_inventory_fix": false
+}

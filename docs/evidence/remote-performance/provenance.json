@@ -245,6 +245,14 @@
     {
       "path": "tests/i18n.txt",
       "sha256": "f30126e1738f12cfcae793f5268ec96bc2bd355bd51e034dc39e27125947b70b"
+    },
+    {
+      "path": "tests/local-validation.json",
+      "sha256": "873b2dc0add1fca94130b26b7ea2f9dcc76adbd51fad7d5e4f132f072bbf4cb8"
+    },
+    {
+      "path": "tests/inventory-fix.txt",
+      "sha256": "337127bab8d541cf5ad0d7e853ff0641fc7600ae7eda37bb1051e5fb46fb05d0"
     }
   ]
 }

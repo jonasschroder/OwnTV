@@ -24,7 +24,8 @@ class TvSuiteInventoryTest(unittest.TestCase):
                      'tv.own.owntv.update.SameSignerUpgradeTest',
                      'tv.own.owntv.update.UpdateInstallReceiverTest',
                      'tv.own.owntv.update.UpdateDialogNavigationTest'}
-        performance = {'tv.own.owntv.performance.PerformanceJourneyTest'}
+        performance = {'tv.own.owntv.performance.PerformanceJourneyTest',
+                       'tv.own.owntv.performance.NativeRemoteLatencyTest'}
         self.assertEqual(set(cases), selected | dedicated | performance, 'Device tests must be selected by a real CI runner')
         workflow = (ROOT / '.github/workflows/android.yml').read_text()
         required = set(re.findall(r"\('([\w.]+)', '([\w]+)'\)", workflow))

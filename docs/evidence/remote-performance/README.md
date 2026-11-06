@@ -106,7 +106,7 @@ In each resolution, app catalogue reads fall **1395 → 31**, guide summaries st
 
 ## Validation and screenshots
 
-- 25 targeted JVM regressions: pass. QA/debug and instrumentation APKs: build successfully.
+- 25 targeted JVM regressions: pass; the complete local QA JVM suite also passes (589 tests) when investigating CI. QA/debug and instrumentation APKs build successfully.
 - 44 targeted native regressions: pass (storage 1, Home 10, navigation 9, native Sport/VOD/settings presentation 16, channel grid 2, source selector 6).
 - Matched production journeys, visible Sport probe and real-clock probe: pass on baseline/candidate in both resolutions. Populated **actual MainActivity** screenshots and remote/player-return/EPG/profile scenarios: pass in both resolutions and both variants. Loopback playback is synthetic Exo, not real IPTV/Chromecast.
 - i18n merge-base ratchet: pass (45 baseline, 2454 safe literals); shell syntax and whitespace: pass. Full GitHub checks are required on the published PR head.
@@ -120,3 +120,10 @@ In each resolution, app catalogue reads fall **1395 → 31**, guide summaries st
 | PROFILE | [1920x1080](before/POPULATED_PROFILE-1920x1080.png) / [1280x720](before/POPULATED_PROFILE-1280x720.png) | [1920x1080](after/POPULATED_PROFILE-1920x1080.png) / [1280x720](after/POPULATED_PROFILE-1280x720.png) |
 
 The TV captures show the restored/scrolled grid, so a partial preceding row is intentional. The approved Home composition, top/context navigation, channel grid and Sport/VOD presentation remain intact. Missing EPG/artwork/broadcaster data remains explicit. Source picker, long list and update screenshots are also in `after/`.
+
+CI initially rejected the added real-clock class because its explicit performance-test inventory had
+not been extended. `tools/tests/test_tv_suite_inventory.py` now includes it; the existing class-set,
+method-to-runner and no-skip assertions remain strict. Python run: 105 other cases passed and this
+inventory case failed; targeted rerun of the corrected inventory passes. No app/instrumentation code,
+APK, source-tree hash or benchmark changed in this follow-up. Full required CI must pass on the
+follow-up head; the earlier failing run is not treated as successful.

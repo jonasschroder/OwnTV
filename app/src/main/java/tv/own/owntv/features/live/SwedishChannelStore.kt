@@ -26,6 +26,10 @@ internal data class SwedishChoices(val showUhd: Boolean = false, val showVariant
     val order: List<String> = emptyList(), val hidden: Set<String> = emptySet(), val preferred: Map<String, String> = emptyMap())
 internal data class SwedishLibrary(val groups: List<SwedishGroup>, val bounded: Boolean = false)
 
+// Shared matcher: catalog rebuilds may scan thousands of provider rows. Avoid
+// compiling this regex for every recognized channel during each TV entry.
+private val broadcastVariantEpg = Regex("(?:stockholm|skane|skåne|goteborg|göteborg|\\+1|english|norsk|dansk)")
+
 /** Derived compact index from existing Room tables. No stream URLs, DB migration or catalog mutation. */
 internal class SwedishChannelStore(context: Context, private val db: OwnTVDatabase, private val customize: CustomizationStore) {
     private val prefs = context.getSharedPreferences("mintv-swedish-channels", 0)
@@ -111,7 +115,7 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
                     // Only explicit regional/time-shift/audio EPG evidence refines a broadcaster.
                     // Different arbitrary provider EPG namespaces do not prove distinct services.
                     val distinct = epg?.lowercase(java.util.Locale.ROOT)?.takeIf {
-                        Regex("(?:stockholm|skane|skåne|goteborg|göteborg|\\+1|english|norsk|dansk)").containsMatchIn(it)
+                        broadcastVariantEpg.containsMatchIn(it)
                     }
                     val name = recognized.copy(identity = recognized.identity + distinct?.let { ":$it" }.orEmpty())
                     if (candidates.size < 4096) candidates += SwedishVariant(last, cursor.getLong(1),

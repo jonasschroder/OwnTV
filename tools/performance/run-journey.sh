@@ -8,8 +8,8 @@ out="${1:-performance-evidence}"
 mkdir -p "$out"
 qa=se.jonasschroder.mintv.qa
 run() {
-  local method="$1" label="$2"
-  adb -s "$serial" shell am instrument -w -r -e performanceProbe true -e perfLabel "$label" -e class "tv.own.owntv.performance.PerformanceJourneyTest#$method" "$qa.test/androidx.test.runner.AndroidJUnitRunner" > "$out/$label.txt" 2>&1
+  local method="$1" label="$2" class="${3:-tv.own.owntv.performance.PerformanceJourneyTest}"
+  adb -s "$serial" shell am instrument -w -r -e performanceProbe true -e perfLabel "$label" -e class "$class#$method" "$qa.test/androidx.test.runner.AndroidJUnitRunner" > "$out/$label.txt" 2>&1
   python3 - "$out/$label.txt" <<'PY'
 import pathlib,sys
 s=pathlib.Path(sys.argv[1]).read_text()
@@ -37,3 +37,8 @@ echo "PASS native screenshots and visible Sport row probe"
 run capturePopulatedNativeShell populated-native
 adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/native" "$out/populated-native" >/dev/null
 echo "PASS populated actual MainActivity and remote return journeys"
+
+# Real display clock: complements the Compose-test/idling measurements above.
+run visibleRowsUseRealFrameClock real-focus tv.own.owntv.performance.NativeRemoteLatencyTest
+adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/real-focus.json" "$out/real-focus.json" >/dev/null
+echo "PASS real-clock visible remote focus probe"

@@ -1,0 +1,1 @@
+i18n literal inventory OK (merge-base ratchet): 45 baseline + 2454 safe entries

@@ -34,6 +34,19 @@ private val broadcastVariantEpg = Regex("(?:stockholm|skane|skåne|goteborg|göt
 internal class SwedishChannelStore(context: Context, private val db: OwnTVDatabase, private val customize: CustomizationStore) {
     private val prefs = context.getSharedPreferences("mintv-swedish-channels", 0)
     private val writes = Mutex()
+    private val catalogReads = Mutex()
+    private val catalogRevision = java.util.concurrent.atomic.AtomicLong()
+    // One bounded projection, no stream URLs or credentials. Permission metadata is read anew
+    // for EVERY request; neither a cached library nor an old profile grants playback access.
+    private data class Access(val profile: Long, val owner: Long, val kids: Boolean,
+        val sources: List<Long>, val forbidden: Set<Long>, val hidden: Set<String>)
+    private data class Projection(val access: Access, val revision: Long,
+        val variants: List<SwedishVariant>, val bounded: Boolean)
+    private var projection: Projection? = null
+    private val observer = object : androidx.room.InvalidationTracker.Observer("channels", "categories", "profiles", "sources", "profile_source") {
+        override fun onInvalidated(tables: Set<String>) { catalogRevision.incrementAndGet() }
+    }
+    private var observingCatalog = false // Accessed only under catalogReads on Dispatchers.IO.
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun observeChoices(profile: Long) = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -84,7 +97,19 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         if (!saved) runCatching { prefs.edit().putString(key, previous).commit() }
         check(saved)
     }
-    suspend fun library(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary = withContext(Dispatchers.IO) {
+    suspend fun library(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary =
+        catalogReads.withLock { readLibrary(profile, sources, choices) }
+
+    private suspend fun readLibrary(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary = withContext(Dispatchers.IO) {
+        // Room's observer registration can synchronously install SQLite triggers. Keep that
+        // one-time work off the UI thread too; never initialize the database in the constructor.
+        if (!observingCatalog) {
+            db.invalidationTracker.addWeakObserver(observer)
+            observingCatalog = true
+        }
+        // Await pending Room invalidations before testing the cache: an async callback alone
+        // could otherwise let an immediately revoked/deleted source survive a quick tab switch.
+        db.invalidationTracker.refresh()
         val permitted = db.sourceDao().observeForProfile(profile).first().filter { it.syncLive }.map { it.id }.toSet()
         val scopedSources = sources.filter { it in permitted }
         if (scopedSources.isEmpty()) return@withContext SwedishLibrary(emptyList())
@@ -96,6 +121,13 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         // than re-reading the same profile/category for every category (including adult users).
         val forbidden = tv.own.owntv.core.content.AdultCategoryClassifier.hiddenCategoryIds(
             categories, cust.hiddenCategories, owner.isKids)
+        val access = Access(profile, owner.createdAt, owner.isKids, scopedSources,
+            forbidden, cust.hiddenItems.keys.toSet())
+        db.invalidationTracker.refresh()
+        val revision = catalogRevision.get()
+        projection?.takeIf { it.access == access && it.revision == revision }?.let {
+            return@withContext SwedishLibrary(SwedishChannels.group(it.variants, choices.order, choices.hidden), it.bounded)
+        }
         val candidates = ArrayList<SwedishVariant>()
         var last = 0L; var scanned = 0; var ended = false
         val marks = scopedSources.joinToString(",") { "?" }
@@ -127,6 +159,9 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         }
         // National and regional services are independently selectable. A region's presence or
         // source count is not evidence of stream health and must never hide the national service.
+        db.invalidationTracker.refresh()
+        if (catalogRevision.get() == revision) projection = Projection(access, revision, candidates.toList(), !ended)
+        else projection = null // A concurrent import/revocation must never seed a reusable snapshot.
         SwedishLibrary(SwedishChannels.group(candidates, choices.order, choices.hidden), !ended)
     }
 }

@@ -1,0 +1,250 @@
+{
+  "identity": {
+    "before_apk_sha256": "698567523c6ff9116beeba3b100ab4b4ec5ce570264d402fd57a8da9cbbbe143",
+    "after_apk_sha256": "57e9dce32654d00c48060b0ece076b677e0cca7c4b24deb9a11fc3047e214e34",
+    "same_instrumentation_apk_sha256": "15224c5f85ede1694b0ffc1c1aaba5e537e9cf603cd429f303b06b4fa8fc1437",
+    "baseline_commit": "2253ac4b6f404d0e360dbcf7b5b93f727421c9bb",
+    "candidate_parent": "a5db1a375f326a68a1007b6cfd6d0047806ce699",
+    "variant": "qaDebug, local fixture stamp 0.14.0-dev, no release identity change",
+    "candidate_app_main_tree": "75f0670668248e168854cc37190eee8fce02a9d8",
+    "same_instrumentation_source_tree": "19756affbf9315324f375477a8039c11ff45ff8f"
+  },
+  "artifacts": [
+    {
+      "path": "before/POPULATED_HOME-1920x1080.png",
+      "sha256": "50b42ab0521be07aad83909da69b832c7e5b0fb1b8ab5ae1ad7ef5a8d81f530f"
+    },
+    {
+      "path": "before/POPULATED_HOME-1280x720.png",
+      "sha256": "746e0b8e2a0aeb305b6a64963eda8befd8860ad27a8c43503fbd549a2f074ebe"
+    },
+    {
+      "path": "before/POPULATED_TV-1920x1080.png",
+      "sha256": "7a5b8d24929b8dd08be05d78744604b07cca920176b3abfe3d5c52a1f4b3d3a7"
+    },
+    {
+      "path": "before/POPULATED_TV-1280x720.png",
+      "sha256": "8a4b1ba6dbac086b9266d896130958b956c236a9c8d6b8b15b04af9b365c6275"
+    },
+    {
+      "path": "before/POPULATED_SPORT-1920x1080.png",
+      "sha256": "88fb534fe44cb78393371c7921ed94918b3707ad200dd847cb2f429db7e5e4c0"
+    },
+    {
+      "path": "before/POPULATED_SPORT-1280x720.png",
+      "sha256": "8bd3399b4697bfbfc200fb3d01efb4fd426fe5140ba7753078dec8681b3096bb"
+    },
+    {
+      "path": "before/POPULATED_VOD-1920x1080.png",
+      "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4"
+    },
+    {
+      "path": "before/POPULATED_VOD-1280x720.png",
+      "sha256": "21d171110546766ca596f6dbad41640c12d37e638dbb01422f8b35c94f2325d9"
+    },
+    {
+      "path": "before/POPULATED_PROFILE-1920x1080.png",
+      "sha256": "34b4805a2cd86511fd30350de0f87f553608b0639e2f7f8af3b8faca6e31d43b"
+    },
+    {
+      "path": "before/POPULATED_PROFILE-1280x720.png",
+      "sha256": "20077f6c5076f52bc7b13cf2a71211dc07786347a2a047730359c79068c29116"
+    },
+    {
+      "path": "performance/before-1920x1080.json",
+      "sha256": "b661c51baa4e02f193c527929cb0045fa2019ba048dd19aa5fa6569287fe39e7"
+    },
+    {
+      "path": "tests/before-1920x1080.txt",
+      "sha256": "78b86f08b7c8dcd0ea2afe265eca36fcd999a510b47bba76810bc069c38f4068"
+    },
+    {
+      "path": "performance/before-1920x1080-focus.json",
+      "sha256": "8de9e56945d7a7b1e5b125ede15b534f9c3df53cb60d2721492ca22f2a753b7d"
+    },
+    {
+      "path": "tests/before-1920x1080-focus.txt",
+      "sha256": "6b478537a54698d61e877c6c0c02a9b7f3242124611859b0390b8dd0dea3640f"
+    },
+    {
+      "path": "performance/before-1920x1080-real-focus.json",
+      "sha256": "9340d37bbfa8628fa96bf52901685af057c248e731af348d6b53211d3fa2f3bb"
+    },
+    {
+      "path": "tests/before-1920x1080-real-focus.txt",
+      "sha256": "4310c6a6cf68599c5f0239c7aa8c3490930efa747a0983f999157a499aa44945"
+    },
+    {
+      "path": "performance/before-1280x720.json",
+      "sha256": "e5f4003542fbf1eec4739d2ff6e8b1824c2d6e33ce059fd5f330ac09e67f4e25"
+    },
+    {
+      "path": "tests/before-1280x720.txt",
+      "sha256": "3a833658cd7c3550bffef8c23b5d8bab0840b9461b617b50843dfa48866a8244"
+    },
+    {
+      "path": "performance/before-1280x720-focus.json",
+      "sha256": "17ba52ce8db6bc0c40911acf1ec1feaed85975f391947d5717c53f3513e3623c"
+    },
+    {
+      "path": "tests/before-1280x720-focus.txt",
+      "sha256": "29ccad6a623414e6094d11faeecd0a008c0d817f55e4a33a4f7a11f1ccfa6a27"
+    },
+    {
+      "path": "performance/before-1280x720-real-focus.json",
+      "sha256": "3c0f653a885d0199120691c6d7b2d542f259a3646fc8445c75be095997a1248a"
+    },
+    {
+      "path": "tests/before-1280x720-real-focus.txt",
+      "sha256": "3b4bdddf8471e5219f6af140fa820a6440178beb317dc8ba0621d154ba080018"
+    },
+    {
+      "path": "tests/before-native.txt",
+      "sha256": "785560ed2ee7f0ac778323e8e6b4cd46c813962361f1cb27728a313e29090eb2"
+    },
+    {
+      "path": "after/POPULATED_HOME-1920x1080.png",
+      "sha256": "622bac93f4e54134bbc05133fe896474d7f9edcdb5b25f55ba6ba4364f985bb4"
+    },
+    {
+      "path": "after/POPULATED_HOME-1280x720.png",
+      "sha256": "933547727d38f876aabd531f0268521d1487aa114337148b4c8c497f0d4c48a5"
+    },
+    {
+      "path": "after/POPULATED_TV-1920x1080.png",
+      "sha256": "20509b4644979fd6efbcc3127d187936241708a8be2335cbd1ab4bc637581635"
+    },
+    {
+      "path": "after/POPULATED_TV-1280x720.png",
+      "sha256": "dbf63f2e8d59991a21e006245b1a5aa6ba0d70af58f44f066f193095a7e49578"
+    },
+    {
+      "path": "after/POPULATED_SPORT-1920x1080.png",
+      "sha256": "6c0cfa8a9a2611d1b728f606921214d7ca8124590a87402d40cd87637be12302"
+    },
+    {
+      "path": "after/POPULATED_SPORT-1280x720.png",
+      "sha256": "56874bed442de8394b3ca1f51ee4219917990ed1308f8a85d52c6ec5919656f9"
+    },
+    {
+      "path": "after/POPULATED_VOD-1920x1080.png",
+      "sha256": "685d8e02f1ae48a93357fd10c3620456f84d275804b809e681e74eaa36195bc4"
+    },
+    {
+      "path": "after/POPULATED_VOD-1280x720.png",
+      "sha256": "21d171110546766ca596f6dbad41640c12d37e638dbb01422f8b35c94f2325d9"
+    },
+    {
+      "path": "after/POPULATED_PROFILE-1920x1080.png",
+      "sha256": "34b4805a2cd86511fd30350de0f87f553608b0639e2f7f8af3b8faca6e31d43b"
+    },
+    {
+      "path": "after/POPULATED_PROFILE-1280x720.png",
+      "sha256": "20077f6c5076f52bc7b13cf2a71211dc07786347a2a047730359c79068c29116"
+    },
+    {
+      "path": "performance/after-1920x1080.json",
+      "sha256": "e54f95fe3971ed6406b231f143f7a4a99790bec1cae7c78d12e0cc58b8d29ede"
+    },
+    {
+      "path": "tests/after-1920x1080.txt",
+      "sha256": "9b85ad547f34b8aadbc7de230536a04daf9c40f862fd924b9fb5328cc127a014"
+    },
+    {
+      "path": "performance/after-1920x1080-focus.json",
+      "sha256": "d5dd035c01114464d4641d7057d214faa426eb377cf3cfe7939acada0c4ebd55"
+    },
+    {
+      "path": "tests/after-1920x1080-focus.txt",
+      "sha256": "b7254a267761baff328e0245b07eb5f054b914657f3892083562d00ed3283799"
+    },
+    {
+      "path": "performance/after-1920x1080-real-focus.json",
+      "sha256": "e7de756081aa05b86ffe8e1e0e20b89e52e081429840cca7c7d3eda494bfdbf3"
+    },
+    {
+      "path": "tests/after-1920x1080-real-focus.txt",
+      "sha256": "b3acac604d1dc0c46ead4342f53c63dfaf679dce4952bf2a16f5a7e395917259"
+    },
+    {
+      "path": "performance/after-1280x720.json",
+      "sha256": "37b1e488b115f127aa0a9b89d001334417faf420fe1ba84182ada9eeaaa80a1f"
+    },
+    {
+      "path": "tests/after-1280x720.txt",
+      "sha256": "2995a71e4e745df918f1d6a6d32727c7483c961c991278ba6fee4bd621c7638d"
+    },
+    {
+      "path": "performance/after-1280x720-focus.json",
+      "sha256": "b1f28ddff56dc340f571d14d1c5463fac5f7712a5c55d1aa736b8e2fec33e90c"
+    },
+    {
+      "path": "tests/after-1280x720-focus.txt",
+      "sha256": "9cf99ed94f53e39fa70446fd3aabc04da4e9818d50fce7f943f5221378e625db"
+    },
+    {
+      "path": "performance/after-1280x720-real-focus.json",
+      "sha256": "1da935cb9173ac7fca8b0d3b80cdcc765c1f250dab4c4aad2f26084bd74f26a2"
+    },
+    {
+      "path": "tests/after-1280x720-real-focus.txt",
+      "sha256": "5db5266c689d812481f0e0de851a9091ac4f2c91be5739125b196a4a5ba6d0fc"
+    },
+    {
+      "path": "tests/after-native.txt",
+      "sha256": "9e16e78bcf2e10cc325ee441cc14732e5fac7b3dc1d4065354d57a27417ae579"
+    },
+    {
+      "path": "after/TV_32_CHANNELS-1920x1080.png",
+      "sha256": "30a937da7e8d560e8ab52abac6245dc31c2299d71c47fe60d9072c4fbbecb3e4"
+    },
+    {
+      "path": "after/TV_32_CHANNELS-1280x720.png",
+      "sha256": "0264e54d7ba2957c9049196fbabe6aebbcfea5e313ee4f71b15a6c6d94e90c87"
+    },
+    {
+      "path": "after/SOURCE_PICKER-1920x1080.png",
+      "sha256": "78109f7a0ff803a3df398482b8738dc068834f0cf962087a8fa9001f22a53777"
+    },
+    {
+      "path": "after/SOURCE_PICKER-1280x720.png",
+      "sha256": "7e3e0dd5429f67eceb70e12e045396d9a428d44749712e1a0f09db678fd4dc71"
+    },
+    {
+      "path": "after/POPULATED_UPDATE-1920x1080.png",
+      "sha256": "de10705a3a882e2e2de09835f6e32f7c8d72ea215cd6bbb76dff2941362b5fbc"
+    },
+    {
+      "path": "after/POPULATED_UPDATE-1280x720.png",
+      "sha256": "145733dc4c07faa5948e6e69e5534181ab1544701cff66806337fd55c1cd6725"
+    },
+    {
+      "path": "tests/ChannelSourceStorageTest.txt",
+      "sha256": "a72d35d6d939186f11ea6299c0b8e893cfbd507280b5c0d30b5525f430b5c244"
+    },
+    {
+      "path": "tests/SmartHomeDeviceTest.txt",
+      "sha256": "d12a4eaf2bb5f77c8818562b860c206d71ef813fda840a909ebb1156cd97a8a8"
+    },
+    {
+      "path": "tests/NativeNavigationDeviceTest.txt",
+      "sha256": "14a83748f9bf665290452ae0b39926246c97deae7daa8568055575ef30b40fac"
+    },
+    {
+      "path": "tests/NativeV011PresentationTest.txt",
+      "sha256": "c5cd808ad39a84734859bbfaad266aed5857c8cae94f42b77df130ea310cc81c"
+    },
+    {
+      "path": "tests/ChannelGridDeviceTest.txt",
+      "sha256": "b5ba771df46f1584e8bc36725662a311fa2d5de9d10d635d7f21526241ec52a4"
+    },
+    {
+      "path": "tests/ChannelSourceDeviceTest.txt",
+      "sha256": "c9681a3261f6bc77072487f646c275e4f66b4121e05df635f955b5e78e5e184c"
+    },
+    {
+      "path": "tests/i18n.txt",
+      "sha256": "f30126e1738f12cfcae793f5268ec96bc2bd355bd51e034dc39e27125947b70b"
+    }
+  ]
+}

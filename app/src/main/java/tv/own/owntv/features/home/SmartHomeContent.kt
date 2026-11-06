@@ -62,6 +62,7 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     val entryFavorite = favoriteKey?.takeIf { key -> favorites.any { it.key == key } } ?: favorites.firstOrNull()?.key
     val scope = rememberCoroutineScope()
     var movement by remember(profile) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var pendingSection by remember(profile) { mutableIntStateOf(0) }
     DisposableEffect(profile) { onDispose { movement?.cancel() } }
     val pendingSourcePress = remember(profile) { SourcePressCancellation() }
     val companionFocus = remember(profile) { FocusRequester() }
@@ -101,24 +102,29 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
     fun enter(): Boolean {
         movement?.cancel()
         movement = scope.launch {
+            var scrolled = false
             val section = nav.selected.takeIf { currentIndices.getOrNull(it) != -1 } ?: 0
+            pendingSection = section
             val target = currentIndices[section].coerceAtLeast(0)
             val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }
-            if (visible == null || visible.offset < list.layoutInfo.viewportStartOffset || visible.offset + visible.size > list.layoutInfo.viewportEndOffset)
-                list.scrollToItem(target)
+            if (visible == null || visible.offset < list.layoutInfo.viewportStartOffset || visible.offset + visible.size > list.layoutInfo.viewportEndOffset) {
+                list.scrollToItem(target); scrolled = true
+            }
             if (section == 1) {
                 val index = currentChannels.indexOfFirst { it.key == currentChannelKey }.coerceAtLeast(0)
                 val item = rail.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-                if (item == null || item.offset < rail.layoutInfo.viewportStartOffset || item.offset + item.size > rail.layoutInfo.viewportEndOffset)
-                    rail.scrollToItem(index)
+                if (item == null || item.offset < rail.layoutInfo.viewportStartOffset || item.offset + item.size > rail.layoutInfo.viewportEndOffset) {
+                    rail.scrollToItem(index); scrolled = true
+                }
             }
             if (section == 2) {
                 val index = currentFavorites.indexOfFirst { it.key == currentFavoriteKey }.coerceAtLeast(0)
                 val item = favoritesRail.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-                if (item == null || item.offset < favoritesRail.layoutInfo.viewportStartOffset || item.offset + item.size > favoritesRail.layoutInfo.viewportEndOffset)
-                    favoritesRail.scrollToItem(index)
+                if (item == null || item.offset < favoritesRail.layoutInfo.viewportStartOffset || item.offset + item.size > favoritesRail.layoutInfo.viewportEndOffset) {
+                    favoritesRail.scrollToItem(index); scrolled = true
+                }
             }
-            repeat(2) { withFrameNanos { } }
+            if (scrolled) repeat(2) { withFrameNanos { } }
             if (!nav.focus[section].requestSafely()) { list.scrollToItem(0); withFrameNanos { }; firstFocus.requestSafely() }
         }
         return true
@@ -147,22 +153,28 @@ internal fun SmartHomeContent(snapshot: SmartHomeSnapshot?, guide: HomeGuideStat
                 .onPreviewKeyEvent { event ->
                     if (event.key !in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)) pendingSourcePress.cancel()
                     val delta = when (event.key) { Key.DirectionDown -> 1; Key.DirectionUp -> -1; else -> 0 }
-                    val target = nextHomeSection(nav.selected, delta, indices)
-                    if (nav.selected == 0 && (delta == 1 && utilityRow == 1 || delta == -1 && utilityRow == 2)) {
+                    val from = if (movement?.isActive == true) pendingSection else nav.selected
+                    val target = nextHomeSection(from, delta, indices)
+                    if (from == 0 && (delta == 1 && utilityRow == 1 || delta == -1 && utilityRow == 2)) {
                         if (event.type == KeyEventType.KeyDown) utilityFocus[if (delta > 0) 1 else 0].requestSafely()
                         true
-                    } else if (delta == -1 && nav.selected == 0) {
+                    } else if (delta == -1 && from == 0) {
                         if (event.type == KeyEventType.KeyDown) { movement?.cancel(); onHeader() }
                         true
                     } else if (target == null) false else {
                         if (event.type == KeyEventType.KeyDown) {
                             movement?.cancel()
+                            pendingSection = target
                             movement = scope.launch {
-                            val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == indices[target] }
-                            if (item == null || item.offset < list.layoutInfo.viewportStartOffset || item.offset + item.size > list.layoutInfo.viewportEndOffset)
-                                list.animateScrollToItem(indices[target])
-                            repeat(2) { withFrameNanos { } }
-                            nav.focus[target].requestSafely()
+                                val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == indices[target] }
+                                if (item == null || item.offset < list.layoutInfo.viewportStartOffset || item.offset + item.size > list.layoutInfo.viewportEndOffset) {
+                                    list.animateScrollToItem(indices[target])
+                                    repeat(2) { withFrameNanos { } }
+                                }
+                                if (!nav.focus[target].requestSafely()) repeat(3) {
+                                    withFrameNanos { }
+                                    if (nav.focus[target].requestSafely()) return@launch
+                                }
                             }
                         }
                         true

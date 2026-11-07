@@ -1,0 +1,6 @@
+test_every_instrumentation_case_has_an_executing_ci_selector (test_tv_suite_inventory.TvSuiteInventoryTest) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.012s
+
+OK

@@ -1,6 +1,10 @@
 package tv.own.owntv.features.live
 
 import android.content.Context
+import androidx.room.useWriterConnection
+import tv.own.owntv.features.catalog.catalogVersionWithinBudget
+import tv.own.owntv.features.catalog.NativeReadKind
+import tv.own.owntv.features.catalog.NativeReadWork
 import tv.own.owntv.features.catalog.readCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -26,10 +30,36 @@ internal data class SwedishChoices(val showUhd: Boolean = false, val showVariant
     val order: List<String> = emptyList(), val hidden: Set<String> = emptySet(), val preferred: Map<String, String> = emptyMap())
 internal data class SwedishLibrary(val groups: List<SwedishGroup>, val bounded: Boolean = false)
 
+// Shared matcher: catalog rebuilds may scan thousands of provider rows. Avoid
+// compiling this regex for every recognized channel during each TV entry.
+private val broadcastVariantEpg = Regex("(?:stockholm|skane|skåne|goteborg|göteborg|\\+1|english|norsk|dansk)")
+
 /** Derived compact index from existing Room tables. No stream URLs, DB migration or catalog mutation. */
 internal class SwedishChannelStore(context: Context, private val db: OwnTVDatabase, private val customize: CustomizationStore) {
     private val prefs = context.getSharedPreferences("mintv-swedish-channels", 0)
     private val writes = Mutex()
+    private val catalogReads = Mutex()
+    // One bounded projection, no stream URLs or credentials. Permission metadata is read anew
+    // for EVERY request; neither a cached library nor an old profile grants playback access.
+    private data class Access(val profile: Long, val owner: Long, val kids: Boolean,
+        val sources: List<Long>, val forbidden: Set<Long>, val hidden: Set<String>)
+    private data class CatalogStamp(val localChanges: Long, val externalVersion: Long)
+    private data class Projection(val access: Access, val revision: CatalogStamp,
+        val variants: List<SwedishVariant>, val bounded: Boolean)
+    private var projection: Projection? = null
+    /** Room has one writer connection for this non-autoclosing database. Read both SQLite
+     * counters there: total_changes covers its writes, data_version covers other connections.
+     * A pooled READER's data_version alone is not comparable across different connections.
+     * The writer slot is released immediately after this constant-size read, never held during
+     * catalogue scanning or computation. No data, schema or invalidation state is modified.
+     */
+    private suspend fun catalogStamp(): CatalogStamp? = catalogVersionWithinBudget { db.useWriterConnection { connection ->
+        NativeReadWork.record(NativeReadKind.CATALOG_VERSION)
+        connection.usePrepared("SELECT total_changes(), data_version FROM pragma_data_version") { statement ->
+            check(statement.step())
+            CatalogStamp(statement.getLong(0), statement.getLong(1))
+        }
+    } }
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun observeChoices(profile: Long) = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -80,7 +110,11 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         if (!saved) runCatching { prefs.edit().putString(key, previous).commit() }
         check(saved)
     }
-    suspend fun library(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary = withContext(Dispatchers.IO) {
+    suspend fun library(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary =
+        catalogReads.withLock { readLibrary(profile, sources, choices) }
+
+    private suspend fun readLibrary(profile: Long, sources: List<Long>, choices: SwedishChoices): SwedishLibrary = withContext(Dispatchers.IO) {
+        val beforeAccess = catalogStamp()
         val permitted = db.sourceDao().observeForProfile(profile).first().filter { it.syncLive }.map { it.id }.toSet()
         val scopedSources = sources.filter { it in permitted }
         if (scopedSources.isEmpty()) return@withContext SwedishLibrary(emptyList())
@@ -92,6 +126,12 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         // than re-reading the same profile/category for every category (including adult users).
         val forbidden = tv.own.owntv.core.content.AdultCategoryClassifier.hiddenCategoryIds(
             categories, cust.hiddenCategories, owner.isKids)
+        val access = Access(profile, owner.createdAt, owner.isKids, scopedSources,
+            forbidden, cust.hiddenItems.keys.toSet())
+        val revision = if (beforeAccess == null) null else catalogStamp()
+        projection?.takeIf { revision != null && beforeAccess == revision && it.access == access && it.revision == revision }?.let {
+            return@withContext SwedishLibrary(SwedishChannels.group(it.variants, choices.order, choices.hidden), it.bounded)
+        }
         val candidates = ArrayList<SwedishVariant>()
         var last = 0L; var scanned = 0; var ended = false
         val marks = scopedSources.joinToString(",") { "?" }
@@ -111,7 +151,7 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
                     // Only explicit regional/time-shift/audio EPG evidence refines a broadcaster.
                     // Different arbitrary provider EPG namespaces do not prove distinct services.
                     val distinct = epg?.lowercase(java.util.Locale.ROOT)?.takeIf {
-                        Regex("(?:stockholm|skane|skåne|goteborg|göteborg|\\+1|english|norsk|dansk)").containsMatchIn(it)
+                        broadcastVariantEpg.containsMatchIn(it)
                     }
                     val name = recognized.copy(identity = recognized.identity + distinct?.let { ":$it" }.orEmpty())
                     if (candidates.size < 4096) candidates += SwedishVariant(last, cursor.getLong(1),
@@ -123,6 +163,8 @@ internal class SwedishChannelStore(context: Context, private val db: OwnTVDataba
         }
         // National and regional services are independently selectable. A region's presence or
         // source count is not evidence of stream health and must never hide the national service.
+        if (revision != null && beforeAccess == revision && catalogStamp() == revision) projection = Projection(access, revision, candidates.toList(), !ended)
+        else projection = null // A concurrent import/revocation must never seed a reusable snapshot.
         SwedishLibrary(SwedishChannels.group(candidates, choices.order, choices.hidden), !ended)
     }
 }

@@ -1,0 +1,26 @@
+{
+  "final_source": {
+    "lintQaDebug": "PASS",
+    "qa_apk_and_instrumentation": "PASS",
+    "version_budget_unit_tests": {
+      "tests": 3,
+      "failures": 0
+    },
+    "native_targeted": {
+      "tests": 44,
+      "failures": 0
+    },
+    "direct_writer_revocation": "PASS",
+    "matched_benchmarks_and_native_scenarios": "PASS"
+  },
+  "historical_qa_jvm_investigation": {
+    "tests": 589,
+    "failures": 0,
+    "head": "179ce1c6329ba61986627f8113a64ce64769d935"
+  },
+  "ci_inventory_registration_retest": {
+    "tests": 1,
+    "failures": 0
+  },
+  "final_ci": "required on final GitHub head; do not infer success from local results"
+}

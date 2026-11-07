@@ -150,8 +150,14 @@ class SmartHomeDeviceTest {
         compose.runOnIdle { snapshot = snapshot!!.copy(favorites = channels.take(6).map {
             it.copy(key = "extra-${it.key}", label = "Extra ${it.label}", channel = it.channel.copy(id = it.channel.id + 1000, name = "Extra ${it.label}"))
         }) }
-        press(KeyEvent.KEYCODE_DPAD_DOWN); press(KeyEvent.KEYCODE_DPAD_DOWN)
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_DOWN) // header -> hero
+        // A held/repeated direction must advance from the pending section while an
+        // offscreen LazyColumn row is still settling, without extra test-frame sleeps.
+        val remote = InstrumentationRegistry.getInstrumentation()
+        remote.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        remote.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.waitForIdle()
+        compose.onNodeWithTag("smart-favorite-extra-SVT1").assertIsFocused().assertIsDisplayed()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
         // Additional favourites have their own stable rail; duplicates stay badged in Now.
         compose.onAllNodesWithTag("smart-favorite-extra-TV3")[0].assertIsFocused()

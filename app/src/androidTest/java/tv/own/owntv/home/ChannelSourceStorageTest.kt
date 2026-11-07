@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.room.Room
+import androidx.room.useWriterConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.*
@@ -62,9 +63,29 @@ class ChannelSourceStorageTest {
             assertTrue(restarted.library(8, listOf(101, 102), saved).groups.isEmpty())
             val before = restarted.library(7, listOf(101, 102), saved).groups.single()
             assertEquals(3L, ChannelSourceResolver.resolve(before, saved).selected?.id)
+            fun catalogReads() = tv.own.owntv.features.catalog.NativeReadWork.snapshot().first()
+            // Room may install/reset bookkeeping rows during the first metadata subscription.
+            // This conservatively invalidates one cold snapshot; steady reentry must not scan.
+            assertEquals(before, restarted.library(7, listOf(101, 102), saved).groups.single())
+            val warm = catalogReads()
+            repeat(5) { assertEquals(before, restarted.library(7, listOf(101, 102), saved).groups.single()) }
+            assertEquals("Reentry reuses the bounded projection, not another catalogue scan", warm, catalogReads())
+            assertTrue(restarted.library(7, listOf(101, 102), saved.copy(hidden = setOf("tv4"))).groups.isEmpty())
+            assertEquals("Presentation choices do not rescan provider rows", warm, catalogReads())
+            // Direct connection writes do not have to wait for a Room invalidation callback.
+            // Read-only stamps must reject an immediately revoked provider variant nevertheless.
+            db.useWriterConnection { connection ->
+                connection.usePrepared("UPDATE channels SET streamUrl='' WHERE id=2") { it.step() }
+            }
+            assertFalse(restarted.library(7, listOf(101, 102), saved).groups.single().variants.any { it.id == 2L })
+            db.channelDao().updateAll(listOf(fhd))
+            assertEquals(before, restarted.library(7, listOf(101, 102), saved).groups.single())
+            assertTrue("Version probes are counted separately from catalogue scans",
+                tv.own.owntv.features.catalog.NativeReadWork.snapshot().last() > 0)
             db.channelDao().deleteByRemoteIds(102, listOf("3"))
             db.channelDao().insertAll(listOf(uhd.copy(id = 300)))
             assertEquals(300L, ChannelSourceResolver.resolve(restarted.library(7, listOf(101, 102), saved).groups.single(), saved).selected?.id)
+            assertTrue("Immediate delete/reinsert invalidates the cache before the next read", catalogReads() > warm)
             // Hidden or inaccessible variants disappear; preference remains for their return.
             custom.setItemHidden(7, MediaType.LIVE, "102:3", "Synthetic UHD", true)
             val hidden = restarted.library(7, listOf(101, 102), saved).groups.single()
@@ -135,6 +156,14 @@ class ChannelSourceStorageTest {
             assertEquals(setOf("svt1"), svt().keys)
             assertEquals("101:22", restarted.choices(7).preferred["svt1varmland"])
             assertTrue(restarted.library(8, listOf(101, 102), regionalChoices).groups.isEmpty())
+            // Re-read linked permissions even for a warm catalogue: no async-observer grace.
+            db.sourceDao().unlink(7, 102)
+            assertFalse(restarted.library(7, listOf(101, 102), regionalChoices).groups.any { g -> g.variants.any { it.sourceId == 102L } })
+            db.sourceDao().link(ProfileSourceCrossRef(7, 102))
+            val source = db.sourceDao().observeForProfile(7).first().first { it.id == 101L }
+            db.sourceDao().update(source.copy(syncLive = false))
+            assertFalse(restarted.library(7, listOf(101, 102), regionalChoices).groups.any { g -> g.variants.any { it.sourceId == 101L } })
+            db.sourceDao().update(source)
             restarted.save(7, saved)
             val profile = db.profileDao().getById(7)!!
             db.profileDao().update(profile.copy(createdAt = 999))

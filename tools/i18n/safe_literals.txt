@@ -952,6 +952,7 @@
 1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	:$it
 1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	?
 1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	SELECT id,sourceId,remoteId,name,number,categoryId,epgChannelId FROM channels WHERE sourceId IN ($marks) AND id > ? AND trim(streamUrl)!='' ORDER BY id LIMIT 400
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	SELECT total_changes(), data_version FROM pragma_data_version
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	hidden
 1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	mintv-swedish-channels
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	order

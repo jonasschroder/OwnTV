@@ -92,16 +92,22 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { failed = true; loaded = true }
     }
-    val candidates = library.groups.filter { g ->
-        (g.variants.first().name.collection == collection || collection == SwedishCollection.OTHER && g.variants.first().name.collection in listOf(SwedishCollection.NEWS, SwedishCollection.CHILDREN)) && g.preferred(choices.preferred[g.identity], choices.showUhd) != null
+    val candidates = remember(library, collection, choices.preferred, choices.showUhd) {
+        library.groups.filter { g ->
+            (g.variants.first().name.collection == collection || collection == SwedishCollection.OTHER && g.variants.first().name.collection in listOf(SwedishCollection.NEWS, SwedishCollection.CHILDREN)) && g.preferred(choices.preferred[g.identity], choices.showUhd) != null
+        }
     }
     val knownGuide = remember(profile, metadata) { linkedMapOf<String, SwedishRowInfo>() }
     var order by remember(profile, collection) { mutableStateOf<List<String>>(emptyList()) }
-    val candidateIds = candidates.map { it.identity }
+    val candidateIds = remember(candidates) { candidates.map { it.identity } }
     LaunchedEffect(candidateIds, collection, gridHasFocus) {
         order = if (collection == SwedishCollection.OTHER) stableGuideOrder(candidates, order, gridHasFocus, knownGuide, at) else candidateIds
     }
-    val groups = (order.filter { it in candidateIds } + candidateIds.filterNot { it in order }).mapNotNull { id -> candidates.firstOrNull { it.identity == id } }
+    val groups = remember(order, candidates) {
+        val byId = candidates.associateBy { it.identity }
+        val ordered = order.toSet()
+        (order.mapNotNull(byId::get) + candidates.filterNot { it.identity in ordered })
+    }
     val focused = library.groups.firstOrNull { it.identity == focusId }
     val preferred = focused?.preferred(choices.preferred[focused.identity], choices.showUhd)
     val selected = resolved?.takeIf { it.first == preferred?.rowKey() }?.second
@@ -113,10 +119,18 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
             verticalTarget = target
             if (focusId != target) preferredColumn = index % CHANNEL_GRID_COLUMNS
             val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == target }
-            if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
-                visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(index + editItems)
-            repeat(2) { withFrameNanos { } }
+            val scrolled = visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
+                visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset
+            if (scrolled) {
+                list.scrollToItem(index + editItems)
+                repeat(2) { withFrameNanos { } }
+            }
+            // Entry into an already visible grid must not wait two more display frames.
             if (targets[target]?.requestSafely() == true) return true
+            repeat(2) {
+                withFrameNanos { }
+                if (targets[target]?.requestSafely() == true) return true
+            }
         }
         categoryFocus.requestSafely()
         return false
@@ -193,7 +207,11 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
             onRestored()
         }
     }
-    LaunchedEffect(focusId, context, preferred, access) {
+    // The full entity is used only by the collection editor's favorite action. Normal
+    // D-pad focus needs the immutable row projection, never a fresh authorized DB lookup.
+    LaunchedEffect(edit, focusId, context, preferred, access) {
+        resolved = null
+        if (!edit) return@LaunchedEffect
         val variant = preferred ?: return@LaunchedEffect
         val channel = vm.homeChannel(variant.id, profile)?.takeIf { tv.own.owntv.core.customize.CustomizeKeys.channel(it) == variant.stableKey && it.sourceId == variant.sourceId }
         resolved = channel?.let { variant.rowKey() to it }
@@ -296,9 +314,19 @@ internal fun SwedishLiveScreen(vm: LiveViewModel, onFullscreen: () -> Unit, onCh
                                 movement?.cancel()
                                 movement = scope.launch {
                                     val visible = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == targetIdentity }
-                                    if (visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset || visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset) list.scrollToItem(next + editItems)
-                                    repeat(2) { withFrameNanos { } }
-                                    targets[targetIdentity]?.requestSafely()
+                                    val scrolled = visible == null || visible.offset.y < list.layoutInfo.viewportStartOffset ||
+                                        visible.offset.y + visible.size.height > list.layoutInfo.viewportEndOffset
+                                    if (scrolled) {
+                                        list.scrollToItem(next + editItems)
+                                        repeat(2) { withFrameNanos { } }
+                                    }
+                                    // Most left/right/up/down presses target an already laid-out
+                                    // channel; transfer focus in this frame. Retry only if a lazy
+                                    // target is not attached yet (e.g. after an offscreen scroll).
+                                    if (targets[targetIdentity]?.requestSafely() != true) repeat(3) {
+                                        withFrameNanos { }
+                                        if (targets[targetIdentity]?.requestSafely() == true) return@launch
+                                    }
                                 }
                             }, onFirstRowUp = {
                                 movement?.cancel()

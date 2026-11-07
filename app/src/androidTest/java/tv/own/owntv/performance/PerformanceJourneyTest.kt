@@ -54,20 +54,24 @@ class PerformanceJourneyTest {
 
     @Test fun seedControlledLibrary(): Unit = runBlocking {
         // Dedicated synthetic IDs, no deletion/reset. The host also refuses non-emulator serials.
-        if (db.profileDao().getById(profile) != null) return@runBlocking
-        db.profileDao().insert(ProfileEntity(id = profile, name = name, avatarColor = 1, createdAt = 99000))
-        db.sourceDao().insert(SourceEntity(id = profile, name = "Synthetic performance source", type = SourceType.M3U,
-            url = "http://127.0.0.1:9/performance.m3u", syncMovies = false, syncSeries = false))
-        db.sourceDao().link(ProfileSourceCrossRef(profile, profile))
-        val names = listOf("SVT1 HD", "SVT2 HD", "TV3 HD", "TV4 HD", "Kanal 5 HD", "TV6 HD", "Sjuan HD", "TV8 HD", "Kanal 9 HD", "TV10 HD", "TV4 Hockey HD") +
-            (1..12).map { "TV4 Sport Live $it HD" }
-        for (batch in (0 until 12000).chunked(400)) db.channelDao().insertAll(batch.map { index ->
-            ChannelEntity(id = 9900000L + index, sourceId = profile,
-                name = names.getOrNull(index) ?: "Synthetic other channel $index", remoteId = "perf-$index",
-                streamUrl = "http://127.0.0.1:9/perf/$index", epgChannelId = "perf-$index")
-        })
-        db.favoriteDao().add(FavoriteEntity(profileId = profile, mediaType = MediaType.LIVE, itemId = 9900000))
-        db.historyDao().record(WatchHistoryEntity(profileId = profile, mediaType = MediaType.LIVE, itemId = 9900000))
+        if (db.profileDao().getById(profile) == null) {
+            db.profileDao().insert(ProfileEntity(id = profile, name = name, avatarColor = 1, createdAt = 99000))
+            db.sourceDao().insert(SourceEntity(id = profile, name = "Synthetic performance source", type = SourceType.M3U,
+                url = "http://127.0.0.1:9/performance.m3u", syncMovies = false, syncSeries = false))
+            db.sourceDao().link(ProfileSourceCrossRef(profile, profile))
+            val names = listOf("SVT1 HD", "SVT2 HD", "TV3 HD", "TV4 HD", "Kanal 5 HD", "TV6 HD", "Sjuan HD", "TV8 HD", "Kanal 9 HD", "TV10 HD", "TV4 Hockey HD") +
+                (1..12).map { "TV4 Sport Live $it HD" }
+            for (batch in (0 until 12000).chunked(400)) db.channelDao().insertAll(batch.map { index ->
+                ChannelEntity(id = 9900000L + index, sourceId = profile,
+                    name = names.getOrNull(index) ?: "Synthetic other channel $index", remoteId = "perf-$index",
+                    streamUrl = "http://127.0.0.1:9/perf/$index", epgChannelId = "perf-$index")
+            })
+            db.favoriteDao().add(FavoriteEntity(profileId = profile, mediaType = MediaType.LIVE, itemId = 9900000))
+            db.historyDao().record(WatchHistoryEntity(profileId = profile, mediaType = MediaType.LIVE, itemId = 9900000))
+        }
+        // Re-normalize opt-in synthetic settings even on a previously seeded disposable image.
+        // Otherwise a prior populated screenshot journey can enable SHL/weather in later timings.
+        settings.setWeatherEnabled(false)
         settings.setActiveProfile(profile)
         settings.setStartupMode(profile, StartupMode.HOME)
         settings.setUpdateCheckOnStart(false)
@@ -115,7 +119,7 @@ class PerformanceJourneyTest {
             "PROFILE" -> waitTag("settings-categories")
         }
     }
-    private val workKinds = listOf("CATALOG", "GUIDE_SUMMARIES", "PUBLIC_HTTP")
+    private val workKinds = listOf("CATALOG", "GUIDE_SUMMARIES", "PUBLIC_HTTP", "CATALOG_VERSION")
     private fun readerWork(): List<Long>? = runCatching {
         val type = Class.forName("tv.own.owntv.features.catalog.NativeReadWork")
         @Suppress("UNCHECKED_CAST")

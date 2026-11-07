@@ -48,14 +48,35 @@ internal fun rememberNativeRowsNavigation(rows: List<NativeRow>, profile: Long?,
         val col = targetRow.keys.indexOf(target)
         pending = target; movement?.cancel()
         movement = scope.launch {
+            // An already-composed card can accept focus immediately. The old unconditional
+            // two-frame delay made every remote press feel sticky, even with no scrolling.
+            var scrolled = false
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == row }
-            if (item == null || item.offset < list.layoutInfo.viewportStartOffset || item.offset + item.size > list.layoutInfo.viewportEndOffset) list.scrollToItem(row)
+            if (item == null || item.offset < list.layoutInfo.viewportStartOffset ||
+                item.offset + item.size > list.layoutInfo.viewportEndOffset) {
+                list.scrollToItem(row)
+                scrolled = true
+            }
             rail?.let { rail ->
                 val visible = rail.layoutInfo.visibleItemsInfo.firstOrNull { it.index == col }
-                if (visible == null || visible.offset < rail.layoutInfo.viewportStartOffset || visible.offset + visible.size > rail.layoutInfo.viewportEndOffset) rail.scrollToItem(col)
+                if (visible == null || visible.offset < rail.layoutInfo.viewportStartOffset ||
+                    visible.offset + visible.size > rail.layoutInfo.viewportEndOffset) {
+                    rail.scrollToItem(col)
+                    scrolled = true
+                }
             }
-            repeat(2) { withFrameNanos { } }
-            if (currentRows.any { target in it.keys }) targets[target]?.requestSafely()
+            // Lazy items created by scroll still need a layout frame before focus is safe.
+            if (scrolled) repeat(2) { withFrameNanos { } }
+            if (currentRows.none { target in it.keys }) return@launch
+            if (targets[target]?.requestSafely() != true) {
+                // A briefly detached target must not drop a remote press or steal focus
+                // from a newer movement; cancellation of this Job aborts these retries.
+                repeat(3) {
+                    withFrameNanos { }
+                    if (currentRows.none { target in it.keys }) return@launch
+                    if (targets[target]?.requestSafely() == true) return@launch
+                }
+            }
         }
         return true
     }

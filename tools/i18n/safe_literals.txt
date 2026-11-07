@@ -952,17 +952,13 @@
 1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	:$it
 1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	?
 1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	SELECT id,sourceId,remoteId,name,number,categoryId,epgChannelId FROM channels WHERE sourceId IN ($marks) AND id > ? AND trim(streamUrl)!='' ORDER BY id LIMIT 400
-1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	categories
-1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	channels
+1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	SELECT total_changes(), data_version FROM pragma_data_version
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	hidden
 1	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	mintv-swedish-channels
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	order
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	owner
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	preferred
 3	preference-key	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	profile:$profile
-1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	profile_source
-1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	profiles
-1	sql	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	sources
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	uhd
 2	json	app/src/main/java/tv/own/owntv/features/live/SwedishChannelStore.kt	variants
 13	protocol	app/src/main/java/tv/own/owntv/features/live/SwedishChannels.kt	\0

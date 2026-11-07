@@ -119,7 +119,7 @@ class PerformanceJourneyTest {
             "PROFILE" -> waitTag("settings-categories")
         }
     }
-    private val workKinds = listOf("CATALOG", "GUIDE_SUMMARIES", "PUBLIC_HTTP")
+    private val workKinds = listOf("CATALOG", "GUIDE_SUMMARIES", "PUBLIC_HTTP", "CATALOG_VERSION")
     private fun readerWork(): List<Long>? = runCatching {
         val type = Class.forName("tv.own.owntv.features.catalog.NativeReadWork")
         @Suppress("UNCHECKED_CAST")

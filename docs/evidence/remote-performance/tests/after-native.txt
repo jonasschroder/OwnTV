@@ -15,7 +15,7 @@ INSTRUMENTATION_STATUS: test=capturePopulatedNativeShell
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 40,252
+Time: 43,36
 
 OK (1 test)
 

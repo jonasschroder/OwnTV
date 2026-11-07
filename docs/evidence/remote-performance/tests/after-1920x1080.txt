@@ -15,7 +15,7 @@ INSTRUMENTATION_STATUS: test=repeatedProductionNavigation
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 59,151
+Time: 58,838
 
 OK (1 test)
 

@@ -15,7 +15,7 @@ INSTRUMENTATION_STATUS: test=visibleRowsUseRealFrameClock
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 4,862
+Time: 4,657
 
 OK (1 test)
 

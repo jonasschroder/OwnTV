@@ -141,7 +141,7 @@ INSTRUMENTATION_STATUS: test=favoritesKeepExactFocusAcrossHeaderReturnAndDoNotLe
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 25,052
+Time: 23,294
 
 OK (10 tests)
 

@@ -85,7 +85,7 @@ INSTRUMENTATION_STATUS: test=saveOnlyAndSavePlayReopenAtSavedVariantWithSinglePl
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 22,158
+Time: 23,849
 
 OK (6 tests)
 

@@ -225,7 +225,7 @@ INSTRUMENTATION_STATUS: test=fontScalingAt720KeepsBothEntriesAndSportsRowsReacha
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 74,389
+Time: 94,441
 
 OK (16 tests)
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.room.Room
+import androidx.room.useWriterConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.*
@@ -63,11 +64,24 @@ class ChannelSourceStorageTest {
             val before = restarted.library(7, listOf(101, 102), saved).groups.single()
             assertEquals(3L, ChannelSourceResolver.resolve(before, saved).selected?.id)
             fun catalogReads() = tv.own.owntv.features.catalog.NativeReadWork.snapshot().first()
+            // Room may install/reset bookkeeping rows during the first metadata subscription.
+            // This conservatively invalidates one cold snapshot; steady reentry must not scan.
+            assertEquals(before, restarted.library(7, listOf(101, 102), saved).groups.single())
             val warm = catalogReads()
             repeat(5) { assertEquals(before, restarted.library(7, listOf(101, 102), saved).groups.single()) }
             assertEquals("Reentry reuses the bounded projection, not another catalogue scan", warm, catalogReads())
             assertTrue(restarted.library(7, listOf(101, 102), saved.copy(hidden = setOf("tv4"))).groups.isEmpty())
             assertEquals("Presentation choices do not rescan provider rows", warm, catalogReads())
+            // Direct connection writes do not have to wait for a Room invalidation callback.
+            // Read-only stamps must reject an immediately revoked provider variant nevertheless.
+            db.useWriterConnection { connection ->
+                connection.usePrepared("UPDATE channels SET streamUrl='' WHERE id=2") { it.step() }
+            }
+            assertFalse(restarted.library(7, listOf(101, 102), saved).groups.single().variants.any { it.id == 2L })
+            db.channelDao().updateAll(listOf(fhd))
+            assertEquals(before, restarted.library(7, listOf(101, 102), saved).groups.single())
+            assertTrue("Version probes are counted separately from catalogue scans",
+                tv.own.owntv.features.catalog.NativeReadWork.snapshot().last() > 0)
             db.channelDao().deleteByRemoteIds(102, listOf("3"))
             db.channelDao().insertAll(listOf(uhd.copy(id = 300)))
             assertEquals(300L, ChannelSourceResolver.resolve(restarted.library(7, listOf(101, 102), saved).groups.single(), saved).selected?.id)

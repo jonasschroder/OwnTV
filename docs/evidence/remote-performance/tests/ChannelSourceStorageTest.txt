@@ -15,7 +15,7 @@ INSTRUMENTATION_STATUS: test=preferencesSurviveRefreshRestartAndRemainProfileOwn
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 0,707
+Time: 0,778
 
 OK (1 test)
 

@@ -29,7 +29,7 @@ INSTRUMENTATION_STATUS: test=shortOkPlaysAndHeldOkOnlyOpensExistingSourceAction
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 4,736
+Time: 5,408
 
 OK (2 tests)
 

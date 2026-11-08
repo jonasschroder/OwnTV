@@ -67,15 +67,34 @@ copy_repo() {
   [[ -n "$original_refs" ]] || { echo "STOP: origin has no branches or tags: $origin" >&2; exit 1; }
 
   destination_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"
-  if [[ -z "$destination_refs" ]]; then
-    echo "Uploading history into empty private repository: $target"
-    git --git-dir="$tmp/$folder.git" push --quiet --all "https://github.com/$target.git"
-    git --git-dir="$tmp/$folder.git" push --quiet --tags "https://github.com/$target.git"
-  elif [[ "$destination_refs" == "$original_refs" ]]; then
+  if [[ "$destination_refs" == "$original_refs" ]]; then
     echo "Already copied completely: $target"
   else
-    echo "STOP: destination has different refs; refusing to overwrite any history: $target" >&2
-    exit 1
+    # Existing references may be behind the public source (for example if
+    # bootstrap previously copied the repo but the source then advanced).
+    # Every existing private branch must be an ancestor of its source branch;
+    # existing tags must match *exactly*. Never delete or force-push anything.
+    if [[ -n "$destination_refs" ]]; then
+      while read -r old_sha old_ref; do
+        [[ -n "$old_sha" && -n "$old_ref" ]] || continue
+        expected_sha="$(git --git-dir="$tmp/$folder.git" rev-parse --verify "$old_ref" 2>/dev/null)" || {
+          echo "STOP: private destination has a ref absent from source: $old_ref" >&2
+          exit 1
+        }
+        if [[ "$old_ref" == refs/heads/* ]]; then
+          git --git-dir="$tmp/$folder.git" merge-base --is-ancestor "$old_sha" "$expected_sha" || {
+            echo "STOP: $old_ref has diverged; no history will be overwritten." >&2
+            exit 1
+          }
+        elif [[ "$old_sha" != "$expected_sha" ]]; then
+          echo "STOP: existing tag differs: $old_ref; no tags will be overwritten." >&2
+          exit 1
+        fi
+      done <<< "$destination_refs"
+    fi
+    echo "Copying missing refs and safely fast-forwarding existing branches: $target"
+    git --git-dir="$tmp/$folder.git" push --quiet --all "https://github.com/$target.git"
+    git --git-dir="$tmp/$folder.git" push --quiet --tags "https://github.com/$target.git"
   fi
 
   destination_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"

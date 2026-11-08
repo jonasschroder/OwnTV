@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Safe migration bootstrap: make private standalone copies; never touch public releases.
+# Safe, resumable bootstrap for two private standalone GitHub repositories.
 # Usage: bash tools/migration/bootstrap-private-sources.sh [--execute]
+# A partially created EMPTY destination can be reused; populated destinations are
+# accepted only if every branch/tag SHA exactly matches the source. Never force-push.
 set -euo pipefail
 
 owner="jonasschroder"
@@ -17,54 +19,81 @@ for origin in "$app" "$core"; do
   gh repo view "$origin" --json nameWithOwner,isPrivate,isFork,defaultBranchRef \
     --jq '"Source: " + .nameWithOwner + "  private=" + (.isPrivate|tostring) + "  fork=" + (.isFork|tostring) + "  default=" + .defaultBranchRef.name'
   is_fork="$(gh repo view "$origin" --json isFork --jq '.isFork')"
-  [[ "$is_fork" == true ]] || { echo "Expected fork: $origin. Stop and reassess." >&2; exit 1; }
+  [[ "$is_fork" == true ]] || { echo "Expected public fork: $origin. Stop and reassess." >&2; exit 1; }
 done
 
-echo "Plan: private standalone $private_app and $private_core, copying all branch/tag history."
-echo "Public OwnTV/OwnTV_Core, APKs, release downloads, and existing app update URLs stay unchanged."
-echo "Private repo Actions will be disabled until the release pipeline is migrated."
-echo "Public GPL-3.0 releases must keep access to their corresponding source."
-
+echo "Copy public forks to private standalone repositories; leave the public release/update URL intact."
+echo "Existing private destinations are reused ONLY when empty, or already fully identical."
+echo "GPL-3.0 corresponding source for distributed versions must remain available."
 if [[ "$#" != 1 || "$1" != --execute ]]; then
-  echo "No changes made. Run with --execute to make the two private copies."
+  echo "Dry run complete. Use --execute to create or resume private copies."
   exit 0
 fi
 
-for target in "$private_app" "$private_core"; do
-  if gh repo view "$target" >/dev/null 2>&1; then
-    echo "Refusing to overwrite existing destination: $target" >&2
-    exit 1
-  fi
-done
-
-# Use the GitHub credential helper, never embed tokens in remote URLs.
+# Do not put authentication tokens into clone URLs or remote configuration.
 gh auth setup-git
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 copy_repo() {
-  local source="$1" target="$2" folder="$3"
-  gh repo create "$target" --private \
-    --description 'Private GPL-3.0 development copy (public binary releases still require corresponding source)'
-  # Prevent costly and insecure first-run CI before secrets and branch protections exist.
-  gh api -X PUT "repos/$target/actions/permissions" -F enabled=false >/dev/null
-  git clone --quiet --bare "https://github.com/$source.git" "$tmp/$folder.git"
-  git --git-dir="$tmp/$folder.git" push --quiet --mirror "https://github.com/$target.git"
-  local original_refs copied_refs private
+  local origin="$1" target="$2" folder="$3"
+  local state private is_fork original_refs destination_refs
+  if gh repo view "$target" --json isPrivate,isFork >/dev/null 2>&1; then
+    private="$(gh repo view "$target" --json isPrivate --jq '.isPrivate')"
+    is_fork="$(gh repo view "$target" --json isFork --jq '.isFork')"
+    [[ "$private" == true && "$is_fork" == false ]] || {
+      echo "STOP: destination exists but is not a private standalone repository: $target" >&2
+      exit 1
+    }
+    echo "Resuming existing private destination: $target"
+  else
+    echo "Creating private standalone destination: $target"
+    gh repo create "$target" --private \
+      --description 'Private GPL-3.0 development copy; public release requires corresponding source'
+  fi
+
+  # Critical: prevent automatic CI/build/signing runs before migration of secrets.
+  # Fail closed on permissions error; user can disable Actions manually in Settings.
+  if ! gh api --method PUT "repos/$target/actions/permissions" -F enabled=false >/dev/null; then
+    echo "STOP: Could not disable Actions on $target." >&2
+    echo "In GitHub: $target > Settings > Actions > General > Disable actions." >&2
+    echo "Then rerun this same script with --execute; it can resume safely." >&2
+    exit 1
+  fi
+
+  echo "Cloning source history: $origin"
+  git clone --quiet --mirror "https://github.com/$origin.git" "$tmp/$folder.git"
   original_refs="$(git --git-dir="$tmp/$folder.git" for-each-ref --format='%(refname) %(objectname)' 'refs/heads/*' 'refs/tags/*' | LC_ALL=C sort)"
-  copied_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"
-  [[ "$original_refs" == "$copied_refs" ]] || { echo "Branch/tag SHA mismatch in $target; STOP migration." >&2; exit 1; }
+  [[ -n "$original_refs" ]] || { echo "STOP: origin has no branches or tags: $origin" >&2; exit 1; }
+
+  destination_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"
+  if [[ -z "$destination_refs" ]]; then
+    echo "Uploading history into empty private repository: $target"
+    git --git-dir="$tmp/$folder.git" push --quiet --mirror "https://github.com/$target.git"
+  elif [[ "$destination_refs" == "$original_refs" ]]; then
+    echo "Already copied completely: $target"
+  else
+    echo "STOP: destination has different refs; refusing to overwrite any history: $target" >&2
+    exit 1
+  fi
+
+  destination_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"
+  [[ "$destination_refs" == "$original_refs" ]] || {
+    echo "STOP: branch/tag SHA verification failed for $target" >&2
+    exit 1
+  }
   private="$(gh repo view "$target" --json isPrivate --jq '.isPrivate')"
-  [[ "$private" == true ]] || { echo "Private visibility check FAILED: $target" >&2; exit 1; }
-  echo "Verified: $target is private and all branches/tags match."
+  [[ "$private" == true ]] || { echo "STOP: private visibility verification failed for $target" >&2; exit 1; }
+  echo "VERIFIED PRIVATE COPY: $target"
 }
 
 copy_repo "$app" "$private_app" "app"
 copy_repo "$core" "$private_core" "core"
 
 cat <<'DONE'
-Private development copies created and verified, with CI intentionally disabled.
-DO NOT delete the public forks or make a private-release cutover yet.
-Next: source token access for Core, independent monotonic versionCode, signing
-environments, public-release publishing and source bundles, then end-to-end QA.
+SUCCESS: both private source repositories verified; GitHub Actions disabled.
+The existing public forks, release URLs, signing certificates, and APKs are unchanged.
+Do not delete or hide the public releases.
+Next: private CI Core access, release code numbering, signing environments,
+GPL source archives, public distribution and installed-device update verification.
 DONE

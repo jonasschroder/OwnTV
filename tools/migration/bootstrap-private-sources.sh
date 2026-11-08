@@ -62,14 +62,15 @@ copy_repo() {
   fi
 
   echo "Cloning source history: $origin"
-  git clone --quiet --mirror "https://github.com/$origin.git" "$tmp/$folder.git"
+  git clone --quiet --bare "https://github.com/$origin.git" "$tmp/$folder.git"
   original_refs="$(git --git-dir="$tmp/$folder.git" for-each-ref --format='%(refname) %(objectname)' 'refs/heads/*' 'refs/tags/*' | LC_ALL=C sort)"
   [[ -n "$original_refs" ]] || { echo "STOP: origin has no branches or tags: $origin" >&2; exit 1; }
 
   destination_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"
   if [[ -z "$destination_refs" ]]; then
     echo "Uploading history into empty private repository: $target"
-    git --git-dir="$tmp/$folder.git" push --quiet --mirror "https://github.com/$target.git"
+    git --git-dir="$tmp/$folder.git" push --quiet --all "https://github.com/$target.git"
+    git --git-dir="$tmp/$folder.git" push --quiet --tags "https://github.com/$target.git"
   elif [[ "$destination_refs" == "$original_refs" ]]; then
     echo "Already copied completely: $target"
   else

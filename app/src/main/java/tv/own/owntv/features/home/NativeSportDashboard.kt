@@ -29,7 +29,8 @@ internal data class NativeSportSnapshot(val profile: Long?, val now: Long, val p
 internal class NativeSportActions(val details: (SportFixture) -> Unit, val channel: (ChannelEntity) -> Unit,
     val browse: () -> Unit, val watch: () -> Unit, val settings: () -> Unit,
     val fixtureWatch: ((SportFixture, ChannelEntity) -> Unit)? = null,
-    val chooseChannel: ((SportFixture) -> Unit)? = null)
+    val chooseChannel: ((SportFixture) -> Unit)? = null,
+    val teams: () -> Unit = settings)
 
 /** Presentation only; every fixture, result and playable assignment comes from existing owners. */
 @Composable
@@ -38,11 +39,15 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     // The featured scheduled fixture already has its own primary/detail actions.
     val featured = data.hero?.takeIf { it.status == MatchStatus.SCHEDULED }?.id
-    val today = data.today.filterNot { it.id == featured }
-    val upcoming = data.upcoming.filterNot { it.id == featured }
+    val groups = sportDashboardGroups(data.today, data.upcoming, data.preferences, featured)
+    val mine = groups.mine
+    val today = groups.today
+    val upcoming = groups.upcoming
     val rows = buildList {
-        add(NativeRow("sport-hero", if (data.hero != null) listOf("sport-hero-action", "sport-hero-details")
-            else if (!data.loading && !data.channelsLoading) listOf("sport-empty-action") else emptyList(), horizontalRail = false))
+        add(NativeRow("sport-hero", if (data.hero != null) listOf("sport-hero-action", "sport-hero-details", "sport-hero-teams")
+            else if (!data.loading && !data.channelsLoading) listOf("sport-empty-action", "sport-hero-teams")
+            else listOf("sport-hero-teams"), horizontalRail = false))
+        if (mine.isNotEmpty()) add(NativeRow("sport-mine", mine.take(12).map { "sport-mine-${it.id}" }))
         if (today.isNotEmpty()) add(NativeRow("sport-today", today.take(16).map { "sport-today-${it.id}" }))
         if (upcoming.isNotEmpty()) add(NativeRow("sport-upcoming", upcoming.take(12).map { "sport-upcoming-${it.id}" }))
         if (data.publicSourceUsed) add(NativeRow("sport-attribution", listOf("sport-attribution-link"), horizontalRail = false))
@@ -94,9 +99,18 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                                     if (data.enabled) actions.browse else actions.settings,
                                     nav.item("sport-empty-action").testTag("sport-empty-action"), primary = true)
                             } else Unit
+                            // Team selection is a first-class Sport action, including while match data
+                            // loads or when no fixture has a verified channel. No network fetch here.
+                            val teams = data.preferences.teamIds.mapNotNull { SportsCatalog.team(it)?.name }
+                            if (teams.isNotEmpty()) TvText(teams.joinToString(", "), size = 18, color = MinTvMuted, lines = 2)
+                            SmartAction(stringResource(R.string.mintv_choose_teams), actions.teams,
+                                nav.item("sport-hero-teams").testTag("sport-hero-teams"), compact = true)
                         }
                     }
                 }
+            }
+            if (mine.isNotEmpty()) item(key = "sport-mine") {
+                SportFixtureRail(stringResource(R.string.mintv_my_teams), mine.take(12), "sport-mine", data, nav, width * 1.3f, actions)
             }
             if (today.isNotEmpty()) item(key = "sport-today") {
                 SportFixtureRail(stringResource(R.string.mintv_today), today.take(16), "sport-today", data, nav, width, actions)

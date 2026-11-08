@@ -1,0 +1,14 @@
+<resources>
+    <string name="hub_league_shl">SHL</string>
+    <string name="hub_league_ha">HockeyAllsvenskan</string>
+    <string name="hub_league_nhl">NHL</string>
+    <string name="hub_league_liiga">Liiga</string>
+    <string name="hub_league_del">DEL</string>
+    <string name="hub_league_national">National League</string>
+    <string name="hub_league_extraliga">Extraliga</string>
+    <string name="hub_league_ice">ICE Hockey League</string>
+    <string name="hub_league_chl">Champions Hockey League</string>
+    <string name="hub_league_premier">Premier League</string>
+    <string name="hub_league_allsvenskan">Allsvenskan</string>
+    <string name="hub_league_international">International ice hockey</string>
+</resources>

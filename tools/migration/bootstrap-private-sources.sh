@@ -2,7 +2,7 @@
 # Safe, resumable bootstrap for two private standalone GitHub repositories.
 # Usage: bash tools/migration/bootstrap-private-sources.sh [--execute]
 # A partially created EMPTY destination can be reused; populated destinations are
-# accepted only if every branch/tag SHA exactly matches the source. Never force-push.
+# accepted only if refs are equal or existing branches can fast-forward. Never force-push.
 set -euo pipefail
 
 owner="jonasschroder"
@@ -23,7 +23,7 @@ for origin in "$app" "$core"; do
 done
 
 echo "Copy public forks to private standalone repositories; leave the public release/update URL intact."
-echo "Existing private destinations are reused ONLY when empty, or already fully identical."
+echo "Existing private destinations may be safely fast-forwarded; divergent history is never overwritten."
 echo "GPL-3.0 corresponding source for distributed versions must remain available."
 if [[ "$#" != 1 || "$1" != --execute ]]; then
   echo "Dry run complete. Use --execute to create or resume private copies."
@@ -75,7 +75,8 @@ copy_repo() {
     # Every existing private branch must be an ancestor of its source branch;
     # existing tags must match *exactly*. Never delete or force-push anything.
     if [[ -n "$destination_refs" ]]; then
-      while read -r old_sha old_ref; do
+      # ls-remote is normalized above to: <refname> <object SHA>.
+      while read -r old_ref old_sha; do
         [[ -n "$old_sha" && -n "$old_ref" ]] || continue
         expected_sha="$(git --git-dir="$tmp/$folder.git" rev-parse --verify "$old_ref" 2>/dev/null)" || {
           echo "STOP: private destination has a ref absent from source: $old_ref" >&2

@@ -1,0 +1,3 @@
+i18n literal inventory OK (bootstrap): 45 baseline + 2454 safe entries
+Number locale check OK (341 Kotlin files, 3 reviewed display calls)
+Text overflow check OK (341 Kotlin files, 1 Clip exceptions)

@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -60,7 +61,7 @@ internal fun SportsTeamPicker(profileId: Long, onDismiss: () -> Unit) {
     }
     Dialog(onDismissRequest = ::back, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         BackHandler(onBack = ::back)
-        Column(Modifier.width(1180.mpx).heightIn(max = 860.mpx).background(MinTvNavy).padding(32.mpx).focusGroup(),
+        Column(Modifier.testTag("sport-team-picker").width(1180.mpx).heightIn(max = 860.mpx).background(MinTvNavy).padding(32.mpx).focusGroup(),
             verticalArrangement = Arrangement.spacedBy(20.mpx)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TvText(stringResource(R.string.mintv_my_teams), size = 34, bold = true)

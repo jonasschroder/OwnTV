@@ -45,8 +45,7 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
     val upcoming = groups.upcoming
     val rows = buildList {
         add(NativeRow("sport-hero", if (data.hero != null) listOf("sport-hero-action", "sport-hero-details", "sport-hero-teams")
-            else if (!data.loading && !data.channelsLoading) listOf("sport-empty-action", "sport-hero-teams")
-            else listOf("sport-hero-teams"), horizontalRail = false))
+            else listOf("sport-empty-action", "sport-hero-teams"), horizontalRail = false))
         if (mine.isNotEmpty()) add(NativeRow("sport-mine", mine.take(12).map { "sport-mine-${it.id}" }))
         if (today.isNotEmpty()) add(NativeRow("sport-today", today.take(16).map { "sport-today-${it.id}" }))
         if (upcoming.isNotEmpty()) add(NativeRow("sport-upcoming", upcoming.take(12).map { "sport-upcoming-${it.id}" }))
@@ -69,8 +68,10 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                                 size = if (data.hero == null) 30 else 42, bold = true, lines = 2)
                             data.hero?.let { TvText(fixtureWhen(it, data.now), size = 23, color = MinTvMuted) }
                         }
-                        Column(Modifier.width(420.mpx).background(MinTvPanel.copy(alpha = .72f), RoundedCornerShape(16.mpx)).padding(20.mpx),
+                        Column(Modifier.width(560.mpx).background(MinTvPanel.copy(alpha = .72f), RoundedCornerShape(16.mpx)).padding(20.mpx),
                             verticalArrangement = Arrangement.spacedBy(14.mpx)) {
+                            val teams = data.preferences.teamIds.mapNotNull { SportsCatalog.team(it)?.name }
+                            if (teams.isNotEmpty()) TvText(teams.joinToString(stringResource(R.string.mintv_team_separator)), size = 18, color = MinTvMuted, lines = 2)
                             if (data.hero != null) TvText(data.broadcastLabels[data.hero.id] ?: data.heroChannel?.name
                                 ?: stringResource(R.string.mintv_v08_channel_unconfirmed), size = 22, color = MinTvMuted, lines = 3)
                             if (data.channels.isEmpty()) TvText(stringResource(if (data.channelsLoading) R.string.mintv_companion_loading
@@ -86,25 +87,25 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                                 }), size = 18, color = MinTvMuted, lines = 3)
                                 val choose = { actions.chooseChannel?.invoke(game) ?: actions.details(game) }
                                 val play = if (data.heroChannel != null) actions.watch else choose
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                     SmartAction(stringResource(if (data.heroChannel != null) R.string.mintv_watch_match else R.string.v016_choose_channel),
                                         play, nav.item("sport-hero-action").testTag("sport-hero-action")
                                             .then(if (data.heroChannel != null) Modifier.logicalChannelKeys(play, { choose() }) else Modifier), primary = true)
                                     SmartAction(stringResource(R.string.v016_match_info_short), { actions.details(game) },
                                         nav.item("sport-hero-details").testTag("sport-hero-details"), compact = true)
+                                    SmartAction(stringResource(R.string.mintv_choose_teams), actions.teams,
+                                        nav.item("sport-hero-teams").testTag("sport-hero-teams"), compact = true)
                                 }
                                 if (data.heroChannel != null) TvText(stringResource(R.string.v016_sport_hold_channel), size = 17, color = MinTvMuted, lines = 2)
-                            } ?: if (!data.loading && !data.channelsLoading) {
+                            } ?: Row(horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                // Local settings/channel browsing need not wait for remote schedule or
+                                // catalogue hydration. Keep the entry key stable across loading -> empty.
                                 SmartAction(stringResource(if (data.enabled) R.string.v016_choose_channel else R.string.v016_hockey_settings),
                                     if (data.enabled) actions.browse else actions.settings,
                                     nav.item("sport-empty-action").testTag("sport-empty-action"), primary = true)
-                            } else Unit
-                            // Team selection is a first-class Sport action, including while match data
-                            // loads or when no fixture has a verified channel. No network fetch here.
-                            val teams = data.preferences.teamIds.mapNotNull { SportsCatalog.team(it)?.name }
-                            if (teams.isNotEmpty()) TvText(teams.joinToString(stringResource(R.string.mintv_team_separator)), size = 18, color = MinTvMuted, lines = 2)
-                            SmartAction(stringResource(R.string.mintv_choose_teams), actions.teams,
-                                nav.item("sport-hero-teams").testTag("sport-hero-teams"), compact = true)
+                                SmartAction(stringResource(R.string.mintv_choose_teams), actions.teams,
+                                    nav.item("sport-hero-teams").testTag("sport-hero-teams"), compact = true)
+                            }
                         }
                     }
                 }

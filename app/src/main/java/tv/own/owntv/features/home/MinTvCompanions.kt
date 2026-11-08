@@ -619,7 +619,16 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }
             }
         }, screen)
-        if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
+        if (teamsOpen && profileId != null) SportsTeamPicker(profileId) {
+            teamsOpen = false
+            if (dashboard == null) restoreTarget = entryFocus else {
+                val owner = profileId
+                scope.launch {
+                    repeat(2) { withFrameNanos { } }
+                    if (currentActive && currentProfile == owner) currentDashboardEntry?.invoke()
+                }
+            }
+        }
         if (screen) {
             BackHandler(onBack = ::back)
             Column(Modifier.fillMaxSize().then(if (picker) Modifier.testTag("sport-manual-picker") else if (selectedId != null) Modifier.testTag("sport-match-details") else Modifier)

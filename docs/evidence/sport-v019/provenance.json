@@ -1,0 +1,37 @@
+{
+  "identity": {
+    "baseline_commit": "29144b0373fb9dd2b283bb000bab2ee84995c38e",
+    "reused_verified_baseline_binary_commit": "2f664b829ce80188972cc4a034f4214b0686ed04",
+    "baseline_and_reused_binary_tree": "8c2e01b9663d3286cfef06e4756243148880f58f",
+    "before_apk_sha256": "7e30b7aaf42d0a21c445366559dddfbb56eb9e19ff90a7bdc03b2542c4652b6c",
+    "after_apk_sha256": "a8b51832ebb8633f9ef6ab41cceb67f1423f331cf73932595a47459795492a19",
+    "instrumentation_apk_sha256": "80e7039499b76a8ce6c45f68608c44ac5ebafaea67d71ea1aa336421b1adb2f0",
+    "variant": "qaDebug local fixture stamp 0.14.0-dev; no release identity change"
+  },
+  "artifacts_sha256": {
+    "after/MY-TEAMS-1280x720.png": "6b6ac16ac84ed68cf9204de308914ca3bacf612a11f2954c04df35847d3ebe71",
+    "after/MY-TEAMS-1920x1080.png": "68ccc906c2356c3754fe8d3e1242235e9c8a9b99a7742225406578d74f63cc74",
+    "after/SPORT-1280x720.png": "e94573e62e2e0fb6590f59039f5e2dde708c43e732d910c16426253644c66df3",
+    "after/SPORT-1920x1080.png": "d755838744410105a70087ef9c09c7aed7be53f49da7dda9fc504be2bd3dd1ab",
+    "before/SPORT-1280x720.png": "411f348317f2dcf8bb6e09a1bfa11427f4613e421b9ca5f28239b2939efcc93e",
+    "before/SPORT-1920x1080.png": "3db75559856005c2b9156a11874d92b2caa8ce262e0cecc542bab6f29a18cdc4",
+    "comparison.json": "99b47ef568643ba914473680246de07483efe7d5c8961f7cfc23b3dafa2e8c5d",
+    "performance/after-1280x720.json": "0df442a589de8444eb0327dcb99c74e3afd37f013784f483fe808a4a57f48376",
+    "performance/after-1920x1080.json": "b1bb8edaa69648147eb6cd9c08c3f5fa512402befa9ff1406198557d1e730d42",
+    "performance/before-1280x720.json": "e95bce69d3c6d8cd25c2c4dff0ae81f509f303df0f9d29c77549014ff79b1432",
+    "performance/before-1920x1080.json": "4651621cc2e5abe000b7c7f7e743b7e6b7861eb1849d44ed68d03743879786a5",
+    "source-trees.json": "622063e365c5fd52bad63949e5152e85716c696ecebbd17aa01b5a0f0a25eb73",
+    "tests/after-1280x720.txt": "b65513e1e49a35096eefdd3097933deb19e1318193f80832ccbdd02bdc5a8218",
+    "tests/after-1920x1080.txt": "eeaadbbd423928066d395b8e6804ab49f1428d362979cd23a4f6c7e4cf0f7d8f",
+    "tests/after-native.txt": "0704ad69c716612ddb3f2feae20108f1217ebeafbc5175a2468ac3b692eff3cc",
+    "tests/before-1280x720.txt": "cdd9c2d32395f9b8de11a0db1ca6d9e0d8c1ed4ae6c1c84dc53775c50955bb4c",
+    "tests/before-1920x1080.txt": "940e1dcb3c83e2b8d6cb3e3eb86c98d77a932f06d1847e5b7b3dbb0e91858ff4",
+    "tests/before-native.txt": "16bbc18a44f3ca6dabbf7d7b7b7587837702e37b6757b860fbdb9bc1555ac331",
+    "tests/i18n.txt": "51c8047469f169c283d0f79b3fa08303c75a6f87ccacfdb91c26c1d230c7a24d",
+    "tests/native-presentation.txt": "ef49f4e1b0235e73859279d27f4efba8209e14f9df8b00a37111da9f4cfdcf22",
+    "tests/startup-extended-1280x720.txt": "143f529eaed1aee68159abc77b8ad8334c6c4c7e104576a82ad826fdffb356c9",
+    "tests/startup-extended-1920x1080.txt": "76e3367bffecc3f32fdea15d13f0d0d77532c29399db37050c0a2d6a89d13409",
+    "tests/test-inventory.txt": "a75d5a91a411eeced9e6131248a85982b358c592dc17ed1f73ccacc7565157fc",
+    "tests/unit-summary.json": "3e78e287727d84c3b3931a18a619cffe1ff4182e32384d56e7431ffe4136c5d7"
+  }
+}

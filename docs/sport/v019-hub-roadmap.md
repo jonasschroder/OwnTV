@@ -2,6 +2,11 @@
 
 Status: **Phase 1 implementation in draft PR #40**. All remaining workstreams below are **in scope and equally prioritized for the full Sport 0.19 delivery**, but are **not implemented yet**. This is not a release candidate.
 
+Phase 1 stabilization: hero actions share their actual horizontal focus order; local recovery
+stays available during loading; Back from Choose teams restores the selected Sport action.
+Native tests, 1080p/720p comparisons and the 0.18 performance comparison are recorded in
+[the phase 1 evidence](../evidence/sport-v019/README.md). Exact-head CI must pass before continuing implementation.
+
 ## Product intent
 
 Use the upstream OwnTV Sports experience as a *reference for flows*, not a wholesale fork replacement.

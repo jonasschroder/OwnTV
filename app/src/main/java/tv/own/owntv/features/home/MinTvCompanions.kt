@@ -572,6 +572,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
+                        teams = { if (profileId != null) teamsOpen = true else onSettings() },
                         fixtureWatch = { game, channel -> play(channel, listOf(channel), game) },
                         chooseChannel = { game -> screen = true; choose(game); picker = true; pickerSelectedId = null; restoreTarget = pickerFocus }), entryFocus, { dashboardEntry = it })
             } else {

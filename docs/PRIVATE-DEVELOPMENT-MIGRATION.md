@@ -30,7 +30,7 @@ bash tools/migration/bootstrap-private-sources.sh
 bash tools/migration/bootstrap-private-sources.sh --execute
 ```
 
-The script refuses existing destinations, creates two **private standalone** repositories, turns off Actions in the copies, clones branches/tags and verifies ref SHAs. It does NOT migrate the live build/distribution, delete/rename public forks, or modify any existing APK/update URL. Run it once only. If it stops halfway, inspect the partial private copy rather than rerunning against an existing destination.
+The script creates or safely resumes two **private standalone** repositories, disables Actions in the copies, clones branches/tags and verifies ref SHAs. If it finds an existing private copy, it updates only branches that can be fast-forwarded and never force-pushes, deletes refs or overwrites mismatching tags. It does NOT migrate the live build/distribution, delete/rename public forks, or modify any existing APK/update URL. If verification fails, inspect the reported divergence before making any manual change.
 
 **Required permissions:** GitHub CLI signed in as the owner with permission to create private repositories. This script cannot be executed via the current GitHub connector because repository creation/visibility changes are not available there.
 

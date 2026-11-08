@@ -102,7 +102,7 @@ internal fun NativeSportDashboard(data: NativeSportSnapshot, actions: NativeSpor
                             // Team selection is a first-class Sport action, including while match data
                             // loads or when no fixture has a verified channel. No network fetch here.
                             val teams = data.preferences.teamIds.mapNotNull { SportsCatalog.team(it)?.name }
-                            if (teams.isNotEmpty()) TvText(teams.joinToString(", "), size = 18, color = MinTvMuted, lines = 2)
+                            if (teams.isNotEmpty()) TvText(teams.joinToString(stringResource(R.string.mintv_team_separator)), size = 18, color = MinTvMuted, lines = 2)
                             SmartAction(stringResource(R.string.mintv_choose_teams), actions.teams,
                                 nav.item("sport-hero-teams").testTag("sport-hero-teams"), compact = true)
                         }

@@ -63,7 +63,8 @@ copy_repo() {
 
   echo "Cloning source history: $origin"
   git clone --quiet --bare "https://github.com/$origin.git" "$tmp/$folder.git"
-  original_refs="$(git --git-dir="$tmp/$folder.git" for-each-ref --format='%(refname) %(objectname)' 'refs/heads/*' 'refs/tags/*' | LC_ALL=C sort)"
+  # Prefixes (not glob patterns) include nested refs such as feat/... and fix/....
+  original_refs="$(git --git-dir="$tmp/$folder.git" for-each-ref --format='%(refname) %(objectname)' refs/heads refs/tags | LC_ALL=C sort)"
   [[ -n "$original_refs" ]] || { echo "STOP: origin has no branches or tags: $origin" >&2; exit 1; }
 
   destination_refs="$(git ls-remote --refs "https://github.com/$target.git" 'refs/heads/*' 'refs/tags/*' | awk '{print $2 " " $1}' | LC_ALL=C sort)"

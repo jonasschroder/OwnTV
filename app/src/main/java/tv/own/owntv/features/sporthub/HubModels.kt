@@ -22,7 +22,7 @@ internal enum class HubMatchStatus { SCHEDULED, REPORTED_FINAL, UNCONFIRMED }
 internal enum class HubResultStage { UNSPECIFIED, REGULATION, EXTRA_TIME, PENALTIES }
 internal enum class HubTeamIdentity { PROVIDER_ID, NAME_DERIVED }
 internal enum class HubIssue { DISABLED, AUTH_REQUIRED, ACCESS_DENIED, RATE_LIMITED, WAITING, UNAVAILABLE, INVALID_DATA }
-internal enum class HubCoverageIssue { INVALID_ROWS, CONFLICTING_IDS, PAST_WITHOUT_FINAL, FINAL_WITHOUT_SCORE, TIME_CONFLICT }
+internal enum class HubCoverageIssue { INVALID_ROWS, CONFLICTING_IDS, PAST_WITHOUT_FINAL, FINAL_WITHOUT_SCORE, TIME_CONFLICT, TIME_UNCORROBORATED }
 internal enum class HubFreshness { FRESH, STALE, INVALID_CLOCK }
 
 internal data class HubLeague(val key: String, val sport: HubSport, val label: Int,

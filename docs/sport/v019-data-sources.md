@@ -12,7 +12,7 @@ profile favourites and Watch Match are subsequent integrated workstreams.
 | DEL 2026 | OpenLigaDB `getmatchdata/del/2026`, 364 rows | 364; 14 teams, 102 reported final |
 | Premier League 2026 | OpenLigaDB `getmatchdata/pl/2026`, 380 rows | 380; 20 teams; 24 overdue unfinished records at capture — incomplete results |
 | Champions Hockey League 2026 | OpenLigaDB `getmatchdata/CHL/2026`, 88 rows | 88; 24 teams, 72 reported final |
-| NHL 2026/27 | SportsEvents24 tournament **123176**, 46 rows, Nov 8–15 | **39 accepted; 7 contradictory UTC/local-time records excluded** |
+| NHL 2026/27 | SportsEvents24 tournament **123176**, 46 rows, Nov 8–15 | 46 retained using documented UTC; 7 local-time warnings on the Mac's older tzdb |
 | Liiga 2026/27 regular season | SportsEvents24 **142163**, 20 rows | 20; results and upcoming |
 | Swiss National League 2026/27 | SportsEvents24 **141810**, 13 rows | 13 upcoming; alternate 141819 duplicated the same fixtures, not combined |
 | Czech Extraliga 2026/27 | SportsEvents24 **141861**, 14 rows | 14; results and upcoming |
@@ -53,7 +53,8 @@ These are spot checks, not independent verification of every fixture or Swedish 
   monthly allowance; source age is still exposed, not called fresh after 15 minutes.
   No live-score guarantee. Provider-wide 7-second spacing, persistent denial/429 cooldown,
   server quota guard and cancellation; no focus-triggered fetch or automatic cursor walk.
-  Invalid times, IDs, source/season bindings and ambiguous scores fail closed.
+  Missing/invalid UTC, IDs, source/season bindings and ambiguous scores fail closed.
+  Local timezone mismatches are warnings, never used to rewrite or drop explicit UTC.
 
 ## Alternatives and exact blockers
 
@@ -83,3 +84,17 @@ Neither API supplies verified Swedish linear-channel assignments. Keep authorize
 match-specific evidence and explicit manual selections separate; no generic TV4 channel guess.
 Do not derive standings from incomplete schedules. Broader sports and rights blockers remain
 in scope; Sport 0.19 is not complete without owner review of their evidence and availability.
+
+## CI follow-up: timezone rules and main ancestry
+
+The first CI exposed a host tzdb difference: Canada changed rules in November 2026
+([Alberta government](https://www.alberta.ca/albertas-new-time-system-abt)). The Mac runs
+JDK 21.0.12.1 with older rules; CI has newer rules. Earlier 39/46 acceptance was a
+host-dependent validation result, **not proof of seven bad source records**. All 46 explicit
+UTC timestamps are now retained; local-time corroboration warnings remain honest and portable.
+A deterministic UTC-zone fixture tests conflicts independently of future regional rule changes.
+
+The i18n failure occurred before the ratchet: after full checkout, refetching advanced main
+with depth 1 marked its tip shallow and disconnected the merge base. Fetch main without
+reintroducing shallow history; the exact merge-base ratchet and every required job remain.
+A local two-branch Git regression reproduces the old failure and verifies the actual fixed command.

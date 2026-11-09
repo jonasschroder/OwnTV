@@ -57,7 +57,9 @@ jobs:
 
       - name: Fetch base branch
         if: ${{ github.event_name == 'pull_request' }}
-        run: git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
+        # Checkout already fetched complete history. A depth-1 refetch makes a newly
+        # advanced main tip shallow and can disconnect the PR's real merge base.
+        run: git fetch --no-tags origin "${GITHUB_BASE_REF}"
 
       - name: Hardcoded-literal ratchet
         env:

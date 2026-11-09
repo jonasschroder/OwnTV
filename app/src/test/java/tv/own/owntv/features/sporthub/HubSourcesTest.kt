@@ -81,9 +81,9 @@ class HubSourcesTest {
         assertNotEquals(s.teams.first().id, events24Team("Montréal Test Club", HubSport.FOOTBALL, "US").id)
         assertNotEquals(s.teams.first().id, events24Team("Montréal Test Club", HubSport.ICE_HOCKEY, "CA").id)
     }
-    @Test fun events24RejectsMismatchedTournamentCountrySportAndTimezone() {
+    @Test fun events24RejectsMismatchedTournamentCountrySportAndMissingUtc() {
         for (r in listOf(event().put("tournamentId", 99), event().put("country", "CA"), event().put("sportId", 1),
-            event().put("timeZone", "Europe/Stockholm"), event().put("startsAt", "2026-11-09T00:00:00")))
+            event().put("startsAt", "2026-11-09T00:00:00")))
             assertTrue(runCatching { parseEvents24(events(r), nhl, "2026-27", now) }.isFailure)
     }
     @Test fun partialPagingIsNotReportedAsCompleteAndNoLiveScoreIsGuessed() {
@@ -98,13 +98,19 @@ class HubSourcesTest {
         }
         assertNull(parseEvents24(events(event().put("category", "result").put("result", "unavailable")),nhl,"2026-27",now).matches.single().score)
     }
-    @Test fun contradictorySourceTimezoneIsExcludedRatherThanRepairedOrMarkedComplete() {
-        // Reproduces the shape observed in the public NHL response; no assumption about which field is right.
+    @Test fun localTimezoneConflictCannotRewriteExplicitUtcOrSilentlyDropFixtures() {
+        // Fixed UTC zone makes the conflict deterministic across host tzdb versions.
         val conflict = event(2).put("startsAt", "2026-11-09T00:00:00Z")
-            .put("localStartsAt", "2026-11-08T18:00:00").put("timeZone", "America/Edmonton")
+            .put("localStartsAt", "2026-11-08T18:00:00").put("timeZone", "UTC")
         val s = parseEvents24(events(event(), conflict), nhl, "2026-27", now)
-        assertEquals(1, s.matches.size)
+        assertEquals(2, s.matches.size)
+        assertEquals(Instant.parse("2026-11-09T00:00:00Z"), s.matches.last().startsAt)
         assertTrue(HubCoverageIssue.TIME_CONFLICT in s.coverage)
+    }
+    @Test fun missingLocalTimezoneRetainsDocumentedUtcWithExplicitCoverageWarning() {
+        val s = parseEvents24(events(event().put("timeZone",JSONObject.NULL)),nhl,"2026-27",now)
+        assertEquals(Instant.parse("2026-11-09T00:00:00Z"),s.matches.single().startsAt)
+        assertTrue(HubCoverageIssue.TIME_UNCORROBORATED in s.coverage)
     }
     @Test fun fractionalAndOversizedSourceIdsCannotSelectAnotherEntity() {
         for (id in listOf<Any>(1.5, "1", java.math.BigInteger("9223372036854775808"))) {

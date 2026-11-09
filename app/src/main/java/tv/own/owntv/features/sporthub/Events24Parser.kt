@@ -47,13 +47,13 @@ internal fun parseEvents24(text: String, league: HubLeague, season: String, now:
         val id = r.hubId("id")
         val at = Instant.parse(r.getString("startsAt"))
         require(!at.atZone(ZoneOffset.UTC).toLocalDate().isBefore(window.from) && at.atZone(ZoneOffset.UTC).toLocalDate().isBefore(window.to))
-        // UTC and supplied local time must agree, including DST overlaps/gaps.
-        val local = LocalDateTime.parse(r.getString("localStartsAt"))
-        val zone = ZoneId.of(r.getString("timeZone"))
-        if (zone.rules.getValidOffsets(local).none { local.toInstant(it) == at }) {
-            issues += HubCoverageIssue.TIME_CONFLICT
-            return@mapNotNull null
-        }
+        // The documented startsAt UTC field is authoritative. Local timezone metadata is
+        // corroboration only: host/device tzdb versions differ (Canada changed in Nov 2026).
+        // Never "repair" UTC using an older local rules database, or silently lose fixtures.
+        val local = runCatching { LocalDateTime.parse(r.getString("localStartsAt")) }.getOrNull()
+        val zone = runCatching { ZoneId.of(r.getString("timeZone")) }.getOrNull()
+        if (local == null || zone == null) issues += HubCoverageIssue.TIME_UNCORROBORATED
+        else if (zone.rules.getValidOffsets(local).none { local.toInstant(it) == at }) issues += HubCoverageIssue.TIME_CONFLICT
         val home = events24Team(r.getString("teamHome"), league.sport, country)
         val away = events24Team(r.getString("teamAway"), league.sport, country); require(home.id != away.id)
         val category = r.getString("category")

@@ -34,7 +34,7 @@
       "provider": "EVENTS24",
       "league": "nhl",
       "input_rows": 46,
-      "parsed_rows": 39,
+      "parsed_rows": 46,
       "response_sha256": "35d2a9292d844d92f454ee494e6a7248d80561650debab3f501b0621ed2ad1cb",
       "url": "https://sportsevents24.com/api/v1/events?tournament_id=123176&limit=100"
     },
@@ -83,5 +83,6 @@
       "response_sha256": "06ab0250d11b4faf0638c6fdc363c515097d291a63a644ae4126db9ded56d6d3",
       "url": "https://sportsevents24.com/api/v1/events?tournament_id=10&limit=50&from=2026-11-01&to=2026-11-15"
     }
-  ]
+  ],
+  "timezone_note": "Documented UTC is retained. Local-zone warnings depend on host tzdb and do not prove incorrect provider UTC. Mac JDK 21.0.12.1 reported 7 such NHL warnings."
 }

@@ -9,6 +9,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import tv.own.owntv.features.sporthub.*
+
+internal data class SportProfileSelection(val owner: Long, val value: SportPreferences)
 
 internal object SportPreferencesCodec {
     fun bound(value: SportPreferences, createdAt: Long): String = JSONObject().put("owner", createdAt)
@@ -18,14 +21,37 @@ internal object SportPreferencesCodec {
         val root = JSONObject(value); require(root.getLong("owner") == createdAt)
         decode(root.getJSONObject("selection").toString())
     }.getOrDefault(SportPreferences())
-    fun encode(value: SportPreferences): String = JSONObject().put("teams", JSONArray(value.teamIds.distinct()))
-        .put("prominent", value.prominent).put("hideScores", value.hideScores).toString()
+    fun encode(value: SportPreferences): String {
+        require(value.hubTeams.size <= 64 && value.hubTeams.all { it.valid() })
+        require(value.hubProviders.all { it in setOf(HubProvider.OPENLIGA, HubProvider.EVENTS24) })
+        return JSONObject().put("teams", JSONArray(value.teamIds.distinct()))
+            .put("prominent", value.prominent).put("hideScores", value.hideScores)
+            .put("hubTeams", JSONArray(value.hubTeams.distinctBy { it.id }.map {
+                JSONObject().put("id", it.id).put("name", it.name).put("league", it.league).put("sport", it.sport.name)
+            })).put("hubProviders", JSONArray(value.hubProviders.map { it.name }.sorted())).toString()
+            .also { require(it.length <= 32_000) }
+    }
     fun decode(value: String?): SportPreferences = runCatching {
         require(value != null && value.length <= 32_768)
         val root = JSONObject(value); val ids = root.getJSONArray("teams"); require(ids.length() <= 256)
-        SportPreferences((0 until ids.length()).map { ids.getString(it).also { id ->
+        val legacy = SportPreferences((0 until ids.length()).map { ids.getString(it).also { id ->
             require(id.matches(Regex("(?:hockey|football):[a-z0-9-]{1,100}")))
         } }.distinct(), root.optBoolean("prominent", true), root.optBoolean("hideScores", false))
+        // Unknown/corrupt optional data must never erase the owner's established Färjestad IDs.
+        val teams = runCatching {
+            val rows = root.optJSONArray("hubTeams") ?: JSONArray(); require(rows.length() <= 64)
+            (0 until rows.length()).map { i -> rows.getJSONObject(i).let {
+                HubFollow(it.getString("id"), it.getString("name"), it.getString("league"), HubSport.valueOf(it.getString("sport")))
+                    .also { follow -> require(follow.valid()) }
+            } }.distinctBy { it.id }
+        }.getOrDefault(emptyList())
+        val providers = runCatching {
+            val rows = root.optJSONArray("hubProviders") ?: JSONArray(); require(rows.length() <= 2)
+            (0 until rows.length()).map { HubProvider.valueOf(rows.getString(it)).also { p ->
+                require(p in setOf(HubProvider.OPENLIGA, HubProvider.EVENTS24))
+            } }.toSet()
+        }.getOrDefault(emptySet())
+        legacy.copy(hubTeams = teams, hubProviders = providers)
     }.getOrDefault(SportPreferences())
 }
 
@@ -50,6 +76,18 @@ internal class SportsPreferences(context: Context, private val profiles: tv.own.
         val profile = profiles.getById(profileId) ?: return@withContext SportPreferences()
         SportPreferencesCodec.forOwner(preferences.getString("profile:$profileId", null), profile.createdAt)
     }
+    suspend fun readSelection(profileId: Long): SportProfileSelection? = mutex.withLock { withContext(Dispatchers.IO) {
+        val profile = profiles.getById(profileId) ?: return@withContext null
+        SportProfileSelection(profile.createdAt, SportPreferencesCodec.forOwner(preferences.getString("profile:$profileId", null), profile.createdAt))
+    } }
+    /** Atomic against another picker, and rejects an asynchronously reused profile ID. */
+    suspend fun updateSelection(profileId: Long, owner: Long, change: (SportPreferences) -> SportPreferences): Boolean = mutex.withLock { withContext(Dispatchers.IO) {
+        val profile = profiles.getById(profileId)?.takeIf { it.createdAt == owner } ?: return@withContext false
+        val previous = SportPreferencesCodec.forOwner(preferences.getString("profile:$profileId", null), profile.createdAt)
+        val next = change(previous); require(next.teamIds.size <= 256)
+        check(preferences.edit().putString("profile:$profileId", SportPreferencesCodec.bound(next, profile.createdAt)).commit())
+        revision.value++; true
+    } }
     suspend fun save(profileId: Long, value: SportPreferences): Unit = mutex.withLock { withContext(Dispatchers.IO) {
         require(profileId >= 0 && value.teamIds.size <= 256)
         val profile = profiles.getById(profileId) ?: return@withContext

@@ -22,7 +22,9 @@ internal data class SportFixture(val id: String, val competition: Competition, v
 }
 internal data class SportSnapshot(val competition: Competition, val seasonId: String, val fixtures: List<SportFixture>,
     val fetchedAt: Long, val sourceUpdatedAt: Long?)
-internal data class SportPreferences(val teamIds: List<String> = emptyList(), val prominent: Boolean = true, val hideScores: Boolean = false) {
+internal data class SportPreferences(val teamIds: List<String> = emptyList(), val prominent: Boolean = true, val hideScores: Boolean = false,
+    val hubTeams: List<tv.own.owntv.features.sporthub.HubFollow> = emptyList(),
+    val hubProviders: Set<tv.own.owntv.features.sporthub.HubProvider> = emptySet()) {
     val primaryTeamId get() = teamIds.firstOrNull()
     fun toggle(id: String): SportPreferences = copy(teamIds = if (id in teamIds) teamIds - id else teamIds + id)
     fun primary(id: String): SportPreferences = if (id in teamIds) copy(teamIds = listOf(id) + (teamIds - id)) else this

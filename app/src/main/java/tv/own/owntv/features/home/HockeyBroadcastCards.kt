@@ -25,7 +25,8 @@ internal fun hockeyCardBroadcast(fixture: SportFixture, local: EpgHockeyMatch?, 
         .filterNot { BroadcastResolver.streamingBrand(it.name) }
     val label = (if (evidence != null) rows.map { it.name } else names).distinct().joinToString().takeIf { it.isNotBlank() }
     val playable = preferredHockeyChannel(rows, choices).takeIf {
-        fixture.status == MatchStatus.SCHEDULED && if (evidence != null) !evidence.truncated else complete
+        fixture.status == MatchStatus.SCHEDULED &&
+            (if (evidence != null) !evidence.truncated else complete && external?.evidence == BroadcastEvidence.CONFIRMED)
     }
     val availability = when {
         playable != null -> HockeyChannelAvailability.PLAYABLE

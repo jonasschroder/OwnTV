@@ -73,6 +73,8 @@ val appModule = module {
     singleOf(::ShlRepository)
     singleOf(::SportsPreferences)
     singleOf(::SportsRepository)
+    single { tv.own.owntv.features.sporthub.HubSourceReader(tv.own.owntv.features.sporthub.PublicHubTransport(),
+        tv.own.owntv.features.sporthub.FileHubCache(get())) }
     singleOf(::TvmatchenBroadcastSource)
     singleOf(::PublicHockeySource)
     singleOf(::ShlChannelOverrides)

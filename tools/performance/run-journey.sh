@@ -37,6 +37,9 @@ echo "PASS native screenshots and visible Sport row probe"
 run capturePopulatedNativeShell populated-native
 adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/native" "$out/populated-native" >/dev/null
 echo "PASS populated actual MainActivity and remote return journeys"
+run captureNativeSportHubRoutes native-sport-hub
+adb -s "$serial" pull "/sdcard/Android/data/$qa/files/performance/native" "$out/native-sport-hub" >/dev/null
+echo "PASS actual native Sport hub routes and exact Back focus"
 
 # Real display clock: complements the Compose-test/idling measurements above.
 run visibleRowsUseRealFrameClock real-focus tv.own.owntv.performance.NativeRemoteLatencyTest

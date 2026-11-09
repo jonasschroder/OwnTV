@@ -190,6 +190,11 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as E
           required = {
+              ('tv.own.owntv.home.NativeSportHubTest', 'hubRemoteRowsBackRestorationAndUnavailableAt1080'),
+              ('tv.own.owntv.home.NativeSportHubTest', 'hubRemoteRowsBackRestorationAndUnavailableAt720'),
+              ('tv.own.owntv.home.NativeSportHubTest', 'profileSwitchAndEmptyArrivalNeverRecallAnotherProfilesFocus'),
+              ('tv.own.owntv.home.NativeSportHubTest', 'mainSportShowsFollowedPublicLeagueAndRevocationRemovesOnlyItsMatches'),
+              ('tv.own.owntv.home.NativeSportHubTest', 'publicOnlyProfileUsesContextualHeroAndCold720EntryRemainsLocal'),
               ('tv.own.owntv.home.HockeyLocalStorageTest', 'boundedAliasQueriesFindOnlyExactAuthorizedLinearChannels'),
               ('tv.own.owntv.home.HockeyLocalStorageTest', 'lookaheadFindsStoredFixtureBeyond128RowsAndInvalidatesChangedGuide'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'automaticBroadcastCardPlaysOnlyUniqueSourceAt1080'),

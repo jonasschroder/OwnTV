@@ -35,6 +35,7 @@ internal class PublicHubTransport : HubTransport {
             .header("User-Agent", "MinTV/0.19 (+https://github.com/jonasschroder/OwnTV)")
             .header("Accept", "application/json").build()
         return suspendCancellableCoroutine { continuation ->
+            tv.own.owntv.features.catalog.NativeReadWork.record(tv.own.owntv.features.catalog.NativeReadKind.PUBLIC_HTTP)
             val call = client.newCall(request)
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {

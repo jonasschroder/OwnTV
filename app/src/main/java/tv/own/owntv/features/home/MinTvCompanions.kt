@@ -469,7 +469,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         localEvidence == null || (localEvidence.channelStops[channel.id] ?: 0) > now
     }
     val manualChannel = chosenChannel.takeIf { matchedGame == gameToMatch && !matching && now < (manualChoice?.expiresAt ?: 0L) }
-    val directChannel = manualChannel ?: preferredHockeyChannel(reliableChannels, guideChoices).takeIf { candidatesComplete }
+    val directChannel = manualChannel ?: preferredHockeyChannel(reliableChannels, guideChoices).takeIf {
+        candidatesComplete && (localEvidence != null || validBroadcast?.evidence != BroadcastEvidence.PROBABLE_EXTERNAL)
+    }
     fun browseChannels() {
         if (gameToMatch != null) selectedId = gameToMatch.id else selectedId = null
         screen = true; picker = true; browsing = false; searchOpen = false; query = ""; pickerSelectedId = null; restoreTarget = pickerFocus

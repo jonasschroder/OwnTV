@@ -39,12 +39,26 @@ class SportsProfileStorageTest {
             store.save(101, a)
             assertEquals(a, SportsPreferences(isolated, dao).read(101))
             assertEquals(legacy, store.read(102))
+            val owner = store.readSelection(101)!!.owner
+            val follow = tv.own.owntv.features.sporthub.HubFollow("football:openliga:1", "Synthetic club", "gb.premier",
+                tv.own.owntv.features.sporthub.HubSport.FOOTBALL)
+            assertTrue(store.updateSelection(101, owner) { it.copy(hubTeams = listOf(follow),
+                hubProviders = setOf(tv.own.owntv.features.sporthub.HubProvider.OPENLIGA)) })
+            val persisted = SportsPreferences(isolated, dao).read(101)
+            assertEquals(a.teamIds, persisted.teamIds)
+            assertEquals(listOf(follow), persisted.hubTeams)
+            assertEquals(legacy, store.read(102))
+            // A second local picker updates only its fields, preserving the fresh public-source selection.
+            assertTrue(store.updateSelection(101, owner) { it.copy(hideScores = false) })
+            assertEquals(listOf(follow), store.read(101).hubTeams)
             // A later restore/new profile is not treated as an old hardcoded Färjestad preference.
             dao.insert(ProfileEntity(id = 103, name = "Synthetic new", avatarColor = 0, createdAt = 300))
             store.migrateLegacy(dao.getAllOnce())
             assertEquals(SportPreferences(), store.read(103))
             dao.delete(dao.getById(101)!!)
             dao.insert(ProfileEntity(id = 101, name = "Synthetic reused", avatarColor = 0, createdAt = 400))
+            assertEquals(SportPreferences(), store.read(101))
+            assertFalse(store.updateSelection(101, owner) { persisted })
             assertEquals(SportPreferences(), store.read(101))
             store.remove(101)
             assertEquals(legacy, store.read(102))

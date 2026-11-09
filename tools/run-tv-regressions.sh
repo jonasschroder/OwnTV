@@ -20,6 +20,17 @@ capture_screenshots() {
     echo '::error::Synthetic screenshots missing after successful tests.'
     test_status=1
   fi
+  hub_dir=/sdcard/Android/data/se.jonasschroder.mintv/files/sport-hub-screenshots
+  if adb shell test -d "$hub_dir"; then
+    mkdir -p v04-device-screenshots
+    if ! adb pull "$hub_dir" v04-device-screenshots/sport-hub; then
+      echo '::error::Could not collect native Sport hub screenshots.'
+      if [ "$test_status" -eq 0 ]; then test_status=1; fi
+    fi
+  elif [ "$test_status" -eq 0 ]; then
+    echo '::error::Native Sport hub screenshots missing after successful tests.'
+    test_status=1
+  fi
   if [ -d v04-device-screenshots ]; then
     cp docs/images/v08/v08-iteration1-*-synthetic.png v04-device-screenshots/
     cp docs/min-tv-v08-comparison.html v04-device-screenshots/v08-review-compare.html

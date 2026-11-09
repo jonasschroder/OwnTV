@@ -82,3 +82,5 @@ measurements and frame callback-loss counts remain available in `comparison.json
 | Exact playback return | [image](native/SPORT_HUB_PLAYBACK_RETURN-1920x1080.png) | [image](native/SPORT_HUB_PLAYBACK_RETURN-1280x720.png) |
 
 Provenance records the timing/probe/overview and final-clipped APK identities separately.
+
+The opt-in real-HTTP diagnostic is preserved separately in [tools/sporthub](../../../tools/sporthub/README.md), outside mandatory test discovery. CI executes deterministic fixtures and every native regression without spending third-party quotas.

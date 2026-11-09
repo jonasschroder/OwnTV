@@ -20,7 +20,7 @@
   "note": "Final-only app change clips decoration in new hub/public-only components, outside the matched no-public-follow journey. Timings and overview images precede that clipping; hub images and native tests use final APK. No exact-final-APK speedup claim.",
   "clock": "Host checked before each test; bounded official alarm clock correction only on disposable emulator; auto_time remains 1",
   "artifacts_sha256": {
-    "README.md": "5fff32b1c275bc9cac6cfae5d8dae535e90b0edad0f7a18163a39e2ad2ac0e34",
+    "README.md": "cd08781a729889710dcf5f88012b0bcd40454cb27c7ea5ca5f3d2dd69ced9f67",
     "comparison.json": "f499efde99d4eba6ca75065eab8a7f4df58c659ed889c7563c8ed6bc6457fe83",
     "native/SPORT_HUB_CALENDAR-1280x720.png": "f64dd0e2320642684def5792570ee2dc5cf2d5f5d32808aec48f545c5e70a301",
     "native/SPORT_HUB_CALENDAR-1920x1080.png": "4b0b857dd3039559384de15a422f6b7621cf225e4f8860b97da6025ae14b9cad",
@@ -54,5 +54,6 @@
     "tests/probable-720.txt": "b5ca8a72e6ae8e8832e728030e6a2a33eb975ed3476cc69318f736dbb3c8ade5",
     "tests/profile-storage.txt": "f65e6e35c5fe4d865dbdd88d6d590c7122b66db0ca7a3cb1d24a44179666331e",
     "tests/settled-candidate-shell.txt": "dfa9d679b43ad1d7a8d9e245650435b3b3fdac15b85142e54d0eb91c1a781f7c"
-  }
+  },
+  "manual_public_probe_source": "tools/sporthub/HubPublicSourceProbe.kt"
 }

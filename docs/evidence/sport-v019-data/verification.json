@@ -1,0 +1,88 @@
+{
+  "verified_utc_day": "2026-11-08",
+  "method": "Real permitted HTTP responses, then actual compiled Kotlin parsers; counts/hashes only, no raw feed redistribution",
+  "results": [
+    {
+      "coverage": "[]",
+      "provider": "OPENLIGA",
+      "league": "del",
+      "input_rows": 364,
+      "parsed_rows": 364,
+      "response_sha256": "a1f616c9683966e518dd3b466bad37daf84e45c3f630f193154fc054ce2ffa57",
+      "url": "https://api.openligadb.de/getmatchdata/del/2026"
+    },
+    {
+      "coverage": "[PAST_WITHOUT_FINAL]",
+      "provider": "OPENLIGA",
+      "league": "pl",
+      "input_rows": 380,
+      "parsed_rows": 380,
+      "response_sha256": "8fa0cd1310220331df0cbb2b362dacb89cc91fc8393a288e5782416de822bd1f",
+      "url": "https://api.openligadb.de/getmatchdata/pl/2026"
+    },
+    {
+      "coverage": "[]",
+      "provider": "OPENLIGA",
+      "league": "CHL",
+      "input_rows": 88,
+      "parsed_rows": 88,
+      "response_sha256": "e2c5df5c3cb506edd3c8af8f3dc966afe57361d0527e2fad440fb8d1812da740",
+      "url": "https://api.openligadb.de/getmatchdata/CHL/2026"
+    },
+    {
+      "coverage": "[TIME_CONFLICT]",
+      "provider": "EVENTS24",
+      "league": "nhl",
+      "input_rows": 46,
+      "parsed_rows": 46,
+      "response_sha256": "35d2a9292d844d92f454ee494e6a7248d80561650debab3f501b0621ed2ad1cb",
+      "url": "https://sportsevents24.com/api/v1/events?tournament_id=123176&limit=100"
+    },
+    {
+      "coverage": "[]",
+      "provider": "EVENTS24",
+      "league": "liiga",
+      "input_rows": 20,
+      "parsed_rows": 20,
+      "response_sha256": "19cf46a8534fa45072f9394843827eb1c7e2f4992147bd96399c586aa1d5291e",
+      "url": "https://sportsevents24.com/api/v1/events?tournament_id=142163&limit=50&from=2026-11-01&to=2026-11-15"
+    },
+    {
+      "coverage": "[]",
+      "provider": "EVENTS24",
+      "league": "national-a",
+      "input_rows": 13,
+      "parsed_rows": 13,
+      "response_sha256": "30227c4a722b20207e07124a9fdf8da0bfbb4184527f93c65090be3fb979159c",
+      "url": "https://sportsevents24.com/api/v1/events?tournament_id=141810&limit=50&from=2026-11-01&to=2026-11-15"
+    },
+    {
+      "coverage": "[]",
+      "provider": "EVENTS24",
+      "league": "extraliga",
+      "input_rows": 14,
+      "parsed_rows": 14,
+      "response_sha256": "b4a8095e32ce5bd5c01b1b3e30bd0c3a6ab55438734c206ac0ea889e31345bcd",
+      "url": "https://sportsevents24.com/api/v1/events?tournament_id=141861&limit=50&from=2026-11-01&to=2026-11-15"
+    },
+    {
+      "coverage": "[]",
+      "provider": "EVENTS24",
+      "league": "icehl",
+      "input_rows": 17,
+      "parsed_rows": 17,
+      "response_sha256": "08f3223e4bfdbd4f8102f2e514d633cb6e9a63ec7d08f2e03c1e79272e4cc098",
+      "url": "https://sportsevents24.com/api/v1/events?tournament_id=141202&limit=50&from=2026-11-01&to=2026-11-15"
+    },
+    {
+      "coverage": "[FINAL_WITHOUT_SCORE]",
+      "provider": "EVENTS24",
+      "league": "allsvenskan",
+      "input_rows": 16,
+      "parsed_rows": 16,
+      "response_sha256": "06ab0250d11b4faf0638c6fdc363c515097d291a63a644ae4126db9ded56d6d3",
+      "url": "https://sportsevents24.com/api/v1/events?tournament_id=10&limit=50&from=2026-11-01&to=2026-11-15"
+    }
+  ],
+  "timezone_note": "Documented UTC is retained. Local-zone warnings depend on host tzdb and do not prove incorrect provider UTC. Mac JDK 21.0.12.1 reported 7 such NHL warnings."
+}

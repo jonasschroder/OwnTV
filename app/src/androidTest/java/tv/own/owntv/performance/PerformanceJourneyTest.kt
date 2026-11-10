@@ -157,8 +157,9 @@ class PerformanceJourneyTest {
                     activity.window.decorView.postOnAnimation { drawn.countDown() }
                 } }
                 assertTrue("Wait for real presentation frames", drawn.await(3, java.util.concurrent.TimeUnit.SECONDS))
-                // Dialog window entry animation is outside Compose's idle clock.
-                if (destination.endsWith("UPDATE")) Thread.sleep(300)
+                // Native activity/dialog window transitions are outside Compose's idle clock.
+                // Capture only their settled presentation; measured journeys never call this helper.
+                Thread.sleep(300)
                 val bitmap = instrumentation.uiAutomation.takeScreenshot()
                 val dir = File(app.getExternalFilesDir(null), "performance/native").apply { mkdirs() }
                 File(dir, "$destination-${bitmap.width}x${bitmap.height}.png").outputStream().use { output ->
@@ -327,6 +328,102 @@ class PerformanceJourneyTest {
             db.channelDao().updateAll(listOf(original))
             shell("wm size reset")
             shell("wm density reset")
+        }
+    }
+
+    @Test fun captureNativeSportHubRoutes(): Unit = runBlocking {
+        seedDesignReview(app, db, settings)
+        val teams = GlobalContext.get().get<tv.own.owntv.features.home.SportsPreferences>()
+        val before = teams.read(profile)
+        val video = tv.own.owntv.home.LoopbackVideoFixture(instrumentation.context.assets.open("live-entry-bars.mp4").use { it.readBytes() })
+        val channel = db.channelDao().getById(9900014)!!
+        db.channelDao().updateAll(listOf(channel.copy(streamUrl = video.url(4))))
+        try {
+            for (size in listOf("1920x1080", "1280x720")) {
+                shell("wm size $size"); shell("wm density ${if (size == "1280x720") 213 else 320}")
+                settings.setActiveProfile(profile)
+                ActivityScenario.launch<MainActivity>(app.packageManager.getLeanbackLaunchIntentForPackage(app.packageName)!!).use { scenario ->
+                    chooseSyntheticProfile(); waitTag("top-SPORT")
+                    focus("top-SPORT"); press(KeyEvent.KEYCODE_DPAD_CENTER); ready("SPORT")
+                    waitTag("sport-hero-explore"); focus("sport-hero-explore");press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("hub-back")
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("hub-back").assertIsFocused(); true }.getOrDefault(false) }
+                    capture(scenario,"SPORT_HUB_DISCOVERY")
+                    press(KeyEvent.KEYCODE_DPAD_DOWN);press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                    compose.onNodeWithTag("sources").assertIsFocused();press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("consent-OPENLIGA");capture(scenario,"SPORT_HUB_SOURCES")
+                    assertEquals(before,teams.read(profile))
+                    press(KeyEvent.KEYCODE_BACK)
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sources").assertIsFocused(); true }.getOrDefault(false) }
+                    waitTag("league-se.shl");focus("league-se.shl");press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("team-hockey:farjestad");capture(scenario,"SPORT_HUB_SHL")
+                    focus("team-hockey:farjestad");press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("toggle-team");capture(scenario,"SPORT_HUB_TEAM")
+                    val original = GlobalContext.get().get<tv.own.owntv.features.home.SportsRepository>()
+                        .cached(tv.own.owntv.features.home.SportsCatalog.shl)!!
+                    val game = original.fixtures.first { it.homeTeam.id == tv.own.owntv.features.home.SportsCatalog.farjestadId ||
+                        it.awayTeam.id == tv.own.owntv.features.home.SportsCatalog.farjestadId }
+                    val matchTag = "match-${game.id}"
+                    compose.onNodeWithTag("sport-hub").performScrollToNode(hasTestTag(matchTag))
+                    focus(matchTag);press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("search-channel")
+                    compose.waitUntil(20_000) { runCatching {
+                        compose.onNodeWithTag("sport-hub").performScrollToNode(hasTestTag("watch-9900014"))
+                        true
+                    }.getOrDefault(false) }
+                    focus("watch-9900014");press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("confirm-channel")
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("confirm-channel").assertIsFocused(); true }.getOrDefault(false) }
+                    capture(scenario,"SPORT_HUB_MANUAL_CONFIRM")
+                    press(KeyEvent.KEYCODE_BACK)
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("watch-9900014").assertIsFocused(); true }.getOrDefault(false) }
+                    // Uncertain selection only starts after a second, explicit confirmation.
+                    // This is a loopback synthetic video, never an owner's IPTV stream.
+                    lateinit var vm: tv.own.owntv.features.live.LiveViewModel
+                    scenario.onActivity { activity ->
+                        vm = androidx.lifecycle.ViewModelProvider(activity, object : androidx.lifecycle.ViewModelProvider.Factory {
+                            @Suppress("UNCHECKED_CAST") override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T =
+                                GlobalContext.get().get<tv.own.owntv.features.live.LiveViewModel>() as T
+                        })[tv.own.owntv.features.live.LiveViewModel::class.java]
+                    }
+                    press(KeyEvent.KEYCODE_DPAD_CENTER);waitTag("confirm-channel")
+                    press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.waitUntil(15_000) { compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty() }
+                    compose.waitUntil(15_000) { vm.previewEngine.state.value == tv.own.owntv.player.LivePreviewEngine.State.PLAYING }
+                    // Playback can start before the confirmation dialog's window has detached.
+                    // Real remote input belongs to the player only after the activity owns focus.
+                    compose.waitUntil(5_000) {
+                        var focused = false
+                        scenario.onActivity { focused = it.hasWindowFocus() }
+                        focused
+                    }
+                    press(KeyEvent.KEYCODE_BACK)
+                    // Preserve the existing finite player hierarchy: visible HUD, then player.
+                    if (compose.onAllNodesWithTag("navigation-global").fetchSemanticsNodes().isEmpty()) press(KeyEvent.KEYCODE_BACK)
+                    try {
+                        compose.waitUntil(10_000) { runCatching { compose.onNodeWithTag("watch-9900014").assertIsFocused(); true }.getOrDefault(false) }
+                    } catch (error: Throwable) {
+                        val dir=File(app.getExternalFilesDir(null),"performance").apply { mkdirs() }
+                        File(dir,"hub-return-tree.txt").writeText("engine=${vm.previewEngine.state.value}\n" +
+                            runCatching { compose.onRoot(useUnmergedTree=true).printToString(maxDepth=9) }.getOrDefault("Root unavailable"))
+                        capture(scenario,"HUB_RETURN_FAILURE")
+                        throw error
+                    }
+                    capture(scenario,"SPORT_HUB_PLAYBACK_RETURN")
+                    press(KeyEvent.KEYCODE_BACK);waitTag("toggle-team")
+                    focus("hub-calendar");press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    waitTag("day-today");capture(scenario,"SPORT_HUB_CALENDAR")
+                    press(KeyEvent.KEYCODE_BACK);waitTag("toggle-team")
+                    press(KeyEvent.KEYCODE_BACK);waitTag("team-hockey:farjestad")
+                    press(KeyEvent.KEYCODE_BACK);waitTag("league-se.shl")
+                    press(KeyEvent.KEYCODE_BACK)
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sport-hero-explore").assertIsFocused(); true }.getOrDefault(false) }
+                    assertEquals(before,teams.read(profile))
+                }
+            }
+        } finally {
+            video.close();db.channelDao().updateAll(listOf(channel))
+            shell("wm size reset");shell("wm density reset")
         }
     }
 

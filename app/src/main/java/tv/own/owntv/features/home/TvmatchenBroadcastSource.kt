@@ -28,11 +28,13 @@ internal class TvmatchenBroadcastSource(context: Context, client: OkHttpClient) 
     val diagnostics = lookupStatus.asStateFlow()
     val blocked get() = preferences.getBoolean("broadcast-blocked", false)
 
-    override suspend fun assignment(fixture: BroadcastFixture): BroadcastAssignment? = withContext(Dispatchers.IO) {
+    override suspend fun assignment(fixture: BroadcastFixture): BroadcastAssignment? = lookup(fixture, false)
+    suspend fun cachedAssignment(fixture: BroadcastFixture): BroadcastAssignment? = lookup(fixture, true)
+    private suspend fun lookup(fixture: BroadcastFixture, cachedOnly: Boolean): BroadcastAssignment? = withContext(Dispatchers.IO) {
         if (!enabled()) { lookupStatus.value = BroadcastLookupStatus(BroadcastLookupOutcome.DISABLED, System.currentTimeMillis()); return@withContext null }
         try {
             val current = initialize.withLock { reader ?: createReader().also { reader = it } }
-            current.assignment(fixture)
+            if (cachedOnly) current.cachedAssignment(fixture) else current.assignment(fixture)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
             lookupStatus.value = BroadcastLookupStatus(BroadcastLookupOutcome.CACHE_ERROR, System.currentTimeMillis(), BroadcastLookupStage.CACHE)

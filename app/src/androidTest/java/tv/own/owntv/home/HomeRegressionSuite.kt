@@ -6,7 +6,7 @@ import org.junit.runners.Suite
 /** One runner selector; CI also verifies each member's individual executed result. */
 @RunWith(Suite::class)
 @Suite.SuiteClasses(HomeDpadTraversalTest::class, HomeChannelDefaultsStorageTest::class,
-    SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, HomeContentViewportTest::class,
+    SportsReaderIntegrationTest::class, SportsProfileStorageTest::class, NativeSportHubTest::class, HomeContentViewportTest::class,
     ChannelPickerNavigationTest::class, SportsLoadingNavigationTest::class, SportsArrivalNavigationTest::class, VodPresentationTest::class,
     HomePresentationTest::class, TwitchOnboardingTest::class, TwitchPlaybackIntentTest::class, SetupOnceHomeTest::class, DiscoveryStorageIntegrationTest::class, DiscoveryPresentationTest::class, TwitchTokenStorageTest::class, HockeyLocalStorageTest::class, V07PresentationTest::class,
     SwedishRowStorageTest::class, SwedishLivePresentationTest::class, ChannelGridDeviceTest::class, NativeV011PresentationTest::class, ChannelSourceDeviceTest::class, ChannelSourceStorageTest::class,

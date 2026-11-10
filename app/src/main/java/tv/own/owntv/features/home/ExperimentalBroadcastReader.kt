@@ -32,7 +32,9 @@ internal class ExperimentalBroadcastReader(private val pages: BroadcastPageReade
         catch (_: Exception) { throw BroadcastLookupFailure(BroadcastLookupOutcome.CACHE_ERROR) }
     }
 
-    override suspend fun assignment(fixture: BroadcastFixture): BroadcastAssignment? = mutex.withLock {
+    override suspend fun assignment(fixture: BroadcastFixture): BroadcastAssignment? = lookup(fixture, true)
+    suspend fun cachedAssignment(fixture: BroadcastFixture): BroadcastAssignment? = lookup(fixture, false)
+    private suspend fun lookup(fixture: BroadcastFixture, allowFetch: Boolean): BroadcastAssignment? = mutex.withLock {
         stage = BroadcastLookupStage.ELIGIBILITY
         if (!enabled()) { status(BroadcastLookupOutcome.DISABLED); return@withLock null }
         if (state.blocked) { status(BroadcastLookupOutcome.ACCESS_BLOCKED); return@withLock null }
@@ -45,6 +47,7 @@ internal class ExperimentalBroadcastReader(private val pages: BroadcastPageReade
             }
             status(BroadcastLookupOutcome.CACHE_HIT); return@withLock cached
         }
+        if (!allowFetch) return@withLock null
         stage = BroadcastLookupStage.ELIGIBILITY
         val today = instant.atZone(Stockholm).toLocalDate()
         if (fixture.league != "SHL" || fixture.date != fixture.faceoff.atZone(Stockholm).toLocalDate() ||

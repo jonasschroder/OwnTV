@@ -1,6 +1,6 @@
 # Min TV 0.19 — Sport hub, My teams and reliable match-to-channel experience
 
-Status: **Phase 1 implementation in draft PR #40**. All remaining workstreams below are **in scope and equally prioritized for the full Sport 0.19 delivery**, but are **not implemented yet**. This is not a release candidate.
+Status: **Phase 1 stabilized in draft PR #40; data contracts in draft #41; integrated native hub/Watch Match implemented for review**. See [native implementation and exact remaining source blockers](v019-native-hub.md). All workstreams below remain **in scope and equally prioritized**. Missing permitted/reliable data is explicitly unavailable; this is not a complete release candidate.
 
 Phase 1 stabilization: hero actions share their actual horizontal focus order; local recovery
 stays available during loading; Back from Choose teams restores the selected Sport action.

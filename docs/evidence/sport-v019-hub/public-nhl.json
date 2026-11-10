@@ -1,0 +1,11 @@
+{
+  "provider": "EVENTS24",
+  "league": "us.nhl",
+  "verifiedAt": "2026-11-09T17:35:37.177705Z",
+  "cached": false,
+  "issue": null,
+  "rows": 58,
+  "coverage": "TIME_CONFLICT",
+  "fetchedAt": "2026-11-09T17:35:37.069926Z",
+  "partial": false
+}

@@ -34,7 +34,7 @@ internal class PublicHockeyReader(private val transport: PublicBroadcastTranspor
         rows.forEach { p -> put(JSONObject().put("channel", p.channel).put("title", p.title).put("description", p.description)
             .put("start", p.start).put("end", p.end).put("generated", p.generatedAt).put("fetched", p.fetchedAt)) }
     }).toString())
-    suspend fun assignments(known: List<SportFixture>, now: Long, enabled: Boolean): Map<String, BroadcastAssignment> = mutex.withLock {
+    suspend fun assignments(known: List<SportFixture>, now: Long, enabled: Boolean, allowFetch: Boolean = true): Map<String, BroadcastAssignment> = mutex.withLock {
         if (!enabled || known.none { it.competition == SportsCatalog.shl && it.venue != null && it.faceoff in now..(now + 7 * 86_400_000L) }) return@withLock emptyMap()
         if (!initialized) {
             initialized = true
@@ -50,7 +50,7 @@ internal class PublicHockeyReader(private val transport: PublicBroadcastTranspor
             } }.onFailure { rows = emptyList(); attempt = now; retry = now + publicTvTtl }
         }
         if (now < attempt) return@withLock emptyMap() // Clock rollback never creates a new budget window.
-        if (now >= retry) {
+        if (now >= retry && allowFetch) {
             attempt = now; retry = now + publicTvTtl; rows = emptyList()
             try {
                 store() // Reserve before HTTP, including process death/cancellation.
@@ -99,4 +99,6 @@ internal class PublicHockeySource(context: Context, client: OkHttpClient) {
     })
     suspend fun assignments(known: List<SportFixture>, now: Long, enabled: Boolean) =
         withContext(io) { reader.assignments(known, now, enabled) }
+    suspend fun cachedAssignments(known: List<SportFixture>, now: Long, enabled: Boolean) =
+        withContext(io) { reader.assignments(known, now, enabled, allowFetch = false) }
 }

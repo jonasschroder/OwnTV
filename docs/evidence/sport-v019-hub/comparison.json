@@ -1,0 +1,242 @@
+{
+  "1920x1080": {
+    "before": {
+      "measurements_ms": {
+        "instrumented_launch_to_useful_home_ms": {
+          "n": 1,
+          "median": 5739.392212,
+          "p95_nearest_rank": 5739.392212
+        },
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 265.1073335,
+          "p95_nearest_rank": 362.882584
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 247.57079199999998,
+          "p95_nearest_rank": 316.17775
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 150.02670849999998,
+          "p95_nearest_rank": 182.177291
+        },
+        "vod_content_down_up_ms": {
+          "n": 20,
+          "median": 149.702333,
+          "p95_nearest_rank": 183.664625
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 215.204583,
+          "p95_nearest_rank": 283.804917
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 299.7300835,
+          "p95_nearest_rank": 415.117209
+        },
+        "dpad_right_left_ms": {
+          "n": 20,
+          "median": 133.59562499999998,
+          "p95_nearest_rank": 150.470208
+        },
+        "background_resume_ms": {
+          "n": 10,
+          "median": 767.700938,
+          "p95_nearest_rank": 884.480168
+        }
+      },
+      "cpu_process_ms": 44688,
+      "sampled_max_pss_kib": 267621,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      },
+      "frame_p95_ms": 153.551113,
+      "frame_callback_drops": 0
+    },
+    "after": {
+      "measurements_ms": {
+        "instrumented_launch_to_useful_home_ms": {
+          "n": 1,
+          "median": 5857.636961,
+          "p95_nearest_rank": 5857.636961
+        },
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 249.45181250000002,
+          "p95_nearest_rank": 302.894375
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 249.7039585,
+          "p95_nearest_rank": 283.636208
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 149.839355,
+          "p95_nearest_rank": 166.638458
+        },
+        "vod_content_down_up_ms": {
+          "n": 20,
+          "median": 149.808271,
+          "p95_nearest_rank": 167.542876
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 200.2896045,
+          "p95_nearest_rank": 233.955333
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 282.9949585,
+          "p95_nearest_rank": 333.312417
+        },
+        "dpad_right_left_ms": {
+          "n": 20,
+          "median": 133.331521,
+          "p95_nearest_rank": 149.561792
+        },
+        "background_resume_ms": {
+          "n": 10,
+          "median": 758.754292,
+          "p95_nearest_rank": 933.860375
+        }
+      },
+      "cpu_process_ms": 42328,
+      "sampled_max_pss_kib": 268934,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      },
+      "frame_p95_ms": 135.856996,
+      "frame_callback_drops": 0
+    }
+  },
+  "1280x720": {
+    "before": {
+      "measurements_ms": {
+        "instrumented_launch_to_useful_home_ms": {
+          "n": 1,
+          "median": 5923.369961,
+          "p95_nearest_rank": 5923.369961
+        },
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 267.21612500000003,
+          "p95_nearest_rank": 332.782833
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 249.362063,
+          "p95_nearest_rank": 299.963083
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 165.1445835,
+          "p95_nearest_rank": 182.644375
+        },
+        "vod_content_down_up_ms": {
+          "n": 20,
+          "median": 166.0647085,
+          "p95_nearest_rank": 183.806042
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 210.6645835,
+          "p95_nearest_rank": 249.836291
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 283.1811455,
+          "p95_nearest_rank": 332.928084
+        },
+        "dpad_right_left_ms": {
+          "n": 20,
+          "median": 133.492417,
+          "p95_nearest_rank": 150.215916
+        },
+        "background_resume_ms": {
+          "n": 10,
+          "median": 733.2456875,
+          "p95_nearest_rank": 933.939084
+        }
+      },
+      "cpu_process_ms": 43879,
+      "sampled_max_pss_kib": 268193,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      },
+      "frame_p95_ms": 141.25557,
+      "frame_callback_drops": 0
+    },
+    "after": {
+      "measurements_ms": {
+        "instrumented_launch_to_useful_home_ms": {
+          "n": 1,
+          "median": 5784.875586,
+          "p95_nearest_rank": 5784.875586
+        },
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 249.7122915,
+          "p95_nearest_rank": 299.155333
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 250.04343749999998,
+          "p95_nearest_rank": 299.455083
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 166.082708,
+          "p95_nearest_rank": 181.352042
+        },
+        "vod_content_down_up_ms": {
+          "n": 20,
+          "median": 166.2338125,
+          "p95_nearest_rank": 182.894792
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 199.6300415,
+          "p95_nearest_rank": 232.525333
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 282.8367295,
+          "p95_nearest_rank": 349.205041
+        },
+        "dpad_right_left_ms": {
+          "n": 20,
+          "median": 117.0884585,
+          "p95_nearest_rank": 150.169375
+        },
+        "background_resume_ms": {
+          "n": 10,
+          "median": 751.4855415,
+          "p95_nearest_rank": 950.922334
+        }
+      },
+      "cpu_process_ms": 42949,
+      "sampled_max_pss_kib": 266825,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      },
+      "frame_p95_ms": 129.123869,
+      "frame_callback_drops": 0
+    }
+  }
+}

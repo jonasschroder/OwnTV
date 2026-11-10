@@ -134,10 +134,10 @@ class NativeV011PresentationTest {
                                         fixture.copy(id = "fixture-other-next", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!,
                                             kickoff = fixture.kickoff.plusSeconds(172_800))) else emptyList(),
                                     if (populated && !channelsLoading) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
-                                    heroChannel = if (broadcastReady) broadcastChannel else null,
+                                    heroChannel = if (broadcastReady && !probableBroadcast) broadcastChannel else null,
                                     broadcastLabels = if (broadcastLabels) mapOf(fixture.id to compose.activity.getString(if (probableBroadcast) R.string.mintv_probable_channel else R.string.mintv_confirmed_channel, broadcastChannel.name)) else emptyMap(),
-                                    playableFixtures = if (broadcastReady) mapOf(fixture.id to broadcastChannel) else emptyMap(), publicSourceUsed = probableBroadcast && broadcastLabels, channelsLoading = channelsLoading,
-                                    broadcastAvailability = if (broadcastLabels) mapOf(fixture.id to if (broadcastReady) HockeyChannelAvailability.PLAYABLE else HockeyChannelAvailability.MISSING) else emptyMap()),
+                                    playableFixtures = if (broadcastReady && !probableBroadcast) mapOf(fixture.id to broadcastChannel) else emptyMap(), publicSourceUsed = probableBroadcast && broadcastLabels, channelsLoading = channelsLoading,
+                                    broadcastAvailability = if (broadcastLabels) mapOf(fixture.id to if (broadcastReady && !probableBroadcast) HockeyChannelAvailability.PLAYABLE else if (probableBroadcast) HockeyChannelAvailability.CHOICE_REQUIRED else HockeyChannelAvailability.MISSING) else emptyMap()),
                                     NativeSportActions({ details++ }, { played++ }, {}, { played++ }, {}, { game, channel ->
                                         assertEquals(fixture, game); assertEquals(broadcastChannel, channel); played++
                                     }, { game -> assertEquals(fixture, game); manualChoices++ }, teams = { teamsOpened++ }), first, { entry = it }, { header.requestFocus() })
@@ -207,16 +207,19 @@ class NativeV011PresentationTest {
         compose.runOnIdle { probableBroadcast = true }
         compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_probable_channel, broadcastChannel.name)).assertCountEquals(1)
         card.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
-        assertEquals(1, played); assertEquals(0, details)
+        assertEquals(0, played); assertEquals(1, manualChoices); assertEquals(0, details)
+        compose.runOnIdle { probableBroadcast = false }
+        card.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, played); assertEquals(1, manualChoices)
         // A status update preserves the existing focus key; long OK opens details, never playback.
         compose.runOnIdle { broadcastReady = false }
         card.assertIsFocused(); press(KeyEvent.KEYCODE_DPAD_CENTER)
-        assertEquals(1, manualChoices); assertEquals(1, played)
+        assertEquals(2, manualChoices); assertEquals(1, played)
         compose.runOnIdle { broadcastReady = true }
         val down = android.os.SystemClock.uptimeMillis()
         instrumentation.sendKeySync(KeyEvent(down, down, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
         instrumentation.sendKeySync(KeyEvent(down, down + 600, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
-        compose.waitForIdle(); assertEquals(2, manualChoices); assertEquals(1, played)
+        compose.waitForIdle(); assertEquals(3, manualChoices); assertEquals(1, played)
         val bitmap = instrumentation.uiAutomation.takeScreenshot()
         assertEquals(size.substringBefore('x').toInt(), bitmap.width); assertEquals(size.substringAfter('x').toInt(), bitmap.height)
         val dir = File(compose.activity.getExternalFilesDir(null), "v04-screenshots").apply { mkdirs() }

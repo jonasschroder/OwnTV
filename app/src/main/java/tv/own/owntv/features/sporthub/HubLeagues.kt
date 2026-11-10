@@ -13,19 +13,24 @@ internal object HubLeagues {
         "123176", "NHL 2026/2027", "US", "2026-27")
     val liiga = HubLeague("fi.liiga", HubSport.ICE_HOCKEY, R.string.hub_league_liiga, HubProvider.EVENTS24, HubAccess.VERIFIED_PUBLIC,
         "142163", "Liiga 2026-2027 Runkosarja", "FI", "2026-27")
-    val del = HubLeague("de.del", HubSport.ICE_HOCKEY, R.string.hub_league_del, HubProvider.OPENLIGA, HubAccess.VERIFIED_PUBLIC, "del")
+    val del = HubLeague("de.del", HubSport.ICE_HOCKEY, R.string.hub_league_del, HubProvider.OPENLIGA, HubAccess.VERIFIED_PUBLIC, "del", sourceSeason = "2026")
     val national = HubLeague("ch.national", HubSport.ICE_HOCKEY, R.string.hub_league_national, HubProvider.EVENTS24, HubAccess.VERIFIED_PUBLIC,
         "141810", "National League 2026-27", "CH", "2026-27")
     val extraliga = HubLeague("cz.extraliga", HubSport.ICE_HOCKEY, R.string.hub_league_extraliga, HubProvider.EVENTS24, HubAccess.VERIFIED_PUBLIC,
         "141861", "Tipsport extraliga 2026/27", "CZ", "2026-27")
     val ice = HubLeague("at.ice", HubSport.ICE_HOCKEY, R.string.hub_league_ice, HubProvider.EVENTS24, HubAccess.VERIFIED_PUBLIC,
         "141202", "win2day ICE Hockey League 2026/27", "AT", "2026-27")
-    val chl = HubLeague("eu.chl", HubSport.ICE_HOCKEY, R.string.hub_league_chl, HubProvider.OPENLIGA, HubAccess.VERIFIED_PUBLIC, "CHL")
-    val premier = HubLeague("gb.premier", HubSport.FOOTBALL, R.string.hub_league_premier, HubProvider.OPENLIGA, HubAccess.VERIFIED_PUBLIC, "pl")
+    val chl = HubLeague("eu.chl", HubSport.ICE_HOCKEY, R.string.hub_league_chl, HubProvider.OPENLIGA, HubAccess.VERIFIED_PUBLIC, "CHL", sourceSeason = "2026")
+    val premier = HubLeague("gb.premier", HubSport.FOOTBALL, R.string.hub_league_premier, HubProvider.OPENLIGA, HubAccess.VERIFIED_PUBLIC, "pl", sourceSeason = "2026")
     val allsvenskan = HubLeague("se.allsvenskan", HubSport.FOOTBALL, R.string.hub_league_allsvenskan, HubProvider.EVENTS24, HubAccess.VERIFIED_PUBLIC,
         "10", "Allsvenskan", "SE", "2026")
     val international = HubLeague("international.hockey", HubSport.ICE_HOCKEY, R.string.hub_league_international,
         HubProvider.NONE, HubAccess.UNVERIFIED)
-    val reviewed = listOf(shl, ha, nhl, liiga, del, national, extraliga, ice, chl, premier, allsvenskan, international)
+    val nfl = HubLeague("us.nfl", HubSport.AMERICAN_FOOTBALL, R.string.hub_league_nfl, HubProvider.EVENTS24, HubAccess.VERIFIED_PUBLIC,
+        "68", "NFL", "US", "2026")
+    // Uncorroborated UTC in 50/50 records; no independently verified start times. Not enabled.
+    val nba = HubLeague("us.nba", HubSport.BASKETBALL, R.string.hub_league_nba, HubProvider.EVENTS24, HubAccess.UNVERIFIED,
+        "65", "NBA", "US")
+    val reviewed = listOf(shl, ha, nhl, liiga, del, national, extraliga, ice, chl, premier, allsvenskan, international, nfl, nba)
     fun find(key: String): HubLeague? = reviewed.firstOrNull { it.key == key }
 }

@@ -1,0 +1,29 @@
+{
+  "tests": 18,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "cases": [
+    "completeTeamPairAndKickoffProduceGuideProof",
+    "cachedBroadcastLookupsNeverFetchReserveBudgetOrBypassDenial",
+    "wrongIntervalInvalidDurationAndFinalResultFailClosed",
+    "watchRanksEvidenceWithoutLexicographicLive10BeforeLive2",
+    "replayHighlightsAndAmbiguousFixturesAreNeverGuideProof",
+    "proofCannotOutliveRescheduleClockRollbackOrScanAge",
+    "hubFollowsAndConsentRoundTripWithoutMigratingLegacyClubs",
+    "genericChannelLabelAndDescriptionMentionDoNotConfirmAMatch",
+    "overviewMergesActualPublicMatchesOnlyForThisProfilesFollowsAndConsent",
+    "routeStackIsBoundedAndBackRestoresExactParentKey",
+    "calendarUsesStockholmDateAndTeamSelectionUsesIdentityNotSimilarNames",
+    "newManualChoicesAreBoundToProfileLifetimeAndFixtureIdentity",
+    "followValidationRejectsSourceUrlsCrossSportIdsAndOversizedLabels",
+    "swedishMatcherReusesExistingAliasesAndNeverAdoptsAnotherFixture",
+    "reviewedSeasonDoesNotFloatAtNewYearOrRunPastItsReviewedCoverage",
+    "corruptNewFieldsDoNotEraseLegacyFavouritesOrEnableNetwork",
+    "evidenceRankingDoesNotUpgradeProbabilityOrManualChoices",
+    "unavailableAndChangedMatchesCannotBeRecalledByIdentifierAlone"
+  ],
+  "build": ":app:testQaDebugUnitTest --tests tv.own.owntv.features.sporthub.HubExperienceTest; :app:lintQaDebug; :app:assembleQaDebug; :app:assembleQaDebugAndroidTest",
+  "result": "BUILD SUCCESSFUL",
+  "i18n": "merge-base ratchet 45 baseline + 2719 safe entries; number-locale and text-overflow pass"
+}

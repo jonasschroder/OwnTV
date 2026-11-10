@@ -67,7 +67,9 @@ These are spot checks, not independent verification of every fixture or Swedish 
 | API-Sports | `v1.hockey.api-sports.io` / `v3.football.api-sports.io`: key required, current free coverage not established; no authenticated test |
 | Official Liiga / SIHF | Liiga data-service consent; SIHF club API contract (published CHF 300 setup + CHF 130/season). Not used or purchased |
 | International hockey | No reviewed complete tournament binding yet; explicitly unavailable, not replaced by CHL or NHL |
-| Basketball, baseball, American football, cricket, rugby, Australian rules, volleyball, lacrosse | SportsEvents24 documents corresponding sport IDs; **specific leagues/teams have not yet been validated**. No operational claim from documentation alone |
+| NFL | SportsEvents24 **68**, actual 15-record response: 8 reported results and 7 upcoming fixtures; UTC/local corroboration agrees. Explicit reviewed 2026 binding; no standings or broadcaster fields |
+| NBA | SportsEvents24 **65**, actual 50-record partial response, all without local-timezone corroboration; no independently verified start times. Not enabled |
+| Baseball, cricket, rugby, Australian rules, volleyball, lacrosse | SportsEvents24 documents corresponding sport IDs; **specific leagues/teams have not yet been validated**. GB cricket catalogue was empty; no global absence claim |
 | Tennis, racing, MMA, golf, rugby league | No permitted keyless endpoint/coverage verified. Upstream ESPN slugs do not establish permission |
 
 No new paid service, mandatory hosting or personal API key. Team IDs from OpenLiga are actual
@@ -76,10 +78,11 @@ explicitly marked `NAME_DERIVED`; spelling/club-renaming collisions remain a lim
 a migration of existing `hockey:farjestad` or other saved IDs. Seasonal beta tournament bindings
 are explicit and must be re-reviewed rather than silently claiming a later season.
 
-## Remaining integrated work
+## Native integration
 
-Expose consent, source age/partial coverage, searchable league/team discovery, profile-bound
-follows, Calendar/Team/League/Match routes and Watch Match through the native Sport hub.
+The follow-up [native hub](v019-native-hub.md) implements consent, source age/partial coverage,
+searchable league/team discovery, profile-bound follows, Calendar/Team/League/Match routes and
+Watch Match. Coverage/terms gaps remain explicit; this does not make every league operational.
 Neither API supplies verified Swedish linear-channel assignments. Keep authorized local EPG,
 match-specific evidence and explicit manual selections separate; no generic TV4 channel guess.
 Do not derive standings from incomplete schedules. Broader sports and rights blockers remain

@@ -544,6 +544,28 @@ class ProductionStartupTest {
                     compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sport-hero-teams").assertIsFocused(); true }.getOrDefault(false) }
                     compose.onNodeWithTag("sport-team-picker").assertDoesNotExist()
                 }
+                // Optional native multi-league hub: inspect sources without enabling any
+                // network provider, then restore the exact production Sport entry.
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("sport-hero-explore").assertIsFocused().assertIsDisplayed()
+                press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(5_000) { compose.onAllNodesWithTag("sport-hub").fetchSemanticsNodes().size == 1 }
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("hub-back").assertIsFocused(); true }.getOrDefault(false) }
+                nativeCapture("sport-hub-discover")
+                press(KeyEvent.KEYCODE_DPAD_DOWN)
+                compose.onNodeWithTag("choose-sport").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("sources").assertIsFocused()
+                press(KeyEvent.KEYCODE_DPAD_CENTER)
+                compose.waitUntil(5_000) { compose.onAllNodesWithTag("consent-OPENLIGA").fetchSemanticsNodes().size == 1 }
+                nativeCapture("sport-hub-sources")
+                assertEquals(originalTeams, teamStore.read(selectedProfile))
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sources").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_BACK)
+                compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sport-hero-explore").assertIsFocused(); true }.getOrDefault(false) }
+                press(KeyEvent.KEYCODE_DPAD_LEFT)
+                compose.onNodeWithTag("sport-hero-teams").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_LEFT)
                 compose.onNodeWithTag("sport-empty-action").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_UP)

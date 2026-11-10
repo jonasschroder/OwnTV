@@ -1,0 +1,158 @@
+{
+  "1920x1080": {
+    "before": {
+      "section_entry_ms": {
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 273.5482705,
+          "p95_nearest_rank": 348.144833
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 197.8649995,
+          "p95_nearest_rank": 314.161
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 165.332896,
+          "p95_nearest_rank": 185.578458
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 216.07345850000002,
+          "p95_nearest_rank": 332.296542
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 272.742292,
+          "p95_nearest_rank": 366.841584
+        }
+      },
+      "cpu_process_ms": 42694,
+      "sampled_max_pss_kib": 272346,
+      "frame_p95_ms": 160.433375,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      }
+    },
+    "after": {
+      "section_entry_ms": {
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 266.2292085,
+          "p95_nearest_rank": 335.37775
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 199.2825625,
+          "p95_nearest_rank": 232.587916
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 165.085354,
+          "p95_nearest_rank": 184.005626
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 216.192208,
+          "p95_nearest_rank": 247.189001
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 265.2207505,
+          "p95_nearest_rank": 299.244833
+        }
+      },
+      "cpu_process_ms": 39873,
+      "sampled_max_pss_kib": 264996,
+      "frame_p95_ms": 150.968584,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      }
+    }
+  },
+  "1280x720": {
+    "before": {
+      "section_entry_ms": {
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 266.706104,
+          "p95_nearest_rank": 334.042375
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 183.56345850000002,
+          "p95_nearest_rank": 216.383958
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 165.8072085,
+          "p95_nearest_rank": 182.205791
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 200.08100000000002,
+          "p95_nearest_rank": 250.274792
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 266.09731250000004,
+          "p95_nearest_rank": 332.87125
+        }
+      },
+      "cpu_process_ms": 37893,
+      "sampled_max_pss_kib": 268361,
+      "frame_p95_ms": 139.56569,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      }
+    },
+    "after": {
+      "section_entry_ms": {
+        "enter_tv_ms": {
+          "n": 20,
+          "median": 265.5008545,
+          "p95_nearest_rank": 301.631375
+        },
+        "enter_sport_ms": {
+          "n": 20,
+          "median": 197.05922950000001,
+          "p95_nearest_rank": 217.416084
+        },
+        "enter_vod_ms": {
+          "n": 20,
+          "median": 150.54445850000002,
+          "p95_nearest_rank": 167.444833
+        },
+        "enter_profile_ms": {
+          "n": 20,
+          "median": 213.9804585,
+          "p95_nearest_rank": 250.304834
+        },
+        "enter_home_ms": {
+          "n": 20,
+          "median": 265.9326665,
+          "p95_nearest_rank": 283.567584
+        }
+      },
+      "cpu_process_ms": 37767,
+      "sampled_max_pss_kib": 265072,
+      "frame_p95_ms": 133.852184,
+      "reader_work": {
+        "CATALOG": 62,
+        "GUIDE_SUMMARIES": 45,
+        "PUBLIC_HTTP": 0,
+        "CATALOG_VERSION": 92
+      }
+    }
+  }
+}

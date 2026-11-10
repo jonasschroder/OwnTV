@@ -30,6 +30,7 @@ import tv.own.owntv.core.settings.PlaylistRefresh
 import tv.own.owntv.core.i18n.LocaleStore
 import tv.own.owntv.features.home.SportsPreferences
 import tv.own.owntv.features.home.SportPreferences
+import tv.own.owntv.features.home.SportsCatalog
 import java.io.File
 
 /** Production Application/Koin/database/Activity/shell/Home. Never supplies setContent or fake VMs. */
@@ -518,6 +519,33 @@ class ProductionStartupTest {
                 compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sport-empty-action").assertIsFocused(); true }.getOrDefault(false) }
                 compose.onNodeWithTag("top-SPORT").assertIsSelected()
                 assertNavigationLevels(contextual = false)
+                press(KeyEvent.KEYCODE_DPAD_RIGHT)
+                compose.onNodeWithTag("sport-hero-teams").assertIsFocused().assertIsDisplayed()
+                val teamStore = GlobalContext.get().get<SportsPreferences>()
+                val originalTeams = teamStore.read(selectedProfile)
+                // Real, local-only picker: follow Färjestad, then undo through the same
+                // remote flow so later persistence assertions retain the original data.
+                repeat(2) { visit ->
+                    press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.waitUntil(5_000) { compose.onAllNodesWithTag("sport-team-picker").fetchSemanticsNodes().size == 1 }
+                    var hockeyLabel = ""
+                    scenario.onActivity { hockeyLabel = it.getString(R.string.mintv_ice_hockey) }
+                    compose.waitUntil(5_000) { compose.onAllNodes(isFocused() and hasText(hockeyLabel)).fetchSemanticsNodes().size == 1 }
+                    press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    compose.onNode(isFocused() and hasText(SportsCatalog.shl.name)).assertExists()
+                    press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    val clubs = SportsCatalog.inCompetition(SportsCatalog.shl)
+                    repeat(clubs.indexOfFirst { it.id == SportsCatalog.farjestadId }) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+                    compose.onNode(isFocused() and hasText("Färjestad BK")).assertExists()
+                    press(KeyEvent.KEYCODE_DPAD_CENTER)
+                    val expected = if (visit == 0) originalTeams.toggle(SportsCatalog.farjestadId) else originalTeams
+                    compose.waitUntil(5_000) { runBlocking { teamStore.read(selectedProfile) } == expected }
+                    repeat(3) { press(KeyEvent.KEYCODE_BACK) }
+                    compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("sport-hero-teams").assertIsFocused(); true }.getOrDefault(false) }
+                    compose.onNodeWithTag("sport-team-picker").assertDoesNotExist()
+                }
+                press(KeyEvent.KEYCODE_DPAD_LEFT)
+                compose.onNodeWithTag("sport-empty-action").assertIsFocused()
                 press(KeyEvent.KEYCODE_DPAD_UP)
                 compose.onNodeWithTag("top-SPORT").assertIsFocused()
                 nativeCapture("sport")

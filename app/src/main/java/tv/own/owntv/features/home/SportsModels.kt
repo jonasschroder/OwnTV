@@ -91,6 +91,30 @@ internal object SportsCatalog {
     }
 }
 
+
+// Keep the Sport hub personal without fetching another feed: only group real,
+// currently supplied fixtures. One fixture may belong to multiple followed teams.
+internal data class SportDashboardGroups(
+    val mine: List<SportFixture>,
+    val today: List<SportFixture>,
+    val upcoming: List<SportFixture>,
+)
+
+internal fun sportDashboardGroups(
+    today: List<SportFixture>,
+    upcoming: List<SportFixture>,
+    preferences: SportPreferences,
+    featuredId: String?,
+): SportDashboardGroups {
+    val all = (today + upcoming).filterNot { it.id == featuredId }.distinctBy { it.id }
+    val mine = all.filter { it.follows(preferences) }.sortedWith(compareBy<SportFixture> { it.faceoff }.thenBy { it.id })
+    val mineIds = mine.mapTo(HashSet()) { it.id }
+    val otherToday = today.filterNot { it.id == featuredId || it.id in mineIds }.distinctBy { it.id }
+    val todayIds = otherToday.mapTo(HashSet()) { it.id }
+    val otherUpcoming = upcoming.filterNot { it.id == featuredId || it.id in mineIds || it.id in todayIds }.distinctBy { it.id }
+    return SportDashboardGroups(mine, otherToday, otherUpcoming)
+}
+
 internal fun personalFixtures(fixtures: List<SportFixture>, selection: SportPreferences, now: Long): List<SportFixture> =
     fixtures.filter { it.follows(selection) && (it.on(stockholmDay(now)) || it.faceoff >= now) }
         .distinctBy { it.id }.sortedBy { it.faceoff }

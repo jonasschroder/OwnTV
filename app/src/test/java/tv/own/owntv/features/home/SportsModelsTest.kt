@@ -73,6 +73,36 @@ class SportsModelsTest {
         assertEquals(personal.map { it.faceoff }.sorted(), personal.map { it.faceoff })
         assertTrue(personalFixtures(games, SportPreferences(listOf(degerfors)), now).isEmpty())
     }
+    @Test fun sportDashboardLiftsFollowedFixturesWithoutDuplicatingHeroOrRows() {
+        val hero = fixture("hero", "Färjestad BK", "Luleå HF", "2026-10-10T12:15:00Z")
+        val mineToday = fixture("mine-today", "FBK", "Brynäs IF", "2026-10-10T18:15:00Z")
+        val otherToday = fixture("other-today", "Frölunda HC", "Örebro HK", "2026-10-10T19:00:00Z")
+        val mineUpcoming = fixture("mine-next", "BIK Karlskoga", "MoDo Hockey", "2026-10-11T12:15:00Z", SportsCatalog.allsvenskan)
+        val otherUpcoming = fixture("other-next", "Luleå HF", "Timrå IK", "2026-10-11T16:00:00Z")
+        val groups = sportDashboardGroups(
+            listOf(hero, mineToday, otherToday, otherToday),
+            listOf(mineUpcoming, mineToday, otherUpcoming),
+            SportPreferences(listOf(fbk, bik)), hero.id,
+        )
+        assertEquals(listOf(mineToday.id, mineUpcoming.id), groups.mine.map { it.id })
+        assertEquals(listOf(otherToday.id), groups.today.map { it.id })
+        assertEquals(listOf(otherUpcoming.id), groups.upcoming.map { it.id })
+        val displayed = groups.mine + groups.today + groups.upcoming
+        assertEquals(displayed.size, displayed.map { it.id }.distinct().size)
+        assertFalse(displayed.any { it.id == hero.id })
+    }
+
+    @Test fun sportDashboardWithNoFollowedTeamsPreservesOtherFixtures() {
+        val todayGame = fixture("other", "Brynäs IF", "Luleå HF", "2026-10-10T13:15:00Z")
+        val tomorrow = fixture("tomorrow", "Färjestad BK", "Frölunda HC", "2026-10-11T13:15:00Z")
+        val groups = sportDashboardGroups(
+            listOf(todayGame), listOf(tomorrow), SportPreferences(), null,
+        )
+        assertTrue(groups.mine.isEmpty())
+        assertEquals(listOf(todayGame), groups.today)
+        assertEquals(listOf(tomorrow), groups.upcoming)
+    }
+
     @Test fun stockholmDateAndKickoffRespectDaylightSaving() {
         val winter = fixture("winter", "FBK", "Malmö", "2026-10-25T00:30:00Z")
         assertEquals(2, winter.kickoff.atZone(Stockholm).hour)

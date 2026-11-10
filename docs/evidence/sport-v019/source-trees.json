@@ -1,0 +1,6 @@
+{
+  "app/src/main": "40449f59a24d91d3722539f7e0f2e5490e843500",
+  "app/src/androidTest": "4a0aa8d4648fa5a3e290933167e32731c7aecb6d",
+  "app/src/test": "52656b537343db9fd9187d052991b477f7eeab21",
+  ".github/workflows": "285cb18fab114c57ef7b7e446ba248fa29fcfae6"
+}

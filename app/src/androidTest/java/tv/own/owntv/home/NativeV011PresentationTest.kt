@@ -84,6 +84,7 @@ class NativeV011PresentationTest {
     private var details = 0
     private var manualChoices = 0
     private var played = 0
+    private var teamsOpened = 0
     private var channelsLoading by mutableStateOf(false)
     private var broadcastReady by mutableStateOf(false)
     private var broadcastLabels by mutableStateOf(false)
@@ -129,7 +130,9 @@ class NativeV011PresentationTest {
                                 TopDestination.TV -> TvFixture(first)
                                 TopDestination.SPORT -> NativeSportDashboard(NativeSportSnapshot(profile, now, preferences, if (populated) fixture else null,
                                     if (populated) listOf(fixture, fixture.copy(id = "fixture-2", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!, awayTeam = SportsCatalog.identity("Luleå HF", Sport.ICE_HOCKEY)!!, status = MatchStatus.RESULT_SNAPSHOT, score = Score(3, 1)), fixture.copy(id = "fixture-3", homeTeam = SportsCatalog.identity("Rögle BK", Sport.ICE_HOCKEY)!!), fixture.copy(id = "fixture-4", homeTeam = SportsCatalog.identity("Leksands IF", Sport.ICE_HOCKEY)!!, awayTeam = SportsCatalog.identity("Timrå IK", Sport.ICE_HOCKEY)!!)) else emptyList(),
-                                    if (populated) listOf(fixture.copy(id = "fixture-next", kickoff = fixture.kickoff.plusSeconds(86_400))) else emptyList(),
+                                    if (populated) listOf(fixture.copy(id = "fixture-next", kickoff = fixture.kickoff.plusSeconds(86_400)),
+                                        fixture.copy(id = "fixture-other-next", homeTeam = SportsCatalog.identity("Brynäs IF", Sport.ICE_HOCKEY)!!,
+                                            kickoff = fixture.kickoff.plusSeconds(172_800))) else emptyList(),
                                     if (populated && !channelsLoading) (0..10).map { i -> channels.first().channel.copy(id = i + 100L, name = if (i == 0) "TV4 Hockey" else "TV4 Hockey Live $i") } else emptyList(),
                                     heroChannel = if (broadcastReady) broadcastChannel else null,
                                     broadcastLabels = if (broadcastLabels) mapOf(fixture.id to compose.activity.getString(if (probableBroadcast) R.string.mintv_probable_channel else R.string.mintv_confirmed_channel, broadcastChannel.name)) else emptyMap(),
@@ -137,7 +140,7 @@ class NativeV011PresentationTest {
                                     broadcastAvailability = if (broadcastLabels) mapOf(fixture.id to if (broadcastReady) HockeyChannelAvailability.PLAYABLE else HockeyChannelAvailability.MISSING) else emptyMap()),
                                     NativeSportActions({ details++ }, { played++ }, {}, { played++ }, {}, { game, channel ->
                                         assertEquals(fixture, game); assertEquals(broadcastChannel, channel); played++
-                                    }, { game -> assertEquals(fixture, game); manualChoices++ }), first, { entry = it }, { header.requestFocus() })
+                                    }, { game -> assertEquals(fixture, game); manualChoices++ }, teams = { teamsOpened++ }), first, { entry = it }, { header.requestFocus() })
                                 TopDestination.VOD -> NativeVodLanding(NativeVodSnapshot(profile, if (populated) cards(MetadataType.MOVIE) else emptyList(),
                                     if (populated) cards(MetadataType.TV) else emptyList(), if (populated) resumes else emptyList()), first, { entry = it },
                                     { header.requestFocus() }, {}, { details++ }, { resumed = it.key })
@@ -239,6 +242,13 @@ class NativeV011PresentationTest {
         compose.onNodeWithTag("sport-hero-action").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("top-SPORT").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-hero-action").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-hero-details").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-hero-teams").assertIsFocused().assertIsDisplayed()
+        press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, teamsOpened); assertEquals(0, played)
+        press(KeyEvent.KEYCODE_DPAD_LEFT); press(KeyEvent.KEYCODE_DPAD_LEFT)
+        // The new personal rail precedes general fixtures. Exercise it rather than skipping it.
+        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-mine-fixture-next").assertIsFocused()
+        compose.onNodeWithTag("sport-upcoming-fixture-next").assertDoesNotExist()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-today-fixture-3").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_LEFT)
@@ -247,7 +257,7 @@ class NativeV011PresentationTest {
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.waitForIdle(); compose.onNodeWithTag("sport-today-fixture-4").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_LEFT)
-        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-upcoming-fixture-next").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-upcoming-fixture-other-next").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("sport-today-fixture-3").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, details); assertEquals(0, played)
         compose.runOnIdle { populated = false }
@@ -516,8 +526,35 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused().assertIsDisplayed()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused().assertIsDisplayed()
         enter(TopDestination.SPORT)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNodeWithTag("sport-hero-teams").assertIsFocused().assertIsDisplayed()
+        val primary = compose.onNodeWithTag("sport-hero-action").fetchSemanticsNode().boundsInRoot
+        val teams = compose.onNodeWithTag("sport-hero-teams").fetchSemanticsNode().boundsInRoot
+        assertTrue("Horizontal focus must follow visible left-to-right actions", primary.right <= teams.left)
+        assertTrue("Hero actions must share a visible row", teams.top < primary.bottom && teams.bottom > primary.top)
+        press(KeyEvent.KEYCODE_DPAD_LEFT); press(KeyEvent.KEYCODE_DPAD_LEFT)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("sport-mine-fixture-next").assertIsFocused().assertIsDisplayed()
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused().assertIsDisplayed()
+    }
+    @Test fun sportEmptyEntryAndTeamChoiceStayReachableAcrossLoadingAndProfiles() {
+        populated = false; channelsLoading = true
+        mount(); enter(TopDestination.SPORT)
+        compose.onNodeWithTag("sport-empty-action").assertIsFocused().assertIsDisplayed()
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNodeWithTag("sport-hero-teams").assertIsFocused().assertIsDisplayed()
+        compose.runOnIdle { channelsLoading = false }
+        compose.onNodeWithTag("sport-hero-teams").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER); assertEquals(1, teamsOpened); assertEquals(0, played)
+        press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-hero-teams").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        // Profile switching belongs to the shell, outside Sport content. A new owner's
+        // entry must start at the recovery action, not recall the old owner's team key.
+        compose.runOnIdle { profile = 8 }
+        compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-empty-action").assertIsFocused()
     }
     @Test fun signedOutTwitchShowsStatusAndPreservesIndependentAppEntry() {
         var launches = 0

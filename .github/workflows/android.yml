@@ -213,6 +213,7 @@ jobs:
               ('tv.own.owntv.home.NativeV011PresentationTest', 'filmSeriesRowsUseDirectionalEntryDetailsAndExactResume'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'emptyProfileKeepsBothVodEntriesReachableWithoutLeakingTitles'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus'),
+              ('tv.own.owntv.home.NativeV011PresentationTest', 'sportEmptyEntryAndTeamChoiceStayReachableAcrossLoadingAndProfiles'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'libraryEntryUsesLatestStateWithoutRegistrationRecompositionLoop'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'settingsLeftReturnsToActiveCategoryAfterScrollingDetails'),
               ('tv.own.owntv.home.NativeV011PresentationTest', 'homeGuideArrivalsAndMissingNextPreserveActionFocus'),

@@ -572,6 +572,7 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
+                        teams = { if (profileId != null) teamsOpen = true else onSettings() },
                         fixtureWatch = { game, channel -> play(channel, listOf(channel), game) },
                         chooseChannel = { game -> screen = true; choose(game); picker = true; pickerSelectedId = null; restoreTarget = pickerFocus }), entryFocus, { dashboardEntry = it })
             } else {
@@ -618,7 +619,16 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
             }
             }
         }, screen)
-        if (teamsOpen && profileId != null) SportsTeamPicker(profileId) { teamsOpen = false; restoreTarget = entryFocus }
+        if (teamsOpen && profileId != null) SportsTeamPicker(profileId) {
+            teamsOpen = false
+            if (dashboard == null) restoreTarget = entryFocus else {
+                val owner = profileId
+                scope.launch {
+                    repeat(2) { withFrameNanos { } }
+                    if (currentActive && currentProfile == owner) currentDashboardEntry?.invoke()
+                }
+            }
+        }
         if (screen) {
             BackHandler(onBack = ::back)
             Column(Modifier.fillMaxSize().then(if (picker) Modifier.testTag("sport-manual-picker") else if (selectedId != null) Modifier.testTag("sport-match-details") else Modifier)

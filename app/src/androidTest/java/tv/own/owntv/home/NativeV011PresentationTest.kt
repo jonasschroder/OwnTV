@@ -85,6 +85,7 @@ class NativeV011PresentationTest {
     private var manualChoices = 0
     private var played = 0
     private var teamsOpened = 0
+    private var allSportChannels = 0
     private var channelsLoading by mutableStateOf(false)
     private var broadcastReady by mutableStateOf(false)
     private var broadcastLabels by mutableStateOf(false)
@@ -140,7 +141,7 @@ class NativeV011PresentationTest {
                                     broadcastAvailability = if (broadcastLabels) mapOf(fixture.id to if (broadcastReady && !probableBroadcast) HockeyChannelAvailability.PLAYABLE else if (probableBroadcast) HockeyChannelAvailability.CHOICE_REQUIRED else HockeyChannelAvailability.MISSING) else emptyMap()),
                                     NativeSportActions({ details++ }, { played++ }, {}, { played++ }, {}, { game, channel ->
                                         assertEquals(fixture, game); assertEquals(broadcastChannel, channel); played++
-                                    }, { game -> assertEquals(fixture, game); manualChoices++ }, teams = { teamsOpened++ }), first, { entry = it }, { header.requestFocus() })
+                                    }, { game -> assertEquals(fixture, game); manualChoices++ }, teams = { teamsOpened++ }, allChannels = { allSportChannels++ }), first, { entry = it }, { header.requestFocus() })
                                 TopDestination.VOD -> NativeVodLanding(NativeVodSnapshot(profile, if (populated) cards(MetadataType.MOVIE) else emptyList(),
                                     if (populated) cards(MetadataType.TV) else emptyList(), if (populated) resumes else emptyList()), first, { entry = it },
                                     { header.requestFocus() }, {}, { details++ }, { resumed = it.key })
@@ -180,7 +181,7 @@ class NativeV011PresentationTest {
         compose.runOnIdle { entered = entry?.invoke() == true }
         if (!entered) compose.onNodeWithTag("top-${destination.name}").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
         compose.waitForIdle()
-        val focusedTag = when (destination) { TopDestination.HOME -> "fixture-matchday"; TopDestination.TV -> "fixture-tv-0"; TopDestination.SPORT -> if (populated) "sport-hero-action" else "sport-empty-action"; else -> "vod-movies-entry" }
+        val focusedTag = when (destination) { TopDestination.HOME -> "fixture-matchday"; TopDestination.TV -> "fixture-tv-0"; TopDestination.SPORT -> if (populated && !channelsLoading) "sport-live-100" else if (populated) "sport-hero-action" else "sport-empty-action"; else -> "vod-movies-entry" }
         compose.waitUntil(5000) { runCatching { compose.onNodeWithTag(focusedTag).assertIsFocused(); true }.getOrDefault(false) }
     }
     private fun captures(size: String, suffix: String) {
@@ -202,6 +203,7 @@ class NativeV011PresentationTest {
         broadcastReady = true; broadcastLabels = true
         mount(); enter(TopDestination.SPORT)
         compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_confirmed_channel, broadcastChannel.name)).assertCountEquals(1)
+        press(KeyEvent.KEYCODE_DPAD_DOWN) // live sports channels lead; the match hero is one row below
         val card = compose.onNodeWithTag("sport-hero-action")
         card.assertIsFocused()
         compose.runOnIdle { probableBroadcast = true }
@@ -242,8 +244,9 @@ class NativeV011PresentationTest {
     }
     @Test fun sportEntryRowNavigationAndRemovedFixtureRestoreSafeFocus() {
         mount(); enter(TopDestination.SPORT)
-        compose.onNodeWithTag("sport-hero-action").assertIsFocused()
+        compose.onNodeWithTag("sport-live-100").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("top-SPORT").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-live-100").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("sport-hero-action").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-hero-details").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-hero-teams").assertIsFocused().assertIsDisplayed()
@@ -529,6 +532,8 @@ class NativeV011PresentationTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN); compose.onNodeWithTag("vod-series-entry").assertIsFocused().assertIsDisplayed()
         press(KeyEvent.KEYCODE_DPAD_UP); compose.onNodeWithTag("vod-movies-entry").assertIsFocused().assertIsDisplayed()
         enter(TopDestination.SPORT)
+        compose.onNodeWithTag("sport-live-100").assertIsDisplayed()
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_RIGHT); press(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithTag("sport-hero-teams").assertIsFocused().assertIsDisplayed()
         val primary = compose.onNodeWithTag("sport-hero-action").fetchSemanticsNode().boundsInRoot
@@ -540,6 +545,22 @@ class NativeV011PresentationTest {
         compose.onNodeWithTag("sport-mine-fixture-next").assertIsFocused().assertIsDisplayed()
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithTag("sport-today-fixture-2").assertIsFocused().assertIsDisplayed()
+    }
+    /** v0.20 M1: a local sports channel plays with one OK after entering Sport, with no match data. */
+    @Test fun sportLiveChannelPlaysWithOneOkWithoutMatchData() {
+        mount(); enter(TopDestination.SPORT)
+        compose.onNodeWithTag("sport-live-100").assertIsFocused().assertIsDisplayed()
+        // No stored guide in this fixture: the card stays playable and says so honestly.
+        compose.onAllNodesWithText(compose.activity.getString(R.string.mintv_v08_empty_now)).onFirst().assertIsDisplayed()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, played); assertEquals(0, manualChoices); assertEquals(0, details)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT); compose.onNodeWithTag("sport-live-101").assertIsFocused()
+        // The visible escape hatch to every sports channel ends the rail; it never opens a match picker.
+        compose.onNodeWithTag("sport-live-all").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        compose.waitForIdle(); compose.onNodeWithTag("sport-live-all").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(1, allSportChannels); assertEquals(0, manualChoices); assertEquals(1, played)
+        compose.onNodeWithTag("sport-channel-100").assertDoesNotExist() // no duplicate bottom channel rail
     }
     @Test fun sportEmptyEntryAndTeamChoiceStayReachableAcrossLoadingAndProfiles() {
         populated = false; channelsLoading = true

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v020_sport_live_title">Sport on TV now</string>
+    <string name="v020_sport_live_hint">OK plays the channel straight away. No match data needed.</string>
+    <string name="v020_sport_all_channels">All sports channels</string>
+    <string name="v020_sport_all_channels_detail">Categories, search and source</string>
+</resources>

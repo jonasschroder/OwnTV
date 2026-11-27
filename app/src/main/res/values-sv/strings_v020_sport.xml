@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="v020_sport_live_title">Sport på TV nu</string>
+    <string name="v020_sport_live_hint">OK startar kanalen direkt. Ingen matchdata behövs.</string>
+    <string name="v020_sport_all_channels">Alla sportkanaler</string>
+    <string name="v020_sport_all_channels_detail">Kategorier, sök och källa</string>
+</resources>

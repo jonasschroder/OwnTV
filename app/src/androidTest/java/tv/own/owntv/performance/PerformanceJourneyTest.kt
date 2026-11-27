@@ -315,7 +315,7 @@ class PerformanceJourneyTest {
                     waitTag("top-HOME")
                     focus("top-HOME"); press(KeyEvent.KEYCODE_DPAD_CENTER)
                     compose.onNodeWithTag("smart-channel-svt1").assertDoesNotExist()
-                    compose.onNodeWithTag("sport-channel-$hockeyId").assertDoesNotExist()
+                    compose.onNodeWithTag("sport-live-$hockeyId").assertDoesNotExist()
                     settings.setActiveProfile(profile)
                     compose.waitUntil(5_000) { compose.onAllNodesWithText(name).fetchSemanticsNodes().isNotEmpty() }
                     chooseSyntheticProfile(); waitTag("top-HOME")

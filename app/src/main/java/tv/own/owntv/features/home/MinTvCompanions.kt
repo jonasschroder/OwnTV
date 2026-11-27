@@ -151,6 +151,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
         catch (_: Exception) { dashboardChannels = emptyList() }
         finally { dashboardChannelsLoaded = true }
     }
+    // The same bounded, stored-only Now/Next owner as Home (max 16 keys, no provider HTTP).
+    val sportGuideKeys = remember(dashboardChannels) { dashboardChannels.map { it.homeEpgKey() } }
+    val sportGuide = rememberHomeDashboardGuide(liveVm, profileId, dashboard != null && active && visible, sportGuideKeys)
     val tabFocus = remember { FocusRequester() }
     val detailFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
@@ -400,7 +403,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     fun back() {
         keyboard?.hide()
         if (browsing) {
-            if (categoryId != null) { categoryId = null; categoryPage = 0 } else browsing = false
+            if (categoryId != null) { categoryId = null; categoryPage = 0 }
+            else if (homeShortcut && selectedId == null) { browsing = false; close(); return } // straight back to the Sport card
+            else browsing = false
             pickerSelectedId = null
             restoreTarget = pickerFocus
             return
@@ -472,6 +477,12 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     val directChannel = manualChannel ?: preferredHockeyChannel(reliableChannels, guideChoices).takeIf {
         candidatesComplete && (localEvidence != null || validBroadcast?.evidence != BroadcastEvidence.PROBABLE_EXTERNAL)
     }
+    /** Fixture-free: selection plays the linear channel and never saves a per-match override. */
+    fun browseAllSportChannels() {
+        selectedId = null; homeShortcut = true
+        screen = true; picker = true; browsing = true; categoryId = null; categoryPage = 0
+        searchOpen = false; query = ""; pickerSelectedId = null; restoreTarget = pickerFocus
+    }
     fun browseChannels() {
         if (gameToMatch != null) selectedId = gameToMatch.id else selectedId = null
         screen = true; picker = true; browsing = false; searchOpen = false; query = ""; pickerSelectedId = null; restoreTarget = pickerFocus
@@ -540,7 +551,9 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
     }
     fun pick(channel: ChannelEntity) {
         pickerSelectedId = channel.id
-        val game = selected ?: run { play(channel, pickerRows); return }
+        // No fixture selected: a plain channel pick plays linear TV. Defaulting to gameToMatch here
+        // silently validated (and could refuse) an unrelated channel against the next hockey match.
+        val game = selected ?: run { play(channel, pickerRows, null); return }
         val profile = profileId ?: return
         overrides.save(FixtureChannelChoice(profile, fixtureKey(game.broadcastFixture()), channel.id,
             channel.sourceId, channel.name, game.faceoff + 4 * 60 * 60_000L), System.currentTimeMillis())
@@ -570,13 +583,15 @@ internal fun MinSportCompanion(visible: Boolean, active: Boolean, liveVm: LiveVi
                     freshGames.filter { !it.on(today) && it.faceoff >= now && it.status == MatchStatus.SCHEDULED }.sortedBy { it.faceoff },
                     dashboardChannels, labels, verified, homeLoading, enabled, homeIssue, playable,
                     publicAssignments.values.any { BroadcastResolver.usable(it.fixture, it, Instant.ofEpochMilli(now)) != null },
-                    channelsLoading = !dashboardChannelsLoaded, broadcastAvailability = cards.mapValues { it.value.availability }),
+                    channelsLoading = !dashboardChannelsLoaded, broadcastAvailability = cards.mapValues { it.value.availability },
+                    channelGuide = sportGuide.rows, guideAt = sportGuide.at),
                     NativeSportActions(details = { game -> screen = true; choose(game) },
                         channel = { channel -> play(channel, dashboardChannels, null) }, browse = ::browseChannels,
                         watch = { verified?.let { play(it, listOf(it), hero) } }, settings = onSettings,
                         teams = { if (profileId != null) teamsOpen = true else onSettings() },
                         fixtureWatch = { game, channel -> play(channel, listOf(channel), game) },
-                        chooseChannel = { game -> screen = true; choose(game); picker = true; pickerSelectedId = null; restoreTarget = pickerFocus }), entryFocus, { dashboardEntry = it })
+                        chooseChannel = { game -> screen = true; choose(game); picker = true; pickerSelectedId = null; restoreTarget = pickerFocus },
+                        allChannels = ::browseAllSportChannels), entryFocus, { dashboardEntry = it })
             } else {
             val shown = manualChannel ?: reliableChannels.firstOrNull()
             val verifiedDirect = verifiedSportHeroChannel(directChannel, manualChannel, reliableChannels, candidatesComplete)
